@@ -82,9 +82,18 @@ async function onboardCompany(input) {
         { session }
       );
 
+      // `ordered: true` is required here (not just a style choice) — this
+      // Mongoose version refuses a multi-document create() inside a
+      // session unless the ordering behavior is stated explicitly, since
+      // ordered vs unordered changes how a partial failure is handled
+      // (stop at the first error vs. attempt every document). Ordered is
+      // correct here: these are the company's fixed starter chart-of-
+      // accounts entries, and `defaultAccounts` below is built by
+      // positional index into this same array, which only stays valid if
+      // documents are created in the order given.
       const createdAccounts = await Account.create(
         STARTER_ACCOUNTS.map(({ key, ...a }) => ({ ...a, companyId: company._id })),
-        { session }
+        { session, ordered: true }
       );
 
       // Wire the explicit defaultAccounts mapping from what was just
