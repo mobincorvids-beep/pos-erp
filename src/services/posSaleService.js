@@ -135,8 +135,21 @@ async function checkout(input) {
       for (const payment of payments) {
         entries.push({ accountId: payment.paymentAccountId, debit: payment.amount, credit: 0 });
       }
-      if (dueAmount > 0 && receivableAccountId) {
-        entries.push({ accountId: receivableAccountId, debit: dueAmount, credit: 0 });
+      if (dueAmount > 0) {
+        // Falls back to the company's default Accounts Receivable account,
+        // the same way revenueAccount/taxAccount already do just below —
+        // this used to only add the debit-side entry when a caller
+        // explicitly passed receivableAccountId, which silently produced
+        // an unbalanced voucher (debits short by exactly dueAmount) for
+        // any partial-payment sale that didn't pass one, since the credit
+        // side always posts the FULL subtotal regardless. Mongoose's
+        // balance validator correctly rejected that, but the fix is to
+        // resolve a real account here, not to skip the entry.
+        const receivable = receivableAccountId
+          || (await defaultAccountsService.resolve(companyId, 'accountsReceivableId', session));
+        if (receivable) {
+          entries.push({ accountId: receivable, debit: dueAmount, credit: 0 });
+        }
       }
       if (revenueAccount) {
         entries.push({ accountId: revenueAccount, debit: 0, credit: subtotal - discountTotal });
