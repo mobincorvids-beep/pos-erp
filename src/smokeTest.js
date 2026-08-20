@@ -91,7 +91,7 @@ async function run() {
   const suffix = nanoid(6).toLowerCase();
 
   // --- 1. Onboarding (Company & Org Management, Accounting starter chart) ---
-  const { company, branch, warehouse } = await step('Onboard a company', () =>
+  const { company, branch, warehouse, admin } = await step('Onboard a company', () =>
     companyProvisioningService.onboardCompany({
       name: `Smoke Test Co ${suffix}`, industryType: 'retail',
       adminName: 'Smoke Admin', adminEmail: `smoke-${suffix}@test.local`,
@@ -128,7 +128,7 @@ async function run() {
 
   const sale1 = await step('Checkout a sale (2 units, full payment)', () =>
     posSaleService.checkout({
-      companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id,
+      companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id, userId: admin._id,
       items: [{ productId: product._id, variantId, quantity: 2, unitPrice: 100 }],
       payments: [{ paymentAccountId: cash._id, method: 'cash', amount: 200 }],
     })
@@ -148,7 +148,7 @@ async function run() {
 
   const sale2 = await step('Checkout a second sale (5 units, partial payment — creates a due balance)', () =>
     posSaleService.checkout({
-      companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id,
+      companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id, userId: admin._id,
       items: [{ productId: product._id, variantId, quantity: 5, unitPrice: 100 }],
       payments: [{ paymentAccountId: cash._id, method: 'cash', amount: 300 }],
     })
@@ -253,7 +253,7 @@ async function run() {
 
   const serialSale = await step('Sell one specific serial — it gets marked sold and linked to the sale', async () => {
     const sale = await posSaleService.checkout({
-      companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id,
+      companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id, userId: admin._id,
       items: [{ productId: serialProduct._id, variantId: serialVariantId, quantity: 1, unitPrice: 800, serialNumbers: [`SN-${suffix}-1`] }],
       payments: [{ paymentAccountId: cash._id, method: 'cash', amount: 800 }],
     });
@@ -263,7 +263,7 @@ async function run() {
     let threw = false;
     try {
       await posSaleService.checkout({
-        companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id,
+        companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id, userId: admin._id,
         items: [{ productId: serialProduct._id, variantId: serialVariantId, quantity: 1, unitPrice: 800, serialNumbers: [`SN-${suffix}-1`] }],
         payments: [{ paymentAccountId: cash._id, method: 'cash', amount: 800 }],
       });
@@ -284,7 +284,7 @@ async function run() {
 
   await step('Voiding a sale releases ALL its serials back to in_stock', async () => {
     const voidableSale = await posSaleService.checkout({
-      companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id,
+      companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id, userId: admin._id,
       items: [{ productId: serialProduct._id, variantId: serialVariantId, quantity: 1, unitPrice: 800, serialNumbers: [`SN-${suffix}-2`] }],
       payments: [{ paymentAccountId: cash._id, method: 'cash', amount: 800 }],
     });
@@ -330,7 +330,7 @@ async function run() {
 
   await step('A project-tagged sale counts toward project revenue', async () => {
     await posSaleService.checkout({
-      companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id, projectId: project._id,
+      companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id, userId: admin._id, projectId: project._id,
       items: [{ productId: product._id, variantId, quantity: 1, unitPrice: 100 }],
       payments: [{ paymentAccountId: cash._id, method: 'cash', amount: 100 }],
     });
@@ -549,7 +549,7 @@ async function run() {
       type: 'adjustment', quantity: 1, note: 'Smoke test opening stock for weight-based item',
     });
     const sale = await posSaleService.checkout({
-      companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id,
+      companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id, userId: admin._id,
       items: [{ productId: jewelryProduct._id, variantId: jewelryVariantId, quantity: 1, unitPrice: quote.totalPrice }],
       payments: [{ paymentAccountId: cash._id, method: 'cash', amount: quote.totalPrice }],
     });
@@ -564,7 +564,7 @@ async function run() {
     assert(buyback.status === 'pending', 'buyback starts pending until applied to a sale');
 
     const linkedSale = await posSaleService.checkout({
-      companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id,
+      companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id, userId: admin._id,
       items: [{ productId: product._id, variantId, quantity: 1, unitPrice: 100, discountAmount: 100 }], // the buyback credit applied as a per-line discount, same pattern as loyalty redemption
       payments: [],
     });
@@ -1154,7 +1154,7 @@ async function run() {
       userId: null,
     });
     await posSaleService.checkout({
-      companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id,
+      companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id, userId: admin._id,
       items: [{ productId: p._id, variantId: p.variants[0]._id, quantity: 2, unitPrice: 900, serialNumbers: [`WARR-${suffix}`, `WARR-EXPIRED-${suffix}`] }],
       payments: [{ paymentAccountId: cash._id, method: 'cash', amount: 1800 }],
     });
@@ -1354,7 +1354,7 @@ async function run() {
 
   await step('Sell 30 through the day via the ordinary checkout — stock drops to exactly 20', async () => {
     await posSaleService.checkout({
-      companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id,
+      companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id, userId: admin._id,
       items: [{ productId: croissantProduct._id, variantId: croissantVariantId, quantity: 30, unitPrice: 60 }],
       payments: [{ paymentAccountId: cash._id, method: 'cash', amount: 1800 }],
     });
@@ -2161,7 +2161,7 @@ async function run() {
     await purchaseService.decidePurchaseOrder(carPo._id, { approve: true, userId: null });
     await purchaseService.receiveGoods({ purchaseOrderId: carPo._id, warehouseId: warehouse._id, items: [{ purchaseOrderItemId: carPo.items[0]._id, productId: carProduct._id, variantId: carProduct.variants[0]._id, quantity: 1, unitCost: 2000000, serialNumbers: [`VIN-${suffix}`] }], userId: null });
     const sale = await posSaleService.checkout({
-      companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id,
+      companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id, userId: admin._id,
       items: [{ productId: carProduct._id, variantId: carProduct.variants[0]._id, quantity: 1, unitPrice: 2500000, serialNumbers: [`VIN-${suffix}`] }],
       payments: [{ paymentAccountId: cash._id, method: 'cash', amount: 2500000 }],
     });
@@ -2172,7 +2172,7 @@ async function run() {
     assert(credit.status === 'pending', 'trade-in starts pending until applied');
 
     const linkedSale = await posSaleService.checkout({
-      companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id,
+      companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id, userId: admin._id,
       items: [{ productId: product._id, variantId, quantity: 1, unitPrice: 100, discountAmount: 100 }],
       payments: [],
     });
