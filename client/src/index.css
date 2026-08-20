@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-rule;
+  }
+  ::selection {
+    @apply bg-accent-soft;
+  }
+  /* Visible keyboard focus everywhere — never suppressed. */
+  :focus-visible {
+    outline: 2px solid theme('colors.accent');
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* Every amount/quantity/document-number in the app uses this. */
+  .num {
+    @apply font-mono tabular-nums;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-40 disabled:pointer-events-none;
+  }
+  .btn-primary {
+    @apply btn bg-accent text-white hover:bg-accent-strong;
+  }
+  .btn-secondary {
+    @apply btn bg-surface border border-rule text-ink hover:bg-paper;
+  }
+  .btn-danger {
+    @apply btn bg-danger text-white hover:opacity-90;
+  }
+  .btn-ghost {
+    @apply btn text-ink-muted hover:text-ink hover:bg-paper;
+  }
+
+  .field-label {
+    @apply block text-xs font-medium text-ink-muted mb-1;
+  }
+  .field-input {
+    @apply w-full rounded border border-rule bg-surface px-2.5 py-1.5 text-sm text-ink placeholder:text-ink-muted/60 focus:border-accent;
+  }
+
+  .card {
+    @apply bg-surface border border-rule rounded;
+  }
+
+  .chip {
+    @apply inline-flex items-center rounded-sm px-1.5 py-0.5 text-xs font-medium;
+  }
+  .chip-accent { @apply chip bg-accent-soft text-accent-strong; }
+  .chip-warning { @apply chip bg-warning-soft text-warning; }
+  .chip-danger { @apply chip bg-danger-soft text-danger; }
+  .chip-info { @apply chip bg-info/10 text-info; }
+  .chip-neutral { @apply chip bg-paper text-ink-muted border border-rule; }
+
+  /* The receipt tear-line — used at exactly one point per screen: between
+     line items and their total. Not generic decoration. */
+  .tear-line {
+    @apply border-t border-dashed border-rule;
+  }
+
+  .page-title {
+    @apply font-display text-2xl text-ink;
+  }
+}

@@ -1,0 +1,181 @@
+/**
+ * PosSaleService — orchestrates a checkout: validates stock, creates the Sale,
+ * deducts inventory, and posts the accounting voucher, all inside one Mongo
+ * transaction so a sale can never exist without its stock/ledger effects
+ * (or vice versa).
+ */
+const mongoose = require('mongoose');
+const Sale = require('../models/Sale');
+const Account = require('../models/Account');
+const inventoryService = require('./inventoryService');
+const accountingService = require('./accountingService');
+const bundleService = require('./bundleService');
+const serialInventoryService = require('./serialInventoryService');
+const defaultAccountsService = require('./defaultAccountsService');
+const { nextInvoiceNumber, nextDocumentNumber } = require('./numberingService');
+const { computeLineItems } = require('./saleCalculations');
+
+/**
+ * @param {Object} input
+ * @param {String} input.companyId
+ * @param {String} input.branchId
+ * @param {String} input.warehouseId
+ * @param {String} [input.posTerminalId]
+ * @param {String} [input.customerId]
+ * @param {String} input.userId
+ * @param {Array} input.items - [{ productId, variantId, batchId?, serialNumbers?, quantity, unitPrice, discountAmount?, taxRate? }]
+ *   For serial/IMEI-tracked products, serialNumbers must have exactly one
+ *   entry per unit (its length must equal quantity) — each is validated as
+ *   in_stock at this warehouse before the sale commits, then marked sold
+ *   and linked to it. Omit for non-serial-tracked products.
+ * @param {Array} input.payments - [{ paymentAccountId, method, amount }]
+ * @param {String} [input.revenueAccountId] - falls back to company's default "Sales Revenue" account
+ * @param {String} [input.taxAccountId] - falls back to company's default "Sales Tax Payable" account
+ * @param {String} [input.receivableAccountId] - used when part of the sale is on credit
+ */
+async function checkout(input) {
+  const session = await mongoose.startSession();
+  try {
+    let sale;
+
+    await session.withTransaction(async () => {
+      const {
+        companyId, branchId, warehouseId, posTerminalId, customerId, userId, projectId, channel,
+        items, payments = [], revenueAccountId, taxAccountId, receivableAccountId,
+      } = input;
+
+      if (!items || items.length === 0) {
+        throw new Error('Sale must contain at least one item.');
+      }
+
+      // 1. Validate stock availability. Bundle line items are expanded to
+      // their components first — a bundle's own "variant" is never in
+      // StockLevel, only what it's made of is. Service items (a haircut, a
+      // room-night — nothing physical to hold in a warehouse) are excluded
+      // by expandItems() itself, not filtered here — see bundleService.js.
+      const expandedItems = await bundleService.expandItems(items, session);
+      for (const item of expandedItems) {
+        await inventoryService.assertSufficientStock(
+          warehouseId, item.variantId, item.batchId || null, item.quantity
+        );
+      }
+
+      // 1b. Serial-tracked lines: validate the exact units requested are
+      // actually available before anything else commits. Checked against
+      // the ORIGINAL items (not expandedItems) — a bundle is never itself
+      // serial-tracked, so this only ever applies to direct lines.
+      for (const item of items) {
+        if (item.serialNumbers && item.serialNumbers.length > 0) {
+          if (item.serialNumbers.length !== item.quantity) {
+            throw new Error(`Product ${item.productId}: ${item.serialNumbers.length} serial number(s) provided but quantity is ${item.quantity} — exactly one serial per unit is required.`);
+          }
+          await serialInventoryService.assertAvailable(item.variantId, warehouseId, item.serialNumbers, session);
+        }
+      }
+
+      // 2. Compute totals server-side — never trust client-sent totals.
+      const { lineItems, subtotal, discountTotal, taxTotal, totalAmount } = computeLineItems(items);
+      const paidAmount = payments.reduce((sum, p) => sum + p.amount, 0);
+      const dueAmount = Math.max(totalAmount - paidAmount, 0);
+
+      const invoiceNumber = posTerminalId
+        ? await nextInvoiceNumber(posTerminalId, session)
+        : nextDocumentNumber('INV');
+
+      // 3. Create the sale document.
+      [sale] = await Sale.create(
+        [{
+          companyId, branchId, warehouseId, posTerminalId, customerId, userId, projectId: projectId || null,
+          documentNumber: invoiceNumber, invoiceNumber, status: 'completed', saleType: 'pos', channel: channel || 'pos',
+          items: lineItems, payments,
+          subtotal, discountAmount: discountTotal, taxAmount: taxTotal,
+          totalAmount, paidAmount, dueAmount,
+        }],
+        { session }
+      );
+
+      // 4. Deduct inventory for each EXPANDED (component-level) line via the
+      // ledger-backed InventoryService — service lines never reached this
+      // list at all (see bundleService.expandItems), so no special-casing
+      // is needed here. Sale.items still stores the bundle itself for
+      // correct pricing/reporting on the invoice — only the stock effect is expanded.
+      let cogsTotal = 0;
+      for (const item of expandedItems) {
+        const avgCost = await inventoryService.getAvgCost(warehouseId, item.variantId, item.batchId || null);
+        cogsTotal += avgCost * item.quantity;
+
+        await inventoryService.recordMovement({
+          companyId, warehouseId,
+          productId: item.productId,
+          variantId: item.variantId,
+          batchId: item.batchId,
+          type: 'sale',
+          quantity: -item.quantity, // stock out
+          referenceType: 'Sale',
+          referenceId: sale._id,
+          userId,
+          note: `Sale ${invoiceNumber}`,
+        }, session);
+      }
+
+      // 4b. Mark the specific serial units sold and link them to this sale
+      // — done against lineItems (the original, unexpanded lines), same
+      // reasoning as the 1b validation step above.
+      for (const item of lineItems) {
+        if (item.serialNumbers && item.serialNumbers.length > 0) {
+          await serialInventoryService.markSold(item.variantId, item.serialNumbers, sale._id, session);
+        }
+      }
+
+      // 5. Post the accounting voucher: Dr Cash/Bank/Receivable, Cr Revenue + Tax Payable.
+      const revenueAccount = revenueAccountId
+        || (await defaultAccountsService.resolve(companyId, 'salesRevenueId', session));
+
+      const entries = [];
+      for (const payment of payments) {
+        entries.push({ accountId: payment.paymentAccountId, debit: payment.amount, credit: 0 });
+      }
+      if (dueAmount > 0 && receivableAccountId) {
+        entries.push({ accountId: receivableAccountId, debit: dueAmount, credit: 0 });
+      }
+      if (revenueAccount) {
+        entries.push({ accountId: revenueAccount, debit: 0, credit: subtotal - discountTotal });
+      }
+      if (taxTotal > 0 && taxAccountId) {
+        entries.push({ accountId: taxAccountId, debit: 0, credit: taxTotal });
+      }
+
+      if (entries.length > 0 && revenueAccount) {
+        await accountingService.postVoucher({
+          companyId, branchId, type: 'receipt', narration: `POS Sale ${invoiceNumber}`,
+          entries, referenceType: 'Sale', referenceId: sale._id, userId,
+        }, session);
+      }
+
+      // 6. COGS: Dr Cost of Goods Sold, Cr Inventory Asset — only posted if
+      // both accounts exist (see reportingService/purchaseService for the
+      // same name-based fallback pattern); otherwise inventory is still
+      // correctly deducted above, just without the matching P&L entry.
+      if (cogsTotal > 0) {
+        const cogsAccount = await defaultAccountsService.resolve(companyId, 'costOfGoodsSoldId', session);
+        const inventoryAsset = await defaultAccountsService.resolve(companyId, 'inventoryAssetId', session);
+        if (cogsAccount && inventoryAsset) {
+          await accountingService.postVoucher({
+            companyId, branchId, type: 'journal', narration: `COGS for sale ${invoiceNumber}`,
+            entries: [
+              { accountId: cogsAccount, debit: cogsTotal, credit: 0 },
+              { accountId: inventoryAsset, debit: 0, credit: cogsTotal },
+            ],
+            referenceType: 'Sale', referenceId: sale._id, userId,
+          }, session);
+        }
+      }
+    });
+
+    return sale;
+  } finally {
+    session.endSession();
+  }
+}
+
+module.exports = { checkout };
