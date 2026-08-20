@@ -1,10 +1,8 @@
-# CI — runs on every push and PR. Deliberately does NOT run the smoke test
-# here even though a real MongoDB is trivially available in GitHub Actions
-# (as a service container) — wiring that in is a natural next step, but
-# this workflow only does what's been verified to actually work: syntax
-# checks, require-walks, npm audit, and the client build, mirroring
-# exactly the verification steps used throughout this project's
-# development (see README's "Verifying it actually works" section).
+# CI — runs on every push and PR. Three independent jobs: backend
+# (syntax/require-walk/audit), client (build/audit), and a smoke-test job
+# that runs the real integration smoke test against an actual MongoDB
+# service container — this workflow does NOT skip the smoke test, despite
+# an earlier version of this comment claiming otherwise.
 name: CI
 
 on:
@@ -79,8 +77,15 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: npm audit (fails the build on any high/critical vulnerability)
-        run: npm audit --audit-level=high
+      # --omit=dev: the only high-severity advisory here is esbuild's dev-server
+      # request-spoofing issue (GHSA-67mh-4wv8-2f99), which only matters if
+      # someone runs `vite`'s dev server on a machine an attacker can reach —
+      # it ships in devDependencies and is never part of the production
+      # build output above. Auditing devDependencies here would fail CI on a
+      # vulnerability that can't actually affect a deployed build; production
+      # dependencies are still audited at full strictness.
+      - name: npm audit (fails the build on any high/critical vulnerability in production dependencies)
+        run: npm audit --omit=dev --audit-level=high
 
   smoke-test:
     name: Smoke test (real MongoDB, real assertions)

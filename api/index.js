@@ -5,6 +5,9 @@
 // need to make sure Mongo is connected before delegating — connectDB() is
 // cached (see src/config/db.js), so calling it on every invocation is a
 // cheap no-op once the container is warm.
+const { validateEnv } = require('../src/config/validateEnv');
+validateEnv(); // same fail-fast check as server.js — must run before the app touches a real request, once per cold start
+
 const app = require('../src/app');
 const connectDB = require('../src/config/db');
 

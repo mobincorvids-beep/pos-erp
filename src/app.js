@@ -1,7 +1,15 @@
 require('dotenv').config();
-const { validateEnv } = require('./config/validateEnv');
-validateEnv(); // refuses to start rather than run with a missing/insecure JWT_SECRET or MONGO_URI — see that file for why
 
+// Deliberately NOT calling validateEnv() here. This module's only job is
+// to build and export the configured Express app — requiring it (e.g. a
+// require-walk sanity check, or a future test importing the app without
+// booting a real server) must be a pure, side-effect-free operation.
+// validateEnv() calls process.exit(1) on a bad config, which would kill
+// whatever process merely required this file, even if that process had no
+// intention of ever handling a real request. Entrypoints that actually
+// serve traffic (server.js for npm start/Docker, api/index.js for Vercel)
+// call validateEnv() themselves, before requiring anything that needs a
+// working JWT_SECRET/MONGO_URI.
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
