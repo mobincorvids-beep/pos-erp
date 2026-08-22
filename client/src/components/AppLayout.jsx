@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
+import { Menu } from 'lucide-react';
 import { Sidebar } from './Sidebar';
 import { useAuth } from '../context/AuthContext';
 
@@ -16,8 +17,8 @@ export function AppLayout() {
             this info, so this whole bar is hidden at md+ rather than
             duplicating it alongside the always-visible desktop sidebar. */}
         <div className="md:hidden flex items-center gap-3 px-4 h-12 border-b border-rule bg-surface sticky top-0 z-30">
-          <button onClick={() => setMobileOpen(true)} className="text-ink text-xl leading-none px-1" aria-label="Open menu">
-            ☰
+          <button onClick={() => setMobileOpen(true)} className="text-ink px-1" aria-label="Open menu">
+            <Menu size={20} strokeWidth={2} />
           </button>
           <p className="font-display text-base text-ink truncate">{company?.name || 'Muhasib'}</p>
         </div>

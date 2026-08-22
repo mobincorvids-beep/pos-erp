@@ -27,12 +27,12 @@ export function ReportsPage() {
   return (
     <div>
       <p className="page-title mb-4">Reports</p>
-      <div className="flex gap-1 border-b border-rule mb-5">
+      <div className="flex gap-1 border-b border-rule mb-5 overflow-x-auto">
         {TABS.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`px-3 py-2 text-sm -mb-px border-b-2 ${tab === t.key ? 'border-accent text-accent-strong font-medium' : 'border-transparent text-ink-muted hover:text-ink'}`}
+            className={`shrink-0 whitespace-nowrap px-3 py-2 text-sm -mb-px border-b-2 ${tab === t.key ? 'border-accent text-accent-strong font-medium' : 'border-transparent text-ink-muted hover:text-ink'}`}
           >
             {t.label}
           </button>

@@ -4,7 +4,7 @@ import {
   CreditCard, Receipt, FileText, CalendarClock, Wrench, Boxes, ArrowLeftRight,
   ClipboardList, Factory, Banknote, Landmark, FolderKanban, PieChart,
   Contact, Truck, UserCog, HeartHandshake, Gift, Sparkles, Store, Circle,
-  Ticket, Shield, FileSearch, TrendingUp, HandCoins, Repeat, Hourglass, Lock, Layers, Ruler, Percent,
+  Ticket, Shield, FileSearch, TrendingUp, HandCoins, Repeat, Hourglass, Lock, Layers, Ruler, Percent, X,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { INDUSTRY_MODULES } from '../industryModuleRegistry';
@@ -106,8 +106,8 @@ export function Sidebar({ mobileOpen, onClose }) {
           <p className="text-xs text-ink-muted mt-1 truncate">{company?.name || '—'}</p>
         </div>
         {/* Close button only rendered/visible in the mobile drawer — the static desktop sidebar has no need for it. */}
-        <button onClick={onClose} className="md:hidden text-ink-muted hover:text-ink text-xl leading-none px-1" aria-label="Close menu">
-          ×
+        <button onClick={onClose} className="md:hidden text-ink-muted hover:text-ink px-1" aria-label="Close menu">
+          <X size={18} strokeWidth={2} />
         </button>
       </div>
 

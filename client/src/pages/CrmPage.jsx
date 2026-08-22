@@ -1,10 +1,21 @@
 import { useEffect, useState } from 'react';
+import { Star } from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { Loading } from '../components/Loading';
 import { EmptyState } from '../components/EmptyState';
 import { formatDate } from '../lib/format';
+
+function RatingStars({ rating }) {
+  return (
+    <span className="inline-flex items-center gap-0.5 align-middle">
+      {Array.from({ length: 5 }, (_, i) => (
+        <Star key={i} size={13} strokeWidth={2} className={i < rating ? 'fill-warning text-warning' : 'text-rule'} />
+      ))}
+    </span>
+  );
+}
 
 export function CrmPage() {
   const [tab, setTab] = useState('campaigns');
@@ -175,7 +186,7 @@ function FeedbackTab() {
           {rows.map((f) => (
             <tr key={f._id} className="border-b border-rule last:border-0">
               <td className="px-3 py-2 text-ink-muted">{formatDate(f.createdAt)}</td>
-              <td className="px-3 py-2 num">{'★'.repeat(f.rating)}{'☆'.repeat(5 - f.rating)}</td>
+              <td className="px-3 py-2"><RatingStars rating={f.rating} /></td>
               <td className="px-3 py-2">{f.comment || '—'}</td>
               <td className="px-3 py-2"><span className={f.status === 'resolved' ? 'chip-accent' : 'chip-warning'}>{f.status}</span></td>
               <td className="px-3 py-2 text-right">{f.status !== 'resolved' && <button className="btn-ghost !text-accent" onClick={() => resolve(f._id)}>Resolve</button>}</td>

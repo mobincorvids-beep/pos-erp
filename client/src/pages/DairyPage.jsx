@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { X } from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
@@ -129,7 +130,7 @@ function ScheduleForm({ onClose, onSaved }) {
                 <div key={i} className="flex items-center gap-2">
                   <input type="number" step="0.1" required className="field-input num" placeholder="Min fat %" value={b.minFatPercent} onChange={(e) => updateBand(i, 'minFatPercent', e.target.value)} />
                   <input type="number" step="0.01" required className="field-input num" placeholder="Price / litre" value={b.pricePerLitre} onChange={(e) => updateBand(i, 'pricePerLitre', e.target.value)} />
-                  <button type="button" className="btn-ghost !px-2 text-xs" disabled={bands.length === 1} onClick={() => removeBand(i)}>✕</button>
+                  <button type="button" className="btn-ghost !px-2 text-xs" disabled={bands.length === 1} onClick={() => removeBand(i)}><X size={13} /></button>
                 </div>
               ))}
             </div>
