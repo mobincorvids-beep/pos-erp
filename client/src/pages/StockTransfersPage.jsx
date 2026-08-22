@@ -9,6 +9,7 @@ export function StockTransfersPage() {
   const toast = useToast();
   const [transfers, setTransfers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showNew, setShowNew] = useState(false);
 
   function load() {
     setLoading(true);
@@ -26,11 +27,14 @@ export function StockTransfersPage() {
 
   return (
     <div>
-      <p className="page-title mb-4">Stock transfers</p>
+      <div className="flex items-center justify-between mb-4">
+        <p className="page-title">Stock transfers</p>
+        <button className="btn-primary" onClick={() => setShowNew(true)}>New transfer</button>
+      </div>
 
       {loading && <Loading />}
       {!loading && transfers.length === 0 && (
-        <EmptyState title="No transfers yet" description="Move stock between warehouses via the API — a full create-transfer form isn't in this UI yet." />
+        <EmptyState title="No transfers yet" description="Move stock between two warehouses and track it in transit until confirmed received." />
       )}
       {!loading && transfers.length > 0 && (
         <div className="card overflow-hidden">
@@ -58,6 +62,108 @@ export function StockTransfersPage() {
           </table>
         </div>
       )}
+      {showNew && <NewTransferModal onClose={() => setShowNew(false)} onCreated={load} />}
+    </div>
+  );
+}
+
+function NewTransferModal({ onClose, onCreated }) {
+  const toast = useToast();
+  const [warehouses, setWarehouses] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [fromWarehouseId, setFromWarehouseId] = useState('');
+  const [toWarehouseId, setToWarehouseId] = useState('');
+  const [receiveImmediately, setReceiveImmediately] = useState(false);
+  const [lines, setLines] = useState([{ productId: '', quantity: '' }]);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    Promise.all([api.get('/org/warehouses'), api.get('/products')]).then(([w, p]) => {
+      setWarehouses(w);
+      setProducts(p);
+      if (w.length > 1) { setFromWarehouseId(w[0]._id); setToWarehouseId(w[1]._id); }
+      else if (w.length) setFromWarehouseId(w[0]._id);
+    }).catch((err) => toast(err.message, 'error'));
+  }, []);
+
+  function updateLine(i, patch) {
+    setLines(lines.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
+  }
+  function addLine() { setLines([...lines, { productId: '', quantity: '' }]); }
+  function removeLine(i) { setLines(lines.filter((_, idx) => idx !== i)); }
+
+  async function submit() {
+    if (!fromWarehouseId || !toWarehouseId) return toast('Choose both warehouses.', 'error');
+    if (fromWarehouseId === toWarehouseId) return toast('Source and destination must be different.', 'error');
+    const items = lines
+      .filter((l) => l.productId && Number(l.quantity) > 0)
+      .map((l) => {
+        const product = products.find((p) => p._id === l.productId);
+        const variant = product?.variants?.[0];
+        return { productId: l.productId, variantId: variant?._id, quantity: Number(l.quantity) };
+      })
+      .filter((l) => l.variantId);
+    if (items.length === 0) return toast('Add at least one product and quantity.', 'error');
+
+    setBusy(true);
+    try {
+      await api.post('/stock-transfers', { fromWarehouseId, toWarehouseId, items, receiveImmediately });
+      toast(receiveImmediately ? 'Transfer completed.' : 'Transfer initiated — mark it received once goods arrive.', 'success');
+      onCreated();
+      onClose();
+    } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="card p-5 w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
+        <p className="font-display text-lg mb-4">New stock transfer</p>
+
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div>
+            <label className="field-label">From warehouse</label>
+            <select className="field-input" value={fromWarehouseId} onChange={(e) => setFromWarehouseId(e.target.value)}>
+              <option value="">Select...</option>
+              {warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="field-label">To warehouse</label>
+            <select className="field-input" value={toWarehouseId} onChange={(e) => setToWarehouseId(e.target.value)}>
+              <option value="">Select...</option>
+              {warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <label className="field-label">Items</label>
+        <div className="space-y-2 mb-3">
+          {lines.map((line, i) => (
+            <div key={i} className="flex gap-2">
+              <select className="field-input flex-1" value={line.productId} onChange={(e) => updateLine(i, { productId: e.target.value })}>
+                <option value="">Select product...</option>
+                {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
+              </select>
+              <input
+                type="number" className="field-input w-24" placeholder="Qty"
+                value={line.quantity} onChange={(e) => updateLine(i, { quantity: e.target.value })}
+              />
+              {lines.length > 1 && <button className="btn-ghost !text-danger" onClick={() => removeLine(i)}>&times;</button>}
+            </div>
+          ))}
+        </div>
+        <button className="btn-ghost !text-accent mb-4" onClick={addLine}>+ Add another item</button>
+
+        <label className="flex items-center gap-2 text-sm mb-4">
+          <input type="checkbox" checked={receiveImmediately} onChange={(e) => setReceiveImmediately(e.target.checked)} />
+          Receive immediately (same-site transfer, skip the in-transit step)
+        </label>
+
+        <div className="flex gap-2 justify-end">
+          <button className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn-primary" disabled={busy} onClick={submit}>Create transfer</button>
+        </div>
+      </div>
     </div>
   );
 }

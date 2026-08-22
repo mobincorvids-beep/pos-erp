@@ -2,12 +2,14 @@ const StockCount = require('../models/StockCount');
 const stockCountService = require('../services/stockCountService');
 
 async function list(req, res) {
-  const rows = await StockCount.find({ companyId: req.companyId }).sort({ createdAt: -1 }).limit(100);
+  const rows = await StockCount.find({ companyId: req.companyId }).sort({ createdAt: -1 }).limit(100)
+    .populate('items.productId', 'name sku');
   res.json(rows);
 }
 
 async function get(req, res) {
-  const stockCount = await StockCount.findOne({ _id: req.params.id, companyId: req.companyId });
+  const stockCount = await StockCount.findOne({ _id: req.params.id, companyId: req.companyId })
+    .populate('items.productId', 'name sku');
   if (!stockCount) return res.status(404).json({ error: 'Stock count not found.' });
   res.json(stockCount);
 }
