@@ -154,18 +154,18 @@ async function seedCoreErp(ctx) {
   const po = await purchaseService.createPurchaseOrder({
     companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, supplierId: supplier._id,
     items: [{ productId: genericProduct._id, variantId: genericProduct.variants[0]._id, quantityOrdered: 10, unitCost: 100 }],
-    userId: null,
+    userId: ctx.admin._id,
   });
-  const approvedPo = await purchaseService.decidePurchaseOrder(po._id, { approve: true, userId: null });
+  const approvedPo = await purchaseService.decidePurchaseOrder(po._id, { approve: true, userId: ctx.admin._id });
   await purchaseService.receiveGoods({
     purchaseOrderId: approvedPo._id, warehouseId: warehouse._id,
     items: [{ purchaseOrderItemId: approvedPo.items[0]._id, productId: genericProduct._id, variantId: genericProduct.variants[0]._id, quantity: 10, unitCost: 100 }],
-    userId: null,
+    userId: ctx.admin._id,
   });
 
   const category = await ExpenseCategory.create({ companyId: company._id, name: 'Office Expenses', accountId: salariesAcc._id });
   const expense = await expenseService.submitExpense({
-    companyId: company._id, categoryId: category._id, paymentAccountId: cash._id, amount: 500, userId: null,
+    companyId: company._id, categoryId: category._id, paymentAccountId: cash._id, amount: 500, userId: ctx.admin._id,
   });
   await expenseService.approveExpense(expense._id, null);
 
@@ -248,10 +248,10 @@ const industrySeeders = {
     const stylist = await hrService.createEmployee({ companyId: ctx.company._id, branchId: ctx.branch._id, name: 'Demo Stylist', salaryStructure: { basic: 25000, allowances: 0, deductions: 0 } });
     const haircut = await serviceProduct(ctx.company._id, 'Haircut', `HC-${ctx.suffix}`);
     const svc = await salonService.createService({ companyId: ctx.company._id, productId: haircut._id, variantId: haircut.variants[0]._id, name: 'Haircut', price: 1500, commissionType: 'percentage', commissionRate: 20 });
-    await salonService.billServiceWithCommission({ companyId: ctx.company._id, branchId: ctx.branch._id, warehouseId: ctx.warehouse._id, customerId: ctx.customer._id, salonServiceId: svc._id, employeeId: stylist._id, paymentAccountId: ctx.cash._id, userId: null });
+    await salonService.billServiceWithCommission({ companyId: ctx.company._id, branchId: ctx.branch._id, warehouseId: ctx.warehouse._id, customerId: ctx.customer._id, salonServiceId: svc._id, employeeId: stylist._id, paymentAccountId: ctx.cash._id, userId: ctx.admin._id });
     const pkgProduct = await serviceProduct(ctx.company._id, '5-Haircut Package', `PKG-${ctx.suffix}`);
     const pkg = await salonService.createMembershipPackage({ companyId: ctx.company._id, productId: pkgProduct._id, variantId: pkgProduct.variants[0]._id, name: '5-Haircut Package', salonServiceId: svc._id, totalSessions: 5, price: 6000, validityDays: 180 });
-    await salonService.sellMembership({ companyId: ctx.company._id, branchId: ctx.branch._id, warehouseId: ctx.warehouse._id, customerId: ctx.customer._id, membershipPackageId: pkg._id, paymentAccountId: ctx.cash._id, userId: null });
+    await salonService.sellMembership({ companyId: ctx.company._id, branchId: ctx.branch._id, warehouseId: ctx.warehouse._id, customerId: ctx.customer._id, membershipPackageId: pkg._id, paymentAccountId: ctx.cash._id, userId: ctx.admin._id });
   },
 
   jewelry: async (ctx) => {
@@ -261,7 +261,7 @@ const industrySeeders = {
     const quote = await jewelryPricingService.quotePrice(ctx.company._id, ring.variants[0]._id);
     await inventoryService.recordMovement({ companyId: ctx.company._id, warehouseId: ctx.warehouse._id, productId: ring._id, variantId: ring.variants[0]._id, type: 'adjustment', quantity: 3, note: 'Demo seed opening stock' });
     await posSaleService.checkout({ userId: ctx.admin._id, companyId: ctx.company._id, branchId: ctx.branch._id, warehouseId: ctx.warehouse._id, customerId: ctx.customer._id, items: [{ productId: ring._id, variantId: ring.variants[0]._id, quantity: 1, unitPrice: quote.totalPrice }], payments: [{ paymentAccountId: ctx.cash._id, method: 'cash', amount: quote.totalPrice }] });
-    await buybackService.intake({ companyId: ctx.company._id, customerId: ctx.customer._id, karat: 22, weightGrams: 10, deductionPercent: 5, userId: null });
+    await buybackService.intake({ companyId: ctx.company._id, customerId: ctx.customer._id, karat: 22, weightGrams: 10, deductionPercent: 5, userId: ctx.admin._id });
   },
 
   hotel: async (ctx) => {
@@ -271,47 +271,47 @@ const industrySeeders = {
     const depositAcc = await Account.create({ companyId: ctx.company._id, name: 'Guest Deposits', type: 'liability' });
     const checkIn = new Date();
     const checkOut = new Date(checkIn.getTime() + 3 * 24 * 60 * 60 * 1000);
-    await hotelService.bookReservation({ companyId: ctx.company._id, branchId: ctx.branch._id, roomId: room1._id, customerId: ctx.customer._id, checkInDate: checkIn, checkOutDate: checkOut, advanceAmount: 10000, advanceReceivedInAccountId: ctx.cash._id, depositLiabilityAccountId: depositAcc._id, userId: null });
+    await hotelService.bookReservation({ companyId: ctx.company._id, branchId: ctx.branch._id, roomId: room1._id, customerId: ctx.customer._id, checkInDate: checkIn, checkOutDate: checkOut, advanceAmount: 10000, advanceReceivedInAccountId: ctx.cash._id, depositLiabilityAccountId: depositAcc._id, userId: ctx.admin._id });
   },
 
   travel: async (ctx) => {
     const liability = await Account.create({ companyId: ctx.company._id, name: 'Travel Deposits', type: 'liability' });
     const billing = await serviceProduct(ctx.company._id, 'Tour Package', `TOUR-${ctx.suffix}`);
-    const booking = await travelService.bookPackage({ companyId: ctx.company._id, branchId: ctx.branch._id, customerId: ctx.customer._id, packageName: 'Istanbul Tour', travelDate: new Date(Date.now() + 30 * 86400000), price: 100000, depositAmount: 20000, depositReceivedInAccountId: ctx.cash._id, depositLiabilityAccountId: liability._id, billingProductId: billing._id, billingVariantId: billing.variants[0]._id, userId: null });
-    await travelService.finalizeBooking(booking._id, { warehouseId: ctx.warehouse._id, finalPaymentAccountId: ctx.cash._id, userId: null });
-    await travelService.bookPackage({ companyId: ctx.company._id, branchId: ctx.branch._id, customerId: ctx.customer._id, packageName: 'Dubai Getaway', travelDate: new Date(Date.now() + 45 * 86400000), price: 50000, depositAmount: 10000, depositReceivedInAccountId: ctx.cash._id, depositLiabilityAccountId: liability._id, billingProductId: billing._id, billingVariantId: billing.variants[0]._id, userId: null });
+    const booking = await travelService.bookPackage({ companyId: ctx.company._id, branchId: ctx.branch._id, customerId: ctx.customer._id, packageName: 'Istanbul Tour', travelDate: new Date(Date.now() + 30 * 86400000), price: 100000, depositAmount: 20000, depositReceivedInAccountId: ctx.cash._id, depositLiabilityAccountId: liability._id, billingProductId: billing._id, billingVariantId: billing.variants[0]._id, userId: ctx.admin._id });
+    await travelService.finalizeBooking(booking._id, { warehouseId: ctx.warehouse._id, finalPaymentAccountId: ctx.cash._id, userId: ctx.admin._id });
+    await travelService.bookPackage({ companyId: ctx.company._id, branchId: ctx.branch._id, customerId: ctx.customer._id, packageName: 'Dubai Getaway', travelDate: new Date(Date.now() + 45 * 86400000), price: 50000, depositAmount: 10000, depositReceivedInAccountId: ctx.cash._id, depositLiabilityAccountId: liability._id, billingProductId: billing._id, billingVariantId: billing.variants[0]._id, userId: ctx.admin._id });
   },
 
   insurance: async (ctx) => {
     const billing = await serviceProduct(ctx.company._id, 'Motor Insurance Premium', `INS-${ctx.suffix}`);
     const claimsExpense = await Account.create({ companyId: ctx.company._id, name: 'Insurance Claims Expense', type: 'expense' });
-    const policy = await insuranceService.sellPolicy({ companyId: ctx.company._id, branchId: ctx.branch._id, customerId: ctx.customer._id, policyType: 'Motor', coverageAmount: 500000, premiumAmount: 20000, startDate: new Date(), endDate: new Date(Date.now() + 365 * 86400000), billingProductId: billing._id, billingVariantId: billing.variants[0]._id, warehouseId: ctx.warehouse._id, paymentAccountId: ctx.cash._id, userId: null });
+    const policy = await insuranceService.sellPolicy({ companyId: ctx.company._id, branchId: ctx.branch._id, customerId: ctx.customer._id, policyType: 'Motor', coverageAmount: 500000, premiumAmount: 20000, startDate: new Date(), endDate: new Date(Date.now() + 365 * 86400000), billingProductId: billing._id, billingVariantId: billing.variants[0]._id, warehouseId: ctx.warehouse._id, paymentAccountId: ctx.cash._id, userId: ctx.admin._id });
     const claim = await insuranceService.submitClaim(policy._id, { claimAmount: 100000, description: 'Windshield damage' });
-    await insuranceService.decideClaim(claim._id, { approve: true, decisionNote: 'Approved after inspection', payoutAccountId: ctx.cash._id, claimsExpenseAccountId: claimsExpense._id, userId: null });
+    await insuranceService.decideClaim(claim._id, { approve: true, decisionNote: 'Approved after inspection', payoutAccountId: ctx.cash._id, claimsExpenseAccountId: claimsExpense._id, userId: ctx.admin._id });
   },
 
   sports: async (ctx) => {
     const billing = await serviceProduct(ctx.company._id, 'Court Time', `COURT-${ctx.suffix}`);
     const facility = await sportsService.createFacility({ companyId: ctx.company._id, branchId: ctx.branch._id, name: 'Court 1', hourlyRate: 1000 });
     const start = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    await sportsService.bookSlot(facility._id, { customerId: ctx.customer._id, startTime: start, endTime: new Date(start.getTime() + 2 * 3600000), billingProductId: billing._id, billingVariantId: billing.variants[0]._id, warehouseId: ctx.warehouse._id, paymentAccountId: ctx.cash._id, userId: null });
+    await sportsService.bookSlot(facility._id, { customerId: ctx.customer._id, startTime: start, endTime: new Date(start.getTime() + 2 * 3600000), billingProductId: billing._id, billingVariantId: billing.variants[0]._id, warehouseId: ctx.warehouse._id, paymentAccountId: ctx.cash._id, userId: ctx.admin._id });
     await sportsService.createFacility({ companyId: ctx.company._id, branchId: ctx.branch._id, name: 'Court 2', hourlyRate: 1200 });
   },
 
   media_entertainment: async (ctx) => {
     const billing = await serviceProduct(ctx.company._id, 'Event Ticket', `TICKET-${ctx.suffix}`);
     const show = await eventTicketingService.createShow({ companyId: ctx.company._id, branchId: ctx.branch._id, eventName: 'Live Concert', showDateTime: new Date(Date.now() + 14 * 86400000), tiers: [{ name: 'VIP', capacity: 20, price: 20000 }, { name: 'Standard', capacity: 100, price: 5000 }] });
-    await eventTicketingService.bookTicket(show._id, show.tiers[0]._id, { customerId: ctx.customer._id, warehouseId: ctx.warehouse._id, ticketBillingProductId: billing._id, ticketBillingVariantId: billing.variants[0]._id, paymentAccountId: ctx.cash._id, userId: null });
-    await eventTicketingService.bookTicket(show._id, show.tiers[1]._id, { customerId: ctx.customer._id, warehouseId: ctx.warehouse._id, ticketBillingProductId: billing._id, ticketBillingVariantId: billing.variants[0]._id, paymentAccountId: ctx.cash._id, userId: null });
+    await eventTicketingService.bookTicket(show._id, show.tiers[0]._id, { customerId: ctx.customer._id, warehouseId: ctx.warehouse._id, ticketBillingProductId: billing._id, ticketBillingVariantId: billing.variants[0]._id, paymentAccountId: ctx.cash._id, userId: ctx.admin._id });
+    await eventTicketingService.bookTicket(show._id, show.tiers[1]._id, { customerId: ctx.customer._id, warehouseId: ctx.warehouse._id, ticketBillingProductId: billing._id, ticketBillingVariantId: billing.variants[0]._id, paymentAccountId: ctx.cash._id, userId: ctx.admin._id });
   },
 
   telecom: async (ctx) => {
     const billing = await serviceProduct(ctx.company._id, 'Plan Fee', `PLAN-${ctx.suffix}`);
     const overage = await serviceProduct(ctx.company._id, 'Usage Overage', `OVERAGE-${ctx.suffix}`);
     const plan = await telecomService.createPlan({ companyId: ctx.company._id, name: 'Postpaid 500', monthlyFee: 1000, includedMinutes: 500, includedDataMB: 1000, includedSms: 100, overageRatePerMinute: 2, overageRatePerMB: 0.5, overageRatePerSms: 1, billingProductId: billing._id, billingVariantId: billing.variants[0]._id, overageBillingProductId: overage._id, overageBillingVariantId: overage.variants[0]._id });
-    const sub = await telecomService.subscribeCustomer({ companyId: ctx.company._id, branchId: ctx.branch._id, customerId: ctx.customer._id, planId: plan._id, warehouseId: ctx.warehouse._id, paymentAccountId: ctx.cash._id, userId: null });
+    const sub = await telecomService.subscribeCustomer({ companyId: ctx.company._id, branchId: ctx.branch._id, customerId: ctx.customer._id, planId: plan._id, warehouseId: ctx.warehouse._id, paymentAccountId: ctx.cash._id, userId: ctx.admin._id });
     await telecomService.recordUsage(sub._id, { minutes: 550, dataMB: 1200, sms: 80 });
-    await telecomService.generateMonthlyBill(sub._id, { warehouseId: ctx.warehouse._id, paymentAccountId: ctx.cash._id, userId: null });
+    await telecomService.generateMonthlyBill(sub._id, { warehouseId: ctx.warehouse._id, paymentAccountId: ctx.cash._id, userId: ctx.admin._id });
   },
 
   professional_services: async (ctx) => {
@@ -319,7 +319,7 @@ const industrySeeders = {
     const consultant = await hrService.createEmployee({ companyId: ctx.company._id, branchId: ctx.branch._id, name: 'Senior Consultant', designation: 'Consultant', salaryStructure: { basic: 150000, allowances: 0, deductions: 0 } });
     await timeEntryService.logTime({ companyId: ctx.company._id, branchId: ctx.branch._id, employeeId: consultant._id, clientCustomerId: ctx.customer._id, description: 'Strategy session', hours: 3, hourlyRate: 5000 });
     await timeEntryService.logTime({ companyId: ctx.company._id, branchId: ctx.branch._id, employeeId: consultant._id, clientCustomerId: ctx.customer._id, description: 'Client call', hours: 2, hourlyRate: 5000 });
-    await timeEntryService.generateInvoice(ctx.company._id, ctx.customer._id, { warehouseId: ctx.warehouse._id, billingProductId: billing._id, billingVariantId: billing.variants[0]._id, paymentAccountId: ctx.cash._id, userId: null });
+    await timeEntryService.generateInvoice(ctx.company._id, ctx.customer._id, { warehouseId: ctx.warehouse._id, billingProductId: billing._id, billingVariantId: billing.variants[0]._id, paymentAccountId: ctx.cash._id, userId: ctx.admin._id });
   },
 
   agriculture: async (ctx) => {
@@ -327,8 +327,8 @@ const industrySeeders = {
     const harvest = await simpleProduct(ctx.company._id, 'Wheat Harvest', `WHEAT-${ctx.suffix}`, 0, 50);
     const bom = await manufacturingService.createBOM({ companyId: ctx.company._id, finishedProductId: harvest._id, finishedVariantId: harvest.variants[0]._id, name: 'Wheat BOM', components: [{ productId: seeds._id, variantId: seeds.variants[0]._id, quantityPerUnit: 2 }], laborCostPerUnit: 10, overheadCostPerUnit: 5 });
     const field = await agricultureService.createFarmField({ companyId: ctx.company._id, branchId: ctx.branch._id, name: 'North Field', areaAcres: 10 });
-    const cycle = await agricultureService.startCropCycle({ companyId: ctx.company._id, branchId: ctx.branch._id, fieldId: field._id, bomId: bom._id, warehouseId: ctx.warehouse._id, cropName: 'Wheat', plantedDate: new Date(), expectedYield: 100, userId: null });
-    await agricultureService.completeHarvest(cycle._id, { actualYield: 110, actualLaborCost: 1100, actualOverheadCost: 550, userId: null });
+    const cycle = await agricultureService.startCropCycle({ companyId: ctx.company._id, branchId: ctx.branch._id, fieldId: field._id, bomId: bom._id, warehouseId: ctx.warehouse._id, cropName: 'Wheat', plantedDate: new Date(), expectedYield: 100, userId: ctx.admin._id });
+    await agricultureService.completeHarvest(cycle._id, { actualYield: 110, actualLaborCost: 1100, actualOverheadCost: 550, userId: ctx.admin._id });
   },
 
   import_export: async (ctx) => {
@@ -340,7 +340,7 @@ const industrySeeders = {
     const supplierPayable = await Account.create({ companyId: ctx.company._id, name: 'Import Supplier Payable', type: 'liability' });
     const customs = await Account.create({ companyId: ctx.company._id, name: 'Customs Duty Payable', type: 'liability' });
     const shipment = await importShipmentService.createShipment({ companyId: ctx.company._id, branchId: ctx.branch._id, supplierId: ctx.supplier._id, items: [{ productId: a._id, variantId: a.variants[0]._id, quantity: 10, unitPrice: 100 }, { productId: b._id, variantId: b.variants[0]._id, quantity: 5, unitPrice: 200 }], additionalCosts: [{ type: 'customs_duty', amount: 100, accountId: customs._id }] });
-    await importShipmentService.receiveShipment(shipment._id, { warehouseId: ctx.warehouse._id, inventoryAssetAccountId: inventoryAsset._id, supplierPayableAccountId: supplierPayable._id, userId: null });
+    await importShipmentService.receiveShipment(shipment._id, { warehouseId: ctx.warehouse._id, inventoryAssetAccountId: inventoryAsset._id, supplierPayableAccountId: supplierPayable._id, userId: ctx.admin._id });
   },
 
   pharmaceutical: async (ctx) => {
@@ -349,7 +349,7 @@ const industrySeeders = {
     const batch = await ProductBatch.create({ companyId: ctx.company._id, productId: drug._id, variantId: drug.variants[0]._id, batchNumber: `LOT-${ctx.suffix}`, manufactureDate: new Date(), expiryDate: new Date(Date.now() + 365 * 86400000) });
     await inventoryService.recordMovement({ companyId: ctx.company._id, warehouseId: ctx.warehouse._id, productId: drug._id, variantId: drug.variants[0]._id, batchId: batch._id, type: 'adjustment', quantity: 100, note: 'Demo seed opening stock' });
     await posSaleService.checkout({ userId: ctx.admin._id, companyId: ctx.company._id, branchId: ctx.branch._id, warehouseId: ctx.warehouse._id, customerId: ctx.customer._id, items: [{ productId: drug._id, variantId: drug.variants[0]._id, batchId: batch._id, quantity: 5, unitPrice: 40 }], payments: [{ paymentAccountId: ctx.cash._id, method: 'cash', amount: 200 }] });
-    await batchRecallService.initiateRecall({ companyId: ctx.company._id, batchId: batch._id, productId: drug._id, reason: 'Contamination found in lab testing', userId: null });
+    await batchRecallService.initiateRecall({ companyId: ctx.company._id, batchId: batch._id, productId: drug._id, reason: 'Contamination found in lab testing', userId: ctx.admin._id });
   },
 
   construction: async (ctx) => {
@@ -372,10 +372,10 @@ const industrySeeders = {
 
   automobile: async (ctx) => {
     const car = await Product.create({ companyId: ctx.company._id, name: 'Sedan', sku: `SEDAN-${ctx.suffix}`, trackingMode: 'serial', costPrice: 2000000, sellingPrice: 2500000, variants: [{ sku: `SEDAN-${ctx.suffix}`, sellingPrice: 2500000 }] });
-    const po = await purchaseService.createPurchaseOrder({ companyId: ctx.company._id, branchId: ctx.branch._id, warehouseId: ctx.warehouse._id, supplierId: ctx.supplier._id, items: [{ productId: car._id, variantId: car.variants[0]._id, quantityOrdered: 1, unitCost: 2000000 }], userId: null });
-    const approved = await purchaseService.decidePurchaseOrder(po._id, { approve: true, userId: null });
-    await purchaseService.receiveGoods({ purchaseOrderId: approved._id, warehouseId: ctx.warehouse._id, items: [{ purchaseOrderItemId: approved.items[0]._id, productId: car._id, variantId: car.variants[0]._id, quantity: 1, unitCost: 2000000, serialNumbers: [`VIN-${ctx.suffix}`] }], userId: null });
-    await tradeInService.intake({ companyId: ctx.company._id, customerId: ctx.customer._id, vehicleDescription: 'Old Corolla', appraisedValue: 300000, userId: null });
+    const po = await purchaseService.createPurchaseOrder({ companyId: ctx.company._id, branchId: ctx.branch._id, warehouseId: ctx.warehouse._id, supplierId: ctx.supplier._id, items: [{ productId: car._id, variantId: car.variants[0]._id, quantityOrdered: 1, unitCost: 2000000 }], userId: ctx.admin._id });
+    const approved = await purchaseService.decidePurchaseOrder(po._id, { approve: true, userId: ctx.admin._id });
+    await purchaseService.receiveGoods({ purchaseOrderId: approved._id, warehouseId: ctx.warehouse._id, items: [{ purchaseOrderItemId: approved.items[0]._id, productId: car._id, variantId: car.variants[0]._id, quantity: 1, unitCost: 2000000, serialNumbers: [`VIN-${ctx.suffix}`] }], userId: ctx.admin._id });
+    await tradeInService.intake({ companyId: ctx.company._id, customerId: ctx.customer._id, vehicleDescription: 'Old Corolla', appraisedValue: 300000, userId: ctx.admin._id });
   },
 
   car_rental: async (ctx) => {
@@ -386,7 +386,7 @@ const industrySeeders = {
     const usage = await serviceProduct(ctx.company._id, 'Car Rental Usage', `CARUSE-${ctx.suffix}`);
     const start = new Date(Date.now() + 5 * 86400000);
     const end = new Date(Date.now() + 8 * 86400000);
-    await carRentalService.bookRental({ companyId: ctx.company._id, branchId: ctx.branch._id, vehicleClass: 'Compact', customerId: ctx.customer._id, startDate: start, endDate: end, rentalBillingProductId: usage._id, rentalBillingVariantId: usage.variants[0]._id, userId: null });
+    await carRentalService.bookRental({ companyId: ctx.company._id, branchId: ctx.branch._id, vehicleClass: 'Compact', customerId: ctx.customer._id, startDate: start, endDate: end, rentalBillingProductId: usage._id, rentalBillingVariantId: usage.variants[0]._id, userId: ctx.admin._id });
     void vehicleA; void vehicleB;
   },
 
@@ -396,7 +396,7 @@ const industrySeeders = {
     await shipmentService.advanceStatus(shipment._id, { status: 'in_transit', location: 'En route' });
     await shipmentService.advanceStatus(shipment._id, { status: 'out_for_delivery', location: 'Lahore' });
     const shippingFee = await serviceProduct(ctx.company._id, 'Shipping Fee', `SHIP-${ctx.suffix}`);
-    await shipmentService.markDelivered(shipment._id, { proofOfDeliveryNote: 'Signed by receptionist', shippingFeeProductId: shippingFee._id, shippingFeeVariantId: shippingFee.variants[0]._id, shippingFee: 500, warehouseId: ctx.warehouse._id, paymentAccountId: ctx.cash._id, userId: null });
+    await shipmentService.markDelivered(shipment._id, { proofOfDeliveryNote: 'Signed by receptionist', shippingFeeProductId: shippingFee._id, shippingFeeVariantId: shippingFee.variants[0]._id, shippingFee: 500, warehouseId: ctx.warehouse._id, paymentAccountId: ctx.cash._id, userId: ctx.admin._id });
     await shipmentService.createShipment({ companyId: ctx.company._id, branchId: ctx.branch._id, customerId: ctx.customer._id, trackingNumber: `TRK2-${ctx.suffix}`, origin: 'Lahore', destination: 'Islamabad' });
   },
 
@@ -404,16 +404,16 @@ const industrySeeders = {
     const schedule = await dairyCollectionService.createSchedule({ companyId: ctx.company._id, name: 'Standard Milk Grades', bands: [{ minFatPercent: 3.0, pricePerLitre: 100 }, { minFatPercent: 4.0, pricePerLitre: 120 }, { minFatPercent: 5.0, pricePerLitre: 140 }] });
     const expenseAcc = await Account.create({ companyId: ctx.company._id, name: 'Milk Purchase Expense', type: 'expense' });
     const payableAcc = await Account.create({ companyId: ctx.company._id, name: 'Accounts Payable - Farmers', type: 'liability' });
-    await dairyCollectionService.recordCollection({ companyId: ctx.company._id, branchId: ctx.branch._id, supplierId: ctx.supplier._id, litres: 50, fatPercent: 4.0, scheduleId: schedule._id, expenseAccountId: expenseAcc._id, payableAccountId: payableAcc._id, userId: null });
-    await dairyCollectionService.recordCollection({ companyId: ctx.company._id, branchId: ctx.branch._id, supplierId: ctx.supplier._id, litres: 30, fatPercent: 5.2, scheduleId: schedule._id, expenseAccountId: expenseAcc._id, payableAccountId: payableAcc._id, userId: null });
+    await dairyCollectionService.recordCollection({ companyId: ctx.company._id, branchId: ctx.branch._id, supplierId: ctx.supplier._id, litres: 50, fatPercent: 4.0, scheduleId: schedule._id, expenseAccountId: expenseAcc._id, payableAccountId: payableAcc._id, userId: ctx.admin._id });
+    await dairyCollectionService.recordCollection({ companyId: ctx.company._id, branchId: ctx.branch._id, supplierId: ctx.supplier._id, litres: 30, fatPercent: 5.2, scheduleId: schedule._id, expenseAccountId: expenseAcc._id, payableAccountId: payableAcc._id, userId: ctx.admin._id });
   },
 
   petrol_pump: async (ctx) => {
     const fuel = await serviceProduct(ctx.company._id, 'Petrol', `FUEL-${ctx.suffix}`);
     const dispenser = await fuelShiftService.createDispenser({ companyId: ctx.company._id, branchId: ctx.branch._id, name: 'Pump 1', productId: fuel._id, variantId: fuel.variants[0]._id, currentMeterReading: 1000 });
-    await fuelShiftService.openShift(dispenser._id, { pricePerLitre: 250, userId: null });
+    await fuelShiftService.openShift(dispenser._id, { pricePerLitre: 250, userId: ctx.admin._id });
     const [openShift] = await fuelShiftService.listShifts(ctx.company._id, { status: 'open' });
-    await fuelShiftService.closeShift(openShift._id, { closingReading: 1150, warehouseId: ctx.warehouse._id, customerId: ctx.customer._id, paymentAccountId: ctx.cash._id, billingProductId: fuel._id, billingVariantId: fuel.variants[0]._id, userId: null });
+    await fuelShiftService.closeShift(openShift._id, { closingReading: 1150, warehouseId: ctx.warehouse._id, customerId: ctx.customer._id, paymentAccountId: ctx.cash._id, billingProductId: fuel._id, billingVariantId: fuel.variants[0]._id, userId: ctx.admin._id });
   },
 
   warehouse_3pl: async (ctx) => {
@@ -424,7 +424,7 @@ const industrySeeders = {
     const contract = await storageContractService.createContract({ companyId: ctx.company._id, branchId: ctx.branch._id, clientCustomerId: ctx.customer._id, productId: storable._id, variantId: storable.variants[0]._id, ratePerUnitPerDay: 2, billingProductId: billing._id, billingVariantId: billing.variants[0]._id });
     await storageContractService.receiveGoods(contract._id, { quantity: 100, at: periodStart });
     await storageContractService.releaseGoods(contract._id, { quantity: 40, at: new Date(periodStart.getTime() + 5 * 86400000) });
-    await storageContractService.billPeriod(contract._id, { periodStart, periodEnd, warehouseId: ctx.warehouse._id, paymentAccountId: ctx.cash._id, userId: null });
+    await storageContractService.billPeriod(contract._id, { periodStart, periodEnd, warehouseId: ctx.warehouse._id, paymentAccountId: ctx.cash._id, userId: ctx.admin._id });
   },
 
   hajj_umrah: async (ctx) => {
@@ -438,7 +438,7 @@ const industrySeeders = {
     await pilgrimageService.enroll(group._id, { customerId: pilgrimA._id, depositLiabilityAccountId: liability._id });
     await pilgrimageService.enroll(group._id, { customerId: pilgrimB._id, depositLiabilityAccountId: liability._id });
     const paymentsA = await pilgrimageService.listPayments(ctx.company._id, { groupId: group._id, customerId: pilgrimA._id });
-    await pilgrimageService.makePayment(paymentsA[0]._id, { amount: 50000, paymentAccountId: ctx.cash._id, userId: null });
+    await pilgrimageService.makePayment(paymentsA[0]._id, { amount: 50000, paymentAccountId: ctx.cash._id, userId: ctx.admin._id });
     void billing;
   },
 
@@ -464,8 +464,8 @@ const industrySeeders = {
     const programExpense = await Account.create({ companyId: ctx.company._id, name: 'Program Expense', type: 'expense' });
     const donor = await Customer.create({ companyId: ctx.company._id, name: 'Anonymous Donor' });
     const fund = await fundService.createFund({ companyId: ctx.company._id, name: 'Education Fund', type: 'restricted', purposeDescription: 'School supplies only' });
-    await fundService.recordDonation(fund._id, { donorCustomerId: donor._id, amount: 50000, branchId: ctx.branch._id, receivingAccountId: ctx.cash._id, donationRevenueAccountId: donationRevenue._id, userId: null });
-    await fundService.recordDisbursement(fund._id, { amount: 30000, description: 'School supplies purchase', branchId: ctx.branch._id, expenseAccountId: programExpense._id, payingAccountId: ctx.cash._id, userId: null });
+    await fundService.recordDonation(fund._id, { donorCustomerId: donor._id, amount: 50000, branchId: ctx.branch._id, receivingAccountId: ctx.cash._id, donationRevenueAccountId: donationRevenue._id, userId: ctx.admin._id });
+    await fundService.recordDisbursement(fund._id, { amount: 30000, description: 'School supplies purchase', branchId: ctx.branch._id, expenseAccountId: programExpense._id, payingAccountId: ctx.cash._id, userId: ctx.admin._id });
   },
 
   real_estate: async (ctx) => {
@@ -473,7 +473,7 @@ const industrySeeders = {
     const depositLiability = await Account.create({ companyId: ctx.company._id, name: 'Tenant Security Deposits', type: 'liability' });
     const apartment = await leaseService.createProperty({ companyId: ctx.company._id, branchId: ctx.branch._id, unitNumber: 'Apartment 3B', propertyType: 'apartment' });
     const leaseStart = new Date();
-    const lease = await leaseService.startLease({ companyId: ctx.company._id, branchId: ctx.branch._id, propertyId: apartment._id, tenantCustomerId: ctx.customer._id, startDate: leaseStart, endDate: new Date(leaseStart.getTime() + 365 * 86400000), monthlyRent: 20000, lateFeePerDay: 100, securityDeposit: 40000, depositReceivedAccountId: ctx.cash._id, securityDepositLiabilityAccountId: depositLiability._id, userId: null });
+    const lease = await leaseService.startLease({ companyId: ctx.company._id, branchId: ctx.branch._id, propertyId: apartment._id, tenantCustomerId: ctx.customer._id, startDate: leaseStart, endDate: new Date(leaseStart.getTime() + 365 * 86400000), monthlyRent: 20000, lateFeePerDay: 100, securityDeposit: 40000, depositReceivedAccountId: ctx.cash._id, securityDepositLiabilityAccountId: depositLiability._id, userId: ctx.admin._id });
     await leaseService.createProperty({ companyId: ctx.company._id, branchId: ctx.branch._id, unitNumber: 'Apartment 4A', propertyType: 'apartment' });
     void lease; void billing;
   },
@@ -493,7 +493,7 @@ const industrySeeders = {
   distribution: async (ctx) => {
     const wholesale = await stockedProduct(ctx, 'Bulk Widget', `BULK-${ctx.suffix}`, 20, 50, 1000);
     await distributionPricingService.setSchedule({ companyId: ctx.company._id, productId: wholesale._id, variantId: wholesale.variants[0]._id, minimumOrderQuantity: 10, tiers: [{ minQuantity: 10, unitPrice: 45 }, { minQuantity: 50, unitPrice: 40 }, { minQuantity: 100, unitPrice: 35 }] });
-    await distributionPricingService.quoteAndCreateSalesOrder({ companyId: ctx.company._id, branchId: ctx.branch._id, warehouseId: ctx.warehouse._id, customerId: ctx.customer._id, userId: null, items: [{ productId: wholesale._id, variantId: wholesale.variants[0]._id, quantity: 100 }] });
+    await distributionPricingService.quoteAndCreateSalesOrder({ companyId: ctx.company._id, branchId: ctx.branch._id, warehouseId: ctx.warehouse._id, customerId: ctx.customer._id, userId: ctx.admin._id, items: [{ productId: wholesale._id, variantId: wholesale.variants[0]._id, quantity: 100 }] });
   },
 
   banquet: async (ctx) => {
@@ -502,14 +502,14 @@ const industrySeeders = {
     const venue = await bookingService.createVenue({ companyId: ctx.company._id, branchId: ctx.branch._id, name: 'Grand Hall', capacity: 300, baseRentalFee: 15000, rentalBillingProductId: venueRental._id, rentalBillingVariantId: venueRental.variants[0]._id });
     const pkg = await bookingService.createPackage({ companyId: ctx.company._id, name: 'Silver Package', pricePerPerson: 2000, minGuests: 50, billingProductId: catering._id, billingVariantId: catering.variants[0]._id });
     const depositLiability = await Account.create({ companyId: ctx.company._id, name: 'Event Deposits', type: 'liability' });
-    await bookingService.bookEvent({ companyId: ctx.company._id, branchId: ctx.branch._id, venueId: venue._id, packageId: pkg._id, customerId: ctx.customer._id, eventDate: new Date(Date.now() + 30 * 86400000), guestCount: 100, depositAmount: 50000, depositReceivedInAccountId: ctx.cash._id, depositLiabilityAccountId: depositLiability._id, userId: null });
+    await bookingService.bookEvent({ companyId: ctx.company._id, branchId: ctx.branch._id, venueId: venue._id, packageId: pkg._id, customerId: ctx.customer._id, eventDate: new Date(Date.now() + 30 * 86400000), guestCount: 100, depositAmount: 50000, depositReceivedInAccountId: ctx.cash._id, depositLiabilityAccountId: depositLiability._id, userId: ctx.admin._id });
   },
 
   service_station: async (ctx) => {
     const vehicle = await vehicleService.registerVehicle({ companyId: ctx.company._id, customerId: ctx.customer._id, make: 'Toyota', model: 'Corolla', year: 2020, registrationNumber: `DEMO-${ctx.suffix}`, currentMileage: 10000, serviceIntervalMileage: 5000, serviceIntervalMonths: 6 });
     await vehicleService.recordServiceCompleted(vehicle._id, { mileageAtService: 10000, serviceDate: new Date() });
     await vehicleService.updateMileage(vehicle._id, 15000);
-    await vehicleService.openJobCard({ companyId: ctx.company._id, branchId: ctx.branch._id, warehouseId: ctx.warehouse._id, vehicleId: vehicle._id, itemDescription: 'Oil change', userId: null });
+    await vehicleService.openJobCard({ companyId: ctx.company._id, branchId: ctx.branch._id, warehouseId: ctx.warehouse._id, vehicleId: vehicle._id, itemDescription: 'Oil change', userId: ctx.admin._id });
   },
 
   hospital: async (ctx) => {
@@ -538,12 +538,12 @@ const industrySeeders = {
 
   electronics: async (ctx) => {
     const phone = await Product.create({ companyId: ctx.company._id, name: 'Smartphone X', sku: `PH-${ctx.suffix}`, trackingMode: 'serial', costPrice: 500, sellingPrice: 900, variants: [{ sku: `PH-${ctx.suffix}`, sellingPrice: 900 }] });
-    const po = await purchaseService.createPurchaseOrder({ companyId: ctx.company._id, branchId: ctx.branch._id, warehouseId: ctx.warehouse._id, supplierId: ctx.supplier._id, items: [{ productId: phone._id, variantId: phone.variants[0]._id, quantityOrdered: 1, unitCost: 500 }], userId: null });
-    const approved = await purchaseService.decidePurchaseOrder(po._id, { approve: true, userId: null });
-    await purchaseService.receiveGoods({ purchaseOrderId: approved._id, warehouseId: ctx.warehouse._id, items: [{ purchaseOrderItemId: approved.items[0]._id, productId: phone._id, variantId: phone.variants[0]._id, quantity: 1, unitCost: 500, serialNumbers: [`WARR-${ctx.suffix}`] }], userId: null });
+    const po = await purchaseService.createPurchaseOrder({ companyId: ctx.company._id, branchId: ctx.branch._id, warehouseId: ctx.warehouse._id, supplierId: ctx.supplier._id, items: [{ productId: phone._id, variantId: phone.variants[0]._id, quantityOrdered: 1, unitCost: 500 }], userId: ctx.admin._id });
+    const approved = await purchaseService.decidePurchaseOrder(po._id, { approve: true, userId: ctx.admin._id });
+    await purchaseService.receiveGoods({ purchaseOrderId: approved._id, warehouseId: ctx.warehouse._id, items: [{ purchaseOrderItemId: approved.items[0]._id, productId: phone._id, variantId: phone.variants[0]._id, quantity: 1, unitCost: 500, serialNumbers: [`WARR-${ctx.suffix}`] }], userId: ctx.admin._id });
     await posSaleService.checkout({ userId: ctx.admin._id, companyId: ctx.company._id, branchId: ctx.branch._id, warehouseId: ctx.warehouse._id, customerId: ctx.customer._id, items: [{ productId: phone._id, variantId: phone.variants[0]._id, quantity: 1, unitPrice: 900, serialNumbers: [`WARR-${ctx.suffix}`] }], payments: [{ paymentAccountId: ctx.cash._id, method: 'cash', amount: 900 }] });
     const warranty = await warrantyService.registerWarranty({ companyId: ctx.company._id, serialNumber: `WARR-${ctx.suffix}`, warrantyMonths: 12, startDate: new Date(), customerId: ctx.customer._id });
-    await warrantyService.submitClaim(warranty._id, { issueDescription: 'Battery drains fast', userId: null });
+    await warrantyService.submitClaim(warranty._id, { issueDescription: 'Battery drains fast', userId: ctx.admin._id });
   },
 
   furniture: async (ctx) => {
@@ -551,10 +551,10 @@ const industrySeeders = {
     const table = await simpleProduct(ctx.company._id, 'Custom Dining Table', `TBL-${ctx.suffix}`, 0, 0);
     const bom = await manufacturingService.createBOM({ companyId: ctx.company._id, finishedProductId: table._id, finishedVariantId: table.variants[0]._id, name: 'Dining Table BOM', components: [{ productId: rawMaterial._id, variantId: rawMaterial.variants[0]._id, quantityPerUnit: 5 }], laborCostPerUnit: 1000, overheadCostPerUnit: 200 });
     const depositLiability = await Account.create({ companyId: ctx.company._id, name: 'Custom Order Deposits', type: 'liability' });
-    const order = await furnitureService.placeOrder({ companyId: ctx.company._id, branchId: ctx.branch._id, customerId: ctx.customer._id, description: 'Custom oak dining table', promisedDeliveryDate: new Date(Date.now() + 7 * 86400000), price: 15000, depositAmount: 5000, depositReceivedInAccountId: ctx.cash._id, depositLiabilityAccountId: depositLiability._id, userId: null });
-    const withWorkOrder = await furnitureService.startProduction(order._id, { bomId: bom._id, warehouseId: ctx.warehouse._id, userId: null });
+    const order = await furnitureService.placeOrder({ companyId: ctx.company._id, branchId: ctx.branch._id, customerId: ctx.customer._id, description: 'Custom oak dining table', promisedDeliveryDate: new Date(Date.now() + 7 * 86400000), price: 15000, depositAmount: 5000, depositReceivedInAccountId: ctx.cash._id, depositLiabilityAccountId: depositLiability._id, userId: ctx.admin._id });
+    const withWorkOrder = await furnitureService.startProduction(order._id, { bomId: bom._id, warehouseId: ctx.warehouse._id, userId: ctx.admin._id });
     await manufacturingService.startProduction(withWorkOrder.workOrderId, null);
-    await manufacturingService.completeProduction(withWorkOrder.workOrderId, { quantityProduced: 1, actualLaborCost: 1000, actualOverheadCost: 200, userId: null });
+    await manufacturingService.completeProduction(withWorkOrder.workOrderId, { quantityProduced: 1, actualLaborCost: 1000, actualOverheadCost: 200, userId: ctx.admin._id });
   },
 
   fashion: async (ctx) => {
@@ -567,18 +567,18 @@ const industrySeeders = {
 
   bakery: async (ctx) => {
     const croissant = await simpleProduct(ctx.company._id, 'Croissant', `CRO-${ctx.suffix}`, 20, 60);
-    const batch = await dailyBatchService.produceBatch({ companyId: ctx.company._id, branchId: ctx.branch._id, warehouseId: ctx.warehouse._id, productId: croissant._id, variantId: croissant.variants[0]._id, producedQuantity: 50, unitCost: 20, userId: null });
+    const batch = await dailyBatchService.produceBatch({ companyId: ctx.company._id, branchId: ctx.branch._id, warehouseId: ctx.warehouse._id, productId: croissant._id, variantId: croissant.variants[0]._id, producedQuantity: 50, unitCost: 20, userId: ctx.admin._id });
     await posSaleService.checkout({ userId: ctx.admin._id, companyId: ctx.company._id, branchId: ctx.branch._id, warehouseId: ctx.warehouse._id, customerId: ctx.customer._id, items: [{ productId: croissant._id, variantId: croissant.variants[0]._id, quantity: 30, unitPrice: 60 }], payments: [{ paymentAccountId: ctx.cash._id, method: 'cash', amount: 1800 }] });
-    await dailyBatchService.closeBatch(batch._id, { userId: null });
+    await dailyBatchService.closeBatch(batch._id, { userId: ctx.admin._id });
   },
 
   grocery: async (ctx) => {
     const milk = await simpleProduct(ctx.company._id, 'Milk Carton', `MILK-${ctx.suffix}`, 100, 150, 'batch');
-    const po = await purchaseService.createPurchaseOrder({ companyId: ctx.company._id, branchId: ctx.branch._id, warehouseId: ctx.warehouse._id, supplierId: ctx.supplier._id, items: [{ productId: milk._id, variantId: milk.variants[0]._id, quantityOrdered: 45, unitCost: 100 }], userId: null });
-    const approved = await purchaseService.decidePurchaseOrder(po._id, { approve: true, userId: null });
-    await purchaseService.receiveGoods({ purchaseOrderId: approved._id, warehouseId: ctx.warehouse._id, items: [{ purchaseOrderItemId: approved.items[0]._id, productId: milk._id, variantId: milk.variants[0]._id, quantity: 15, unitCost: 100, batchNumber: 'MILK-B', manufactureDate: new Date(), expiryDate: new Date(Date.now() + 20 * 86400000) }], userId: null });
-    await purchaseService.receiveGoods({ purchaseOrderId: approved._id, warehouseId: ctx.warehouse._id, items: [{ purchaseOrderItemId: approved.items[0]._id, productId: milk._id, variantId: milk.variants[0]._id, quantity: 10, unitCost: 100, batchNumber: 'MILK-A', manufactureDate: new Date(), expiryDate: new Date(Date.now() + 5 * 86400000) }], userId: null });
-    await purchaseService.receiveGoods({ purchaseOrderId: approved._id, warehouseId: ctx.warehouse._id, items: [{ purchaseOrderItemId: approved.items[0]._id, productId: milk._id, variantId: milk.variants[0]._id, quantity: 20, unitCost: 100, batchNumber: 'MILK-C', manufactureDate: new Date(), expiryDate: new Date(Date.now() + 40 * 86400000) }], userId: null });
+    const po = await purchaseService.createPurchaseOrder({ companyId: ctx.company._id, branchId: ctx.branch._id, warehouseId: ctx.warehouse._id, supplierId: ctx.supplier._id, items: [{ productId: milk._id, variantId: milk.variants[0]._id, quantityOrdered: 45, unitCost: 100 }], userId: ctx.admin._id });
+    const approved = await purchaseService.decidePurchaseOrder(po._id, { approve: true, userId: ctx.admin._id });
+    await purchaseService.receiveGoods({ purchaseOrderId: approved._id, warehouseId: ctx.warehouse._id, items: [{ purchaseOrderItemId: approved.items[0]._id, productId: milk._id, variantId: milk.variants[0]._id, quantity: 15, unitCost: 100, batchNumber: 'MILK-B', manufactureDate: new Date(), expiryDate: new Date(Date.now() + 20 * 86400000) }], userId: ctx.admin._id });
+    await purchaseService.receiveGoods({ purchaseOrderId: approved._id, warehouseId: ctx.warehouse._id, items: [{ purchaseOrderItemId: approved.items[0]._id, productId: milk._id, variantId: milk.variants[0]._id, quantity: 10, unitCost: 100, batchNumber: 'MILK-A', manufactureDate: new Date(), expiryDate: new Date(Date.now() + 5 * 86400000) }], userId: ctx.admin._id });
+    await purchaseService.receiveGoods({ purchaseOrderId: approved._id, warehouseId: ctx.warehouse._id, items: [{ purchaseOrderItemId: approved.items[0]._id, productId: milk._id, variantId: milk.variants[0]._id, quantity: 20, unitCost: 100, batchNumber: 'MILK-C', manufactureDate: new Date(), expiryDate: new Date(Date.now() + 40 * 86400000) }], userId: ctx.admin._id });
     await fefoService.suggestPickOrder(ctx.warehouse._id, milk.variants[0]._id, 20);
   },
 
@@ -595,9 +595,9 @@ const industrySeeders = {
 
   textile: async (ctx) => {
     const fabric = await simpleProduct(ctx.company._id, 'Cotton Fabric', `FAB-${ctx.suffix}`, 200, 350);
-    const roll = await fabricRollService.receiveRoll({ companyId: ctx.company._id, productId: fabric._id, variantId: fabric.variants[0]._id, warehouseId: ctx.warehouse._id, rollNumber: `ROLL-${ctx.suffix}`, unitOfMeasure: 'meters', length: 20, unitCost: 200, remnantThreshold: 5, userId: null });
-    await fabricRollService.cutFromRoll(roll._id, { lengthToCut: 10, userId: null });
-    const roll2 = await fabricRollService.receiveRoll({ companyId: ctx.company._id, productId: fabric._id, variantId: fabric.variants[0]._id, warehouseId: ctx.warehouse._id, rollNumber: `ROLL2-${ctx.suffix}`, unitOfMeasure: 'meters', length: 30, unitCost: 200, remnantThreshold: 5, userId: null });
+    const roll = await fabricRollService.receiveRoll({ companyId: ctx.company._id, productId: fabric._id, variantId: fabric.variants[0]._id, warehouseId: ctx.warehouse._id, rollNumber: `ROLL-${ctx.suffix}`, unitOfMeasure: 'meters', length: 20, unitCost: 200, remnantThreshold: 5, userId: ctx.admin._id });
+    await fabricRollService.cutFromRoll(roll._id, { lengthToCut: 10, userId: ctx.admin._id });
+    const roll2 = await fabricRollService.receiveRoll({ companyId: ctx.company._id, productId: fabric._id, variantId: fabric.variants[0]._id, warehouseId: ctx.warehouse._id, rollNumber: `ROLL2-${ctx.suffix}`, unitOfMeasure: 'meters', length: 30, unitCost: 200, remnantThreshold: 5, userId: ctx.admin._id });
     void roll2;
   },
 
@@ -605,29 +605,38 @@ const industrySeeders = {
     const drill = await stockedProduct(ctx, 'Drill Machine', `DRILL-${ctx.suffix}`, 8000, 15000, 5);
     const rentalUsage = await serviceProduct(ctx.company._id, 'Tool Rental Usage', `RENTUSE-${ctx.suffix}`);
     const depositLiability = await Account.create({ companyId: ctx.company._id, name: 'Rental Deposits', type: 'liability' });
-    await toolRentalService.checkOutRental({ companyId: ctx.company._id, branchId: ctx.branch._id, warehouseId: ctx.warehouse._id, productId: drill._id, variantId: drill.variants[0]._id, customerId: ctx.customer._id, dailyRate: 500, depositAmount: 5000, expectedReturnDate: new Date(Date.now() + 3 * 86400000), depositReceivedInAccountId: ctx.cash._id, depositLiabilityAccountId: depositLiability._id, rentalBillingProductId: rentalUsage._id, rentalBillingVariantId: rentalUsage.variants[0]._id, userId: null });
+    await toolRentalService.checkOutRental({ companyId: ctx.company._id, branchId: ctx.branch._id, warehouseId: ctx.warehouse._id, productId: drill._id, variantId: drill.variants[0]._id, customerId: ctx.customer._id, dailyRate: 500, depositAmount: 5000, expectedReturnDate: new Date(Date.now() + 3 * 86400000), depositReceivedInAccountId: ctx.cash._id, depositLiabilityAccountId: depositLiability._id, rentalBillingProductId: rentalUsage._id, rentalBillingVariantId: rentalUsage.variants[0]._id, userId: ctx.admin._id });
   },
 
   retail: async (ctx) => {
     const tv = await stockedProduct(ctx, 'Smart TV', `TV-${ctx.suffix}`, 2000, 3000, 10);
     const liability = await Account.create({ companyId: ctx.company._id, name: 'Layaway Deposits', type: 'liability' });
-    const plan = await layawayService.createPlan({ companyId: ctx.company._id, branchId: ctx.branch._id, warehouseId: ctx.warehouse._id, productId: tv._id, variantId: tv.variants[0]._id, customerId: ctx.customer._id, totalPrice: 3000, depositLiabilityAccountId: liability._id, userId: null });
-    await layawayService.makePayment(plan._id, { amount: 1000, paymentAccountId: ctx.cash._id, userId: null });
-    await layawayService.makePayment(plan._id, { amount: 1000, paymentAccountId: ctx.cash._id, userId: null });
+    const plan = await layawayService.createPlan({ companyId: ctx.company._id, branchId: ctx.branch._id, warehouseId: ctx.warehouse._id, productId: tv._id, variantId: tv.variants[0]._id, customerId: ctx.customer._id, totalPrice: 3000, depositLiabilityAccountId: liability._id, userId: ctx.admin._id });
+    await layawayService.makePayment(plan._id, { amount: 1000, paymentAccountId: ctx.cash._id, userId: ctx.admin._id });
+    await layawayService.makePayment(plan._id, { amount: 1000, paymentAccountId: ctx.cash._id, userId: ctx.admin._id });
   },
 
   cafe: async (ctx) => {
     const coffee = await stockedProduct(ctx, 'Regular Coffee', `COFFEE-${ctx.suffix}`, 50, 200, 30);
     const subFee = await serviceProduct(ctx.company._id, 'Coffee Club Membership', `CLUB-${ctx.suffix}`);
-    const sub = await cafeSubscriptionService.sellSubscription({ companyId: ctx.company._id, branchId: ctx.branch._id, warehouseId: ctx.warehouse._id, customerId: ctx.customer._id, planName: 'Coffee Club', startDate: new Date(Date.now() - 86400000), endDate: new Date(Date.now() + 30 * 86400000), dailyLimit: 1, subscriptionBillingProductId: subFee._id, subscriptionBillingVariantId: subFee.variants[0]._id, subscriptionPrice: 2000, redeemProductId: coffee._id, redeemVariantId: coffee.variants[0]._id, paymentAccountId: ctx.cash._id, userId: null });
-    await cafeSubscriptionService.redeemDaily(sub._id, { warehouseId: ctx.warehouse._id, userId: null });
+    const sub = await cafeSubscriptionService.sellSubscription({ companyId: ctx.company._id, branchId: ctx.branch._id, warehouseId: ctx.warehouse._id, customerId: ctx.customer._id, planName: 'Coffee Club', startDate: new Date(Date.now() - 86400000), endDate: new Date(Date.now() + 30 * 86400000), dailyLimit: 1, subscriptionBillingProductId: subFee._id, subscriptionBillingVariantId: subFee.variants[0]._id, subscriptionPrice: 2000, redeemProductId: coffee._id, redeemVariantId: coffee.variants[0]._id, paymentAccountId: ctx.cash._id, userId: ctx.admin._id });
+    await cafeSubscriptionService.redeemDaily(sub._id, { warehouseId: ctx.warehouse._id, userId: ctx.admin._id });
   },
 
   toys_gifts: async (ctx) => {
     const toy = await stockedProduct(ctx, 'Building Blocks Set', `TOY-${ctx.suffix}`, 500, 1000, 50);
     const owner = await Customer.create({ companyId: ctx.company._id, name: 'Registry Owner' });
     const registry = await giftRegistryService.createRegistry({ companyId: ctx.company._id, branchId: ctx.branch._id, ownerCustomerId: owner._id, occasion: 'Baby Shower', items: [{ productId: toy._id, variantId: toy.variants[0]._id, desiredQuantity: 5 }] });
-    await giftRegistryService.purchaseFromRegistry(registry._id, registry.items[0]._id, { quantity: 2, purchasingCustomerId: ctx.customer._id, branchId: ctx.branch._id, warehouseId: ctx.warehouse._id, paymentAccountId: ctx.cash._id, userId: null });
+    // purchaseFromRegistry's atomic $expr arrayFilters update has shown a driver-version-dependent
+    // cast error in some environments ("Parameter obj to Document() must be an object") even though
+    // smokeTest.js exercises the identical call successfully — rather than risk the whole company
+    // seed failing on a flaky call, wrap it so the registry itself (the visible demo data) still
+    // lands even if this one purchase-against-it doesn't.
+    try {
+      await giftRegistryService.purchaseFromRegistry(registry._id, registry.items[0]._id, { quantity: 2, purchasingCustomerId: ctx.customer._id, branchId: ctx.branch._id, warehouseId: ctx.warehouse._id, paymentAccountId: ctx.cash._id, userId: ctx.admin._id });
+    } catch (err) {
+      console.warn(`  (toys_gifts: purchaseFromRegistry failed, registry itself still seeded: ${err.message})`);
+    }
   },
 };
 
@@ -659,15 +668,29 @@ async function seedCompany(industry, results) {
 
     await seedCoreErp(ctx);
 
+    // The industry-specific block is seeded separately from core ERP data:
+    // if it throws partway through, the company/admin/core-ERP records
+    // created above are already real and committed (this isn't a single
+    // transaction), so swallowing the error here — rather than letting it
+    // propagate to seedCompany's catch — keeps the login usable and the
+    // industry out of the "already exists, skip" path on re-run. The user
+    // still sees the failure logged, just doesn't lose the whole company.
     const fn = industrySeeders[industry.key];
+    let moduleNote = null;
     if (fn) {
-      await fn(ctx);
+      try {
+        await fn(ctx);
+      } catch (err) {
+        console.warn(`  (${industry.key}: module-specific seeding failed, core ERP data still seeded: ${err.message})`);
+        moduleNote = 'core ERP only — module seed failed, see log';
+      }
     } else {
       console.warn(`  (no module-specific seeder written for "${industry.key}" yet — core ERP data only)`);
+      moduleNote = 'core ERP only — no module seeder written';
     }
 
     console.log(`✓ ${email} seeded`);
-    results.push({ company: company.name, industry: industry.key, email, password: PASSWORD });
+    results.push({ company: company.name, industry: industry.key, email, password: PASSWORD, note: moduleNote });
   } catch (err) {
     console.error(`✗ ${industry.key} failed: ${err.message}`);
   }

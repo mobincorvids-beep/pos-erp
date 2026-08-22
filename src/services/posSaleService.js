@@ -218,7 +218,7 @@ async function checkout(input) {
     // completed successfully — same "the real operation matters more than
     // the notification about it" principle the low-stock check already established.
     try {
-      await require('./webhookService').fire(companyId, 'sale.completed', {
+      await require('./webhookService').fire(input.companyId, 'sale.completed', {
         saleId: sale._id, invoiceNumber: sale.invoiceNumber, totalAmount: sale.totalAmount, branchId: sale.branchId,
       });
     } catch (err) {

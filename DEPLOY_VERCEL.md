@@ -53,6 +53,39 @@ VPS/container deployment); Vercel just needs the pieces split differently.
    same `MONGO_URI`, use `admin@demo.test` / `password123` (or
    `cashier@demo.test` / `password123` for the restricted-role account).
 
+## 4. JazzCash / Easypaisa payment gateway
+
+The POS checkout's JazzCash and Easypaisa tenders call out to those
+providers' real APIs and receive a signed server-to-server callback back.
+Both need env vars on the **backend** Vercel project (Project Settings →
+Environment Variables) — see `.env.example` for the full list and where
+each value comes from:
+
+- `JAZZCASH_MERCHANT_ID`, `JAZZCASH_PASSWORD`, `JAZZCASH_INTEGRITY_SALT`,
+  `JAZZCASH_SANDBOX`
+- `EASYPAISA_STORE_ID`, `EASYPAISA_MERCHANT_ID`, `EASYPAISA_HASH_KEY`,
+  `EASYPAISA_SANDBOX`
+
+Leave `*_SANDBOX=true` until you have live merchant credentials — with no
+credentials configured at all, `initiate` fails with a clear "not
+configured" error rather than silently doing nothing.
+
+**Register the callback URL** with each provider's support/onboarding team
+so their servers know where to POST the signed payment result:
+
+- JazzCash: `https://<backend-url>/api/v1/payment-gateway/callback/jazzcash`
+- Easypaisa: `https://<backend-url>/api/v1/payment-gateway/callback/easypaisa`
+
+Both callback routes are intentionally public (no bearer token) — request
+authenticity is verified by recomputing each provider's own HMAC signature
+inside `paymentGatewayService.verifyCallback`, not by CORS or JWT. Confirm
+the exact `DoMWalletTransaction` / `initiate-ma-transaction` paths in
+`src/services/paymentGateways/jazzCashService.js` and `easypaisaService.js`
+against the integration guide your JazzCash/Easypaisa merchant contact
+sends — the hosts and signature construction are correct per their public
+spec, but the exact transaction-initiate path can vary slightly by the API
+version/product a merchant is onboarded onto.
+
 ## Common failure: "Failed to fetch" on login
 
 Almost always one of:

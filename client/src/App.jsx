@@ -6,6 +6,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { HomeDashboardPage } from './pages/HomeDashboardPage';
 import { PosPage } from './pages/PosPage';
 import { ProductsPage } from './pages/ProductsPage';
 import { SalesHistoryPage } from './pages/SalesHistoryPage';
@@ -73,8 +74,9 @@ export default function App() {
                 </ProtectedRoute>
               }
             >
-              <Route path="/" element={<Navigate to="/pos" replace />} />
-              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<HomeDashboardPage />} />
+              <Route path="/dashboard/team" element={<DashboardPage />} />
               <Route path="/pos" element={<PosPage />} />
               <Route path="/sales" element={<SalesHistoryPage />} />
               <Route path="/sales-workflow" element={<SalesWorkflowPage />} />
@@ -139,7 +141,7 @@ export default function App() {
             </Route>
           </Route>
 
-          <Route path="*" element={<Navigate to="/pos" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </ToastProvider>
     </BrowserRouter>

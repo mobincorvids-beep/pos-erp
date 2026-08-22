@@ -14,6 +14,9 @@ export function PosPage() {
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [checkingOut, setCheckingOut] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [gatewayPhone, setGatewayPhone] = useState('');
+  const [gatewayStatus, setGatewayStatus] = useState(null); // null | 'waiting' | 'failed'
+  const isGatewayMethod = paymentMethod === 'jazzcash' || paymentMethod === 'easypaisa';
   const [context, setContext] = useState(() => {
     try {
       const stored = localStorage.getItem('pos_erp_checkout_context');
@@ -68,24 +71,76 @@ export function PosPage() {
   const taxTotal = cart.reduce((sum, l) => sum + (l.unitPrice * l.quantity) * (l.taxRate / 100), 0);
   const total = subtotal + taxTotal;
 
+  async function finalizeSale() {
+    const sale = await api.post('/sales/checkout', {
+      branchId: context.branchId,
+      warehouseId: context.warehouseId,
+      posTerminalId: context.posTerminalId || undefined,
+      items: cart.map((l) => ({ productId: l.productId, variantId: l.variantId, quantity: l.quantity, unitPrice: l.unitPrice, taxRate: l.taxRate })),
+      payments: [{ paymentAccountId: context.cashAccountId, method: paymentMethod, amount: total }],
+    });
+    toast(`Sale ${sale.invoiceNumber} completed — ${formatMoney(sale.totalAmount, company?.currency)}`, 'success');
+    setCart([]);
+    setGatewayStatus(null);
+    setGatewayPhone('');
+  }
+
+  /** Waits for a mobile-wallet transaction to resolve, polling every 3s, and finalizes the sale once it's completed — same ledger-posting flow cash/card checkout already uses. */
+  async function waitForGatewayPayment(transactionId) {
+    const POLL_MS = 3000;
+    const MAX_ATTEMPTS = 40; // ~2 minutes — long enough for a customer to approve on their phone, not indefinite
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, POLL_MS));
+      let status;
+      try {
+        status = await api.get(`/payment-gateway/transactions/${transactionId}`);
+      } catch (err) {
+        continue; // a transient network hiccup on one poll shouldn't abort the whole wait
+      }
+      if (status.status === 'completed') {
+        await finalizeSale();
+        return;
+      }
+      if (status.status === 'failed') {
+        setGatewayStatus('failed');
+        toast(status.responseMessage || 'Payment was not completed by the customer.', 'error');
+        return;
+      }
+    }
+    setGatewayStatus('failed');
+    toast('Timed out waiting for payment confirmation — ask the customer to check their phone and try again.', 'error');
+  }
+
   async function handleCheckout() {
     if (cart.length === 0) return;
     if (!context?.warehouseId || !context?.cashAccountId) {
       toast('Set warehouse and payment account in Setup before checking out (see below).', 'error');
       return;
     }
+    if (isGatewayMethod && !/^03\d{9}$/.test(gatewayPhone)) {
+      toast('Enter a valid mobile number (03XXXXXXXXX) to charge via ' + (paymentMethod === 'jazzcash' ? 'JazzCash' : 'Easypaisa') + '.', 'error');
+      return;
+    }
     setCheckingOut(true);
     setError('');
     try {
-      const sale = await api.post('/sales/checkout', {
-        branchId: context.branchId,
-        warehouseId: context.warehouseId,
-        posTerminalId: context.posTerminalId || undefined,
-        items: cart.map((l) => ({ productId: l.productId, variantId: l.variantId, quantity: l.quantity, unitPrice: l.unitPrice, taxRate: l.taxRate })),
-        payments: [{ paymentAccountId: context.cashAccountId, method: paymentMethod, amount: total }],
-      });
-      toast(`Sale ${sale.invoiceNumber} completed — ${formatMoney(sale.totalAmount, company?.currency)}`, 'success');
-      setCart([]);
+      if (isGatewayMethod) {
+        const init = await api.post('/payment-gateway/initiate', {
+          provider: paymentMethod, amount: total, phone: gatewayPhone,
+        });
+        if (init.status === 'failed') {
+          setGatewayStatus('failed');
+          toast(init.responseMessage || 'Payment request was declined.', 'error');
+        } else if (init.status === 'completed') {
+          await finalizeSale();
+        } else {
+          setGatewayStatus('waiting');
+          toast('Payment request sent — ask the customer to approve it on their phone.', 'success');
+          await waitForGatewayPayment(init.transactionId);
+        }
+      } else {
+        await finalizeSale();
+      }
     } catch (err) {
       setError(err.message);
       toast(err.message, 'error');
@@ -166,12 +221,40 @@ export function PosPage() {
 
         <div className="mt-3">
           <label className="field-label">Payment method</label>
-          <select className="field-input" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
+          <select
+            className="field-input"
+            value={paymentMethod}
+            onChange={(e) => { setPaymentMethod(e.target.value); setGatewayStatus(null); }}
+          >
             <option value="cash">Cash</option>
             <option value="card">Card</option>
             <option value="bank_transfer">Bank transfer</option>
+            <option value="jazzcash">JazzCash</option>
+            <option value="easypaisa">Easypaisa</option>
           </select>
         </div>
+
+        {isGatewayMethod && (
+          <div className="mt-2">
+            <label className="field-label">Customer mobile number</label>
+            <input
+              type="tel" placeholder="03XXXXXXXXX" className="field-input"
+              value={gatewayPhone} onChange={(e) => setGatewayPhone(e.target.value.trim())}
+              disabled={checkingOut}
+            />
+          </div>
+        )}
+
+        {gatewayStatus === 'waiting' && (
+          <p className="text-sm text-accent-strong mt-2">
+            Waiting for the customer to approve the payment on their phone…
+          </p>
+        )}
+        {gatewayStatus === 'failed' && (
+          <p className="text-sm text-danger mt-2">
+            Payment was not confirmed. Try again once the customer is ready.
+          </p>
+        )}
 
         {error && <p className="text-sm text-danger mt-2">{error}</p>}
 
@@ -180,7 +263,9 @@ export function PosPage() {
           disabled={cart.length === 0 || checkingOut}
           onClick={handleCheckout}
         >
-          {checkingOut ? 'Processing…' : `Charge ${formatMoney(total, company?.currency)}`}
+          {checkingOut
+            ? (gatewayStatus === 'waiting' ? 'Waiting for confirmation…' : 'Processing…')
+            : `Charge ${formatMoney(total, company?.currency)}`}
         </button>
       </div>
     </div>

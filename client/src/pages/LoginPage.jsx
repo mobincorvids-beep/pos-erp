@@ -16,7 +16,7 @@ export function LoginPage() {
     setLoading(true);
     try {
       await login(email, password);
-      navigate('/pos');
+      navigate('/dashboard');
     } catch (err) {
       setError(err.message);
     } finally {

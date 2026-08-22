@@ -3,6 +3,7 @@ import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { Loading } from '../components/Loading';
 import { formatMoney, toDateInputValue } from '../lib/format';
+import { MetricCard } from '../components/MetricCard';
 
 const TABS = [
   { key: 'sales-summary', label: 'Sales summary' },
@@ -347,15 +348,6 @@ function CashBankBookReport() {
       {accountId && (
         <DateRangeReport key={accountId} path={`/reports/cash-bank-book?accountId=${accountId}`} render={CashBankBookView} />
       )}
-    </div>
-  );
-}
-
-function MetricCard({ label, value, tone, plain, className = '' }) {
-  return (
-    <div className={`card p-4 ${className}`}>
-      <p className="text-xs text-ink-muted mb-1">{label}</p>
-      <p className={`text-xl ${plain ? 'font-display' : 'num'} ${tone === 'warning' ? 'text-warning' : 'text-ink'}`}>{value}</p>
     </div>
   );
 }

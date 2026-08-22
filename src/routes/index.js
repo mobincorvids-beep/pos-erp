@@ -41,6 +41,7 @@ router.use('/tickets', require('./ticketRoutes'));
 router.use('/notifications', require('./notificationRoutes'));
 router.use('/workflows', require('./workflowRoutes'));
 router.use('/webhooks', require('./webhookRoutes'));
+router.use('/payment-gateway', require('./paymentGatewayRoutes')); // JazzCash/Easypaisa — callback/:provider is public, see that file
 router.use('/projects', require('./projectRoutes'));
 router.use('/ecommerce-config', require('./ecommerceConfigRoutes')); // tenant-side setup
 router.use('/ecommerce', require('./ecommerceWebhookRoutes'));        // external store calls this — webhook-token auth, not JWT

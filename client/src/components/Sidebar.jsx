@@ -5,6 +5,7 @@ import {
   ClipboardList, Factory, Banknote, Landmark, FolderKanban, PieChart,
   Contact, Truck, UserCog, HeartHandshake, Gift, Sparkles, Store, Circle,
   Ticket, Shield, FileSearch, TrendingUp, HandCoins, Repeat, Hourglass, Lock, Layers, Ruler, Percent, X,
+  LayoutDashboard,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { INDUSTRY_MODULES } from '../industryModuleRegistry';
@@ -112,6 +113,21 @@ export function Sidebar({ mobileOpen, onClose }) {
       </div>
 
       <nav className="flex-1 overflow-y-auto py-3">
+        <div className="mb-4">
+          <NavLink
+            to="/dashboard"
+            end
+            onClick={onClose}
+            className={({ isActive }) =>
+              `flex items-center gap-2.5 px-4 py-1.5 text-sm mx-2 rounded ${
+                isActive ? 'bg-accent-soft text-accent-strong font-medium' : 'text-ink hover:bg-paper'
+              }`
+            }
+          >
+            <LayoutDashboard size={15} strokeWidth={2} className="shrink-0 opacity-70" />
+            Home
+          </NavLink>
+        </div>
         {SECTIONS.map((section) => {
           const SectionIcon = SECTION_ICONS[section.label] || Circle;
           return (

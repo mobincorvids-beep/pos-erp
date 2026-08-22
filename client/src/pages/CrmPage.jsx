@@ -5,7 +5,10 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { Loading } from '../components/Loading';
 import { EmptyState } from '../components/EmptyState';
-import { formatDate } from '../lib/format';
+import { formatDate, formatMoney } from '../lib/format';
+
+const STAGES = ['new', 'contacted', 'proposal', 'negotiation', 'won', 'lost'];
+const STAGE_LABELS = { new: 'New', contacted: 'Contacted', proposal: 'Proposal', negotiation: 'Negotiation', won: 'Won', lost: 'Lost' };
 
 function RatingStars({ rating }) {
   return (
@@ -23,12 +26,14 @@ export function CrmPage() {
     <div>
       <p className="page-title mb-4">CRM</p>
       <div className="flex gap-1 border-b border-rule mb-5">
-        {[['campaigns', 'Campaigns'], ['feedback', 'Feedback'], ['follow-ups', 'Follow-ups'], ['tags', 'Customer tags']].map(([key, label]) => (
+        {[['pipeline', 'Pipeline'], ['leads', 'Leads'], ['campaigns', 'Campaigns'], ['feedback', 'Feedback'], ['follow-ups', 'Follow-ups'], ['tags', 'Customer tags']].map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)} className={`px-3 py-2 text-sm -mb-px border-b-2 ${tab === key ? 'border-accent text-accent-strong font-medium' : 'border-transparent text-ink-muted hover:text-ink'}`}>
             {label}
           </button>
         ))}
       </div>
+      {tab === 'pipeline' && <PipelineTab />}
+      {tab === 'leads' && <LeadsTab />}
       {tab === 'campaigns' && <CampaignsTab />}
       {tab === 'feedback' && <FeedbackTab />}
       {tab === 'follow-ups' && <FollowUpsTab />}
@@ -293,6 +298,471 @@ function TagsTab() {
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+// --- Leads ------------------------------------------------------------------
+
+function LeadsTab() {
+  const { can } = useAuth();
+  const toast = useToast();
+  const [leads, setLeads] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [converting, setConverting] = useState(null);
+
+  function load() {
+    setLoading(true);
+    api.get(`/crm/leads${statusFilter ? `?status=${statusFilter}` : ''}`).then(setLeads).catch((err) => toast(err.message, 'error')).finally(() => setLoading(false));
+  }
+  useEffect(load, [statusFilter]);
+
+  async function changeStatus(id, status) {
+    try {
+      await api.post(`/crm/leads/${id}/status`, { status });
+      toast('Lead status updated.', 'success');
+      load();
+    } catch (err) { toast(err.message, 'error'); }
+  }
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-3">
+        <select className="field-input !w-48" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <option value="">All statuses</option>
+          {['new', 'contacted', 'qualified', 'unqualified', 'converted'].map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>New lead</button>
+      </div>
+      {loading && <Loading />}
+      {!loading && leads.length === 0 && <EmptyState title="No leads yet" description="Track prospects here before they become opportunities and customers." />}
+      {!loading && leads.length > 0 && (
+        <div className="card overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
+                <th className="px-3 py-2 font-medium">Name</th>
+                <th className="px-3 py-2 font-medium">Contact</th>
+                <th className="px-3 py-2 font-medium">Source</th>
+                <th className="px-3 py-2 font-medium">Status</th>
+                <th className="px-3 py-2 font-medium"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {leads.map((l) => (
+                <tr key={l._id} className="border-b border-rule last:border-0">
+                  <td className="px-3 py-2">{l.name}</td>
+                  <td className="px-3 py-2 text-ink-muted">{l.phone || l.email || '—'}</td>
+                  <td className="px-3 py-2 uppercase text-xs text-ink-muted">{l.source}</td>
+                  <td className="px-3 py-2">
+                    {l.status === 'converted'
+                      ? <span className="chip-accent">converted</span>
+                      : (
+                        <select className="field-input !py-1 !text-xs !w-32" value={l.status} onChange={(e) => changeStatus(l._id, e.target.value)}>
+                          {['new', 'contacted', 'qualified', 'unqualified'].map((s) => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      )}
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    {l.status !== 'converted' && can('crm.manage') && (
+                      <button className="btn-ghost !text-accent" onClick={() => setConverting(l)}>Convert to customer</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {showForm && <NewLeadModal onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
+      {converting && <ConvertLeadModal lead={converting} onClose={() => setConverting(null)} onConverted={() => { setConverting(null); load(); }} />}
+    </div>
+  );
+}
+
+function NewLeadModal({ onClose, onSaved }) {
+  const toast = useToast();
+  const [form, setForm] = useState({ name: '', contactName: '', phone: '', email: '', source: 'website', notes: '' });
+  const [saving, setSaving] = useState(false);
+
+  async function submit() {
+    if (!form.name.trim()) return toast('Name is required.', 'error');
+    setSaving(true);
+    try {
+      await api.post('/crm/leads', form);
+      toast('Lead created.', 'success');
+      onSaved();
+    } catch (err) { toast(err.message, 'error'); } finally { setSaving(false); }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
+      <div className="card p-5 w-full max-w-sm">
+        <p className="font-display text-lg mb-4">New lead</p>
+        <div className="space-y-3">
+          <div><label className="field-label">Name / business</label><input autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+          <div><label className="field-label">Contact person</label><input className="field-input" value={form.contactName} onChange={(e) => setForm({ ...form, contactName: e.target.value })} /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className="field-label">Phone</label><input className="field-input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
+            <div><label className="field-label">Email</label><input className="field-input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+          </div>
+          <div>
+            <label className="field-label">Source</label>
+            <select className="field-input" value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })}>
+              {['website', 'referral', 'walk-in', 'social', 'other'].map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div><label className="field-label">Notes</label><textarea rows={2} className="field-input" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+        </div>
+        <div className="flex justify-end gap-2 mt-4">
+          <button className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn-primary" disabled={saving} onClick={submit}>{saving ? 'Saving…' : 'Create lead'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ConvertLeadModal({ lead, onClose, onConverted }) {
+  const toast = useToast();
+  const [form, setForm] = useState({ name: lead.name, phone: lead.phone || '', email: lead.email || '', address: '' });
+  const [saving, setSaving] = useState(false);
+
+  async function submit() {
+    setSaving(true);
+    try {
+      await api.post(`/crm/leads/${lead._id}/convert`, form);
+      toast('Lead converted to customer.', 'success');
+      onConverted();
+    } catch (err) { toast(err.message, 'error'); } finally { setSaving(false); }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
+      <div className="card p-5 w-full max-w-sm">
+        <p className="font-display text-lg mb-4">Convert lead to customer</p>
+        <div className="space-y-3">
+          <div><label className="field-label">Customer name</label><input autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className="field-label">Phone</label><input className="field-input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
+            <div><label className="field-label">Email</label><input className="field-input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+          </div>
+          <div><label className="field-label">Address</label><input className="field-input" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
+        </div>
+        <div className="flex justify-end gap-2 mt-4">
+          <button className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn-primary" disabled={saving} onClick={submit}>{saving ? 'Converting…' : 'Convert'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Pipeline -----------------------------------------------------------------
+
+function PipelineTab() {
+  const { can, company } = useAuth();
+  const toast = useToast();
+  const [board, setBoard] = useState(null);
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [showNewOpp, setShowNewOpp] = useState(false);
+  const [stageTarget, setStageTarget] = useState(null); // { opportunity, stage }
+
+  function load() {
+    setLoading(true);
+    Promise.all([api.get('/crm/pipeline'), api.get('/crm/pipeline/summary')])
+      .then(([b, s]) => { setBoard(b); setSummary(s); })
+      .catch((err) => toast(err.message, 'error'))
+      .finally(() => setLoading(false));
+  }
+  useEffect(load, []);
+
+  async function moveStage(opportunity, stage) {
+    if (stage === 'won' || stage === 'lost') {
+      setStageTarget({ opportunity, stage });
+      return;
+    }
+    try {
+      await api.post(`/crm/opportunities/${opportunity._id}/stage`, { stage });
+      toast(`Moved to ${STAGE_LABELS[stage]}.`, 'success');
+      load();
+    } catch (err) { toast(err.message, 'error'); }
+  }
+
+  if (loading) return <Loading />;
+
+  return (
+    <div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+        <div className="card p-4">
+          <p className="text-xs text-ink-muted mb-1">Open pipeline value</p>
+          <p className="text-xl num text-ink">{formatMoney(summary?.openPipelineValue, company?.currency)}</p>
+        </div>
+        <div className="card p-4">
+          <p className="text-xs text-ink-muted mb-1">Win rate ({summary?.periodDays}d)</p>
+          <p className="text-xl num text-ink">{summary ? `${(summary.winRate * 100).toFixed(0)}%` : '—'}</p>
+        </div>
+        <div className="card p-4">
+          <p className="text-xs text-ink-muted mb-1">Won deals ({summary?.periodDays}d)</p>
+          <p className="text-xl num text-ink">{summary?.wonCount ?? 0}</p>
+        </div>
+        <div className="card p-4">
+          <p className="text-xs text-ink-muted mb-1">Average won deal size</p>
+          <p className="text-xl num text-ink">{formatMoney(summary?.averageWonDealSize, company?.currency)}</p>
+        </div>
+      </div>
+
+      {can('crm.manage') && (
+        <div className="flex justify-end mb-3">
+          <button className="btn-primary" onClick={() => setShowNewOpp(true)}>New opportunity</button>
+        </div>
+      )}
+
+      <div className="overflow-x-auto">
+        <div className="flex gap-3 min-w-max pb-2">
+          {STAGES.map((stage) => (
+            <div key={stage} className="w-64 shrink-0">
+              <p className="text-xs text-ink-muted uppercase tracking-wide mb-2 px-1">
+                {STAGE_LABELS[stage]} <span className="text-ink-muted">({board[stage]?.length || 0})</span>
+              </p>
+              <div className="space-y-2">
+                {(board[stage] || []).map((opp) => (
+                  <div key={opp._id} className="card p-3">
+                    <p className="text-sm font-medium mb-1">{opp.title}</p>
+                    <p className="text-xs text-ink-muted mb-1">{opp.customerId?.name || opp.leadId?.name || 'Unassigned'}</p>
+                    <p className="text-sm num mb-2">{formatMoney(opp.estimatedValue, company?.currency)}</p>
+                    {stage !== 'won' && stage !== 'lost' && can('crm.manage') && (
+                      <select
+                        className="field-input !py-1 !text-xs"
+                        value=""
+                        onChange={(e) => e.target.value && moveStage(opp, e.target.value)}
+                      >
+                        <option value="">Move to…</option>
+                        {STAGES.filter((s) => s !== stage).map((s) => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}
+                      </select>
+                    )}
+                    {stage === 'lost' && opp.lostReason && <p className="text-xs text-danger mt-1">{opp.lostReason}</p>}
+                  </div>
+                ))}
+                {(board[stage] || []).length === 0 && <p className="text-xs text-ink-muted px-1">No deals here.</p>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {showNewOpp && <NewOpportunityModal onClose={() => setShowNewOpp(false)} onSaved={() => { setShowNewOpp(false); load(); }} />}
+      {stageTarget?.stage === 'lost' && (
+        <LoseOpportunityModal opportunity={stageTarget.opportunity} onClose={() => setStageTarget(null)} onDone={() => { setStageTarget(null); load(); }} />
+      )}
+      {stageTarget?.stage === 'won' && (
+        <WinOpportunityModal opportunity={stageTarget.opportunity} onClose={() => setStageTarget(null)} onDone={() => { setStageTarget(null); load(); }} />
+      )}
+    </div>
+  );
+}
+
+function NewOpportunityModal({ onClose, onSaved }) {
+  const toast = useToast();
+  const [leads, setLeads] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [form, setForm] = useState({ title: '', estimatedValue: '', source: 'lead', leadId: '', customerId: '', expectedCloseDate: '' });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    api.get('/crm/leads?status=new').then(setLeads).catch(() => {});
+    api.get('/customers').then(setCustomers).catch(() => {});
+  }, []);
+
+  async function submit() {
+    if (!form.title.trim()) return toast('Title is required.', 'error');
+    if (!form.estimatedValue || Number(form.estimatedValue) < 0) return toast('Enter a valid estimated value.', 'error');
+    if (form.source === 'lead' && !form.leadId) return toast('Select a lead.', 'error');
+    if (form.source === 'customer' && !form.customerId) return toast('Select a customer.', 'error');
+    setSaving(true);
+    try {
+      await api.post('/crm/opportunities', {
+        title: form.title,
+        estimatedValue: Number(form.estimatedValue),
+        leadId: form.source === 'lead' ? form.leadId : undefined,
+        customerId: form.source === 'customer' ? form.customerId : undefined,
+        expectedCloseDate: form.expectedCloseDate || undefined,
+      });
+      toast('Opportunity created.', 'success');
+      onSaved();
+    } catch (err) { toast(err.message, 'error'); } finally { setSaving(false); }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
+      <div className="card p-5 w-full max-w-sm">
+        <p className="font-display text-lg mb-4">New opportunity</p>
+        <div className="space-y-3">
+          <div><label className="field-label">Title</label><input autoFocus className="field-input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
+          <div><label className="field-label">Estimated value</label><input type="number" min="0" className="field-input" value={form.estimatedValue} onChange={(e) => setForm({ ...form, estimatedValue: e.target.value })} /></div>
+          <div>
+            <label className="field-label">Linked to</label>
+            <select className="field-input" value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })}>
+              <option value="lead">A lead</option>
+              <option value="customer">An existing customer</option>
+            </select>
+          </div>
+          {form.source === 'lead' ? (
+            <div>
+              <label className="field-label">Lead</label>
+              <select className="field-input" value={form.leadId} onChange={(e) => setForm({ ...form, leadId: e.target.value })}>
+                <option value="">Select...</option>
+                {leads.map((l) => <option key={l._id} value={l._id}>{l.name}</option>)}
+              </select>
+            </div>
+          ) : (
+            <div>
+              <label className="field-label">Customer</label>
+              <select className="field-input" value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })}>
+                <option value="">Select...</option>
+                {customers.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
+              </select>
+            </div>
+          )}
+          <div><label className="field-label">Expected close date</label><input type="date" className="field-input" value={form.expectedCloseDate} onChange={(e) => setForm({ ...form, expectedCloseDate: e.target.value })} /></div>
+        </div>
+        <div className="flex justify-end gap-2 mt-4">
+          <button className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn-primary" disabled={saving} onClick={submit}>{saving ? 'Saving…' : 'Create opportunity'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LoseOpportunityModal({ opportunity, onClose, onDone }) {
+  const toast = useToast();
+  const [reason, setReason] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  async function submit() {
+    if (!reason.trim()) return toast('A reason is required.', 'error');
+    setSaving(true);
+    try {
+      await api.post(`/crm/opportunities/${opportunity._id}/stage`, { stage: 'lost', lostReason: reason });
+      toast('Opportunity marked lost.', 'success');
+      onDone();
+    } catch (err) { toast(err.message, 'error'); } finally { setSaving(false); }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
+      <div className="card p-5 w-full max-w-sm">
+        <p className="font-display text-lg mb-4">Mark "{opportunity.title}" as lost</p>
+        <label className="field-label">Reason</label>
+        <textarea autoFocus rows={3} className="field-input" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Chose a competitor, budget cut, went cold…" />
+        <div className="flex justify-end gap-2 mt-4">
+          <button className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn-primary" disabled={saving} onClick={submit}>{saving ? 'Saving…' : 'Mark lost'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Winning an opportunity creates a real quotation-status Sale (via the same
+ * pathway the Sales/Quotations screens use), so it needs the same inputs a
+ * quotation needs: branch, warehouse, and real product lines.
+ */
+function WinOpportunityModal({ opportunity, onClose, onDone }) {
+  const toast = useToast();
+  const [branches, setBranches] = useState([]);
+  const [warehouses, setWarehouses] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [branchId, setBranchId] = useState('');
+  const [warehouseId, setWarehouseId] = useState('');
+  const [lines, setLines] = useState([{ productId: '', quantity: 1, unitPrice: '' }]);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    Promise.all([api.get('/org/branches'), api.get('/org/warehouses'), api.get('/products')]).then(([b, w, p]) => {
+      setBranches(b); setWarehouses(w); setProducts(p);
+      if (b.length) setBranchId(b[0]._id);
+      if (w.length) setWarehouseId(w[0]._id);
+    }).catch((err) => toast(err.message, 'error'));
+  }, []);
+
+  function updateLine(i, patch) { setLines(lines.map((l, idx) => (idx === i ? { ...l, ...patch } : l))); }
+  function addLine() { setLines([...lines, { productId: '', quantity: 1, unitPrice: '' }]); }
+  function removeLine(i) { setLines(lines.filter((_, idx) => idx !== i)); }
+
+  async function submit() {
+    if (!branchId || !warehouseId) return toast('Choose a branch and warehouse.', 'error');
+    const items = lines
+      .filter((l) => l.productId && Number(l.quantity) > 0)
+      .map((l) => {
+        const product = products.find((p) => p._id === l.productId);
+        const variant = product?.variants?.[0];
+        return {
+          productId: l.productId, variantId: variant?._id,
+          quantity: Number(l.quantity),
+          unitPrice: l.unitPrice !== '' ? Number(l.unitPrice) : (variant?.sellingPrice || 0),
+        };
+      })
+      .filter((l) => l.variantId);
+    if (items.length === 0) return toast('Add at least one product line for the quotation.', 'error');
+
+    setSaving(true);
+    try {
+      await api.post(`/crm/opportunities/${opportunity._id}/stage`, { stage: 'won', branchId, warehouseId, items });
+      toast('Opportunity won — a quotation has been created.', 'success');
+      onDone();
+    } catch (err) { toast(err.message, 'error'); } finally { setSaving(false); }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
+      <div className="card p-5 w-full max-w-lg">
+        <p className="font-display text-lg mb-1">Win "{opportunity.title}"</p>
+        <p className="text-xs text-ink-muted mb-4">This creates a real quotation for the deal — pick the branch, warehouse, and products.</p>
+
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div>
+            <label className="field-label">Branch</label>
+            <select className="field-input" value={branchId} onChange={(e) => setBranchId(e.target.value)}>
+              <option value="">Select...</option>
+              {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="field-label">Warehouse</label>
+            <select className="field-input" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
+              <option value="">Select...</option>
+              {warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <label className="field-label">Items</label>
+        <div className="space-y-2 mb-3">
+          {lines.map((line, i) => (
+            <div key={i} className="flex gap-2">
+              <select className="field-input flex-1" value={line.productId} onChange={(e) => updateLine(i, { productId: e.target.value })}>
+                <option value="">Select product...</option>
+                {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
+              </select>
+              <input type="number" min="1" className="field-input w-20" placeholder="Qty" value={line.quantity} onChange={(e) => updateLine(i, { quantity: e.target.value })} />
+              <input type="number" min="0" className="field-input w-28" placeholder="Unit price" value={line.unitPrice} onChange={(e) => updateLine(i, { unitPrice: e.target.value })} />
+              {lines.length > 1 && <button className="btn-ghost !text-danger" onClick={() => removeLine(i)}>&times;</button>}
+            </div>
+          ))}
+        </div>
+        <button className="btn-ghost !text-accent mb-4" onClick={addLine}>+ Add another item</button>
+
+        <div className="flex justify-end gap-2">
+          <button className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn-primary" disabled={saving} onClick={submit}>{saving ? 'Saving…' : 'Mark won & create quotation'}</button>
+        </div>
+      </div>
     </div>
   );
 }

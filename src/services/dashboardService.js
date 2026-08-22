@@ -16,6 +16,8 @@ const ApprovalRequest = require('../models/ApprovalRequest');
 const LeaveRequest = require('../models/LeaveRequest');
 const StockCount = require('../models/StockCount');
 const Notification = require('../models/Notification');
+const Company = require('../models/Company');
+const Appointment = require('../models/Appointment');
 
 const today = () => new Date();
 const daysAgo = (n) => new Date(Date.now() - n * 24 * 60 * 60 * 1000);
@@ -120,4 +122,206 @@ async function getDashboard(companyId, { userId, roleId, permissions }) {
   return { ...common, sections };
 }
 
-module.exports = { getDashboard, ownerDashboard, salesManagerDashboard, warehouseManagerDashboard, hrManagerDashboard, cashierDashboard };
+// ---------------------------------------------------------------------------
+// Home Dashboard — a company-agnostic CORE snapshot plus an industry-specific
+// section chosen by the company's actual industryType/activeModules. Unlike
+// getDashboard() above (which slices by the REQUESTER's permissions), this
+// is deliberately company-shaped, not role-shaped: "what does this business
+// look like today", the same for whoever's looking at it. Built the same
+// way as the rest of this file — real queries against existing models/
+// services, never a fabricated number, and any industry with no bespoke
+// section below still gets the CORE section rather than an empty page.
+// ---------------------------------------------------------------------------
+
+/** Always-useful numbers regardless of what the company sells. */
+async function coreHomeSection(companyId) {
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+
+  const [salesToday, lowStock, balanceSheet] = await Promise.all([
+    reportingService.salesSummary(companyId, todayStart, today()),
+    reportingService.lowStockReport(companyId),
+    reportingService.balanceSheet(companyId, today()),
+  ]);
+
+  const receivablesAccountId = await defaultAccountsService.resolve(companyId, 'accountsReceivableId').catch(() => null);
+  const receivables = balanceSheet.assets.find((a) => String(a.accountId) === String(receivablesAccountId))?.balance || 0;
+  const cashAndBank = balanceSheet.assets.filter((a) => /cash|bank/i.test(a.name)).reduce((sum, a) => sum + a.balance, 0);
+
+  return {
+    salesToday: salesToday.summary.netSales,
+    transactionsToday: salesToday.summary.invoiceCount,
+    lowStockCount: lowStock.length,
+    cashAndBank,
+    receivablesDue: receivables,
+  };
+}
+
+async function pharmacyHomeSection(companyId) {
+  const pharmacyService = require('../modules/pharmacy/services/pharmacyService');
+  const Prescription = require('../modules/pharmacy/models/Prescription');
+  const [nearExpiry, pendingPrescriptions] = await Promise.all([
+    pharmacyService.nearExpiryReport(companyId, 30),
+    Prescription.countDocuments({ companyId, status: { $ne: 'dispensed' } }),
+  ]);
+  return { industry: 'pharmacy', nearExpiryBatches: nearExpiry.slice(0, 10), nearExpiryCount: nearExpiry.length, pendingPrescriptions };
+}
+
+async function hotelHomeSection(companyId) {
+  const Room = require('../modules/hotel/models/Room');
+  const Reservation = require('../modules/hotel/models/Reservation');
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+
+  const [totalRooms, occupiedRooms, checkInsToday, checkOutsToday] = await Promise.all([
+    Room.countDocuments({ companyId, isActive: true }),
+    Room.countDocuments({ companyId, isActive: true, status: 'occupied' }),
+    Reservation.find({ companyId, status: 'booked', checkInDate: { $gte: todayStart, $lt: todayEnd } }).populate('roomId', 'roomNumber').populate('customerId', 'name'),
+    Reservation.find({ companyId, status: 'checked_in', checkOutDate: { $gte: todayStart, $lt: todayEnd } }).populate('roomId', 'roomNumber').populate('customerId', 'name'),
+  ]);
+
+  return {
+    industry: 'hotel',
+    totalRooms, occupiedRooms,
+    occupancyRate: totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 1000) / 10 : 0,
+    checkInsToday, checkOutsToday,
+  };
+}
+
+async function restaurantHomeSection(companyId) {
+  const Table = require('../modules/restaurant/models/Table');
+  const KitchenOrderTicket = require('../modules/restaurant/models/KitchenOrderTicket');
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+
+  const [totalTables, openTables, openKots, kotsToday] = await Promise.all([
+    Table.countDocuments({ companyId }),
+    Table.countDocuments({ companyId, status: { $ne: 'free' } }),
+    KitchenOrderTicket.countDocuments({ companyId, status: { $in: ['open', 'sent_to_kitchen'] } }),
+    KitchenOrderTicket.countDocuments({ companyId, createdAt: { $gte: todayStart } }),
+  ]);
+
+  return { industry: 'restaurant', totalTables, openTables, openKots, kotsToday };
+}
+
+async function salonHomeSection(companyId) {
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+
+  const [appointmentsToday, appointmentsCompletedToday] = await Promise.all([
+    Appointment.find({ companyId, startTime: { $gte: todayStart, $lt: todayEnd }, status: { $ne: 'cancelled' } })
+      .populate('customerId', 'name').sort({ startTime: 1 }),
+    Appointment.countDocuments({ companyId, startTime: { $gte: todayStart, $lt: todayEnd }, status: 'completed' }),
+  ]);
+
+  return { industry: 'salon', appointmentsToday: appointmentsToday.slice(0, 10), appointmentsTodayCount: appointmentsToday.length, appointmentsCompletedToday };
+}
+
+async function gymHomeSection(companyId) {
+  const ClassSession = require('../modules/gym/models/ClassSession');
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+
+  const sessionsToday = await ClassSession.find({ companyId, startTime: { $gte: todayStart, $lt: todayEnd } }).populate('gymClassId', 'name').sort({ startTime: 1 });
+  const totalCapacity = sessionsToday.reduce((sum, s) => sum + s.capacity, 0);
+  const totalEnrolled = sessionsToday.reduce((sum, s) => sum + s.enrolledCustomerIds.length, 0);
+  const totalWaitlisted = sessionsToday.reduce((sum, s) => sum + s.waitlistCustomerIds.length, 0);
+
+  return {
+    industry: 'gym',
+    sessionsToday: sessionsToday.slice(0, 10), sessionsTodayCount: sessionsToday.length,
+    totalCapacity, totalEnrolled, totalWaitlisted,
+  };
+}
+
+async function realEstateHomeSection(companyId) {
+  const Lease = require('../modules/real_estate/models/Lease');
+  const PERIOD_DAYS = 30;
+  const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+  const activeLeases = await Lease.find({ companyId, status: 'active' }).populate('tenantCustomerId', 'name').populate('propertyId', 'unitNumber');
+  const now = new Date();
+
+  const overdue = [];
+  for (const lease of activeLeases) {
+    const dueDate = new Date(lease.lastRentGeneratedThrough.getTime() + PERIOD_DAYS * MS_PER_DAY);
+    if (now > dueDate) {
+      const daysLate = Math.ceil((now - dueDate) / MS_PER_DAY);
+      const lateFee = Math.round(daysLate * lease.lateFeePerDay * 100) / 100;
+      overdue.push({
+        leaseId: lease._id, unitNumber: lease.propertyId?.unitNumber, tenantName: lease.tenantCustomerId?.name,
+        dueDate, daysLate, amountDue: Math.round((lease.monthlyRent + lateFee) * 100) / 100,
+      });
+    }
+  }
+  overdue.sort((a, b) => b.daysLate - a.daysLate);
+
+  return {
+    industry: 'real_estate',
+    activeLeaseCount: activeLeases.length,
+    overdueLeases: overdue.slice(0, 10),
+    overdueLeaseCount: overdue.length,
+    overdueTotal: Math.round(overdue.reduce((sum, o) => sum + o.amountDue, 0) * 100) / 100,
+  };
+}
+
+async function groceryHomeSection(companyId) {
+  const pharmacyService = require('../modules/pharmacy/services/pharmacyService'); // nearExpiryReport is a plain company-scoped ProductBatch/StockLevel query, nothing pharmacy-specific about the fields it reads — genuinely reusable for any perishable-goods trade, not just pharmacy
+  const todayStart7 = daysAgo(7);
+  const [fastMovers, nearExpiry] = await Promise.all([
+    reportingService.topProductsReport(companyId, todayStart7, today(), 5),
+    pharmacyService.nearExpiryReport(companyId, 14),
+  ]);
+  return { industry: 'grocery', fastMovers, nearExpiryBatches: nearExpiry.slice(0, 10), nearExpiryCount: nearExpiry.length };
+}
+
+async function retailHomeSection(companyId) {
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+  const topProductsToday = await reportingService.topProductsReport(companyId, todayStart, today(), 5);
+  return { industry: 'retail', topProductsToday };
+}
+
+const INDUSTRY_SECTIONS = {
+  pharmacy: pharmacyHomeSection,
+  hotel: hotelHomeSection,
+  restaurant: restaurantHomeSection,
+  salon: salonHomeSection,
+  gym: gymHomeSection,
+  real_estate: realEstateHomeSection,
+  grocery: groceryHomeSection,
+  retail: retailHomeSection,
+};
+
+/**
+ * The home-screen snapshot: CORE numbers every business owner wants,
+ * plus an industry section picked off the company's real industryType
+ * (falling back to checking activeModules, since a company can run a
+ * secondary industry module without that being its primary industryType).
+ * Any industry without a bespoke section above still gets a real,
+ * non-empty page — just CORE alone — never an error or fake data.
+ */
+async function getHomeDashboard(companyId) {
+  const company = await Company.findById(companyId);
+  if (!company) throw new Error('Company not found.');
+
+  const core = await coreHomeSection(companyId);
+
+  const industryKey = INDUSTRY_SECTIONS[company.industryType]
+    ? company.industryType
+    : (company.activeModules || []).find((m) => INDUSTRY_SECTIONS[m]);
+
+  let industrySection = null;
+  if (industryKey) {
+    industrySection = await INDUSTRY_SECTIONS[industryKey](companyId);
+  }
+
+  return {
+    companyName: company.name,
+    industryType: company.industryType,
+    core,
+    industry: industrySection, // null when this company's industry has no bespoke section yet — the frontend renders CORE only in that case
+  };
+}
+
+module.exports = {
+  getDashboard, ownerDashboard, salesManagerDashboard, warehouseManagerDashboard, hrManagerDashboard, cashierDashboard,
+  getHomeDashboard,
+};
