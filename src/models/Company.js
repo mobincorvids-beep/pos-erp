@@ -7,11 +7,6 @@ const companySchema = new Schema({
   ntn: String,        // National Tax Number
   strn: String,       // Sales Tax Registration Number
   fbrPosId: String,   // FBR POS registration ID
-  // Optional fields consumed by fbrService.buildInvoicePayload for FBR's
-  // Digital Invoicing schema. Left unset until confirmed against your
-  // actual FBR registration — see src/services/taxAuthorities/README.md.
-  fbrProvince: String,          // seller's registered province, as FBR expects it
-  fbrDefaultScenarioId: String, // default FBR invoicing scenario for this company
   phone: String,
   email: String,
   address: String,

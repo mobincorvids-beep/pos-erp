@@ -12,6 +12,7 @@ router.post('/quality-schedules',
   body('name').isString().trim().notEmpty().withMessage('name is required.'),
   body('bands').isArray({ min: 1 }).withMessage('At least one band is required.'),
   validate, controller.createSchedule);
+router.get('/quality-schedules', controller.listSchedules);
 router.post('/collections',
   body('branchId').isString().notEmpty().withMessage('branchId is required.'),
   body('supplierId').isString().notEmpty().withMessage('supplierId is required.'),

@@ -11,19 +11,16 @@ const userSchema = new Schema({
   passwordHash: { type: String, required: true },
   isActive: { type: Boolean, default: true },
 
-  // Account lockout after repeated failed logins — see authController.login.
-  // Reset on every successful login; lockedUntil is only set once
-  // failedLoginAttempts hits the threshold.
-  failedLoginAttempts: { type: Number, default: 0 },
-  lockedUntil: { type: Date, default: null },
-
-  // Password reset — token is hashed at rest (same rationale as
-  // RefreshToken.tokenHash: a database leak alone shouldn't let anyone
-  // reset a password). Kept as inline fields rather than a separate
-  // model since, unlike refresh tokens, a user only ever has one live
-  // reset request at a time — no need for a collection of them.
-  passwordResetTokenHash: { type: String, default: null },
-  passwordResetExpires: { type: Date, default: null },
+  // 2FA (TOTP) — twoFactorSecret is set the moment setup() is called but
+  // twoFactorEnabled stays false until the user actually proves they can
+  // generate a valid code (confirmSetup()), so a half-finished setup
+  // never silently locks anyone out or is silently treated as active.
+  // Backup codes are stored HASHED, never plain — same principle as
+  // passwordHash, and checked the same way (bcrypt.compare), never by
+  // direct string equality.
+  twoFactorSecret: { type: String, default: null },
+  twoFactorEnabled: { type: Boolean, default: false },
+  twoFactorBackupCodeHashes: { type: [String], default: [] },
 }, { timestamps: true });
 
 userSchema.methods.setPassword = async function (plain) {

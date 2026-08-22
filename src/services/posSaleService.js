@@ -12,6 +12,7 @@ const accountingService = require('./accountingService');
 const bundleService = require('./bundleService');
 const serialInventoryService = require('./serialInventoryService');
 const defaultAccountsService = require('./defaultAccountsService');
+const currencyService = require('./currencyService');
 const { nextInvoiceNumber, nextDocumentNumber } = require('./numberingService');
 const { computeLineItems } = require('./saleCalculations');
 
@@ -34,6 +35,24 @@ const { computeLineItems } = require('./saleCalculations');
  * @param {String} [input.receivableAccountId] - used when part of the sale is on credit
  */
 async function checkout(input) {
+  // Resolved BEFORE the transaction starts, deliberately — getRate() can
+  // trigger a live external fetch() call to the Frankfurter API when a
+  // rate isn't already cached, and an external HTTP call has no business
+  // holding a database transaction open while it waits on another
+  // server's response time. Same lesson Hardware's returnRental() already
+  // had to learn the hard way earlier in this project, applied here from
+  // the start instead of needing to be caught again. Only a plain number
+  // (or nothing, when no foreign currency is requested) crosses into the
+  // transaction below — no network calls happen inside it.
+  let resolvedExchangeRate = null;
+  if (input.currency) {
+    const Company = require('../models/Company');
+    const company = await Company.findById(input.companyId);
+    if (company && company.currency && company.currency.toUpperCase() !== input.currency.toUpperCase()) {
+      resolvedExchangeRate = await currencyService.getRate(input.companyId, company.currency, input.currency, input.currencyDate);
+    }
+  }
+
   const session = await mongoose.startSession();
   try {
     let sale;
@@ -82,7 +101,13 @@ async function checkout(input) {
         ? await nextInvoiceNumber(posTerminalId, session)
         : nextDocumentNumber('INV');
 
-      // 3. Create the sale document.
+      // 3. Create the sale document. currency/exchangeRate/foreignTotalAmount
+      // are display-only — totalAmount and every other monetary field
+      // above remain in the company's BASE currency always, since that's
+      // what accounting/vouchers/reports assume everywhere else in this
+      // app; resolvedExchangeRate was already computed BEFORE this
+      // transaction started (see above), so this is pure arithmetic, no
+      // network call happening here.
       [sale] = await Sale.create(
         [{
           companyId, branchId, warehouseId, posTerminalId, customerId, userId, projectId: projectId || null,
@@ -90,6 +115,9 @@ async function checkout(input) {
           items: lineItems, payments,
           subtotal, discountAmount: discountTotal, taxAmount: taxTotal,
           totalAmount, paidAmount, dueAmount,
+          currency: resolvedExchangeRate ? input.currency.toUpperCase() : null,
+          exchangeRate: resolvedExchangeRate || 1,
+          foreignTotalAmount: resolvedExchangeRate ? Math.round(totalAmount * resolvedExchangeRate * 100) / 100 : null,
         }],
         { session }
       );
@@ -137,14 +165,11 @@ async function checkout(input) {
       }
       if (dueAmount > 0) {
         // Falls back to the company's default Accounts Receivable account,
-        // the same way revenueAccount/taxAccount already do just below —
-        // this used to only add the debit-side entry when a caller
-        // explicitly passed receivableAccountId, which silently produced
-        // an unbalanced voucher (debits short by exactly dueAmount) for
-        // any partial-payment sale that didn't pass one, since the credit
-        // side always posts the FULL subtotal regardless. Mongoose's
-        // balance validator correctly rejected that, but the fix is to
-        // resolve a real account here, not to skip the entry.
+        // the same way revenueAccount/taxAccount already do — without this,
+        // any partial-payment sale that didn't pass receivableAccountId
+        // explicitly produced an unbalanced voucher (debits short by
+        // exactly dueAmount), since the credit side always posts the FULL
+        // subtotal regardless.
         const receivable = receivableAccountId
           || (await defaultAccountsService.resolve(companyId, 'accountsReceivableId', session));
         if (receivable) {
@@ -184,6 +209,21 @@ async function checkout(input) {
         }
       }
     });
+
+    // Fired AFTER the transaction has fully committed, deliberately outside
+    // it — an external HTTP call (which is exactly what firing a webhook
+    // is) has no business holding a database transaction open while it
+    // waits on some other server's response time. Wrapped so a failed or
+    // slow webhook delivery can never affect the sale that already
+    // completed successfully — same "the real operation matters more than
+    // the notification about it" principle the low-stock check already established.
+    try {
+      await require('./webhookService').fire(companyId, 'sale.completed', {
+        saleId: sale._id, invoiceNumber: sale.invoiceNumber, totalAmount: sale.totalAmount, branchId: sale.branchId,
+      });
+    } catch (err) {
+      console.error('Webhook delivery for sale.completed failed (sale itself still succeeded):', err.message);
+    }
 
     return sale;
   } finally {

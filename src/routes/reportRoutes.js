@@ -1,8 +1,11 @@
 const router = require('express').Router();
+const { body } = require('express-validator');
 const { requireAuth, scopeToCompany, requirePermission } = require('../middleware/auth');
 const { REPORTS_VIEW, REPORTS_FINANCIAL } = require('../constants/permissions');
+const { validate } = require('../middleware/validate');
 const controller = require('../controllers/reportController');
 const consolidatedController = require('../controllers/consolidatedReportController');
+const badDebtController = require('../controllers/badDebtController');
 
 router.use(requireAuth, scopeToCompany);
 router.get('/stock-valuation', requirePermission(REPORTS_VIEW), controller.stockValuation);
@@ -28,5 +31,12 @@ router.get('/expense-report', requirePermission(REPORTS_FINANCIAL), controller.e
 router.get('/consolidated/group', requirePermission(REPORTS_VIEW), consolidatedController.group);
 router.get('/consolidated/sales-summary', requirePermission(REPORTS_VIEW), consolidatedController.salesSummary); // ?from=&to=
 router.get('/consolidated/trial-balance', requirePermission(REPORTS_FINANCIAL), consolidatedController.trialBalance); // ?asOfDate=
+
+router.get('/ar-aging', requirePermission(REPORTS_FINANCIAL), badDebtController.arAgingReport); // ?asOfDate=
+router.get('/ap-aging', requirePermission(REPORTS_FINANCIAL), controller.apAging); // ?asOfDate=
+router.post('/write-off/:saleId', requirePermission(REPORTS_FINANCIAL),
+  body('badDebtExpenseAccountId').isString().notEmpty().withMessage('badDebtExpenseAccountId is required.'),
+  body('receivableAccountId').isString().notEmpty().withMessage('receivableAccountId is required.'),
+  validate, badDebtController.writeOffReceivable);
 
 module.exports = router;

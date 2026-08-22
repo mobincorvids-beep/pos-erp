@@ -5,9 +5,6 @@ import { AppLayout } from './components/AppLayout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 import { LoginPage } from './pages/LoginPage';
-import { RegisterPage } from './pages/RegisterPage';
-import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
-import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { PosPage } from './pages/PosPage';
 import { ProductsPage } from './pages/ProductsPage';
@@ -17,6 +14,17 @@ import { PurchasesPage } from './pages/PurchasesPage';
 import { StockTransfersPage } from './pages/StockTransfersPage';
 import { StockCountsPage } from './pages/StockCountsPage';
 import { ExpensesPage } from './pages/ExpensesPage';
+import { TicketsPage } from './pages/TicketsPage';
+import { SecurityPage } from './pages/SecurityPage';
+import { RfqPage } from './pages/RfqPage';
+import { BudgetsPage } from './pages/BudgetsPage';
+import { EmployeeLoansPage } from './pages/EmployeeLoansPage';
+import { RecurringInvoicesPage } from './pages/RecurringInvoicesPage';
+import { AgingPage } from './pages/AgingPage';
+import { PeriodsPage } from './pages/PeriodsPage';
+import { CostCentersPage } from './pages/CostCentersPage';
+import { UnitsPage } from './pages/UnitsPage';
+import { EarlyPaymentDiscountPage } from './pages/EarlyPaymentDiscountPage';
 import { BankingPage } from './pages/BankingPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { CustomersPage } from './pages/CustomersPage';
@@ -58,9 +66,6 @@ export default function App() {
             }
           >
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route
               element={
                 <ProtectedRoute>
@@ -78,6 +83,17 @@ export default function App() {
               <Route path="/stock-transfers" element={<StockTransfersPage />} />
               <Route path="/stock-counts" element={<StockCountsPage />} />
               <Route path="/expenses" element={<ExpensesPage />} />
+              <Route path="/tickets" element={<TicketsPage />} />
+              <Route path="/security" element={<SecurityPage />} />
+              <Route path="/rfqs" element={<RfqPage />} />
+              <Route path="/budgets" element={<BudgetsPage />} />
+              <Route path="/employee-loans" element={<EmployeeLoansPage />} />
+              <Route path="/recurring-invoices" element={<RecurringInvoicesPage />} />
+              <Route path="/aging" element={<AgingPage />} />
+              <Route path="/periods" element={<PeriodsPage />} />
+              <Route path="/cost-centers" element={<CostCentersPage />} />
+              <Route path="/units" element={<UnitsPage />} />
+              <Route path="/early-payment-discount" element={<EarlyPaymentDiscountPage />} />
               <Route path="/banking" element={<BankingPage />} />
               <Route path="/reports" element={<ReportsPage />} />
               <Route path="/customers" element={<CustomersPage />} />

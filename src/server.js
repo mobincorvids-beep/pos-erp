@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { validateEnv } = require('./config/validateEnv');
 validateEnv(); // refuses to start rather than run with a missing/insecure JWT_SECRET or MONGO_URI — see that file for why
 

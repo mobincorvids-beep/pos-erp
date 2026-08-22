@@ -1,9 +1,27 @@
 const reportingService = require('../services/reportingService');
+const reportExportService = require('../services/reportExportService');
 
+/** ?format=excel|pdf on top of the exact same reportingService.trialBalance() every other caller already uses — the report logic itself is never duplicated, only its output is optionally rendered as a real downloadable file instead of JSON. */
 async function trialBalance(req, res) {
   try {
     const asOfDate = req.query.asOfDate ? new Date(req.query.asOfDate) : new Date();
     const report = await reportingService.trialBalance(req.companyId, asOfDate);
+
+    if (req.query.format === 'excel' || req.query.format === 'pdf') {
+      const columns = [{ key: 'name', header: 'Account' }, { key: 'type', header: 'Type' }, { key: 'debit', header: 'Debit' }, { key: 'credit', header: 'Credit' }];
+      const rows = [...report.accounts, { name: 'TOTAL', type: '', debit: report.totalDebit, credit: report.totalCredit }];
+      if (req.query.format === 'excel') {
+        const buffer = await reportExportService.toExcelBuffer({ title: 'Trial Balance', columns, rows });
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename="trial-balance.xlsx"');
+        return res.send(buffer);
+      }
+      const buffer = await reportExportService.toPdfBuffer({ title: 'Trial Balance', columns, rows, generatedAt: asOfDate });
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename="trial-balance.pdf"');
+      return res.send(buffer);
+    }
+
     res.json(report);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -71,6 +89,11 @@ async function lowStock(req, res) {
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
+}
+
+async function apAging(req, res) {
+  const asOfDate = req.query.asOfDate ? new Date(req.query.asOfDate) : new Date();
+  res.json(await reportingService.apAgingReport(req.companyId, asOfDate));
 }
 
 function requireRange(req, res) {
@@ -150,5 +173,5 @@ async function stockMovement(req, res) {
 
 module.exports = {
   trialBalance, stockValuation, salesSummary, profitAndLoss, balanceSheet, cashBankBook,
-  lowStock, topProducts, topCustomers, salespersonPerformance, expenseReport, branchComparison, stockMovement,
+  lowStock, topProducts, topCustomers, salespersonPerformance, expenseReport, branchComparison, stockMovement, apAging,
 };

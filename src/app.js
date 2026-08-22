@@ -1,15 +1,10 @@
-require('dotenv').config();
-
-// Deliberately NOT calling validateEnv() here. This module's only job is
-// to build and export the configured Express app — requiring it (e.g. a
-// require-walk sanity check, or a future test importing the app without
-// booting a real server) must be a pure, side-effect-free operation.
-// validateEnv() calls process.exit(1) on a bad config, which would kill
-// whatever process merely required this file, even if that process had no
-// intention of ever handling a real request. Entrypoints that actually
-// serve traffic (server.js for npm start/Docker, api/index.js for Vercel)
-// call validateEnv() themselves, before requiring anything that needs a
-// working JWT_SECRET/MONGO_URI.
+// The Express app itself — pure and side-effect-free to require (no
+// validateEnv(), no listen(), no DB connect). Split out from server.js so
+// it can be required directly by both the traditional entrypoint
+// (server.js, for Docker/local/CI) and the Vercel serverless entrypoint
+// (api/index.js), and so CI's require-walk can load every file under src/
+// without a missing env var killing the process via validateEnv()'s
+// process.exit(1).
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -22,10 +17,11 @@ const { generalLimiter } = require('./middleware/rateLimit');
 const app = express();
 
 // Required when running behind a reverse proxy / load balancer (Nginx,
-// an ELB, Cloudflare) — without it, express-rate-limit and anything else
-// keying off req.ip sees the proxy's IP for every request instead of the
-// real client's, making per-IP limits meaningless. Harmless when there's
-// no proxy (the app just trusts its own direct connection info instead).
+// an ELB, Cloudflare, Vercel's edge network) — without it, express-rate-limit
+// and anything else keying off req.ip sees the proxy's IP for every request
+// instead of the real client's, making per-IP limits meaningless. Harmless
+// when there's no proxy (the app just trusts its own direct connection info
+// instead).
 app.set('trust proxy', 1);
 
 app.use(helmet());

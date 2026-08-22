@@ -26,6 +26,17 @@ const receiveValidation = [
 router.use(requireAuth, scopeToCompany);
 router.get('/', controller.list);
 router.post('/', requirePermission(PURCHASE_CREATE), requireBranchAccess(), createValidation, validate, controller.createOrder); // creates as 'draft'
+router.post('/from-alternate-units', requirePermission(PURCHASE_CREATE), requireBranchAccess(),
+  body('branchId').isString().notEmpty().withMessage('branchId is required.'),
+  body('warehouseId').isString().notEmpty().withMessage('warehouseId is required.'),
+  body('supplierId').isString().notEmpty().withMessage('supplierId is required.'),
+  body('items').isArray({ min: 1 }).withMessage('At least one item is required.'),
+  body('items.*.productId').isString().notEmpty().withMessage('Each item needs a productId.'),
+  body('items.*.variantId').isString().notEmpty().withMessage('Each item needs a variantId.'),
+  body('items.*.quantity').isFloat({ gt: 0 }).withMessage('quantity must be greater than zero.'),
+  body('items.*.unitCost').isFloat({ min: 0 }).withMessage('unitCost cannot be negative.'),
+  body('items.*.purchaseUnitId').isString().notEmpty().withMessage('purchaseUnitId is required — which unit this line item was actually purchased in.'),
+  validate, controller.createOrderFromAlternateUnits);
 router.get('/:id', controller.get);
 router.post('/:id/decide', requirePermission(PURCHASE_CREATE), body('approve').isBoolean().withMessage('approve must be true or false.'), validate, controller.decide);
 router.post('/:id/receive', requirePermission(PURCHASE_RECEIVE), receiveValidation, validate, controller.receive);

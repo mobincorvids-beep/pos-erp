@@ -1,4 +1,5 @@
 const Product = require('../models/Product');
+const inventoryService = require('../services/inventoryService');
 
 async function list(req, res) {
   const products = await Product.find({ companyId: req.companyId, isActive: true }).limit(200);
@@ -17,4 +18,8 @@ async function findByBarcode(req, res) {
   res.json(product);
 }
 
-module.exports = { list, create, findByBarcode };
+async function listBatches(req, res) {
+  res.json(await inventoryService.listProductBatches(req.companyId, req.query));
+}
+
+module.exports = { list, create, findByBarcode, listBatches };

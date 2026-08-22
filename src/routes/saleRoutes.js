@@ -30,7 +30,6 @@ router.get('/:id', requirePermission(SALES_VIEW), controller.get);
 router.post('/checkout', requirePermission(POS_SELL), requireBranchAccess(), checkoutValidation, validate, controller.checkout);
 router.post('/:id/fbr-submit', controller.submitFbr); // manual retry for FBR digital invoicing specifically
 router.post('/:id/tax-compliance-submit', controller.submitTaxCompliance); // manual retry across every registered authority
-router.post('/tax-compliance/retry-pending', requirePermission(SALES_VIEW), controller.retryTaxCompliance); // bulk reconciliation: retry every sale still missing a submission, ?limit=
 router.post('/:id/return', controller.processReturn); // { items: [...], refundAccountId, reason }
 router.post('/:id/void', controller.voidSale);          // { reason }
 

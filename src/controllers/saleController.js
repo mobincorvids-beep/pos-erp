@@ -72,21 +72,6 @@ async function submitTaxCompliance(req, res) {
   }
 }
 
-/**
- * Admin/reconciliation action: retries tax-compliance submission for every
- * completed sale of this company still missing a submission to at least
- * one registered authority (FBR and/or SRB/PRA/KPRA/BRA). Company-scoped
- * via req.companyId like every other route on this router.
- */
-async function retryTaxCompliance(req, res) {
-  try {
-    const results = await taxComplianceService.retryPendingCompliance(req.companyId, Number(req.query.limit) || 100);
-    res.json({ retried: results.length, results });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-}
-
 async function processReturn(req, res) {
   try {
     const saleReturn = await saleReturnService.processReturn(req.params.id, { ...req.body, userId: req.auth.userId });
@@ -105,4 +90,4 @@ async function voidSale(req, res) {
   }
 }
 
-module.exports = { list, get, checkout, submitFbr, submitTaxCompliance, retryTaxCompliance, processReturn, voidSale };
+module.exports = { list, get, checkout, submitFbr, submitTaxCompliance, processReturn, voidSale };

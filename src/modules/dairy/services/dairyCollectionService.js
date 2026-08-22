@@ -19,6 +19,11 @@ function createSchedule(input) {
   return QualityGradeSchedule.create({ companyId, name, bands: sorted });
 }
 
+/** A real, previously-missing read endpoint — createSchedule() existed with no way to list schedules back out, which the Dairy client page had honestly worked around with session-only local state (lost on refresh) until now. */
+function listSchedules(companyId) {
+  return QualityGradeSchedule.find({ companyId }).sort({ createdAt: -1 });
+}
+
 /** Highest band whose minFatPercent the reading actually meets — the boundary itself counts. */
 async function computePrice(scheduleId, fatPercent) {
   const schedule = await QualityGradeSchedule.findById(scheduleId);
@@ -65,4 +70,4 @@ function listCollections(companyId, { supplierId, paid } = {}) {
   return MilkCollection.find(filter).populate('supplierId', 'name').sort({ collectedAt: -1 });
 }
 
-module.exports = { createSchedule, computePrice, recordCollection, listCollections };
+module.exports = { createSchedule, listSchedules, computePrice, recordCollection, listCollections };

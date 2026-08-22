@@ -5,6 +5,7 @@
  */
 const Voucher = require('../models/Voucher');
 const { nextDocumentNumber } = require('./numberingService');
+const periodService = require('./periodService');
 
 /**
  * @param {Object} params
@@ -24,6 +25,13 @@ async function postVoucher(params, session) {
     companyId, branchId, type, date = new Date(), narration,
     entries, referenceType, referenceId, userId,
   } = params;
+
+  // The real period-lock enforcement — a fast, indexed, read-only check
+  // that resolves silently (a genuine no-op) for the overwhelming
+  // majority of companies that have never defined an AccountingPeriod at
+  // all. Deliberately placed here, before any write happens, so a closed
+  // period can never be violated even under concurrent posting attempts.
+  await periodService.assertPeriodOpen(companyId, date);
 
   const [voucher] = await Voucher.create(
     [{

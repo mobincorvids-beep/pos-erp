@@ -6,5 +6,6 @@ router.use(requireAuth, scopeToCompany);
 router.get('/', controller.list);
 router.post('/', controller.create);
 router.get('/barcode/:barcode', controller.findByBarcode);
+router.get('/batches', controller.listBatches); // ?productId=
 
 module.exports = router;

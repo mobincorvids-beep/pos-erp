@@ -27,11 +27,19 @@ function generateToken() {
   return crypto.randomBytes(48).toString('hex');
 }
 
-/** @returns {Promise<string>} the raw refresh token — only ever returned once, never stored in plaintext. */
-async function issue(subjectType, subjectId) {
+/** @returns {Promise<string>} the raw refresh token — only ever returned once, never stored in plaintext.
+ * `deviceContext` is optional and additive — every existing call site that
+ * doesn't pass it (admin login, and the two pre-existing user login paths)
+ * behaves exactly as before; only NEW callers that want a real session
+ * record with device/IP context need to pass it. */
+async function issue(subjectType, subjectId, deviceContext) {
   const token = generateToken();
   const expiresAt = new Date(Date.now() + REFRESH_TOKEN_DAYS * 24 * 60 * 60 * 1000);
-  await RefreshToken.create({ subjectType, subjectId, tokenHash: hash(token), expiresAt });
+  await RefreshToken.create({
+    subjectType, subjectId, tokenHash: hash(token), expiresAt,
+    ipAddress: deviceContext?.ipAddress || null,
+    userAgent: deviceContext?.userAgent || null,
+  });
   return token;
 }
 
@@ -60,12 +68,32 @@ async function rotate(rawToken) {
 
   const newToken = generateToken();
   const newHash = hash(newToken);
-  await RefreshToken.create({ subjectType: record.subjectType, subjectId: record.subjectId, tokenHash: newHash, expiresAt: new Date(Date.now() + REFRESH_TOKEN_DAYS * 24 * 60 * 60 * 1000) });
+  await RefreshToken.create({
+    subjectType: record.subjectType, subjectId: record.subjectId, tokenHash: newHash,
+    expiresAt: new Date(Date.now() + REFRESH_TOKEN_DAYS * 24 * 60 * 60 * 1000),
+    ipAddress: record.ipAddress, userAgent: record.userAgent, lastUsedAt: new Date(), // carries the device context forward across rotation — still the "same" session from the user's point of view, just a rotated token underneath
+  });
 
   record.replacedByTokenHash = newHash;
   await record.save();
 
   return { subjectType: record.subjectType, subjectId: record.subjectId, newToken };
+}
+
+/** Lists a subject's real, currently-live sessions — safe fields only, never the token hash itself. */
+function listActiveSessions(subjectType, subjectId) {
+  return RefreshToken.find({ subjectType, subjectId, revokedAt: null, expiresAt: { $gt: new Date() } })
+    .select('ipAddress userAgent lastUsedAt createdAt')
+    .sort({ lastUsedAt: -1 });
+}
+
+/** Revokes exactly ONE session by its own record id — checked to actually belong to the requesting subject first, so a user can never revoke someone else's session by guessing an id. */
+async function revokeById(sessionId, subjectType, subjectId) {
+  const record = await RefreshToken.findOne({ _id: sessionId, subjectType, subjectId });
+  if (!record) throw new Error('Session not found.');
+  record.revokedAt = new Date();
+  await record.save();
+  return record;
 }
 
 /** Revokes one refresh token — call on logout. */
@@ -81,4 +109,4 @@ async function revokeAllForSubject(subjectType, subjectId) {
   );
 }
 
-module.exports = { issue, rotate, revoke, revokeAllForSubject };
+module.exports = { issue, rotate, revoke, revokeAllForSubject, listActiveSessions, revokeById };

@@ -16,21 +16,6 @@ const saleItemSchema = new Schema({
   taxRate: { type: Number, default: 0 },
   taxAmount: { type: Number, default: 0 },
   lineTotal: { type: Number, required: true },
-
-  // Optional fields used only when building the FBR Digital Invoicing
-  // payload (see fbrService.buildInvoicePayload). Left unset unless the
-  // catalog/checkout flow actually captures them — FBR submission still
-  // works without these, just with fewer of FBR's optional fields filled.
-  hsCode: String,             // Harmonized System code, per-product
-  description: String,        // product description as FBR expects it
-  unitOfMeasure: String,       // e.g. 'PCS', 'KG' — defaults to 'PCS'
-  taxWithheldAtSource: { type: Number, default: 0 },
-  extraTax: { type: Number, default: 0 },
-  furtherTax: { type: Number, default: 0 },
-  sroScheduleNo: String,
-  fedPayable: { type: Number, default: 0 },
-  saleType: String,           // FBR "saleType" classification for this item
-  sroItemSerialNo: String,
 }, { _id: false });
 
 const salePaymentSchema = new Schema({
@@ -76,6 +61,25 @@ const saleSchema = new Schema({
   totalAmount: { type: Number, default: 0 },
   paidAmount: { type: Number, default: 0 },
   dueAmount: { type: Number, default: 0 },
+  writtenOff: { type: Boolean, default: false }, // once true, dueAmount is permanently 0 — see badDebtService.writeOffReceivable
+  writtenOffAt: { type: Date, default: null },
+
+  // Real transaction-level foreign-currency denomination — the actual
+  // piece that was missing from Multi-Currency before this: a sale can
+  // now genuinely be BILLED in a currency other than the company's base
+  // one. currency defaults to the base currency and exchangeRate defaults
+  // to 1, so every existing call site that never mentions currency at all
+  // (which is every single one before this round) behaves EXACTLY as
+  // before — this is additive, not a breaking change. totalAmount and
+  // every other monetary field above remain in the company's BASE
+  // currency always (that's what accounting/vouchers/reports already
+  // assume everywhere else in this app) — foreignTotalAmount is the only
+  // field actually denominated in `currency`, snapshotted at the rate
+  // used at checkout time, the same "snapshot the terms, don't re-derive
+  // them later" convention this app already uses everywhere else.
+  currency: { type: String, default: null }, // null = base currency, no conversion involved
+  exchangeRate: { type: Number, default: 1 }, // 1 unit of `currency` = this many units of the base currency
+  foreignTotalAmount: { type: Number, default: null }, // totalAmount expressed in `currency`, for display/printing on the actual invoice — never used for accounting math
 
   // FBR digital invoicing — kept as dedicated fields (rather than folded
   // into taxSubmissions below) since FBR predates the multi-authority
@@ -83,16 +87,6 @@ const saleSchema = new Schema({
   fbrInvoiceNumber: String,
   fbrQrCode: String,
   fbrSubmittedAt: Date,
-  // Optional fields FBR's Digital Invoicing schema expects for certain
-  // scenarios (B2B invoices, non-standard sale types). Only populated when
-  // the checkout flow actually captures them; fbrService.buildInvoicePayload
-  // falls back to sensible defaults ('Unregistered', null) when absent.
-  buyerNTNCNIC: String,
-  buyerBusinessName: String,
-  buyerProvince: String,
-  buyerAddress: String,
-  buyerRegistrationType: String, // 'Registered' | 'Unregistered'
-  fbrScenarioId: String, // per-invoice override of Company.fbrDefaultScenarioId
 
   // Provincial services-tax authorities (SRB/PRA/KPRA/BRA) — a company can
   // be registered with more than one (e.g. FBR federally for goods, SRB

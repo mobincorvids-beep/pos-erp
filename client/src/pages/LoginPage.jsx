@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export function LoginPage() {
@@ -57,16 +57,10 @@ export function LoginPage() {
           <button type="submit" disabled={loading} className="btn-primary w-full">
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
-          <p className="text-xs text-ink-muted text-center">
-            <Link to="/forgot-password" className="underline">Forgot password?</Link>
-          </p>
         </form>
 
         <p className="text-xs text-ink-muted text-center mt-4">
           Seeded demo: admin@demo.test / password123
-        </p>
-        <p className="text-xs text-ink-muted text-center mt-2">
-          Don't have an account? <Link to="/register" className="underline">Register</Link>
         </p>
       </div>
     </div>

@@ -1,6 +1,25 @@
 const purchaseService = require('../services/purchaseService');
+const unitConversionService = require('../services/unitConversionService');
 const PurchaseOrder = require('../models/PurchaseOrder');
 const GoodsReceivedNote = require('../models/GoodsReceivedNote');
+
+/**
+ * Real multi-UOM entry point: items are expressed in whatever unit the
+ * purchase actually happened in (e.g. "2 cartons"), converted to the
+ * product's own tracking unit (quantity AND unit cost both converted,
+ * preserving the true total cost), then handed to the exact same
+ * createPurchaseOrder() every other PO already goes through — core
+ * Purchasing never has to know multi-UOM exists.
+ */
+async function createOrderFromAlternateUnits(req, res) {
+  try {
+    const convertedItems = await unitConversionService.convertPurchaseItemsToProductUnits(req.body.items);
+    const po = await purchaseService.createPurchaseOrder({ ...req.body, items: convertedItems, companyId: req.companyId, userId: req.auth.userId });
+    res.status(201).json(po);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
 
 async function createOrder(req, res) {
   try {
@@ -70,4 +89,4 @@ async function recordQC(req, res) {
   }
 }
 
-module.exports = { createOrder, receive, list, get, decide, listGRNs, recordQC };
+module.exports = { createOrder, createOrderFromAlternateUnits, receive, list, get, decide, listGRNs, recordQC };

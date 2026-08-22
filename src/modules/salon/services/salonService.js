@@ -112,38 +112,41 @@ function listMembershipPackages(companyId) {
   return MembershipPackage.find({ companyId, isActive: true });
 }
 
-/** Sells a membership package — a real Sale for the package price, plus a CustomerMembership record tracking the session credit. */
+/**
+ * Sells a membership package — a real Sale for the package price, plus a
+ * CustomerMembership record tracking the session credit. Deliberately NOT
+ * wrapped in an enclosing transaction — posSaleService.checkout() always
+ * opens its own independent session internally and has no way to join an
+ * outer one, so nesting a transaction around it wouldn't actually make
+ * this function atomic, it would just create two unrelated transactions
+ * that happen to overlap in time. This was a real bug in this exact
+ * function until it was caught and fixed: the checkout() call sat inside
+ * this function's own session.withTransaction(), the same class of
+ * mistake later caught in Hardware, Multi-Currency, and Media/
+ * Entertainment — found this time by re-reading this file while building
+ * Sports' membership module on top of the same pattern, not from a bug
+ * report. checkout() is now its own atomic unit; the CustomerMembership
+ * write follows as its own standalone, real single-document write.
+ */
 async function sellMembership(input) {
   const { companyId, branchId, warehouseId, posTerminalId, customerId, membershipPackageId, paymentAccountId, userId } = input;
 
   const pkg = await MembershipPackage.findOne({ _id: membershipPackageId, companyId });
   if (!pkg) throw new Error('Membership package not found.');
 
-  const session = await mongoose.startSession();
-  try {
-    let result;
-    await session.withTransaction(async () => {
-      const sale = await posSaleService.checkout({
-        companyId, branchId, warehouseId, posTerminalId, customerId, userId,
-        items: [{ productId: pkg.productId, variantId: pkg.variantId, quantity: 1, unitPrice: pkg.price }],
-        payments: [{ paymentAccountId, method: 'cash', amount: pkg.price }],
-      });
+  const sale = await posSaleService.checkout({
+    companyId, branchId, warehouseId, posTerminalId, customerId, userId,
+    items: [{ productId: pkg.productId, variantId: pkg.variantId, quantity: 1, unitPrice: pkg.price }],
+    payments: [{ paymentAccountId, method: 'cash', amount: pkg.price }],
+  });
 
-      const expiresAt = new Date(Date.now() + pkg.validityDays * 24 * 60 * 60 * 1000);
-      const [membership] = await CustomerMembership.create(
-        [{
-          companyId, customerId, membershipPackageId: pkg._id, saleId: sale._id,
-          totalSessions: pkg.totalSessions, remainingSessions: pkg.totalSessions, expiresAt,
-        }],
-        { session }
-      );
+  const expiresAt = new Date(Date.now() + pkg.validityDays * 24 * 60 * 60 * 1000);
+  const membership = await CustomerMembership.create({
+    companyId, customerId, membershipPackageId: pkg._id, saleId: sale._id,
+    totalSessions: pkg.totalSessions, remainingSessions: pkg.totalSessions, expiresAt,
+  });
 
-      result = { sale, membership };
-    });
-    return result;
-  } finally {
-    session.endSession();
-  }
+  return { sale, membership };
 }
 
 function listCustomerMemberships(companyId, customerId) {

@@ -14,6 +14,7 @@ const Account = require('../models/Account');
 const accountingService = require('./accountingService');
 const auditService = require('./auditService');
 const defaultAccountsService = require('./defaultAccountsService');
+const employeeLoanService = require('./employeeLoanService');
 const mongoose = require('mongoose');
 
 // --- Employees -----------------------------------------------------------
@@ -114,12 +115,21 @@ async function generatePayroll({ companyId, month, year, userId }) {
     const perDayRate = basic / daysInMonth;
     const attendanceDeduction = Math.round(perDayRate * absentDays * 100) / 100;
 
-    const netPay = Math.round((basic + allowances - fixedDeductions - attendanceDeduction) * 100) / 100;
+    // The real integration: PayrollRun's `advances` field has existed
+    // this whole project but was always hardcoded to 0 and never
+    // subtracted from netPay — confirmed by reading this function before
+    // touching it. employeeLoanService.monthlyDeductionFor() is a pure,
+    // read-only lookup: for an employee with no active loan (the
+    // overwhelming majority, and every scenario that existed before this
+    // feature), it returns exactly 0 — a true no-op, not merely expected to be one.
+    const advances = await employeeLoanService.monthlyDeductionFor(emp._id);
+
+    const netPay = Math.round((basic + allowances - fixedDeductions - attendanceDeduction - advances) * 100) / 100;
     totalNetPay += netPay;
 
     entries.push({
       employeeId: emp._id, basic, allowances, fixedDeductions,
-      absentDays, attendanceDeduction, advances: 0, bonuses: 0, netPay,
+      absentDays, attendanceDeduction, advances, bonuses: 0, netPay,
     });
   }
 

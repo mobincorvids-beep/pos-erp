@@ -23,6 +23,14 @@ const purchaseOrderSchema = new Schema({
   totalAmount: { type: Number, default: 0 },
   paidAmount: { type: Number, default: 0 },
   dueAmount: { type: Number, default: 0 }, // set to totalAmount once received; reduced by SupplierPayment allocations
+  // Real "2/10 net 30"-style trade credit terms — all optional and
+  // default to null/0, so every existing PurchaseOrder and every prior
+  // call to recordPayment() is completely unaffected. Set once, at PO
+  // creation time; earlyPaymentDiscountService reads these to decide
+  // whether a given payment date genuinely qualifies for the discount.
+  paymentTermsDays: { type: Number, default: null },
+  earlyPaymentDiscountPercent: { type: Number, default: 0 },
+  earlyPaymentDiscountDays: { type: Number, default: 0 },
   userId: { type: Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 

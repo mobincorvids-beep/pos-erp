@@ -2,22 +2,14 @@ import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { Loading } from '../components/Loading';
-import { formatMoney, formatDate, formatQty, toDateInputValue } from '../lib/format';
+import { formatMoney, toDateInputValue } from '../lib/format';
 
 const TABS = [
   { key: 'sales-summary', label: 'Sales summary' },
   { key: 'stock-valuation', label: 'Stock valuation' },
-  { key: 'low-stock', label: 'Low stock' },
-  { key: 'top-products', label: 'Top products' },
-  { key: 'top-customers', label: 'Top customers' },
-  { key: 'salesperson-performance', label: 'Salesperson performance' },
-  { key: 'branch-comparison', label: 'Branch comparison' },
-  { key: 'stock-movement', label: 'Stock movement' },
   { key: 'trial-balance', label: 'Trial balance' },
   { key: 'profit-and-loss', label: 'Profit & loss' },
   { key: 'balance-sheet', label: 'Balance sheet' },
-  { key: 'cash-bank-book', label: 'Cash/bank book' },
-  { key: 'expense-report', label: 'Expenses' },
   { key: 'consolidated', label: 'Multi-company' },
 ];
 
@@ -41,17 +33,9 @@ export function ReportsPage() {
 
       {tab === 'sales-summary' && <DateRangeReport path="/reports/sales-summary" render={SalesSummaryView} />}
       {tab === 'stock-valuation' && <SimpleReport path="/reports/stock-valuation" render={StockValuationView} />}
-      {tab === 'low-stock' && <SimpleReport path="/reports/low-stock" render={LowStockView} />}
-      {tab === 'top-products' && <DateRangeReport path="/reports/top-products" render={TopProductsView} />}
-      {tab === 'top-customers' && <DateRangeReport path="/reports/top-customers" render={TopCustomersView} />}
-      {tab === 'salesperson-performance' && <DateRangeReport path="/reports/salesperson-performance" render={SalespersonPerformanceView} />}
-      {tab === 'branch-comparison' && <DateRangeReport path="/reports/branch-comparison" render={BranchComparisonView} />}
-      {tab === 'stock-movement' && <DateRangeReport path="/reports/stock-movement" render={StockMovementView} />}
       {tab === 'trial-balance' && <SimpleReport path="/reports/trial-balance" render={TrialBalanceView} />}
       {tab === 'profit-and-loss' && <DateRangeReport path="/reports/profit-and-loss" render={ProfitAndLossView} />}
       {tab === 'balance-sheet' && <SimpleReport path="/reports/balance-sheet" render={BalanceSheetView} />}
-      {tab === 'cash-bank-book' && <CashBankBookReport />}
-      {tab === 'expense-report' && <DateRangeReport path="/reports/expense-report" render={ExpenseReportView} />}
       {tab === 'consolidated' && <DateRangeReport path="/reports/consolidated/sales-summary" render={ConsolidatedView} />}
     </div>
   );
@@ -208,152 +192,6 @@ function BalanceSheetView({ data }) {
           <p className="num text-sm font-medium mt-2 text-right">{formatMoney(data.totalEquity, company?.currency)}</p>
         </div>
       </div>
-    </div>
-  );
-}
-
-function LowStockView({ data }) {
-  const rows = data || [];
-  if (rows.length === 0) return <p className="text-sm text-ink-muted">No low-stock items — everything is above its reorder level.</p>;
-  return (
-    <ReportTable
-      columns={['Product', 'On hand', 'Reorder level', 'Min stock']}
-      rows={rows.map((r) => [r.productName, formatQty(r.quantityOnHand), formatQty(r.reorderLevel), formatQty(r.minStock)])}
-    />
-  );
-}
-
-function TopProductsView({ data }) {
-  const { company } = useAuth();
-  const rows = data || [];
-  if (rows.length === 0) return <p className="text-sm text-ink-muted">No sales for this period.</p>;
-  return (
-    <ReportTable
-      columns={['Product', 'Qty sold', 'Revenue']}
-      rows={rows.map((r) => [r.productName, formatQty(r.quantitySold), formatMoney(r.revenue, company?.currency)])}
-    />
-  );
-}
-
-function TopCustomersView({ data }) {
-  const { company } = useAuth();
-  const rows = data || [];
-  if (rows.length === 0) return <p className="text-sm text-ink-muted">No customer sales for this period.</p>;
-  return (
-    <ReportTable
-      columns={['Customer', 'Invoices', 'Total spend']}
-      rows={rows.map((r) => [r.customerName, String(r.invoiceCount), formatMoney(r.totalSpend, company?.currency)])}
-    />
-  );
-}
-
-function SalespersonPerformanceView({ data }) {
-  const { company } = useAuth();
-  const rows = data || [];
-  if (rows.length === 0) return <p className="text-sm text-ink-muted">No sales for this period.</p>;
-  return (
-    <ReportTable
-      columns={['Salesperson', 'Invoices', 'Net sales', 'Average sale']}
-      rows={rows.map((r) => [r.userName, String(r.invoiceCount), formatMoney(r.netSales, company?.currency), formatMoney(r.averageSale, company?.currency)])}
-    />
-  );
-}
-
-function BranchComparisonView({ data }) {
-  const { company } = useAuth();
-  const rows = data || [];
-  if (rows.length === 0) return <p className="text-sm text-ink-muted">No branches configured.</p>;
-  return (
-    <ReportTable
-      columns={['Branch', 'Invoices', 'Net sales']}
-      rows={rows.map((r) => [r.branchName, String(r.invoiceCount), formatMoney(r.netSales, company?.currency)])}
-    />
-  );
-}
-
-function StockMovementView({ data }) {
-  const rows = data || [];
-  if (rows.length === 0) return <p className="text-sm text-ink-muted">No stock movements for this period.</p>;
-  return (
-    <div>
-      <p className="text-xs text-ink-muted mb-3">Most recent 500 movements.</p>
-      <ReportTable
-        columns={['Date', 'Product', 'Type', 'Qty']}
-        rows={rows.map((r) => [formatDate(r.createdAt), r.productId?.name || 'Unknown', r.type, formatQty(r.quantity)])}
-      />
-    </div>
-  );
-}
-
-function ExpenseReportView({ data }) {
-  const { company } = useAuth();
-  return (
-    <div>
-      <MetricCard label="Total approved expenses" value={formatMoney(data.grandTotal, company?.currency)} className="mb-4 w-64" />
-      <ReportTable
-        columns={['Category', 'Count', 'Total']}
-        rows={data.rows.map((r) => [r.categoryName, String(r.count), formatMoney(r.total, company?.currency)])}
-      />
-    </div>
-  );
-}
-
-function CashBankBookReport() {
-  const { company } = useAuth();
-  const [accounts, setAccounts] = useState([]);
-  const [accountId, setAccountId] = useState('');
-  const [from, setFrom] = useState(() => toDateInputValue(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)));
-  const [to, setTo] = useState(() => toDateInputValue());
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    api.get('/org/accounts?paymentOnly=true').then((accs) => {
-      setAccounts(accs);
-      if (accs.length > 0) setAccountId(accs[0]._id);
-    }).catch((err) => setError(err.message));
-  }, []);
-
-  function load() {
-    if (!accountId) return;
-    setLoading(true);
-    api.get(`/reports/cash-bank-book?accountId=${accountId}&from=${from}&to=${to}`)
-      .then(setData).catch((err) => setError(err.message)).finally(() => setLoading(false));
-  }
-  useEffect(load, [accountId]);
-
-  return (
-    <div>
-      <div className="flex items-end gap-2 mb-4">
-        <div>
-          <label className="field-label">Account</label>
-          <select className="field-input" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
-            {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
-          </select>
-        </div>
-        <div><label className="field-label">From</label><input type="date" className="field-input" value={from} onChange={(e) => setFrom(e.target.value)} /></div>
-        <div><label className="field-label">To</label><input type="date" className="field-input" value={to} onChange={(e) => setTo(e.target.value)} /></div>
-        <button className="btn-secondary" onClick={load}>Update</button>
-      </div>
-      {loading && <Loading />}
-      {error && <p className="text-sm text-danger">{error}</p>}
-      {!loading && data && (
-        <div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
-            <MetricCard label="Account" value={data.accountName} plain />
-            <MetricCard label="Opening balance" value={formatMoney(data.openingBalance, company?.currency)} />
-            <MetricCard label="Closing balance" value={formatMoney(data.closingBalance, company?.currency)} />
-          </div>
-          <ReportTable
-            columns={['Date', 'Voucher', 'Type', 'Narration', 'Debit', 'Credit', 'Balance']}
-            rows={data.entries.map((e) => [
-              formatDate(e.date), e.voucherNumber, e.type, e.narration || '—',
-              formatMoney(e.debit, company?.currency), formatMoney(e.credit, company?.currency), formatMoney(e.balance, company?.currency),
-            ])}
-          />
-        </div>
-      )}
     </div>
   );
 }

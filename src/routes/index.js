@@ -6,6 +6,14 @@ router.use('/sales', require('./saleRoutes'));
 router.use('/sales-workflow', require('./salesOrderRoutes')); // quotations & sales orders
 router.use('/purchase-orders', require('./purchaseRoutes'));
 router.use('/requisitions', require('./requisitionRoutes'));
+router.use('/rfqs', require('./rfqRoutes'));
+router.use('/cost-centers', require('./costCenterRoutes'));
+router.use('/units', require('./unitRoutes'));
+router.use('/accounting-periods', require('./periodRoutes'));
+router.use('/employee-loans', require('./employeeLoanRoutes'));
+router.use('/recurring-invoices', require('./recurringInvoiceRoutes'));
+router.use('/budgets', require('./budgetRoutes'));
+router.use('/purchase-orders/early-payment', require('./earlyPaymentDiscountRoutes'));
 router.use('/stock-transfers', require('./transferRoutes'));
 router.use('/stock-counts', require('./stockCountRoutes'));
 router.use('/manufacturing', require('./manufacturingRoutes'));
@@ -25,6 +33,14 @@ router.use('/loyalty', require('./loyaltyRoutes'));
 router.use('/appointments', require('./appointmentRoutes'));
 router.use('/crm', require('./crmRoutes'));
 router.use('/hr', require('./hrRoutes'));
+router.use('/fixed-assets', require('./fixedAssetRoutes'));
+router.use('/dashboard', require('./dashboardRoutes'));
+router.use('/currency', require('./currencyRoutes'));
+router.use('/documents', require('./documentRoutes'));
+router.use('/tickets', require('./ticketRoutes'));
+router.use('/notifications', require('./notificationRoutes'));
+router.use('/workflows', require('./workflowRoutes'));
+router.use('/webhooks', require('./webhookRoutes'));
 router.use('/projects', require('./projectRoutes'));
 router.use('/ecommerce-config', require('./ecommerceConfigRoutes')); // tenant-side setup
 router.use('/ecommerce', require('./ecommerceWebhookRoutes'));        // external store calls this — webhook-token auth, not JWT

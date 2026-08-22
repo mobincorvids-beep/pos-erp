@@ -45,6 +45,16 @@ const KEYS = {
   PAYROLL_POST: 'payroll.post',
 
   ECOMMERCE_MANAGE: 'ecommerce.manage',
+
+  DOCUMENTS_VIEW: 'documents.view',
+  DOCUMENTS_MANAGE: 'documents.manage',
+  // A deliberately STRICTER permission than the general documents ones
+  // above — a supplier's tax registration, bank details, or contract, or
+  // the company's own registration/tax documents, are more sensitive
+  // than a routine attachment on a Sale or PurchaseOrder, and shouldn't
+  // be visible to every role that can see ordinary documents.
+  VENDOR_COMPANY_DOCUMENTS_VIEW: 'documents.vendor_company.view',
+  VENDOR_COMPANY_DOCUMENTS_MANAGE: 'documents.vendor_company.manage',
 };
 
 // Human-readable catalog for the role-editor UI — grouped so checkboxes
@@ -97,6 +107,15 @@ const CATALOG = [
       { key: KEYS.USERS_MANAGE, label: 'Add/manage staff accounts' },
       { key: KEYS.ROLES_MANAGE, label: 'Create/edit roles' },
       { key: KEYS.ORG_ALL_BRANCHES, label: 'Access all branches (bypasses per-branch access restriction)' },
+    ],
+  },
+  {
+    group: 'Documents',
+    items: [
+      { key: KEYS.DOCUMENTS_VIEW, label: 'View attached documents (contracts, invoices, licenses...)' },
+      { key: KEYS.DOCUMENTS_MANAGE, label: 'Upload/manage documents' },
+      { key: KEYS.VENDOR_COMPANY_DOCUMENTS_VIEW, label: 'View SUPPLIER and COMPANY documents (tax registration, bank details, contracts — more sensitive than ordinary attachments)' },
+      { key: KEYS.VENDOR_COMPANY_DOCUMENTS_MANAGE, label: 'Upload/manage SUPPLIER and COMPANY documents' },
     ],
   },
   {

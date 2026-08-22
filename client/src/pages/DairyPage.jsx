@@ -10,6 +10,8 @@ export function DairyPage() {
   const [tab, setTab] = useState('collections');
   const [schedules, setSchedules] = useState([]);
 
+  useEffect(() => { api.get('/dairy/quality-schedules').then(setSchedules).catch(() => {}); }, []);
+
   return (
     <div>
       <p className="page-title mb-4">Dairy</p>
@@ -30,9 +32,10 @@ function SchedulesTab({ schedules, setSchedules }) {
   const toast = useToast();
   const [showForm, setShowForm] = useState(false);
 
-  // NOTE: the backend does not currently expose a GET /dairy/quality-schedules
-  // endpoint — schedules created this session are tracked here so the
-  // Collections tab can reference them by id, but a page refresh loses them.
+  // Schedules are loaded fresh from the real endpoint on mount (see
+  // DairyPage above) — created here, they're appended to that same
+  // state so the Collections tab sees them immediately, without waiting
+  // for a refetch.
   function handleSaved(schedule) {
     setSchedules((prev) => [schedule, ...prev]);
     setShowForm(false);

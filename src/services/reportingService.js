@@ -13,6 +13,7 @@ const Product = require('../models/Product');
 const Sale = require('../models/Sale');
 const Expense = require('../models/Expense');
 const Branch = require('../models/Branch');
+const PurchaseOrder = require('../models/PurchaseOrder');
 /**
  * Trial balance: for every account, sum all debits and credits across all
  * vouchers up to `asOfDate`, plus its opening balance. A balanced ledger
@@ -425,5 +426,30 @@ module.exports = {
   trialBalance, stockValuation, salesSummary,
   profitAndLoss, balanceSheet, cashBankBook,
   lowStockReport, topProductsReport, topCustomersReport, salespersonPerformanceReport,
-  expenseReport, branchComparisonReport, stockMovementReport,
+  expenseReport, branchComparisonReport, stockMovementReport, apAgingReport,
 };
+
+/**
+ * apAgingReport — the payable-side mirror of badDebtService.arAgingReport,
+ * reusing its exact bucketing shape (0-30/31-60/61-90/90+ days, measured
+ * from createdAt since PurchaseOrder has no separate due-date field
+ * either, the same honest default already stated for AR). Confirmed
+ * before writing this that PurchaseOrder.dueAmount is a real, live
+ * balance already maintained by supplierLedgerService's own payment
+ * allocation logic — this report reads that existing source of truth,
+ * it doesn't introduce a second one.
+ */
+async function apAgingReport(companyId, asOfDate = new Date()) {
+  const outstandingOrders = await PurchaseOrder.find({ companyId, dueAmount: { $gt: 0 }, status: { $ne: 'cancelled' } })
+    .populate('supplierId', 'name').sort({ createdAt: 1 });
+
+  const buckets = { '0-30': 0, '31-60': 0, '61-90': 0, '90+': 0 };
+  const rows = outstandingOrders.map((po) => {
+    const daysOverdue = Math.max(0, Math.floor((asOfDate - po.createdAt) / (24 * 60 * 60 * 1000)));
+    const bucket = daysOverdue <= 30 ? '0-30' : daysOverdue <= 60 ? '31-60' : daysOverdue <= 90 ? '61-90' : '90+';
+    buckets[bucket] = Math.round((buckets[bucket] + po.dueAmount) * 100) / 100;
+    return { purchaseOrderId: po._id, poNumber: po.poNumber, supplierName: po.supplierId?.name || 'Unknown', daysOverdue, bucket, dueAmount: po.dueAmount };
+  });
+
+  return { asOfDate, rows, buckets, totalOutstanding: Math.round(Object.values(buckets).reduce((s, v) => s + v, 0) * 100) / 100 };
+}

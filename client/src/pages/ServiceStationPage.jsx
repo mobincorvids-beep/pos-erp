@@ -112,12 +112,8 @@ function VehiclePanel({ vehicle, onClose, onChanged }) {
   const [mileage, setMileage] = useState(vehicle.currentMileage);
   const [history, setHistory] = useState([]);
   const [busy, setBusy] = useState(false);
-  const [showJobCard, setShowJobCard] = useState(false);
 
-  function loadHistory() {
-    api.get(`/service-station/vehicles/${vehicle._id}/history`).then(setHistory).catch(() => {});
-  }
-  useEffect(loadHistory, [vehicle._id]);
+  useEffect(() => { api.get(`/service-station/vehicles/${vehicle._id}/history`).then(setHistory).catch(() => {}); }, [vehicle._id]);
 
   async function updateMileage() {
     setBusy(true);
@@ -145,76 +141,10 @@ function VehiclePanel({ vehicle, onClose, onChanged }) {
       <input type="number" className="field-input num mb-2" value={mileage} onChange={(e) => setMileage(e.target.value)} />
       <button className="btn-secondary w-full mb-4" disabled={busy} onClick={updateMileage}>Update</button>
       <button className="btn-primary w-full mb-4" disabled={busy} onClick={recordServiceCompleted}>Record service completed here</button>
-      <button className="btn-secondary w-full mb-4" disabled={busy} onClick={() => setShowJobCard(true)}>Open job card</button>
       <div className="tear-line my-3" />
       <p className="text-sm font-medium mb-2">Service history</p>
       {history.length === 0 && <p className="text-sm text-ink-muted">No job cards yet.</p>}
       {history.map((h) => <div key={h._id} className="text-sm border-b border-rule py-1.5">{h.itemDescription} — <span className="chip-neutral">{h.status}</span></div>)}
-      {showJobCard && (
-        <JobCardForm
-          vehicle={vehicle}
-          onClose={() => setShowJobCard(false)}
-          onSaved={() => { setShowJobCard(false); loadHistory(); onChanged(); }}
-        />
-      )}
-    </div>
-  );
-}
-
-function JobCardForm({ vehicle, onClose, onSaved }) {
-  const toast = useToast();
-  const [branches, setBranches] = useState([]);
-  const [warehouses, setWarehouses] = useState([]);
-  const [form, setForm] = useState({ branchId: '', warehouseId: '', itemDescription: '' });
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => { api.get('/org/branches').then(setBranches).catch(() => {}); }, []);
-  useEffect(() => { if (form.branchId) api.get(`/org/warehouses?branchId=${form.branchId}`).then(setWarehouses).catch(() => {}); }, [form.branchId]);
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      await api.post(`/service-station/vehicles/${vehicle._id}/job-cards`, form);
-      toast('Job card opened.', 'success');
-      onSaved();
-    } catch (err) {
-      toast(err.message, 'error');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
-      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-1">Open job card</p>
-        <p className="text-sm text-ink-muted mb-4">{vehicle.registrationNumber}</p>
-        <div className="space-y-3">
-          <div>
-            <label className="field-label">Branch</label>
-            <select required className="field-input" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value, warehouseId: '' })}>
-              <option value="">Select…</option>
-              {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="field-label">Warehouse</label>
-            <select required className="field-input" value={form.warehouseId} onChange={(e) => setForm({ ...form, warehouseId: e.target.value })} disabled={!form.branchId}>
-              <option value="">Select…</option>
-              {warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="field-label">Work description</label>
-            <input required autoFocus className="field-input" value={form.itemDescription} onChange={(e) => setForm({ ...form, itemDescription: e.target.value })} placeholder="e.g. Oil change & brake check" />
-          </div>
-        </div>
-        <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Opening…' : 'Open'}</button>
-        </div>
-      </form>
     </div>
   );
 }

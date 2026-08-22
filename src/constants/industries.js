@@ -45,19 +45,6 @@ const CORE_ALWAYS_ON = [
 // honest reasoning behind each. These obviously can't be auto-discovered;
 // this is the one place genuinely open work still needs to be listed by hand.
 const NOT_YET_BUILT = [
-  { key: 'pharmaceutical', label: 'Pharmaceutical (Manufacturing/Distribution)', category: 'Health & Wellness', hasModule: false },
-  { key: 'construction', label: 'Construction', category: 'Trade Crafts & Construction', hasModule: false },
-  { key: 'import_export', label: 'Import / Export', category: 'Logistics & Distribution', hasModule: false },
-  { key: 'telecom', label: 'Telecom', category: 'Electronics & Telecom', hasModule: false },
-  { key: 'real_estate', label: 'Real Estate', category: 'Property', hasModule: false },
-  { key: 'housing_society', label: 'Housing Society', category: 'Property', hasModule: false },
-  { key: 'travel', label: 'Travel', category: 'Travel & Pilgrimage', hasModule: false },
-  { key: 'hajj_umrah', label: 'Hajj / Umrah', category: 'Travel & Pilgrimage', hasModule: false },
-  { key: 'insurance', label: 'Insurance', category: 'Finance & Risk', hasModule: false },
-  { key: 'professional_services', label: 'Professional Services', category: 'Services', hasModule: false },
-  { key: 'ngo', label: 'NGO', category: 'Services', hasModule: false },
-  { key: 'media_entertainment', label: 'Media / Entertainment', category: 'Services', hasModule: false },
-  { key: 'sports', label: 'Sports', category: 'Services', hasModule: false },
   { key: 'government', label: 'Government', category: 'Services', hasModule: false },
 ];
 

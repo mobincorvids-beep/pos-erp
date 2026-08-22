@@ -1,8 +1,7 @@
 # CI — runs on every push and PR. Three independent jobs: backend
 # (syntax/require-walk/audit), client (build/audit), and a smoke-test job
 # that runs the real integration smoke test against an actual MongoDB
-# service container — this workflow does NOT skip the smoke test, despite
-# an earlier version of this comment claiming otherwise.
+# service container.
 name: CI
 
 on:
@@ -77,13 +76,14 @@ jobs:
       - name: Build
         run: npm run build
 
-      # --omit=dev: the only high-severity advisory here is esbuild's dev-server
-      # request-spoofing issue (GHSA-67mh-4wv8-2f99), which only matters if
+      # --omit=dev: the only high-severity advisories in this project's
+      # client deps are dev-server-only (e.g. esbuild's dev-server
+      # request-spoofing issue, GHSA-67mh-4wv8-2f99), which only matter if
       # someone runs `vite`'s dev server on a machine an attacker can reach —
-      # it ships in devDependencies and is never part of the production
+      # they ship in devDependencies and are never part of the production
       # build output above. Auditing devDependencies here would fail CI on a
-      # vulnerability that can't actually affect a deployed build; production
-      # dependencies are still audited at full strictness.
+      # vulnerability that can't actually affect a deployed build;
+      # production dependencies are still audited at full strictness.
       - name: npm audit (fails the build on any high/critical vulnerability in production dependencies)
         run: npm audit --omit=dev --audit-level=high
 
@@ -93,13 +93,12 @@ jobs:
     # Deliberately NOT using the `services:` shorthand for MongoDB here —
     # that syntax has no way to pass --replSet as a command-line argument to
     # the image, and this app relies on real multi-document transactions
-    # (posSaleService, saleReturnService, etc. — a sale must decrement stock
-    # AND record payment atomically, or not at all). MongoDB only supports
-    # transactions on a replica set (or mongos), and a plain standalone
-    # mongod rejects them outright with "Transaction numbers are only
-    # allowed on a replica set member or mongos." So MongoDB is started
-    # manually below via `docker run`, with --replSet set, then initiated
-    # as a single-node replica set before the smoke test is allowed to run.
+    # (posSaleService, saleReturnService, purchaseService, etc.). MongoDB
+    # only supports transactions on a replica set (or mongos), and a plain
+    # standalone mongod rejects them outright with "Transaction numbers are
+    # only allowed on a replica set member or mongos." So MongoDB is
+    # started manually below via `docker run`, with --replSet set, then
+    # initiated as a single-node replica set before the smoke test runs.
     env:
       MONGO_URI: mongodb://127.0.0.1:27017/pos_erp_ci?replicaSet=rs0&directConnection=true
       JWT_SECRET: ci_test_secret_not_used_for_anything_real_1234567890

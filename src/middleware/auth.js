@@ -60,6 +60,21 @@ function requirePermission(key) {
 }
 
 /**
+ * The same authorization logic requirePermission() already uses,
+ * extracted as a plain boolean check — for the real cases where a route
+ * needs a CONDITIONAL permission (e.g., a stricter check only when the
+ * request body targets a specific, more sensitive entity type), which a
+ * static route-level requirePermission() can't express since it only
+ * ever checks one fixed key regardless of the request body.
+ */
+function hasPermission(req, key) {
+  const [module] = key.split('.');
+  const permissions = req.auth?.permissions;
+  if (permissions === null || permissions === undefined) return true; // super-admin
+  return permissions.includes(key) || permissions.includes(`${module}.*`) || permissions.includes('*');
+}
+
+/**
  * Gates a route behind branch-level access — the actual enforcement that
  * was missing. `req.auth.branchId` was already being set on login and put
  * in the JWT, but nothing anywhere ever checked it against the branch a
@@ -113,4 +128,4 @@ function requireBranchAccess(extractBranchId) {
   };
 }
 
-module.exports = { requireAuth, scopeToCompany, requirePermission, requireBranchAccess };
+module.exports = { requireAuth, scopeToCompany, requirePermission, hasPermission, requireBranchAccess };

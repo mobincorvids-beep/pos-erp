@@ -58,6 +58,18 @@ export function AuthProvider({ children }) {
     return me.user;
   }, []);
 
+  // Re-fetches /auth/me and updates state in place — for anything that
+  // changes something on the user record itself (e.g. enabling 2FA)
+  // without a full re-login, so the rest of the app sees the fresh value
+  // immediately rather than a stale one until the next page reload.
+  const refreshUser = useCallback(async () => {
+    const me = await api.get('/auth/me');
+    setUser(me.user);
+    setCompany(me.company);
+    setPermissions(me.permissions);
+    return me.user;
+  }, []);
+
   /** null permissions = super-admin (see backend requirePermission). */
   const can = useCallback((key) => {
     if (permissions === null) return true;
@@ -67,7 +79,7 @@ export function AuthProvider({ children }) {
   }, [permissions]);
 
   return (
-    <AuthContext.Provider value={{ user, company, permissions, login, logout, initializing, can }}>
+    <AuthContext.Provider value={{ user, company, permissions, login, logout, refreshUser, initializing, can }}>
       {children}
     </AuthContext.Provider>
   );

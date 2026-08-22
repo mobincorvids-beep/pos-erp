@@ -4,6 +4,11 @@ const ledgerEntrySchema = new Schema({
   accountId: { type: Schema.Types.ObjectId, ref: 'Account', required: true },
   debit: { type: Number, default: 0 },
   credit: { type: Number, default: 0 },
+  // Optional — every one of the hundreds of existing postVoucher() call
+  // sites across every industry module simply doesn't pass this, and
+  // nothing about them changes: the balance validator below only sums
+  // debit/credit, genuinely unaffected by this field's presence or absence.
+  costCenterId: { type: Schema.Types.ObjectId, ref: 'CostCenter', default: null },
 }, { _id: false });
 
 const voucherSchema = new Schema({

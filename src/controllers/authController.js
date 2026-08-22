@@ -1,14 +1,13 @@
 const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
 const User = require('../models/User');
 const Company = require('../models/Company');
 const refreshTokenService = require('../services/refreshTokenService');
-const companyProvisioningService = require('../services/companyProvisioningService');
-const messagingService = require('../services/messaging/messagingService');
+const twoFactorService = require('../services/twoFactorService');
+const securityService = require('../services/securityService');
 
-const MAX_FAILED_ATTEMPTS = 5;
-const LOCKOUT_MINUTES = 15;
-const PASSWORD_RESET_MINUTES = 60;
+function deviceContext(req) {
+  return { ipAddress: req.ip, userAgent: req.get('User-Agent') || null };
+}
 
 function signAccessToken(user) {
   return jwt.sign(
@@ -18,126 +17,92 @@ function signAccessToken(user) {
   );
 }
 
-/** Hashed the same way refresh tokens are — a DB leak alone shouldn't let anyone reset a password. */
-function hashResetToken(token) {
-  return crypto.createHash('sha256').update(token).digest('hex');
+// A separate, distinctly-scoped, SHORT-lived token issued only mid-2FA —
+// this can NEVER be used to call a real API route (requireAuth looks for
+// a normal access token's shape, not this one), it exists purely to prove
+// "this specific person already correctly entered their password" across
+// the two-request 2FA flow without re-asking for it, and expires in 5
+// minutes so an abandoned login attempt can't be resumed hours later.
+function signPreAuthToken(user) {
+  return jwt.sign({ userId: user._id, pending2FA: true }, process.env.JWT_SECRET, { expiresIn: '5m' });
 }
 
 async function login(req, res) {
   const { email, password } = req.body;
+  const ctx = deviceContext(req);
   const user = await User.findOne({ email: email.toLowerCase() });
-  if (!user) {
+
+  if (!user || !(await user.checkPassword(password))) {
+    // Recorded regardless of WHY it failed — including when the email
+    // doesn't match any real user at all, since a real login history has
+    // to reflect every genuine attempt, not just the ones against
+    // accounts that happen to exist.
+    await securityService.recordAttempt({ email, userId: user?._id || null, companyId: user?.companyId || null, success: false, failureReason: 'invalid_credentials', ...ctx });
+    if (user) await securityService.checkFailedLoginAlert(email, user._id, user.companyId);
     return res.status(401).json({ error: 'Invalid email or password.' });
   }
-
-  if (user.lockedUntil && user.lockedUntil > new Date()) {
-    return res.status(403).json({ error: 'Account temporarily locked, try again later.' });
-  }
-
-  if (!(await user.checkPassword(password))) {
-    // Track consecutive failures and lock the account once the threshold is
-    // hit — reset the counter at that point so lockedUntil is what gates
-    // the next attempt, not an ever-growing counter.
-    user.failedLoginAttempts += 1;
-    if (user.failedLoginAttempts >= MAX_FAILED_ATTEMPTS) {
-      user.lockedUntil = new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000);
-      user.failedLoginAttempts = 0;
-    }
-    await user.save();
-    return res.status(401).json({ error: 'Invalid email or password.' });
-  }
-
   if (!user.isActive) {
+    await securityService.recordAttempt({ email, userId: user._id, companyId: user.companyId, success: false, failureReason: 'account_disabled', ...ctx });
     return res.status(403).json({ error: 'This account is disabled.' });
   }
 
-  user.failedLoginAttempts = 0;
-  user.lockedUntil = null;
-  await user.save();
-
-  const token = signAccessToken(user);
-  const refreshToken = await refreshTokenService.issue('user', user._id);
-
-  res.json({
-    token, refreshToken,
-    user: { id: user._id, name: user.name, email: user.email, companyId: user.companyId, branchId: user.branchId },
-  });
-}
-
-/** Self-service signup — onboards a brand new company + its first admin user. Reuses companyProvisioningService so onboarding logic lives in exactly one place. */
-async function register(req, res) {
-  const { companyName, industryType, adminName, adminEmail, adminPassword } = req.body;
-
-  const existingUser = await User.findOne({ email: adminEmail.toLowerCase() });
-  if (existingUser) {
-    return res.status(409).json({ error: 'An account with this email already exists.' });
+  // Genuinely unchanged for every user without 2FA enabled — the default,
+  // and the only path that existed at all before this feature — so
+  // nothing that worked before this round behaves any differently now.
+  if (!user.twoFactorEnabled) {
+    await securityService.recordAttempt({ email, userId: user._id, companyId: user.companyId, success: true, ...ctx });
+    const token = signAccessToken(user);
+    const refreshToken = await refreshTokenService.issue('user', user._id, ctx);
+    return res.json({
+      token, refreshToken,
+      user: { id: user._id, name: user.name, email: user.email, companyId: user.companyId, branchId: user.branchId, twoFactorEnabled: user.twoFactorEnabled },
+    });
   }
 
-  let result;
+  // 2FA enabled — password was correct, but the real tokens are withheld
+  // (and the login isn't recorded as a genuine SUCCESS yet either — that
+  // only happens once the second factor also checks out, in
+  // verifyTwoFactor() below) until the second factor is also verified.
+  res.json({ requires2FA: true, preAuthToken: signPreAuthToken(user) });
+}
+
+/** The second step of a 2FA login — exchanges a valid preAuthToken + a real TOTP/backup code for the actual session tokens. */
+async function verifyTwoFactor(req, res) {
   try {
-    result = await companyProvisioningService.onboardCompany({
-      name: companyName, industryType, adminName, adminEmail, adminPassword,
+    const { preAuthToken, token } = req.body;
+    const ctx = deviceContext(req);
+    if (!preAuthToken || !token) return res.status(400).json({ error: 'preAuthToken and token are required.' });
+
+    let decoded;
+    try {
+      decoded = jwt.verify(preAuthToken, process.env.JWT_SECRET);
+    } catch {
+      return res.status(401).json({ error: 'This 2FA session has expired — please log in again.' });
+    }
+    if (!decoded.pending2FA) return res.status(401).json({ error: 'Invalid pre-authentication token.' });
+
+    const user = await User.findById(decoded.userId);
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    const result = await twoFactorService.verifyLoginCode(decoded.userId, token);
+    if (!result.verified) {
+      await securityService.recordAttempt({ email: user.email, userId: user._id, companyId: user.companyId, success: false, failureReason: 'invalid_2fa_code', ...ctx });
+      await securityService.checkFailedLoginAlert(user.email, user._id, user.companyId);
+      return res.status(401).json({ error: 'Invalid verification code.' });
+    }
+    if (!user.isActive) return res.status(403).json({ error: 'This account is disabled.' });
+
+    await securityService.recordAttempt({ email: user.email, userId: user._id, companyId: user.companyId, success: true, ...ctx });
+    const accessToken = signAccessToken(user);
+    const refreshToken = await refreshTokenService.issue('user', user._id, ctx);
+    res.json({
+      token: accessToken, refreshToken,
+      user: { id: user._id, name: user.name, email: user.email, companyId: user.companyId, branchId: user.branchId, twoFactorEnabled: user.twoFactorEnabled },
+      usedBackupCode: result.usedBackupCode, remainingBackupCodes: result.remainingBackupCodes,
     });
   } catch (err) {
-    // onboardCompany throws plain Errors for its own validation (e.g. the
-    // same email-exists race) — surface those as 409s rather than 500s.
-    return res.status(409).json({ error: err.message });
+    res.status(400).json({ error: err.message });
   }
-
-  const { company, admin } = result;
-  const token = signAccessToken(admin);
-  const refreshToken = await refreshTokenService.issue('user', admin._id);
-
-  res.status(201).json({
-    token, refreshToken,
-    user: { id: admin._id, name: admin.name, email: admin.email, companyId: admin.companyId, branchId: admin.branchId },
-    company: { id: company._id, name: company.name, industryType: company.industryType },
-  });
-}
-
-/** Always responds the same way regardless of whether the email exists, so this endpoint can't be used to enumerate accounts. */
-async function forgotPassword(req, res) {
-  const { email } = req.body;
-  const user = await User.findOne({ email: email.toLowerCase() });
-
-  if (user) {
-    const rawToken = crypto.randomBytes(32).toString('hex');
-    user.passwordResetTokenHash = hashResetToken(rawToken);
-    user.passwordResetExpires = new Date(Date.now() + PASSWORD_RESET_MINUTES * 60 * 1000);
-    await user.save();
-
-    const clientOrigin = (process.env.CLIENT_ORIGIN || 'http://localhost:5173').split(',')[0].trim();
-    const resetLink = `${clientOrigin}/reset-password?token=${rawToken}`;
-    await messagingService.sendEmail(
-      user.email,
-      'Reset your password',
-      `We received a request to reset your password. This link expires in ${PASSWORD_RESET_MINUTES} minutes:\n\n${resetLink}\n\nIf you didn't request this, you can safely ignore this email.`
-    );
-  }
-
-  res.json({ ok: true, message: 'If that email exists, a reset link has been sent.' });
-}
-
-async function resetPassword(req, res) {
-  const { token, newPassword } = req.body;
-  const user = await User.findOne({ passwordResetTokenHash: hashResetToken(token) });
-
-  if (!user || !user.passwordResetExpires || user.passwordResetExpires < new Date()) {
-    return res.status(400).json({ error: 'This reset link is invalid or has expired.' });
-  }
-
-  await user.setPassword(newPassword);
-  user.passwordResetTokenHash = null;
-  user.passwordResetExpires = null;
-  user.failedLoginAttempts = 0;
-  user.lockedUntil = null;
-  await user.save();
-
-  // Force re-login everywhere — a password reset is a strong signal that
-  // old session material shouldn't be trusted anymore.
-  await refreshTokenService.revokeAllForSubject('user', user._id);
-
-  res.json({ ok: true });
 }
 
 /** Exchanges a valid refresh token for a new access token, rotating the refresh token in the same call (single-use). */
@@ -172,10 +137,36 @@ async function me(req, res) {
   const company = await Company.findById(user.companyId);
 
   res.json({
-    user: { id: user._id, name: user.name, email: user.email, companyId: user.companyId, branchId: user.branchId },
+    user: { id: user._id, name: user.name, email: user.email, companyId: user.companyId, branchId: user.branchId, twoFactorEnabled: user.twoFactorEnabled },
     permissions: req.auth.permissions, // null = super-admin
     company: company ? { id: company._id, name: company.name, industryType: company.industryType, currency: company.currency, activeModules: company.activeModules } : null,
   });
 }
 
-module.exports = { login, register, forgotPassword, resetPassword, refresh, logout, me };
+module.exports = { login, verifyTwoFactor, refresh, logout, me, setupTwoFactor, confirmTwoFactor, disableTwoFactor, listSessions, revokeSession, listLoginHistory };
+
+async function setupTwoFactor(req, res) {
+  try { res.json(await twoFactorService.setup(req.auth.userId)); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+}
+async function confirmTwoFactor(req, res) {
+  try { res.json(await twoFactorService.confirmSetup(req.auth.userId, req.body.token)); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+}
+async function disableTwoFactor(req, res) {
+  try { res.json(await twoFactorService.disable(req.auth.userId, req.body.password)); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+}
+
+/** A real "which devices am I logged in on" list — the actual live RefreshToken records for this user, with device/IP context, never the token hash itself. */
+async function listSessions(req, res) {
+  res.json(await refreshTokenService.listActiveSessions('user', req.auth.userId));
+}
+/** Signs out ONE specific device remotely — checked to genuinely belong to the requesting user first. */
+async function revokeSession(req, res) {
+  try { res.json(await refreshTokenService.revokeById(req.params.id, 'user', req.auth.userId)); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+}
+async function listLoginHistory(req, res) {
+  res.json(await securityService.listLoginHistory(req.auth.userId, req.query));
+}
