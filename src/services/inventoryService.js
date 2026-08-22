@@ -22,7 +22,15 @@ const ProductBatch = require('../models/ProductBatch');
 const Role = require('../models/Role');
 const notificationService = require('./notificationService');
 
-const COSTED_INCOMING_TYPES = ['purchase', 'production_output'];
+// 'adjustment' is included so an opening-stock or stock-count adjustment
+// that carries an explicit unitCost (e.g. "I'm entering 100 units at cost
+// PKR 40 each") establishes a real cost basis — without this, any stock
+// that entered the system via adjustment rather than a Purchase/GRN would
+// have avgCost permanently stuck at 0, silently zeroing out COGS and
+// margin reporting for that stock forever, even after real sales. An
+// adjustment with no unitCost (e.g. a shrinkage correction) is unaffected
+// — isCostedIncoming below still requires unitCost to be explicitly set.
+const COSTED_INCOMING_TYPES = ['purchase', 'production_output', 'adjustment'];
 
 /**
  * @param {Object} params

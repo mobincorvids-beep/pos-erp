@@ -25,7 +25,14 @@ function bucketFor(daysOverdue) {
 }
 
 async function arAgingReport(companyId, asOfDate = new Date()) {
-  const outstandingSales = await Sale.find({ companyId, dueAmount: { $gt: 0 }, writtenOff: false, status: { $ne: 'cancelled' } })
+  // Only sales that have actually been invoiced are real receivables — a
+  // 'quotation' or 'sales_order' status sale can carry a non-zero
+  // dueAmount before it's ever been billed, which used to leak into this
+  // report as a row with a blank invoice number (invoiceNumber is only
+  // assigned once a quotation is actually converted/invoiced — see
+  // Sale.js). Restricting to invoiced statuses keeps AR aging to genuine
+  // outstanding invoices only.
+  const outstandingSales = await Sale.find({ companyId, dueAmount: { $gt: 0 }, writtenOff: false, status: { $nin: ['cancelled', 'quotation', 'sales_order'] } })
     .populate('customerId', 'name').sort({ createdAt: 1 });
 
   const buckets = { '0-30': 0, '31-60': 0, '61-90': 0, '90+': 0 };

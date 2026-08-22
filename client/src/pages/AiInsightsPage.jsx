@@ -14,16 +14,25 @@ export function AiInsightsPage() {
   const [slowMoving, setSlowMoving] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Fetched as three INDEPENDENT requests, each clearing its own share of
+  // `loading`, rather than one Promise.all — under Promise.all, a single
+  // slow or failed endpoint (e.g. a cold-started serverless function)
+  // held the whole page's spinner open forever even after the other two
+  // sections had real data to show, since nothing cleared `loading` until
+  // every request settled. Each request now resolves the spinner as soon
+  // as ITS OWN data is in, and one endpoint failing no longer blocks the
+  // other two from rendering.
   useEffect(() => {
+    let cancelled = false;
     setLoading(true);
-    Promise.all([
-      api.get('/ai/briefing'),
-      api.get('/ai/reorder-recommendations'),
-      api.get('/ai/slow-moving-inventory'),
-    ])
-      .then(([b, r, s]) => { setBriefing(b); setReorders(r); setSlowMoving(s); })
-      .catch((err) => toast(err.message, 'error'))
-      .finally(() => setLoading(false));
+    let pending = 3;
+    const settle = () => { if (!cancelled && --pending === 0) setLoading(false); };
+
+    api.get('/ai/briefing').then((b) => { if (!cancelled) setBriefing(b); }).catch((err) => toast(err.message, 'error')).finally(settle);
+    api.get('/ai/reorder-recommendations').then((r) => { if (!cancelled) setReorders(r); }).catch((err) => toast(err.message, 'error')).finally(settle);
+    api.get('/ai/slow-moving-inventory').then((s) => { if (!cancelled) setSlowMoving(s); }).catch((err) => toast(err.message, 'error')).finally(settle);
+
+    return () => { cancelled = true; };
   }, []);
 
   return (

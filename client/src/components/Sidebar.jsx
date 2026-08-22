@@ -90,14 +90,17 @@ const SECTIONS = [
       { to: '/ecommerce', label: 'E-commerce' },
     ],
   },
-  {
-    label: 'Industry',
-    items: INDUSTRY_MODULES.map(({ path, label }) => ({ to: path, label })),
-  },
 ];
 
 export function Sidebar({ mobileOpen, onClose }) {
   const { company, logout, user } = useAuth();
+  // Only surface the ONE industry module this tenant actually has (if
+  // any) — previously every tenant's sidebar listed all ~30 industry
+  // modules regardless of plan, and clicking one for a module the tenant
+  // doesn't have rendered a fully interactive page that only failed once
+  // you tried to submit (see IndustryModuleGate in App.jsx, which still
+  // blocks direct URL access as a second layer).
+  const enabledIndustryModules = INDUSTRY_MODULES.filter((m) => m.key === company?.industryType);
 
   const content = (
     <>
@@ -157,6 +160,29 @@ export function Sidebar({ mobileOpen, onClose }) {
             </div>
           );
         })}
+        {enabledIndustryModules.length > 0 && (
+          <div className="mb-4">
+            <p className="px-4 mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-muted/70">
+              <Building2 size={12} strokeWidth={2.5} />
+              Industry
+            </p>
+            {enabledIndustryModules.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                onClick={onClose}
+                className={({ isActive }) =>
+                  `flex items-center gap-2.5 px-4 py-1.5 text-sm mx-2 rounded ${
+                    isActive ? 'bg-accent-soft text-accent-strong font-medium' : 'text-ink hover:bg-paper'
+                  }`
+                }
+              >
+                <Circle size={15} strokeWidth={2} className="shrink-0 opacity-70" />
+                {item.label}
+              </NavLink>
+            ))}
+          </div>
+        )}
       </nav>
 
       <div className="border-t border-rule px-4 py-3">

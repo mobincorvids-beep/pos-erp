@@ -98,6 +98,7 @@ async function seed() {
     variantId: variant._id,
     type: 'adjustment',
     quantity: 100,
+    unitCost: 60, // matches costPrice above — establishes a real avgCost so COGS/margin reporting isn't stuck at 0
     note: 'Opening stock (seed)',
   });
 

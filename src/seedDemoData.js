@@ -129,7 +129,7 @@ async function main() {
       });
       await inventoryService.recordMovement({
         companyId: company._id, warehouseId: warehouse._id, productId: p._id, variantId: p.variants[0]._id,
-        type: 'adjustment', quantity: qty, note: 'Demo data seed opening stock',
+        type: 'adjustment', quantity: qty, unitCost: costPrice, note: 'Demo data seed opening stock',
       });
       products.push(p);
     }
@@ -149,7 +149,7 @@ async function main() {
       });
       await inventoryService.recordMovement({
         companyId: company._id, warehouseId: warehouse._id, productId: batchProduct._id, variantId: batchProduct.variants[0]._id,
-        batchId: batch._id, type: 'adjustment', quantity: 40, note: 'Demo data seed opening stock (near-expiry batch)',
+        batchId: batch._id, type: 'adjustment', quantity: 40, unitCost: 35, note: 'Demo data seed opening stock (near-expiry batch)',
       });
       products.push(batchProduct);
       ok('Products', `created ${catalog.length} products + 1 near-expiry batch product (Fresh Yogurt Cup)`);
@@ -754,6 +754,223 @@ async function main() {
       skip('Banking', 'Cash or Bank account not found');
     }
   } catch (err) { fail('Banking', err); }
+
+  // ---------------------------------------------------------------------
+  // 18. Units — several modules (Products, RFQs) reference units by name
+  // for display; the Units page itself had zero rows to show, so add a
+  // realistic starter set.
+  // ---------------------------------------------------------------------
+  try {
+    const Unit = require('./models/Unit');
+    const existing = await Unit.countDocuments({ companyId: company._id });
+    if (existing > 0) {
+      skip('Units', `${existing} unit(s) already exist`);
+    } else {
+      const pc = await Unit.create({ companyId: company._id, name: 'Piece', shortCode: 'pc' });
+      await Unit.create({ companyId: company._id, name: 'Kilogram', shortCode: 'kg' });
+      await Unit.create({ companyId: company._id, name: 'Litre', shortCode: 'ltr' });
+      await Unit.create({ companyId: company._id, name: 'Box', shortCode: 'box', baseUnitId: pc._id, conversionFactor: 12 });
+      await Unit.create({ companyId: company._id, name: 'Dozen', shortCode: 'dz', baseUnitId: pc._id, conversionFactor: 12 });
+      ok('Units', 'created 5 units (Piece, Kilogram, Litre, Box, Dozen)');
+    }
+  } catch (err) { fail('Units', err); }
+
+  // ---------------------------------------------------------------------
+  // 19. Stock transfers — needs a second warehouse to transfer between,
+  // since the base seed only creates one.
+  // ---------------------------------------------------------------------
+  try {
+    const transferService = require('./services/transferService');
+    const StockTransfer = require('./models/StockTransfer');
+    const existingTransfers = await StockTransfer.countDocuments({ companyId: company._id });
+    if (existingTransfers > 0) {
+      skip('Stock transfers', `${existingTransfers} transfer(s) already exist`);
+    } else {
+      let secondBranch = await Branch.findOne({ companyId: company._id, _id: { $ne: branch._id } });
+      if (!secondBranch) {
+        secondBranch = await Branch.create({ companyId: company._id, name: 'Downtown Branch', code: 'DT-01' });
+      }
+      let secondWarehouse = await Warehouse.findOne({ companyId: company._id, _id: { $ne: warehouse._id } });
+      if (!secondWarehouse) {
+        secondWarehouse = await Warehouse.create({ companyId: company._id, branchId: secondBranch._id, name: 'Downtown Warehouse' });
+      }
+
+      const transferable = products.filter((p) => p.variants?.[0]?._id).slice(0, 2);
+      if (transferable.length === 0) {
+        skip('Stock transfers', 'no transferable products available');
+      } else {
+        const itemsFor = (list) => list.map((p) => ({ productId: p._id, variantId: p.variants[0]._id, quantity: 10 }));
+
+        const received = await transferService.initiateTransfer({
+          companyId: company._id, fromWarehouseId: warehouse._id, toWarehouseId: secondWarehouse._id,
+          items: itemsFor(transferable.slice(0, 1)), userId: admin._id,
+        });
+        await transferService.receiveTransfer(received._id, admin._id);
+
+        await transferService.initiateTransfer({
+          companyId: company._id, fromWarehouseId: warehouse._id, toWarehouseId: secondWarehouse._id,
+          items: itemsFor(transferable), userId: admin._id, // left in_transit, not received
+        });
+
+        ok('Stock transfers', `created a second branch/warehouse ("${secondBranch.name}" / "${secondWarehouse.name}") + 2 transfers (1 received, 1 in transit)`);
+      }
+    }
+  } catch (err) { fail('Stock transfers', err); }
+
+  // ---------------------------------------------------------------------
+  // 20. Stock counts / stocktakes
+  // ---------------------------------------------------------------------
+  try {
+    const stockCountService = require('./services/stockCountService');
+    const StockCount = require('./models/StockCount');
+    const existingCounts = await StockCount.countDocuments({ companyId: company._id });
+    if (existingCounts > 0) {
+      skip('Stock counts', `${existingCounts} stocktake(s) already exist`);
+    } else {
+      const submitted = await stockCountService.startCount({ companyId: company._id, warehouseId: warehouse._id, userId: admin._id });
+      const counts = submitted.items.slice(0, 5).map((item) => ({
+        itemId: item._id,
+        // Introduce a small, realistic variance on a couple of lines rather
+        // than counting everything exactly as the system expects — a
+        // stocktake that always matches perfectly isn't a useful demo.
+        countedQuantity: Math.max(0, item.systemQuantity + randInt(-2, 2)),
+      }));
+      await stockCountService.recordCounts(submitted._id, counts);
+      // Any remaining (unlisted) lines still need a count before submit is allowed.
+      const remaining = submitted.items.slice(5).map((item) => ({ itemId: item._id, countedQuantity: item.systemQuantity }));
+      if (remaining.length > 0) await stockCountService.recordCounts(submitted._id, remaining);
+      await stockCountService.submitCount(submitted._id, admin._id);
+
+      const inProgress = await stockCountService.startCount({ companyId: company._id, warehouseId: warehouse._id, userId: admin._id });
+      void inProgress; // left in_progress deliberately, so the list shows both a completed and an open stocktake
+
+      ok('Stock counts', 'created 1 submitted stocktake (with variances) + 1 left in progress');
+    }
+  } catch (err) { fail('Stock counts', err); }
+
+  // ---------------------------------------------------------------------
+  // 21. Manufacturing — a simple BOM (2 raw materials -> 1 finished good)
+  // and two work orders, one completed and one still in progress.
+  // ---------------------------------------------------------------------
+  try {
+    const manufacturingService = require('./services/manufacturingService');
+    const BillOfMaterials = require('./models/BillOfMaterials');
+    const existingBoms = await BillOfMaterials.countDocuments({ companyId: company._id });
+    if (existingBoms > 0) {
+      skip('Manufacturing', `${existingBoms} BOM(s) already exist`);
+    } else if (products.length >= 3) {
+      const [componentA, componentB, finished] = products;
+      const bom = await manufacturingService.createBOM({
+        companyId: company._id,
+        finishedProductId: finished._id, finishedVariantId: finished.variants[0]._id,
+        name: `${finished.name} assembly`,
+        components: [
+          { productId: componentA._id, variantId: componentA.variants[0]._id, quantityPerUnit: 1 },
+          { productId: componentB._id, variantId: componentB.variants[0]._id, quantityPerUnit: 1 },
+        ],
+        laborCostPerUnit: 5, overheadCostPerUnit: 2,
+      });
+
+      const completedWO = await manufacturingService.createWorkOrder({
+        companyId: company._id, branchId: branch._id, warehouseId: warehouse._id,
+        bomId: bom._id, quantityToProduce: 5, userId: admin._id,
+      });
+      await manufacturingService.startProduction(completedWO._id, admin._id);
+      await manufacturingService.completeProduction(completedWO._id, { quantityProduced: 5, userId: admin._id });
+
+      const inProgressWO = await manufacturingService.createWorkOrder({
+        companyId: company._id, branchId: branch._id, warehouseId: warehouse._id,
+        bomId: bom._id, quantityToProduce: 3, userId: admin._id,
+      });
+      await manufacturingService.startProduction(inProgressWO._id, admin._id);
+
+      ok('Manufacturing', `created 1 BOM ("${bom.name}") + 2 work orders (1 completed, 1 in progress)`);
+    } else {
+      skip('Manufacturing', 'not enough products available for a BOM');
+    }
+  } catch (err) { fail('Manufacturing', err); }
+
+  // ---------------------------------------------------------------------
+  // 22. Fiscal years & periods
+  // ---------------------------------------------------------------------
+  try {
+    const FiscalYear = require('./models/FiscalYear');
+    const AccountingPeriod = require('./models/AccountingPeriod');
+    const existingFY = await FiscalYear.countDocuments({ companyId: company._id });
+    if (existingFY > 0) {
+      skip('Periods', `${existingFY} fiscal year(s) already exist`);
+    } else {
+      const now = new Date();
+      const yearStart = new Date(now.getFullYear(), 0, 1);
+      const yearEnd = new Date(now.getFullYear(), 11, 31);
+      const fy = await FiscalYear.create({ companyId: company._id, name: `FY${now.getFullYear()}`, startDate: yearStart, endDate: yearEnd });
+
+      // One closed period (last month) + one open period (this month) — so
+      // both states are visible, and the closed one demonstrates the
+      // voucher-posting guard actually blocking backdated entries.
+      const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+      await AccountingPeriod.create({
+        companyId: company._id, fiscalYearId: fy._id,
+        name: lastMonthStart.toLocaleString('en-US', { month: 'long', year: 'numeric' }),
+        startDate: lastMonthStart, endDate: lastMonthEnd, status: 'closed',
+      });
+
+      const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const thisMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      await AccountingPeriod.create({
+        companyId: company._id, fiscalYearId: fy._id,
+        name: thisMonthStart.toLocaleString('en-US', { month: 'long', year: 'numeric' }),
+        startDate: thisMonthStart, endDate: thisMonthEnd, status: 'open',
+      });
+
+      ok('Periods', `created ${fy.name} with 1 closed period and 1 open period`);
+    }
+  } catch (err) { fail('Periods', err); }
+
+  // ---------------------------------------------------------------------
+  // 23. Service orders — job cards spanning a few statuses.
+  // ---------------------------------------------------------------------
+  try {
+    const serviceOrderService = require('./services/serviceOrderService');
+    const ServiceOrder = require('./models/ServiceOrder');
+    const existingOrders = await ServiceOrder.countDocuments({ companyId: company._id });
+    if (existingOrders > 0) {
+      skip('Service orders', `${existingOrders} service order(s) already exist`);
+    } else {
+      const received = await serviceOrderService.create({
+        companyId: company._id, branchId: branch._id, warehouseId: warehouse._id,
+        customerId: customers[0]?._id, itemDescription: 'HP LaserJet Printer — not powering on',
+        reportedIssue: 'Customer reports no lights when plugged in.', userId: admin._id,
+      });
+
+      const inProgress = await serviceOrderService.create({
+        companyId: company._id, branchId: branch._id, warehouseId: warehouse._id,
+        customerId: customers[1]?._id, itemDescription: 'Split AC unit — not cooling',
+        reportedIssue: 'Blows warm air, unusual noise from outdoor unit.', userId: admin._id,
+      });
+      await serviceOrderService.updateStatus(inProgress._id, 'diagnosed', { diagnosisNote: 'Low refrigerant, suspected leak in outdoor coil.' });
+      await serviceOrderService.updateStatus(inProgress._id, 'in_progress');
+      if (products[0]?.variants?.[0]) {
+        await serviceOrderService.addPart(inProgress._id, {
+          productId: products[0]._id, variantId: products[0].variants[0]._id,
+          quantity: 1, unitPrice: products[0].sellingPrice, userId: admin._id,
+        });
+      }
+
+      const completed = await serviceOrderService.create({
+        companyId: company._id, branchId: branch._id, warehouseId: warehouse._id,
+        customerId: customers[2]?._id, itemDescription: 'iPhone 12 — cracked screen replacement',
+        reportedIssue: 'Screen shattered, touch still partially working.', userId: admin._id,
+      });
+      await serviceOrderService.updateStatus(completed._id, 'diagnosed', { diagnosisNote: 'Screen assembly replacement needed.' });
+      await serviceOrderService.updateStatus(completed._id, 'in_progress');
+      await serviceOrderService.setLaborCharge(completed._id, 1500);
+      await serviceOrderService.updateStatus(completed._id, 'completed');
+
+      ok('Service orders', 'created 3 job cards (received, in progress with a part used, completed with labor charged)');
+    }
+  } catch (err) { fail('Service orders', err); }
 
   // ---------------------------------------------------------------------
   console.log('\n================ DEMO DATA SEED SUMMARY ================');

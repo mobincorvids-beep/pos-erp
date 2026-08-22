@@ -42,6 +42,32 @@ import { EcommercePage } from './pages/EcommercePage';
 import { AiInsightsPage } from './pages/AiInsightsPage';
 import { INDUSTRY_MODULES } from './industryModuleRegistry';
 import { Suspense } from 'react';
+import { useAuth } from './context/AuthContext';
+
+// Guards an industry-specific module page behind the tenant's actual
+// Company.industryType. The backend already rejects any mutating call to
+// an unpurchased module with 403 (see e.g. restaurantController), but
+// before this the frontend still rendered the FULL interactive page —
+// tables, "Add" buttons, forms — for every one of the ~30 industry
+// modules regardless of which one (if any) the tenant actually has,
+// which reads as broken/misleading rather than "not included in your
+// plan." Now a mismatched tenant sees a plain notice instead of a UI
+// that's guaranteed to fail on submit.
+function IndustryModuleGate({ industryKey, label, children }) {
+  const { company } = useAuth();
+  if (company?.industryType && company.industryType !== industryKey) {
+    return (
+      <div className="card p-6 max-w-lg">
+        <p className="font-medium text-ink mb-1.5">{label} module isn't enabled</p>
+        <p className="text-sm text-ink-muted">
+          Your company's industry is set to "{company.industryType}", so the {label} module isn't part of your plan.
+          Contact your account admin if you'd like it added.
+        </p>
+      </div>
+    );
+  }
+  return children;
+}
 
 import { AdminAuthProvider } from './admin/context/AdminAuthContext';
 import { AdminLayout } from './admin/components/AdminLayout';
@@ -110,8 +136,12 @@ export default function App() {
               <Route path="/appointments" element={<AppointmentsPage />} />
               <Route path="/ecommerce" element={<EcommercePage />} />
               <Route path="/ai-insights" element={<AiInsightsPage />} />
-              {INDUSTRY_MODULES.map(({ key, path, component: Component }) => (
-                <Route key={key} path={path} element={<Suspense fallback={<div className="p-6 text-ink-muted text-sm">Loading…</div>}><Component /></Suspense>} />
+              {INDUSTRY_MODULES.map(({ key, path, label, component: Component }) => (
+                <Route key={key} path={path} element={
+                  <IndustryModuleGate industryKey={key} label={label}>
+                    <Suspense fallback={<div className="p-6 text-ink-muted text-sm">Loading…</div>}><Component /></Suspense>
+                  </IndustryModuleGate>
+                } />
               ))}
             </Route>
           </Route>

@@ -21,7 +21,7 @@ function RatingStars({ rating }) {
 }
 
 export function CrmPage() {
-  const [tab, setTab] = useState('campaigns');
+  const [tab, setTab] = useState('pipeline');
   return (
     <div>
       <p className="page-title mb-4">CRM</p>
