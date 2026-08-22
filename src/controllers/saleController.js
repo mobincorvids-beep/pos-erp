@@ -5,13 +5,25 @@ const taxComplianceService = require('../services/taxComplianceService');
 const loyaltyService = require('../services/loyaltyService');
 const saleReturnService = require('../services/saleReturnService');
 
+// `to` arrives as a plain "YYYY-MM-DD" string — new Date(to) alone parses
+// that as midnight UTC (the START of that day), so a `$lte` bound against
+// it would silently exclude every sale made later that same day for any
+// caller in a timezone ahead of UTC. Push it to the last instant of that
+// calendar date instead — see reportingService.js's endOfDay for the same
+// fix applied to every report.
+function endOfDay(dateStr) {
+  const d = new Date(dateStr);
+  d.setUTCHours(23, 59, 59, 999);
+  return d;
+}
+
 async function list(req, res) {
   const filter = { companyId: req.companyId, saleType: 'pos', status: { $ne: 'quotation' } };
   if (req.query.status) filter.status = req.query.status;
   if (req.query.from || req.query.to) {
     filter.createdAt = {};
     if (req.query.from) filter.createdAt.$gte = new Date(req.query.from);
-    if (req.query.to) filter.createdAt.$lte = new Date(req.query.to);
+    if (req.query.to) filter.createdAt.$lte = endOfDay(req.query.to);
   }
   const sales = await Sale.find(filter).sort({ createdAt: -1 }).limit(Number(req.query.limit) || 100).populate('customerId', 'name');
   res.json(sales);

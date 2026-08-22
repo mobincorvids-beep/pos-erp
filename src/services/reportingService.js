@@ -14,6 +14,24 @@ const Sale = require('../models/Sale');
 const Expense = require('../models/Expense');
 const Branch = require('../models/Branch');
 const PurchaseOrder = require('../models/PurchaseOrder');
+
+// Every date-range report below takes `to` as a plain "YYYY-MM-DD" string
+// from the client's date picker. `new Date(to)` alone parses that as
+// midnight UTC — i.e. the very START of that day — so any document
+// timestamped later that same day (which is most of them, for any caller
+// whose local timezone is ahead of UTC — this covers the majority of this
+// app's actual user base, including Pakistan) was silently excluded by a
+// `$lte` upper bound. A same-day sale would show correctly in Sales
+// History but as PKR 0.00 in every report. Every `to` upper bound below
+// goes through this instead, which pushes it to the last instant of that
+// calendar date (in UTC, matching how the date-only string was parsed) so
+// "today" actually includes all of today.
+function endOfDay(dateStr) {
+  const d = new Date(dateStr);
+  d.setUTCHours(23, 59, 59, 999);
+  return d;
+}
+
 /**
  * Trial balance: for every account, sum all debits and credits across all
  * vouchers up to `asOfDate`, plus its opening balance. A balanced ledger
@@ -106,7 +124,7 @@ async function salesSummary(companyId, from, to) {
   const match = {
     companyId: new mongoose.Types.ObjectId(companyId),
     status: 'completed',
-    createdAt: { $gte: new Date(from), $lte: new Date(to) },
+    createdAt: { $gte: new Date(from), $lte: endOfDay(to) },
   };
 
   const totals = await Sale.aggregate([
@@ -168,7 +186,7 @@ async function profitAndLoss(companyId, from, to) {
   const accounts = await Account.find({ companyId, type: { $in: ['income', 'expense'] }, isActive: true });
 
   const totals = await Voucher.aggregate([
-    { $match: { companyId: new mongoose.Types.ObjectId(companyId), date: { $gte: new Date(from), $lte: new Date(to) } } },
+    { $match: { companyId: new mongoose.Types.ObjectId(companyId), date: { $gte: new Date(from), $lte: endOfDay(to) } } },
     { $unwind: '$entries' },
     {
       $group: {
@@ -282,7 +300,7 @@ async function cashBankBook(companyId, accountId, from, to) {
     + (priorTotals[0]?.debit || 0) - (priorTotals[0]?.credit || 0);
 
   const vouchers = await Voucher.find({
-    companyId, date: { $gte: new Date(from), $lte: new Date(to) },
+    companyId, date: { $gte: new Date(from), $lte: endOfDay(to) },
     'entries.accountId': accountId,
   }).sort({ date: 1 });
 
@@ -327,7 +345,7 @@ async function lowStockReport(companyId, warehouseId = null) {
 /** Best-selling products by revenue in a date range — driven straight off completed Sale line items. */
 async function topProductsReport(companyId, from, to, limit = 20) {
   const rows = await Sale.aggregate([
-    { $match: { companyId: new mongoose.Types.ObjectId(companyId), status: 'completed', createdAt: { $gte: new Date(from), $lte: new Date(to) } } },
+    { $match: { companyId: new mongoose.Types.ObjectId(companyId), status: 'completed', createdAt: { $gte: new Date(from), $lte: endOfDay(to) } } },
     { $unwind: '$items' },
     { $group: { _id: { productId: '$items.productId', variantId: '$items.variantId' }, quantitySold: { $sum: '$items.quantity' }, revenue: { $sum: '$items.lineTotal' } } },
     { $sort: { revenue: -1 } },
@@ -345,7 +363,7 @@ async function topProductsReport(companyId, from, to, limit = 20) {
 /** Best customers by spend in a date range. */
 async function topCustomersReport(companyId, from, to, limit = 20) {
   const rows = await Sale.aggregate([
-    { $match: { companyId: new mongoose.Types.ObjectId(companyId), status: 'completed', customerId: { $ne: null }, createdAt: { $gte: new Date(from), $lte: new Date(to) } } },
+    { $match: { companyId: new mongoose.Types.ObjectId(companyId), status: 'completed', customerId: { $ne: null }, createdAt: { $gte: new Date(from), $lte: endOfDay(to) } } },
     { $group: { _id: '$customerId', totalSpend: { $sum: '$totalAmount' }, invoiceCount: { $sum: 1 } } },
     { $sort: { totalSpend: -1 } },
     { $limit: limit },
@@ -362,7 +380,7 @@ async function topCustomersReport(companyId, from, to, limit = 20) {
 /** Sales performance by cashier/salesperson — who rang up how much. */
 async function salespersonPerformanceReport(companyId, from, to) {
   const rows = await Sale.aggregate([
-    { $match: { companyId: new mongoose.Types.ObjectId(companyId), status: 'completed', createdAt: { $gte: new Date(from), $lte: new Date(to) } } },
+    { $match: { companyId: new mongoose.Types.ObjectId(companyId), status: 'completed', createdAt: { $gte: new Date(from), $lte: endOfDay(to) } } },
     { $group: { _id: '$userId', netSales: { $sum: '$totalAmount' }, invoiceCount: { $sum: 1 } } },
     { $sort: { netSales: -1 } },
     { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'user' } },
@@ -379,7 +397,7 @@ async function salespersonPerformanceReport(companyId, from, to) {
 /** Approved expenses grouped by category in a date range. */
 async function expenseReport(companyId, from, to) {
   const rows = await Expense.aggregate([
-    { $match: { companyId: new mongoose.Types.ObjectId(companyId), status: 'approved', date: { $gte: new Date(from), $lte: new Date(to) } } },
+    { $match: { companyId: new mongoose.Types.ObjectId(companyId), status: 'approved', date: { $gte: new Date(from), $lte: endOfDay(to) } } },
     { $group: { _id: '$categoryId', total: { $sum: '$amount' }, count: { $sum: 1 } } },
     { $sort: { total: -1 } },
     { $lookup: { from: 'expensecategories', localField: '_id', foreignField: '_id', as: 'category' } },
@@ -399,7 +417,7 @@ async function branchComparisonReport(companyId, from, to) {
   const [branches, sales] = await Promise.all([
     Branch.find({ companyId }),
     Sale.aggregate([
-      { $match: { companyId: new mongoose.Types.ObjectId(companyId), status: 'completed', createdAt: { $gte: new Date(from), $lte: new Date(to) } } },
+      { $match: { companyId: new mongoose.Types.ObjectId(companyId), status: 'completed', createdAt: { $gte: new Date(from), $lte: endOfDay(to) } } },
       { $group: { _id: '$branchId', netSales: { $sum: '$totalAmount' }, invoiceCount: { $sum: 1 } } },
     ]),
   ]);
@@ -416,7 +434,7 @@ async function branchComparisonReport(companyId, from, to) {
 
 /** Raw stock movement ledger for a warehouse/date range — the audit trail behind every other inventory number. */
 async function stockMovementReport(companyId, warehouseId, from, to) {
-  const filter = { companyId, createdAt: { $gte: new Date(from), $lte: new Date(to) } };
+  const filter = { companyId, createdAt: { $gte: new Date(from), $lte: endOfDay(to) } };
   if (warehouseId) filter.warehouseId = warehouseId;
 
   return StockMovement.find(filter).sort({ createdAt: -1 }).limit(500).populate('productId', 'name sku');

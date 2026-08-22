@@ -7,6 +7,17 @@
 const Appointment = require('../models/Appointment');
 const posSaleService = require('./posSaleService');
 
+// staffSchedule's `to` is a plain "YYYY-MM-DD" string from a calendar-view
+// date picker — new Date(to) alone parses to midnight UTC (the START of
+// that day), so a $lte bound against it would silently drop any
+// appointment ending later that same day. See reportingService.js's
+// endOfDay for the same fix applied to every report.
+function endOfDay(dateStr) {
+  const d = new Date(dateStr);
+  d.setUTCHours(23, 59, 59, 999);
+  return d;
+}
+
 /** True if the staff member has no overlapping appointment in this window. */
 async function isStaffAvailable(staffUserId, startTime, endTime, excludeAppointmentId = null) {
   const overlap = await Appointment.findOne({
@@ -77,7 +88,7 @@ async function billAppointment(appointmentId, saleInput) {
 /** Staff schedule for a date range — the calendar view. */
 async function staffSchedule(staffUserId, from, to) {
   return Appointment.find({
-    staffUserId, startTime: { $gte: new Date(from) }, endTime: { $lte: new Date(to) },
+    staffUserId, startTime: { $gte: new Date(from) }, endTime: { $lte: endOfDay(to) },
   }).sort({ startTime: 1 });
 }
 

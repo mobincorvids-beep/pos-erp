@@ -10,6 +10,14 @@ const TABS = [
   { key: 'trial-balance', label: 'Trial balance' },
   { key: 'profit-and-loss', label: 'Profit & loss' },
   { key: 'balance-sheet', label: 'Balance sheet' },
+  { key: 'low-stock', label: 'Low stock' },
+  { key: 'top-products', label: 'Top products' },
+  { key: 'top-customers', label: 'Top customers' },
+  { key: 'salesperson-performance', label: 'Salesperson performance' },
+  { key: 'branch-comparison', label: 'Branch comparison' },
+  { key: 'stock-movement', label: 'Stock movement' },
+  { key: 'expense-report', label: 'Expenses' },
+  { key: 'cash-bank-book', label: 'Cash/bank book' },
   { key: 'consolidated', label: 'Multi-company' },
 ];
 
@@ -36,6 +44,14 @@ export function ReportsPage() {
       {tab === 'trial-balance' && <SimpleReport path="/reports/trial-balance" render={TrialBalanceView} />}
       {tab === 'profit-and-loss' && <DateRangeReport path="/reports/profit-and-loss" render={ProfitAndLossView} />}
       {tab === 'balance-sheet' && <SimpleReport path="/reports/balance-sheet" render={BalanceSheetView} />}
+      {tab === 'low-stock' && <SimpleReport path="/reports/low-stock" render={LowStockView} />}
+      {tab === 'top-products' && <DateRangeReport path="/reports/top-products" render={TopProductsView} />}
+      {tab === 'top-customers' && <DateRangeReport path="/reports/top-customers" render={TopCustomersView} />}
+      {tab === 'salesperson-performance' && <DateRangeReport path="/reports/salesperson-performance" render={SalespersonPerformanceView} />}
+      {tab === 'branch-comparison' && <DateRangeReport path="/reports/branch-comparison" render={BranchComparisonView} />}
+      {tab === 'stock-movement' && <DateRangeReport path="/reports/stock-movement" render={StockMovementView} />}
+      {tab === 'expense-report' && <DateRangeReport path="/reports/expense-report" render={ExpenseReportView} />}
+      {tab === 'cash-bank-book' && <CashBankBookReport />}
       {tab === 'consolidated' && <DateRangeReport path="/reports/consolidated/sales-summary" render={ConsolidatedView} />}
     </div>
   );
@@ -82,7 +98,8 @@ function DateRangeReport({ path, render: Render }) {
 
   function load() {
     setLoading(true);
-    api.get(`${path}?from=${from}&to=${to}`).then(setData).catch((err) => setError(err.message)).finally(() => setLoading(false));
+    const joiner = path.includes('?') ? '&' : '?';
+    api.get(`${path}${joiner}from=${from}&to=${to}`).then(setData).catch((err) => setError(err.message)).finally(() => setLoading(false));
   }
   useEffect(load, [path]);
 
@@ -192,6 +209,144 @@ function BalanceSheetView({ data }) {
           <p className="num text-sm font-medium mt-2 text-right">{formatMoney(data.totalEquity, company?.currency)}</p>
         </div>
       </div>
+    </div>
+  );
+}
+
+function LowStockView({ data }) {
+  return (
+    <ReportTable
+      columns={['Product', 'Warehouse', 'On hand', 'Reorder level', 'Min stock']}
+      rows={data.map((r) => [r.productName, r.warehouseId, String(r.quantityOnHand), String(r.reorderLevel ?? '-'), String(r.minStock ?? '-')])}
+    />
+  );
+}
+
+function TopProductsView({ data }) {
+  const { company } = useAuth();
+  return (
+    <ReportTable
+      columns={['Product', 'Qty sold', 'Revenue']}
+      rows={data.map((r) => [r.productName, String(r.quantitySold), formatMoney(r.revenue, company?.currency)])}
+    />
+  );
+}
+
+function TopCustomersView({ data }) {
+  const { company } = useAuth();
+  return (
+    <ReportTable
+      columns={['Customer', 'Invoices', 'Total spend']}
+      rows={data.map((r) => [r.customerName, String(r.invoiceCount), formatMoney(r.totalSpend, company?.currency)])}
+    />
+  );
+}
+
+function SalespersonPerformanceView({ data }) {
+  const { company } = useAuth();
+  return (
+    <ReportTable
+      columns={['Salesperson', 'Invoices', 'Net sales', 'Average sale']}
+      rows={data.map((r) => [r.userName, String(r.invoiceCount), formatMoney(r.netSales, company?.currency), formatMoney(r.averageSale, company?.currency)])}
+    />
+  );
+}
+
+function BranchComparisonView({ data }) {
+  const { company } = useAuth();
+  return (
+    <ReportTable
+      columns={['Branch', 'Invoices', 'Net sales']}
+      rows={data.map((r) => [r.branchName, String(r.invoiceCount), formatMoney(r.netSales, company?.currency)])}
+    />
+  );
+}
+
+function StockMovementView({ data }) {
+  return (
+    <ReportTable
+      columns={['Date', 'Product', 'Type', 'Quantity']}
+      rows={data.map((m) => [
+        m.createdAt ? new Date(m.createdAt).toLocaleString() : '-',
+        m.productId?.name || m.productId?.sku || '-',
+        m.type || m.movementType || '-',
+        String(m.quantity ?? ''),
+      ])}
+    />
+  );
+}
+
+function ExpenseReportView({ data }) {
+  const { company } = useAuth();
+  return (
+    <div>
+      <ReportTable
+        columns={['Category', 'Count', 'Total']}
+        rows={data.rows.map((r) => [r.categoryName, String(r.count), formatMoney(r.total, company?.currency)])}
+      />
+      <div className="tear-line mt-3 pt-3 flex justify-between text-base font-medium">
+        <span>Grand total</span>
+        <span className="num">{formatMoney(data.grandTotal, company?.currency)}</span>
+      </div>
+    </div>
+  );
+}
+
+function CashBankBookView({ data }) {
+  const { company } = useAuth();
+  return (
+    <div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
+        <MetricCard label="Account" value={data.accountName} plain />
+        <MetricCard label="Opening balance" value={formatMoney(data.openingBalance, company?.currency)} />
+        <MetricCard label="Closing balance" value={formatMoney(data.closingBalance, company?.currency)} />
+      </div>
+      <ReportTable
+        columns={['Date', 'Voucher #', 'Type', 'Narration', 'Debit', 'Credit', 'Balance']}
+        rows={data.entries.map((e) => [
+          e.date ? new Date(e.date).toLocaleDateString() : '-',
+          e.voucherNumber || '-',
+          e.type || '-',
+          e.narration || '-',
+          formatMoney(e.debit, company?.currency),
+          formatMoney(e.credit, company?.currency),
+          formatMoney(e.balance, company?.currency),
+        ])}
+      />
+    </div>
+  );
+}
+
+/** Cash/bank book needs an account picker before it can load — unlike the other
+ * date-range reports, `cashBankBook` requires an `accountId` param. Pulls the
+ * account list from /account-settings (same endpoint the Default Accounts
+ * settings page uses), defaults to the first account once loaded. */
+function CashBankBookReport() {
+  const [accounts, setAccounts] = useState([]);
+  const [accountId, setAccountId] = useState('');
+  const [accountsError, setAccountsError] = useState('');
+
+  useEffect(() => {
+    api.get('/account-settings').then((res) => {
+      setAccounts(res.accounts || []);
+      if (res.accounts?.length) setAccountId(res.accounts[0]._id);
+    }).catch((err) => setAccountsError(err.message));
+  }, []);
+
+  if (accountsError) return <p className="text-sm text-danger">{accountsError}</p>;
+  if (!accounts.length) return <Loading />;
+
+  return (
+    <div>
+      <div className="mb-4">
+        <label className="field-label">Account</label>
+        <select className="field-input" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+          {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
+        </select>
+      </div>
+      {accountId && (
+        <DateRangeReport key={accountId} path={`/reports/cash-bank-book?accountId=${accountId}`} render={CashBankBookView} />
+      )}
     </div>
   );
 }

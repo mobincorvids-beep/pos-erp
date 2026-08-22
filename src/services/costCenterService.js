@@ -15,6 +15,16 @@ const Voucher = require('../models/Voucher');
 const Account = require('../models/Account');
 const CostCenter = require('../models/CostCenter');
 
+// See reportingService.js's endOfDay for why this exists: `to` is a plain
+// "YYYY-MM-DD" string, and new Date(to) alone parses to midnight UTC (the
+// START of that day) — a $lte bound against it would silently drop every
+// voucher dated later that same day.
+function endOfDay(dateStr) {
+  const d = new Date(dateStr);
+  d.setUTCHours(23, 59, 59, 999);
+  return d;
+}
+
 function createCostCenter(input) {
   const { companyId, name, code } = input;
   return CostCenter.create({ companyId, name, code });
@@ -35,7 +45,7 @@ async function costCenterProfitAndLoss(companyId, costCenterId, from, to) {
     // Matched once at the voucher level first (a real index-friendly
     // pre-filter — a voucher can't possibly qualify if none of its
     // entries carry this cost center at all).
-    { $match: { companyId: companyObjectId, date: { $gte: new Date(from), $lte: new Date(to) }, 'entries.costCenterId': costCenterObjectId } },
+    { $match: { companyId: companyObjectId, date: { $gte: new Date(from), $lte: endOfDay(to) }, 'entries.costCenterId': costCenterObjectId } },
     { $unwind: '$entries' },
     // The REAL filter — now operating on individual unwound entries, so
     // a voucher's OTHER entries (tagged to a different cost center, or
