@@ -4,6 +4,7 @@ const Company = require('../models/Company');
 const refreshTokenService = require('../services/refreshTokenService');
 const twoFactorService = require('../services/twoFactorService');
 const securityService = require('../services/securityService');
+const companyProvisioningService = require('../services/companyProvisioningService');
 
 function deviceContext(req) {
   return { ipAddress: req.ip, userAgent: req.get('User-Agent') || null };
@@ -64,6 +65,43 @@ async function login(req, res) {
   // only happens once the second factor also checks out, in
   // verifyTwoFactor() below) until the second factor is also verified.
   res.json({ requires2FA: true, preAuthToken: signPreAuthToken(user) });
+}
+
+/**
+ * Public self-serve signup — a NEW business creates its own tenant.
+ * Reuses the same onboardCompany() the platform-admin "add company" flow
+ * uses (Company + Main Branch/Warehouse/Terminal + starter chart of
+ * accounts + one admin user), so a self-signed-up business ends up in
+ * exactly the same, fully-isolated shape as an admin-provisioned one —
+ * scoped to its own companyId everywhere, invisible to every other
+ * tenant. The only difference from the admin flow: this is reachable
+ * without a login, and it logs the new admin straight in afterwards
+ * instead of returning a generated password to hand over separately.
+ */
+async function register(req, res) {
+  try {
+    const { businessName, industryType, currency, adminName, adminEmail, adminPassword } = req.body;
+    const { company, admin } = await companyProvisioningService.onboardCompany({
+      name: businessName,
+      industryType,
+      currency,
+      adminName,
+      adminEmail,
+      adminPassword,
+    });
+
+    const ctx = deviceContext(req);
+    await securityService.recordAttempt({ email: admin.email, userId: admin._id, companyId: admin.companyId, success: true, ...ctx });
+    const token = signAccessToken(admin);
+    const refreshToken = await refreshTokenService.issue('user', admin._id, ctx);
+    res.status(201).json({
+      token, refreshToken,
+      user: { id: admin._id, name: admin.name, email: admin.email, companyId: admin.companyId, branchId: admin.branchId, twoFactorEnabled: false },
+      company: { id: company._id, name: company.name, industryType: company.industryType, currency: company.currency },
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 }
 
 /** The second step of a 2FA login — exchanges a valid preAuthToken + a real TOTP/backup code for the actual session tokens. */
@@ -143,7 +181,7 @@ async function me(req, res) {
   });
 }
 
-module.exports = { login, verifyTwoFactor, refresh, logout, me, setupTwoFactor, confirmTwoFactor, disableTwoFactor, listSessions, revokeSession, listLoginHistory };
+module.exports = { login, register, verifyTwoFactor, refresh, logout, me, setupTwoFactor, confirmTwoFactor, disableTwoFactor, listSessions, revokeSession, listLoginHistory };
 
 async function setupTwoFactor(req, res) {
   try { res.json(await twoFactorService.setup(req.auth.userId)); }

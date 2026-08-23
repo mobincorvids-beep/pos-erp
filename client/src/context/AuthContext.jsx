@@ -58,6 +58,19 @@ export function AuthProvider({ children }) {
     return me.user;
   }, []);
 
+  // Self-serve signup: a new business provisions its own tenant (own
+  // Company + admin user, fully isolated by companyId from every other
+  // business on the platform) and is logged straight in, same as login().
+  const register = useCallback(async (payload) => {
+    const data = await api.post('/auth/register', payload);
+    setToken(data.token, data.refreshToken);
+    const me = await api.get('/auth/me');
+    setUser(me.user);
+    setCompany(me.company);
+    setPermissions(me.permissions);
+    return me.user;
+  }, []);
+
   // Re-fetches /auth/me and updates state in place — for anything that
   // changes something on the user record itself (e.g. enabling 2FA)
   // without a full re-login, so the rest of the app sees the fresh value
@@ -79,7 +92,7 @@ export function AuthProvider({ children }) {
   }, [permissions]);
 
   return (
-    <AuthContext.Provider value={{ user, company, permissions, login, logout, refreshUser, initializing, can }}>
+    <AuthContext.Provider value={{ user, company, permissions, login, register, logout, refreshUser, initializing, can }}>
       {children}
     </AuthContext.Provider>
   );

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { INDUSTRY_MODULES } from '../industryModuleRegistry';
+import { getNavVisibility } from '../lib/businessProfile';
 
 // One icon per nav item — a real, intentional choice per destination
 // rather than a generic bullet, so the sidebar can be scanned visually,
@@ -102,6 +103,15 @@ export function Sidebar({ mobileOpen, onClose }) {
   // blocks direct URL access as a second layer).
   const enabledIndustryModules = INDUSTRY_MODULES.filter((m) => m.key === company?.industryType);
 
+  // Narrow the generic Sell/Stock/Money/People/Insights items to what
+  // THIS business actually does — see lib/businessProfile.js. A section
+  // that ends up with zero visible items (e.g. "Stock" for a pure
+  // services business) is dropped entirely rather than shown empty.
+  const isVisible = getNavVisibility(company?.industryType);
+  const visibleSections = SECTIONS
+    .map((section) => ({ ...section, items: section.items.filter((item) => isVisible(item.to)) }))
+    .filter((section) => section.items.length > 0);
+
   const content = (
     <>
       <div className="px-4 py-4 border-b border-rule flex items-center justify-between">
@@ -131,7 +141,7 @@ export function Sidebar({ mobileOpen, onClose }) {
             Home
           </NavLink>
         </div>
-        {SECTIONS.map((section) => {
+        {visibleSections.map((section) => {
           const SectionIcon = SECTION_ICONS[section.label] || Circle;
           return (
             <div key={section.label} className="mb-4">
