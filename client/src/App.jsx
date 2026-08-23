@@ -26,6 +26,7 @@ import { AgingPage } from './pages/AgingPage';
 import { PeriodsPage } from './pages/PeriodsPage';
 import { CostCentersPage } from './pages/CostCentersPage';
 import { UnitsPage } from './pages/UnitsPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { EarlyPaymentDiscountPage } from './pages/EarlyPaymentDiscountPage';
 import { BankingPage } from './pages/BankingPage';
 import { ReportsPage } from './pages/ReportsPage';
@@ -115,6 +116,7 @@ export default function App() {
               <Route path="/expenses" element={<ExpensesPage />} />
               <Route path="/tickets" element={<TicketsPage />} />
               <Route path="/security" element={<SecurityPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
               <Route path="/rfqs" element={<RfqPage />} />
               <Route path="/budgets" element={<BudgetsPage />} />
               <Route path="/employee-loans" element={<EmployeeLoansPage />} />

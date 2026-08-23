@@ -5,7 +5,7 @@ import {
   ClipboardList, Factory, Banknote, Landmark, FolderKanban, PieChart,
   Contact, Truck, UserCog, HeartHandshake, Gift, Sparkles, Store, Circle,
   Ticket, Shield, FileSearch, TrendingUp, HandCoins, Repeat, Hourglass, Lock, Layers, Ruler, Percent, X,
-  LayoutDashboard,
+  LayoutDashboard, Settings,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { INDUSTRY_MODULES } from '../industryModuleRegistry';
@@ -194,6 +194,24 @@ export function Sidebar({ mobileOpen, onClose }) {
           </div>
         )}
       </nav>
+
+      {/* Settings is deliberately outside businessProfile.js scoping — every
+          business, whatever its industry, needs a place to manage its own
+          profile and branches, so this is never hidden per business type. */}
+      <div className="mb-1">
+        <NavLink
+          to="/settings"
+          onClick={onClose}
+          className={({ isActive }) =>
+            `flex items-center gap-2.5 px-4 py-1.5 text-sm mx-2 rounded ${
+              isActive ? 'bg-accent-soft text-accent-strong font-medium' : 'text-ink hover:bg-paper'
+            }`
+          }
+        >
+          <Settings size={15} strokeWidth={2} className="shrink-0 opacity-70" />
+          Settings
+        </NavLink>
+      </div>
 
       <div className="border-t border-rule px-4 py-3">
         <p className="text-sm text-ink truncate">{user?.name}</p>

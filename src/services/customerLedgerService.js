@@ -114,20 +114,25 @@ async function ledger(customerId) {
   const payments = await CustomerPayment.find({ customerId }).sort({ date: 1 });
 
   // A sale's full totalAmount is always the debit (the invoice value), but
-  // whatever was paid AT CHECKOUT (Sale.paidAmount, e.g. a cash sale paid
-  // in full on the spot) has to be credited right alongside it — otherwise
-  // a fully-paid-at-checkout sale would show as permanently owed, since
-  // only later CustomerPayment records were being credited here before.
+  // whatever was paid AT CHECKOUT (the sale's own `payments` array, e.g. a
+  // cash sale paid in full on the spot) has to be credited right alongside
+  // it — otherwise a fully-paid-at-checkout sale would show as permanently
+  // owed. NOTE: this must NOT use Sale.paidAmount — recordPayment() above
+  // also increments paidAmount whenever it allocates a later CustomerPayment
+  // against this sale, and those allocations are already credited below via
+  // the CustomerPayment rows. Crediting paidAmount here as well would double
+  // count anything paid after checkout.
   const entries = [
     ...sales.flatMap((s) => {
+      const paidAtCheckout = (s.payments || []).reduce((sum, p) => sum + p.amount, 0);
       const rows = [{
         date: s.createdAt, type: 'sale', reference: s.invoiceNumber || s.documentNumber,
         debit: s.totalAmount, credit: 0,
       }];
-      if (s.paidAmount > 0) {
+      if (paidAtCheckout > 0) {
         rows.push({
           date: s.createdAt, type: 'sale_payment', reference: s.invoiceNumber || s.documentNumber,
-          debit: 0, credit: s.paidAmount,
+          debit: 0, credit: paidAtCheckout,
         });
       }
       return rows;
