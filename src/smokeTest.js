@@ -3562,7 +3562,7 @@ async function run() {
   const receivableAccount = await Account.create({ companyId: company._id, name: 'Accounts Receivable - Smoke', type: 'asset' });
   const badDebtExpenseAccount = await Account.create({ companyId: company._id, name: 'Bad Debt Expense', type: 'expense' });
 
-  const creditSale = await step('A credit sale (partial payment, real dueAmount left outstanding) — its date is directly set 45 days in the past to deterministically test aging buckets without waiting real time', async () => {
+  const creditSale = await step('A credit sale (partial payment, real dueAmount left outstanding) — its invoice date is directly set 45 days in the past to deterministically test aging buckets without waiting real time', async () => {
     const sale = await posSaleService.checkout({ userId: admin._id,
       companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id,
       items: [{ productId: product._id, variantId, quantity: 1, unitPrice: 1000 }],
@@ -3570,7 +3570,7 @@ async function run() {
       receivableAccountId: receivableAccount._id,
     });
     assert(sale.dueAmount === 600, `expected a real outstanding dueAmount of exactly 600 (1000 - 400 paid), got ${sale.dueAmount}`);
-    await Sale.findByIdAndUpdate(sale._id, { createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000) });
+    await Sale.findByIdAndUpdate(sale._id, { invoiceDate: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000) });
     return sale;
   });
 
@@ -3613,7 +3613,7 @@ async function run() {
       items: [{ productId: product._id, variantId, quantityOrdered: 8, quantityReceived: 8, unitCost: 100 }],
       subtotal: 800, totalAmount: 800, paidAmount: 0, dueAmount: 800,
     });
-    await PurchaseOrder.findByIdAndUpdate(po._id, { createdAt: new Date(Date.now() - 75 * 24 * 60 * 60 * 1000) });
+    await PurchaseOrder.findByIdAndUpdate(po._id, { orderDate: new Date(Date.now() - 75 * 24 * 60 * 60 * 1000) });
     return po;
   });
 

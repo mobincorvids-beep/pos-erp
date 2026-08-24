@@ -3,8 +3,13 @@
  * core Reporting bucketed outstanding receivables by how overdue they
  * are, confirmed by listing every real report function before building
  * this. Since Sale has no explicit due-date field, aging is measured
- * from createdAt — a defensible default for credit terms that aren't
- * otherwise tracked, stated here rather than left implicit.
+ * from the invoice date — a defensible default for credit terms that
+ * aren't otherwise tracked, stated here rather than left implicit.
+ *
+ * Aging is measured from Sale.invoiceDate (falling back to createdAt for
+ * rows written before that field existed) — an explicit business date, so
+ * a back-dated or late-entered invoice ages from when it was actually
+ * issued rather than from an immutable record-creation stamp.
  *
  * writeOffReceivable() is the real accounting action that follows from
  * that report: a genuinely uncollectible receivable gets removed from
@@ -33,11 +38,11 @@ async function arAgingReport(companyId, asOfDate = new Date()) {
   // Sale.js). Restricting to invoiced statuses keeps AR aging to genuine
   // outstanding invoices only.
   const outstandingSales = await Sale.find({ companyId, dueAmount: { $gt: 0 }, writtenOff: false, status: { $nin: ['cancelled', 'quotation', 'sales_order'] } })
-    .populate('customerId', 'name').sort({ createdAt: 1 });
+    .populate('customerId', 'name').sort({ invoiceDate: 1, createdAt: 1 });
 
   const buckets = { '0-30': 0, '31-60': 0, '61-90': 0, '90+': 0 };
   const rows = outstandingSales.map((sale) => {
-    const daysOverdue = Math.max(0, Math.floor((asOfDate - sale.createdAt) / MS_PER_DAY));
+    const daysOverdue = Math.max(0, Math.floor((asOfDate - (sale.invoiceDate || sale.createdAt)) / MS_PER_DAY));
     const bucket = bucketFor(daysOverdue);
     buckets[bucket] = Math.round((buckets[bucket] + sale.dueAmount) * 100) / 100;
     return { saleId: sale._id, invoiceNumber: sale.invoiceNumber, customerName: sale.customerId?.name || 'Walk-in', daysOverdue, bucket, dueAmount: sale.dueAmount };

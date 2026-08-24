@@ -41,7 +41,7 @@ async function calculateDiscount(purchaseOrderId, paymentDate) {
   if (po.dueAmount <= 0) return { eligible: false, discountAmount: 0, reason: 'No outstanding balance.' };
   if (!po.earlyPaymentDiscountPercent || po.earlyPaymentDiscountPercent <= 0) return { eligible: false, discountAmount: 0, reason: 'This PO has no early payment discount terms.' };
 
-  const daysElapsed = Math.floor((new Date(paymentDate) - po.createdAt) / MS_PER_DAY);
+  const daysElapsed = Math.floor((new Date(paymentDate) - (po.orderDate || po.createdAt)) / MS_PER_DAY);
   if (daysElapsed > po.earlyPaymentDiscountDays) {
     return { eligible: false, discountAmount: 0, reason: `Payment is ${daysElapsed} days after the order date — the discount window closed after ${po.earlyPaymentDiscountDays} days.`, daysElapsed };
   }

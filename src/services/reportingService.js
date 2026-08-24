@@ -450,7 +450,8 @@ module.exports = {
 /**
  * apAgingReport — the payable-side mirror of badDebtService.arAgingReport,
  * reusing its exact bucketing shape (0-30/31-60/61-90/90+ days, measured
- * from createdAt since PurchaseOrder has no separate due-date field
+ * from PurchaseOrder.orderDate — falling back to createdAt for rows
+ * predating that field — since there is no separate due-date field
  * either, the same honest default already stated for AR). Confirmed
  * before writing this that PurchaseOrder.dueAmount is a real, live
  * balance already maintained by supplierLedgerService's own payment
@@ -463,7 +464,7 @@ async function apAgingReport(companyId, asOfDate = new Date()) {
 
   const buckets = { '0-30': 0, '31-60': 0, '61-90': 0, '90+': 0 };
   const rows = outstandingOrders.map((po) => {
-    const daysOverdue = Math.max(0, Math.floor((asOfDate - po.createdAt) / (24 * 60 * 60 * 1000)));
+    const daysOverdue = Math.max(0, Math.floor((asOfDate - (po.orderDate || po.createdAt)) / (24 * 60 * 60 * 1000)));
     const bucket = daysOverdue <= 30 ? '0-30' : daysOverdue <= 60 ? '31-60' : daysOverdue <= 90 ? '61-90' : '90+';
     buckets[bucket] = Math.round((buckets[bucket] + po.dueAmount) * 100) / 100;
     return { purchaseOrderId: po._id, poNumber: po.poNumber, supplierName: po.supplierId?.name || 'Unknown', daysOverdue, bucket, dueAmount: po.dueAmount };

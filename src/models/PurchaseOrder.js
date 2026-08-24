@@ -16,6 +16,11 @@ const purchaseOrderSchema = new Schema({
   requisitionId: { type: Schema.Types.ObjectId, ref: 'PurchaseRequisition', default: null },
   projectId: { type: Schema.Types.ObjectId, ref: 'Project', default: null }, // tags this PO for job costing; a ProjectCost is auto-created per GRN received against it
   poNumber: { type: String, required: true, unique: true },
+  // Business date of the order — AP aging and early-payment-discount
+  // terms measure from THIS, not from the immutable createdAt stamp, so
+  // a PO entered into the system days after it was actually raised ages
+  // correctly. Defaults to now: existing behaviour is unchanged.
+  orderDate: { type: Date, default: Date.now },
   status: { type: String, default: 'draft' }, // draft, ordered, partially_received, received, cancelled
   items: [poItemSchema],
   subtotal: { type: Number, default: 0 },

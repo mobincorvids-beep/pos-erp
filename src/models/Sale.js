@@ -39,6 +39,13 @@ const saleSchema = new Schema({
   // invoice number until someone buys, so it can't be `required` anymore.
   documentNumber: { type: String, required: true, unique: true },
   invoiceNumber: { type: String, unique: true, sparse: true },
+  // The business date the document is dated for — aging, statements and
+  // any "how old is this receivable" question measure from THIS, never
+  // from createdAt. Mongoose marks timestamps.createdAt immutable, so a
+  // record-creation timestamp can never be corrected or backdated for a
+  // sale entered late; an explicit invoice date can. Defaults to now, so
+  // every existing call site behaves exactly as before.
+  invoiceDate: { type: Date, default: Date.now },
   status: { type: String, default: 'completed' }, // quotation, sales_order, completed, cancelled, returned
   saleType: { type: String, default: 'pos' },       // pos, sales_order, quotation
   // Where the order originated — distinct from saleType (a checkout
