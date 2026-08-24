@@ -943,7 +943,7 @@ async function run() {
     // Hand-traced: 30000 deposit × 40% = 12000 forfeited (revenue), 18000 refunded (cash).
     // Verified by pulling the actual voucher's entries, not just trusting the function didn't throw.
     const Voucher = require('./models/Voucher');
-    const voucher = await Voucher.findOne({ referenceType: 'EventBooking', referenceId: booking2._id });
+    const voucher = await Voucher.findOne({ referenceType: 'EventBookingCancellation', referenceId: booking2._id });
     assert(voucher, 'expected a voucher to have been posted for the cancellation');
     assert(voucher.entries.length === 3, `expected exactly 3 ledger entries (clear liability, credit revenue, credit cash refund), got ${voucher.entries.length}`);
 

@@ -211,7 +211,7 @@ async function cancelBooking(bookingId, { forfeitPercent, revenueAccountId, refu
         await accountingService.postVoucher({
           companyId: booking.companyId, branchId: booking.branchId, type: 'journal',
           narration: `Cancelled event — ${pct}% of deposit forfeited as cancellation fee, ${100 - pct}% refunded`,
-          entries, referenceType: 'EventBooking', referenceId: booking._id, userId,
+          entries, referenceType: 'EventBookingCancellation', referenceId: booking._id, userId,
         }, session);
       }
 

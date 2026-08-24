@@ -42,21 +42,79 @@ function listRegistries(companyId, { ownerCustomerId, status } = {}) {
  * Atomically reserves `quantity` against one registry item — the update
  * only applies if purchasedQuantity + quantity still fits within
  * desiredQuantity, checked and applied in the SAME database operation via
- * arrayFilters' $expr, so there's no window between reading the current
- * total and writing the new one for a second, concurrent purchase to slip
- * through. Returns null (not a partial/incorrect update) if it doesn't fit.
+ * an aggregation-pipeline update ($map/$cond over the items array), so
+ * there's no window between reading the current total and writing the new
+ * one for a second, concurrent purchase to slip through. MongoDB does NOT
+ * allow $expr inside arrayFilters at all (a hard server-side restriction,
+ * confirmed via a real "QueryFeatureNotAllowed" error) — a pipeline
+ * update is the correct atomic mechanism for a conditional array-element
+ * increment like this. Returns null (not a partial/incorrect update) if
+ * the registry/item doesn't exist or the increment doesn't fit.
  */
 async function reserveRegistryQuantity(registryId, itemId, quantity) {
-  return GiftRegistry.findOneAndUpdate(
-    { _id: registryId, status: 'active', 'items._id': itemId },
-    { $inc: { 'items.$[item].purchasedQuantity': quantity } },
-    {
-      arrayFilters: [
-        { 'item._id': itemId, $expr: { $lte: [{ $add: ['$$item.purchasedQuantity', quantity] }, '$$item.desiredQuantity'] } },
-      ],
-      new: true,
-    }
+  const itemObjId = new mongoose.Types.ObjectId(itemId);
+
+  // Bypassing the Mongoose model method for this one call: pipeline-style
+  // updates (an array as the update argument) go through the raw driver
+  // cleanly, whereas Mongoose's update casting has known issues with
+  // aggregation expressions inside array updates. The result is hydrated
+  // back into a real Mongoose document so callers see the same shape as
+  // before.
+  const raw = await GiftRegistry.collection.findOneAndUpdate(
+    { _id: new mongoose.Types.ObjectId(registryId), status: 'active', 'items._id': itemObjId },
+    [
+      {
+        $set: {
+          items: {
+            $map: {
+              input: '$items',
+              as: 'it',
+              in: {
+                $cond: [
+                  { $eq: ['$$it._id', itemObjId] },
+                  // Only the target item is touched. __reserveResult is
+                  // ALWAYS explicitly set true or false here, every single
+                  // call — never left as-is — so a later call can never
+                  // inherit a stale "true" persisted by an earlier,
+                  // unrelated successful call on this same item. That
+                  // stale-marker bug is exactly what let two concurrent
+                  // purchases both report success in testing: only the
+                  // marker looked reserved, the second increment never
+                  // actually applied.
+                  {
+                    $cond: [
+                      { $lte: [{ $add: ['$$it.purchasedQuantity', quantity] }, '$$it.desiredQuantity'] },
+                      {
+                        $mergeObjects: [
+                          '$$it',
+                          { purchasedQuantity: { $add: ['$$it.purchasedQuantity', quantity] }, __reserveResult: true },
+                        ],
+                      },
+                      { $mergeObjects: ['$$it', { __reserveResult: false }] },
+                    ],
+                  },
+                  '$$it', // untouched — not the item this call is reserving against
+                ],
+              },
+            },
+          },
+        },
+      },
+    ],
+    { returnDocument: 'after' }
   );
+
+  const doc = raw?.value ?? raw; // driver version differences: some return {value}, some return the doc directly
+  if (!doc) return null; // registry not found, not active, or item doesn't exist at all
+
+  const updatedItem = doc.items.find((it) => String(it._id) === String(itemId));
+  const succeeded = updatedItem?.__reserveResult === true;
+  // __reserveResult is a transient scratch field, not part of the schema —
+  // Mongoose would silently ignore it on normal reads anyway, but strip it
+  // here too so the object handed back to the caller is clean.
+  doc.items.forEach((it) => { delete it.__reserveResult; });
+
+  return succeeded ? GiftRegistry.hydrate(doc) : null;
 }
 
 /**
