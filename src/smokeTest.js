@@ -3639,7 +3639,11 @@ async function run() {
   });
 
   const employeeLoanPayrollRun = await step('One payroll run covering BOTH employees: the no-loan employee\'s advances is EXACTLY 0 (the true regression check — this field was always hardcoded to 0 before this feature, so it must stay 0 for anyone without a loan) — the loan employee\'s advances is EXACTLY 5000, netPay correctly reduced by that amount', async () => {
-    const run = await hrService.generatePayroll({ companyId: company._id, month: 6, year: 2099, userId: admin._id }); // a deliberately far-future, never-colliding month/year
+    // 6/2099 is already taken by the salon commission-to-payroll test above
+    // (PayrollRun has a unique companyId+month+year index), so this uses
+    // 7/2099 — still far-future and collision-free, but genuinely distinct
+    // from every other payroll run this file creates.
+    const run = await hrService.generatePayroll({ companyId: company._id, month: 7, year: 2099, userId: admin._id });
     const noLoanEntry = run.entries.find((e) => String(e.employeeId) === String(noLoanEmployee._id));
     const loanEntry = run.entries.find((e) => String(e.employeeId) === String(loanEmployee._id));
 
