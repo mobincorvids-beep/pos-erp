@@ -92,7 +92,18 @@ async function generateDueInvoices(companyId, { warehouseId, paymentAccountId, p
     });
 
     template.lastRunDate = template.nextRunDate;
-    template.nextRunDate = advanceDate(template.nextRunDate, template.frequency);
+    // Advance PAST the evaluation date, not just by a single period. A template
+    // that fell 40 days behind on a monthly schedule would otherwise land on a
+    // nextRunDate that is STILL in the past, and get billed again on the very
+    // next run — real double-billing. One invoice per run, then catch the
+    // schedule up to the next genuinely future occurrence.
+    let next = advanceDate(template.nextRunDate, template.frequency);
+    let guard = 0;
+    while (next <= evalDate) {
+      if (++guard > 1000) throw new Error('Recurring schedule failed to advance past the evaluation date.');
+      next = advanceDate(next, template.frequency);
+    }
+    template.nextRunDate = next;
     await template.save();
 
     results.push({ templateId: template._id, sale });
