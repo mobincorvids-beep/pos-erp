@@ -443,7 +443,6 @@ async function run() {
   });
 
   // --- 12. Salon industry module: service billing with staff commission, memberships, commission -> payroll interlink ---
-  const Company = require('./models/Company');
   await step('Enable the salon module for this company', async () => {
     await Company.findByIdAndUpdate(company._id, { $addToSet: { activeModules: 'salon' } });
   });

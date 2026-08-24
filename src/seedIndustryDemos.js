@@ -716,7 +716,11 @@ async function run() {
   process.exit(0);
 }
 
-run().catch((err) => {
-  console.error('Fatal error running seedIndustryDemos:', err);
-  process.exit(1);
-});
+if (require.main === module) {
+  run().catch((err) => {
+    console.error('Fatal error running seedIndustryDemos:', err);
+    process.exit(1);
+  });
+}
+
+module.exports = run;
