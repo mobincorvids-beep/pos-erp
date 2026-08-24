@@ -184,7 +184,7 @@ async function receiveGoods(input) {
       }
 
       if (newSerialDocs.length > 0) {
-        await ProductSerial.create(newSerialDocs, { session });
+        await ProductSerial.insertMany(newSerialDocs, { session });
       }
 
       let receivedTotal = 0;
