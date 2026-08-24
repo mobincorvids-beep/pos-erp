@@ -181,7 +181,7 @@ async function run() {
   });
 
   await step('Void the sale reverses stock and ledger', async () => {
-    await saleReturnService.voidSale(sale1._id, { userId: null, reason: 'smoke test void' });
+    await saleReturnService.voidSale(sale1._id, { userId: admin._id, reason: 'smoke test void' });
     const qty = await inventoryService.getStockLevel(warehouse._id, variantId);
     assert(qty === 100, `expected stock restored to 100 after void, got ${qty}`);
   });
@@ -198,7 +198,7 @@ async function run() {
   await step('Return 1 unit from sale2', async () => {
     await saleReturnService.processReturn(sale2._id, {
       items: [{ productId: product._id, variantId, quantity: 1 }],
-      refundAccountId: cash._id, reason: 'smoke test return', userId: null,
+      refundAccountId: cash._id, reason: 'smoke test return', userId: admin._id,
     });
     const qty = await inventoryService.getStockLevel(warehouse._id, variantId);
     assert(qty === 96, `expected 96 in stock after selling 5 (net of void) and returning 1, got ${qty}`);
@@ -224,7 +224,7 @@ async function run() {
       companyId: company._id, branchId: branch._id,
       items: [{ productId: product._id, variantId, quantityRequested: 20 }], requestedBy: null,
     });
-    return requisitionService.decide(req._id, { approve: true, userId: null });
+    return requisitionService.decide(req._id, { approve: true, userId: admin._id });
   });
 
   const po = await step('Create a PO from the requisition, then approve it', async () => {
@@ -232,9 +232,9 @@ async function run() {
       companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, supplierId: supplier._id,
       requisitionId: requisition._id,
       items: [{ productId: product._id, variantId, quantityOrdered: 20, unitCost: 45 }],
-      userId: null,
+      userId: admin._id,
     });
-    return purchaseService.decidePurchaseOrder(created._id, { approve: true, userId: null });
+    return purchaseService.decidePurchaseOrder(created._id, { approve: true, userId: admin._id });
   });
   assert(po.status === 'ordered', `expected PO status "ordered" after approval, got "${po.status}"`);
 
@@ -243,7 +243,7 @@ async function run() {
     purchaseService.receiveGoods({
       purchaseOrderId: po._id, warehouseId: warehouse._id,
       items: [{ purchaseOrderItemId: po.items[0]._id, productId: product._id, variantId, quantity: 15, unitCost: 45 }],
-      userId: null,
+      userId: admin._id,
     })
   );
 
@@ -258,7 +258,7 @@ async function run() {
       await purchaseService.receiveGoods({
         purchaseOrderId: po._id, warehouseId: warehouse._id,
         items: [{ purchaseOrderItemId: po.items[0]._id, productId: product._id, variantId, quantity: 999, unitCost: 45 }],
-        userId: null,
+        userId: admin._id,
       });
     } catch { threw = true; }
     assert(threw, 'expected receiveGoods to reject a quantity exceeding what remains outstanding');
@@ -274,16 +274,16 @@ async function run() {
     });
     const phonePo = await purchaseService.createPurchaseOrder({
       companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, supplierId: supplier._id,
-      items: [{ productId: p._id, variantId: p.variants[0]._id, quantityOrdered: 3, unitCost: 500 }], userId: null,
+      items: [{ productId: p._id, variantId: p.variants[0]._id, quantityOrdered: 3, unitCost: 500 }], userId: admin._id,
     });
-    await purchaseService.decidePurchaseOrder(phonePo._id, { approve: true, userId: null });
+    await purchaseService.decidePurchaseOrder(phonePo._id, { approve: true, userId: admin._id });
     await purchaseService.receiveGoods({
       purchaseOrderId: phonePo._id, warehouseId: warehouse._id,
       items: [{
         purchaseOrderItemId: phonePo.items[0]._id, productId: p._id, variantId: p.variants[0]._id,
         quantity: 3, unitCost: 500, serialNumbers: [`SN-${suffix}-1`, `SN-${suffix}-2`, `SN-${suffix}-3`],
       }],
-      userId: null,
+      userId: admin._id,
     });
     const serials = await ProductSerial.find({ variantId: p.variants[0]._id });
     assert(serials.length === 3 && serials.every((s) => s.status === 'in_stock'), 'all 3 serials created and in_stock after receiving');
@@ -316,7 +316,7 @@ async function run() {
   await step('Returning that serial releases it back to in_stock', async () => {
     await saleReturnService.processReturn(serialSale._id, {
       items: [{ productId: serialProduct._id, variantId: serialVariantId, quantity: 1, serialNumbers: [`SN-${suffix}-1`] }],
-      refundAccountId: cash._id, reason: 'smoke test serial return', userId: null,
+      refundAccountId: cash._id, reason: 'smoke test serial return', userId: admin._id,
     });
     const released = await ProductSerial.findOne({ variantId: serialVariantId, serialNumber: `SN-${suffix}-1` });
     assert(released.status === 'in_stock' && released.saleId === null, 'returned serial released back to in_stock with saleId cleared');
@@ -328,7 +328,7 @@ async function run() {
       items: [{ productId: serialProduct._id, variantId: serialVariantId, quantity: 1, unitPrice: 800, serialNumbers: [`SN-${suffix}-2`] }],
       payments: [{ paymentAccountId: cash._id, method: 'cash', amount: 800 }],
     });
-    await saleReturnService.voidSale(voidableSale._id, { userId: null, reason: 'smoke test serial void' });
+    await saleReturnService.voidSale(voidableSale._id, { userId: admin._id, reason: 'smoke test serial void' });
     const released = await ProductSerial.findOne({ variantId: serialVariantId, serialNumber: `SN-${suffix}-2` });
     assert(released.status === 'in_stock', 'voided sale released its serial back to in_stock');
   });
@@ -343,7 +343,7 @@ async function run() {
     const category = await ExpenseCategory.create({ companyId: company._id, name: 'Smoke Category', accountId: salariesAcc._id });
     const expense = await expenseService.submitExpense({
       companyId: company._id, categoryId: category._id, paymentAccountId: cash._id,
-      amount: 500, projectId: project._id, userId: null,
+      amount: 500, projectId: project._id, userId: admin._id,
     });
     await expenseService.approveExpense(expense._id, null);
 
@@ -355,13 +355,13 @@ async function run() {
     const projectPo = await purchaseService.createPurchaseOrder({
       companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, supplierId: supplier._id,
       projectId: project._id,
-      items: [{ productId: product._id, variantId, quantityOrdered: 5, unitCost: 45 }], userId: null,
+      items: [{ productId: product._id, variantId, quantityOrdered: 5, unitCost: 45 }], userId: admin._id,
     });
-    await purchaseService.decidePurchaseOrder(projectPo._id, { approve: true, userId: null });
+    await purchaseService.decidePurchaseOrder(projectPo._id, { approve: true, userId: admin._id });
     await purchaseService.receiveGoods({
       purchaseOrderId: projectPo._id, warehouseId: warehouse._id,
       items: [{ purchaseOrderItemId: projectPo.items[0]._id, productId: product._id, variantId, quantity: 5, unitCost: 45 }],
-      userId: null,
+      userId: admin._id,
     });
 
     const report = await projectService.profitability(project._id);
@@ -390,11 +390,11 @@ async function run() {
     await hrService.markAttendance({ companyId: company._id, employeeId: employee._id, date: new Date(now.getFullYear(), now.getMonth(), 2), status: 'absent' });
     await hrService.markAttendance({ companyId: company._id, employeeId: employee._id, date: new Date(now.getFullYear(), now.getMonth(), 3), status: 'absent' });
 
-    const run = await hrService.generatePayroll({ companyId: company._id, month: now.getMonth() + 1, year: now.getFullYear(), userId: null });
+    const run = await hrService.generatePayroll({ companyId: company._id, month: now.getMonth() + 1, year: now.getFullYear(), userId: admin._id });
     assert(run.entries[0].absentDays === 2, `expected 2 absent days counted, got ${run.entries[0].absentDays}`);
     assert(run.entries[0].netPay < 32000, 'net pay should be reduced below basic+allowances by the absence deduction');
 
-    const posted = await hrService.postPayroll(run._id, { paymentAccountId: cash._id, userId: null });
+    const posted = await hrService.postPayroll(run._id, { paymentAccountId: cash._id, userId: admin._id });
     assert(posted.status === 'posted' && posted.voucherId, 'payroll run posted with a voucher attached');
   });
 
@@ -473,7 +473,7 @@ async function run() {
   await step('Bill a service performed by the stylist — records a commission and a real Sale', async () => {
     const result = await salonService.billServiceWithCommission({
       companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id,
-      salonServiceId: salonSvc._id, employeeId: salonEmployee._id, paymentAccountId: cash._id, userId: null,
+      salonServiceId: salonSvc._id, employeeId: salonEmployee._id, paymentAccountId: cash._id, userId: admin._id,
     });
     assert(result.sale.totalAmount === 1500, `expected sale total 1500, got ${result.sale.totalAmount}`);
     assert(result.commission.amount === 300, `expected 20% commission of 1500 = 300, got ${result.commission.amount}`);
@@ -504,7 +504,7 @@ async function run() {
   await step('Sell a membership package — creates a real Sale plus session credit', async () => {
     const { sale, membership } = await salonService.sellMembership({
       companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id,
-      membershipPackageId: pkg._id, paymentAccountId: cash._id, userId: null,
+      membershipPackageId: pkg._id, paymentAccountId: cash._id, userId: admin._id,
     });
     assert(sale.totalAmount === 6000, `expected package sale total 6000, got ${sale.totalAmount}`);
     assert(membership.remainingSessions === 5, `expected 5 remaining sessions, got ${membership.remainingSessions}`);
@@ -517,7 +517,7 @@ async function run() {
 
     const result = await salonService.billServiceWithCommission({
       companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id,
-      salonServiceId: salonSvc._id, employeeId: salonEmployee._id, useMembership: true, userId: null,
+      salonServiceId: salonSvc._id, employeeId: salonEmployee._id, useMembership: true, userId: admin._id,
     });
     assert(result.sale.totalAmount === 0, `expected a zero-charge sale for a membership redemption, got ${result.sale.totalAmount}`);
     assert(result.commission.amount === 300, 'commission still earned on the service\'s real price even though the customer paid nothing this visit');
@@ -538,7 +538,7 @@ async function run() {
       amount: 450, status: 'unpaid', earnedAt: targetFrom,
     }]);
 
-    const run = await hrService.generatePayroll({ companyId: company._id, month: targetMonth, year: targetYear, userId: null });
+    const run = await hrService.generatePayroll({ companyId: company._id, month: targetMonth, year: targetYear, userId: admin._id });
     const applied = await salonService.applyCommissionsToPayroll(run._id, targetMonth, targetYear, company._id);
 
     assert(applied.length === 1 && applied[0].amount === 450, `expected exactly one employee with 450 applied, got ${JSON.stringify(applied)}`);
@@ -597,7 +597,7 @@ async function run() {
 
   await step('Buy-back intake computes credit from weight, deduction, and the current rate — hand-traced: 10g × (1 - 5%) × 20000 = 190000', async () => {
     const buyback = await buybackService.intake({
-      companyId: company._id, customerId: customer._id, karat: 22, weightGrams: 10, deductionPercent: 5, userId: null,
+      companyId: company._id, customerId: customer._id, karat: 22, weightGrams: 10, deductionPercent: 5, userId: admin._id,
     });
     assert(buyback.creditAmount === 190000, `expected creditAmount 190000 (10 × 0.95 × 20000), got ${buyback.creditAmount}`);
     assert(buyback.status === 'pending', 'buyback starts pending until applied to a sale');
@@ -643,7 +643,7 @@ async function run() {
       companyId: company._id, branchId: branch._id, roomId: room._id, customerId: customer._id,
       checkInDate: checkIn, checkOutDate: checkOut,
       advanceAmount: 10000, advanceReceivedInAccountId: cash._id, depositLiabilityAccountId: depositLiabilityAccount._id,
-      userId: null,
+      userId: admin._id,
     });
     assert(r.status === 'booked', `expected status "booked", got "${r.status}"`);
     return r;
@@ -656,7 +656,7 @@ async function run() {
     try {
       await hotelService.bookReservation({
         companyId: company._id, branchId: branch._id, roomId: room._id, customerId: customer._id,
-        checkInDate: overlapStart, checkOutDate: overlapEnd, userId: null,
+        checkInDate: overlapStart, checkOutDate: overlapEnd, userId: admin._id,
       });
     } catch { threw = true; }
     assert(threw, 'expected an overlapping reservation for the same room to be rejected');
@@ -678,7 +678,7 @@ async function run() {
     });
 
     const result = await hotelService.checkOut(reservation._id, {
-      warehouseId: warehouse._id, finalPaymentAccountId: cash._id, userId: null,
+      warehouseId: warehouse._id, finalPaymentAccountId: cash._id, userId: admin._id,
     });
 
     assert(result.nights === 3, `expected 3 nights, got ${result.nights}`);
@@ -760,7 +760,7 @@ async function run() {
     assert(invoices.length === 1, `expected exactly one invoice for student A this period, got ${invoices.length}`);
 
     const { sale, invoice } = await schoolService.payInvoice(invoices[0]._id, {
-      branchId: branch._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: null,
+      branchId: branch._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: admin._id,
     });
     assert(sale.totalAmount === 5000, `expected the tuition sale to total 5000, got ${sale.totalAmount}`);
     assert(invoice.status === 'paid' && String(invoice.saleId) === String(sale._id), 'invoice marked paid and linked to the sale that paid it');
@@ -836,7 +836,7 @@ async function run() {
 
   await step('quoteAndCreateSalesOrder creates a REAL Sales Order (core module) at the tiered price, not a checkout', async () => {
     const order = await distributionPricingService.quoteAndCreateSalesOrder({
-      companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id, userId: null,
+      companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id, userId: admin._id,
       items: [{ productId: wholesaleProduct._id, variantId: wholesaleVariantId, quantity: 100 }],
     });
     assert(order.saleType === 'sales_order' && order.status === 'sales_order', `expected a real sales_order document, got saleType="${order.saleType}" status="${order.status}"`);
@@ -897,7 +897,7 @@ async function run() {
       companyId: company._id, branchId: branch._id, venueId: venue._id, packageId: eventPackage._id, customerId: customer._id,
       eventDate: eventDate1, guestCount: 100,
       depositAmount: 50000, depositReceivedInAccountId: cash._id, depositLiabilityAccountId: eventDepositLiabilityAccount._id,
-      userId: null,
+      userId: admin._id,
     });
     assert(b.status === 'booked', `expected status "booked", got "${b.status}"`);
     return b;
@@ -908,14 +908,14 @@ async function run() {
     try {
       await bookingService.bookEvent({
         companyId: company._id, branchId: branch._id, venueId: venue._id, packageId: eventPackage._id, customerId: customer._id,
-        eventDate: eventDate1, guestCount: 60, userId: null,
+        eventDate: eventDate1, guestCount: 60, userId: admin._id,
       });
     } catch { threw = true; }
     assert(threw, 'expected a second booking on the same venue+day to be rejected');
   });
 
   await step('Completing the event bills the per-headcount + venue rental through the ordinary checkout', async () => {
-    const result = await bookingService.completeEvent(booking1._id, { warehouseId: warehouse._id, finalPaymentAccountId: cash._id, userId: null });
+    const result = await bookingService.completeEvent(booking1._id, { warehouseId: warehouse._id, finalPaymentAccountId: cash._id, userId: admin._id });
     assert(result.guestTotal === 200000, `expected guestTotal 200000 (100 × 2000), got ${result.guestTotal}`);
     assert(result.grandTotal === 215000, `expected grandTotal 215000 (200000 + 15000), got ${result.grandTotal}`);
     assert(result.depositApplied === 50000, `expected the full 50000 deposit applied, got ${result.depositApplied}`);
@@ -929,7 +929,7 @@ async function run() {
       companyId: company._id, branchId: branch._id, venueId: venue._id, packageId: eventPackage._id, customerId: customer._id,
       eventDate: eventDate2, guestCount: 60,
       depositAmount: 30000, depositReceivedInAccountId: cash._id, depositLiabilityAccountId: eventDepositLiabilityAccount._id,
-      userId: null,
+      userId: admin._id,
     })
   );
 
@@ -937,7 +937,7 @@ async function run() {
 
   await step('Cancelling with a 40% forfeit splits the deposit into a 12000 cancellation-fee revenue and an 18000 refund — one voucher, three legs', async () => {
     await bookingService.cancelBooking(booking2._id, {
-      forfeitPercent: 40, revenueAccountId: cancellationRevenueAccount._id, refundAccountId: cash._id, userId: null,
+      forfeitPercent: 40, revenueAccountId: cancellationRevenueAccount._id, refundAccountId: cash._id, userId: admin._id,
     });
 
     // Hand-traced: 30000 deposit × 40% = 12000 forfeited (revenue), 18000 refunded (cash).
@@ -1012,7 +1012,7 @@ async function run() {
   await step('A job card opened against this vehicle is tagged with vehicleId and shows up in its service history — reuses core ServiceOrder unmodified', async () => {
     const jobCard = await vehicleService.openJobCard({
       companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, vehicleId: vehicle._id,
-      itemDescription: 'Oil change', userId: null,
+      itemDescription: 'Oil change', userId: admin._id,
     });
     assert(String(jobCard.vehicleId) === String(vehicle._id), 'job card correctly tagged with vehicleId');
 
@@ -1099,7 +1099,7 @@ async function run() {
   });
 
   await step('Complete visit A — bills the consultation fee through the ordinary checkout', async () => {
-    const result = await hospitalService.completeVisit(visitA._id, { warehouseId: warehouse._id, paymentAccountId: cash._id, userId: null });
+    const result = await hospitalService.completeVisit(visitA._id, { warehouseId: warehouse._id, paymentAccountId: cash._id, userId: admin._id });
     assert(result.sale.totalAmount === 2000, `expected consultation sale total 2000, got ${result.sale.totalAmount}`);
     assert(result.visit.status === 'completed', `expected visit status "completed", got "${result.visit.status}"`);
   });
@@ -1181,16 +1181,16 @@ async function run() {
     });
     const phonePo2 = await purchaseService.createPurchaseOrder({
       companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, supplierId: supplier._id,
-      items: [{ productId: p._id, variantId: p.variants[0]._id, quantityOrdered: 2, unitCost: 500 }], userId: null,
+      items: [{ productId: p._id, variantId: p.variants[0]._id, quantityOrdered: 2, unitCost: 500 }], userId: admin._id,
     });
-    await purchaseService.decidePurchaseOrder(phonePo2._id, { approve: true, userId: null });
+    await purchaseService.decidePurchaseOrder(phonePo2._id, { approve: true, userId: admin._id });
     await purchaseService.receiveGoods({
       purchaseOrderId: phonePo2._id, warehouseId: warehouse._id,
       items: [{
         purchaseOrderItemId: phonePo2.items[0]._id, productId: p._id, variantId: p.variants[0]._id,
         quantity: 2, unitCost: 500, serialNumbers: [`WARR-${suffix}`, `WARR-EXPIRED-${suffix}`],
       }],
-      userId: null,
+      userId: admin._id,
     });
     await posSaleService.checkout({ userId: admin._id,
       companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id,
@@ -1224,20 +1224,20 @@ async function run() {
   await step('Submitting a claim against the expired warranty is rejected outright, not silently accepted', async () => {
     let threw = false;
     try {
-      await warrantyService.submitClaim(expiredWarranty._id, { issueDescription: 'Screen cracked', userId: null });
+      await warrantyService.submitClaim(expiredWarranty._id, { issueDescription: 'Screen cracked', userId: admin._id });
     } catch { threw = true; }
     assert(threw, 'expected a claim against an expired warranty to be rejected at submission time');
   });
 
   const claim = await step('Submitting a claim against the ACTIVE warranty succeeds', () =>
-    warrantyService.submitClaim(activeWarranty._id, { issueDescription: 'Battery drains fast', userId: null })
+    warrantyService.submitClaim(activeWarranty._id, { issueDescription: 'Battery drains fast', userId: admin._id })
   );
   assert(claim.status === 'submitted', `expected claim status "submitted", got "${claim.status}"`);
 
   await step('Approving the claim, then opening a repair job, creates a REAL core ServiceOrder — not a duplicate concept', async () => {
     await warrantyService.decideClaim(claim._id, { approve: true, decisionNote: 'Covered under warranty' });
     const withRepair = await warrantyService.linkRepairJob(claim._id, {
-      branchId: branch._id, warehouseId: warehouse._id, itemDescription: 'Battery replacement', userId: null,
+      branchId: branch._id, warehouseId: warehouse._id, itemDescription: 'Battery replacement', userId: admin._id,
     });
     assert(withRepair.status === 'in_repair', `expected claim status "in_repair", got "${withRepair.status}"`);
     assert(withRepair.serviceOrderId, 'expected the claim to be linked to a real ServiceOrder');
@@ -1275,16 +1275,16 @@ async function run() {
     const order = await furnitureService.placeOrder({
       companyId: company._id, branchId: branch._id, customerId: customer._id,
       description: 'Custom oak dining table', promisedDeliveryDate, price: 15000,
-      depositAmount: 5000, depositReceivedInAccountId: cash._id, depositLiabilityAccountId: furnitureDepositLiability._id, userId: null,
+      depositAmount: 5000, depositReceivedInAccountId: cash._id, depositLiabilityAccountId: furnitureDepositLiability._id, userId: admin._id,
     });
-    const withWorkOrder = await furnitureService.startProduction(order._id, { bomId: furnitureBom._id, warehouseId: warehouse._id, userId: null });
+    const withWorkOrder = await furnitureService.startProduction(order._id, { bomId: furnitureBom._id, warehouseId: warehouse._id, userId: admin._id });
     // The furniture module only CREATES the work order — actually running
     // production is the real, unmodified core Manufacturing flow, called
     // directly here exactly as any other caller of that module would.
     await manufacturingService.startProduction(withWorkOrder.workOrderId, null);
-    await manufacturingService.completeProduction(withWorkOrder.workOrderId, { quantityProduced: 1, actualLaborCost: 1000, actualOverheadCost: 200, userId: null });
+    await manufacturingService.completeProduction(withWorkOrder.workOrderId, { quantityProduced: 1, actualLaborCost: 1000, actualOverheadCost: 200, userId: admin._id });
     await furnitureService.markReady(order._id);
-    return furnitureService.deliver(order._id, { warehouseId: warehouse._id, finalPaymentAccountId: cash._id, userId: null });
+    return furnitureService.deliver(order._id, { warehouseId: warehouse._id, finalPaymentAccountId: cash._id, userId: admin._id });
   }
 
   await step('An order promised 7 days from now, delivered today, bills correctly and counts as ON TIME — hand-traced: 15000 price - 5000 deposit = 10000 remaining', async () => {
@@ -1384,7 +1384,7 @@ async function run() {
   const morningBatch = await step('Produce 50 croissants this morning at 20/unit cost — stock should be exactly 50', async () => {
     const batch = await dailyBatchService.produceBatch({
       companyId: company._id, branchId: branch._id, warehouseId: warehouse._id,
-      productId: croissantProduct._id, variantId: croissantVariantId, producedQuantity: 50, unitCost: 20, userId: null,
+      productId: croissantProduct._id, variantId: croissantVariantId, producedQuantity: 50, unitCost: 20, userId: admin._id,
     });
     const stock = await inventoryService.getStockLevel(warehouse._id, croissantVariantId);
     assert(stock === 50, `expected stock 50 right after production, got ${stock}`);
@@ -1402,7 +1402,7 @@ async function run() {
   });
 
   await step('Closing the batch writes off exactly the 20 unsold units and posts a real waste voucher — hand-traced: 20 × 20 = 400', async () => {
-    const closed = await dailyBatchService.closeBatch(morningBatch._id, { userId: null });
+    const closed = await dailyBatchService.closeBatch(morningBatch._id, { userId: admin._id });
     assert(closed.status === 'closed', `expected batch status "closed", got "${closed.status}"`);
     assert(closed.wastedQuantity === 20, `expected exactly 20 units written off (the unsold remainder, capped at what was actually produced), got ${closed.wastedQuantity}`);
     assert(closed.wasteValue === 400, `expected waste value 400 (20 × 20 unit cost), got ${closed.wasteValue}`);
@@ -1424,7 +1424,7 @@ async function run() {
   await step('Closing an already-closed batch is rejected, not silently re-processed', async () => {
     let threw = false;
     try {
-      await dailyBatchService.closeBatch(morningBatch._id, { userId: null });
+      await dailyBatchService.closeBatch(morningBatch._id, { userId: admin._id });
     } catch { threw = true; }
     assert(threw, 'expected closing an already-closed batch to be rejected');
   });
@@ -1434,7 +1434,7 @@ async function run() {
     await Customer.findByIdAndUpdate(customer._id, { $addToSet: { tags: 'SmokeSegment' } });
     const campaign = await crmService.createCampaign({
       companyId: company._id, name: 'Smoke SMS Campaign', channel: 'sms', message: 'Hello from the smoke test',
-      targetTags: ['SmokeSegment'], userId: null,
+      targetTags: ['SmokeSegment'], userId: admin._id,
     });
     const { campaign: sent, results } = await crmService.sendCampaign(campaign._id);
 
@@ -1449,7 +1449,7 @@ async function run() {
     await Customer.findByIdAndUpdate(customer._id, { phone: '+15551234567' });
     const campaign = await crmService.createCampaign({
       companyId: company._id, name: 'Smoke SMS Campaign 2', channel: 'sms', message: 'Second smoke test message',
-      targetTags: ['SmokeSegment'], userId: null,
+      targetTags: ['SmokeSegment'], userId: admin._id,
     });
     const { campaign: sent } = await crmService.sendCampaign(campaign._id);
 
@@ -1458,7 +1458,7 @@ async function run() {
 
   await step('Re-sending an already-sent campaign is rejected, not silently re-processed into a duplicate send', async () => {
     const campaign = await crmService.createCampaign({
-      companyId: company._id, name: 'Smoke SMS Campaign 3', channel: 'sms', message: 'Third', targetTags: ['SmokeSegment'], userId: null,
+      companyId: company._id, name: 'Smoke SMS Campaign 3', channel: 'sms', message: 'Third', targetTags: ['SmokeSegment'], userId: admin._id,
     });
     await crmService.sendCampaign(campaign._id);
     let threw = false;
@@ -1485,9 +1485,9 @@ async function run() {
   await step('Receive 3 separate batches with different expiry dates and quantities — 10 expiring soonest, 15 next, 20 last', async () => {
     const milkPo = await purchaseService.createPurchaseOrder({
       companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, supplierId: supplier._id,
-      items: [{ productId: milkProduct._id, variantId: milkVariantId, quantityOrdered: 45, unitCost: 100 }], userId: null,
+      items: [{ productId: milkProduct._id, variantId: milkVariantId, quantityOrdered: 45, unitCost: 100 }], userId: admin._id,
     });
-    await purchaseService.decidePurchaseOrder(milkPo._id, { approve: true, userId: null });
+    await purchaseService.decidePurchaseOrder(milkPo._id, { approve: true, userId: admin._id });
 
     // Received in a deliberately SCRAMBLED order (soonest-expiring batch
     // received SECOND, not first) — specifically to prove FEFO sorts by
@@ -1495,17 +1495,17 @@ async function run() {
     await purchaseService.receiveGoods({
       purchaseOrderId: milkPo._id, warehouseId: warehouse._id,
       items: [{ purchaseOrderItemId: milkPo.items[0]._id, productId: milkProduct._id, variantId: milkVariantId, quantity: 15, unitCost: 100, batchNumber: 'MILK-B', manufactureDate: new Date(), expiryDate: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000) }],
-      userId: null,
+      userId: admin._id,
     });
     await purchaseService.receiveGoods({
       purchaseOrderId: milkPo._id, warehouseId: warehouse._id,
       items: [{ purchaseOrderItemId: milkPo.items[0]._id, productId: milkProduct._id, variantId: milkVariantId, quantity: 10, unitCost: 100, batchNumber: 'MILK-A', manufactureDate: new Date(), expiryDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000) }],
-      userId: null,
+      userId: admin._id,
     });
     await purchaseService.receiveGoods({
       purchaseOrderId: milkPo._id, warehouseId: warehouse._id,
       items: [{ purchaseOrderItemId: milkPo.items[0]._id, productId: milkProduct._id, variantId: milkVariantId, quantity: 20, unitCost: 100, batchNumber: 'MILK-C', manufactureDate: new Date(), expiryDate: new Date(Date.now() + 40 * 24 * 60 * 60 * 1000) }],
-      userId: null,
+      userId: admin._id,
     });
   });
 
@@ -1600,7 +1600,7 @@ async function run() {
   const roll = await step('Receive a 20-meter roll with a 5-meter remnant threshold — stock should be exactly 20', async () => {
     const r = await fabricRollService.receiveRoll({
       companyId: company._id, productId: fabricProduct._id, variantId: fabricVariantId, warehouseId: warehouse._id,
-      rollNumber: `ROLL-${suffix}`, unitOfMeasure: 'meters', length: 20, unitCost: 200, remnantThreshold: 5, userId: null,
+      rollNumber: `ROLL-${suffix}`, unitOfMeasure: 'meters', length: 20, unitCost: 200, remnantThreshold: 5, userId: admin._id,
     });
     const stock = await inventoryService.getStockLevel(warehouse._id, fabricVariantId);
     assert(stock === 20, `expected stock 20 right after receiving the roll, got ${stock}`);
@@ -1609,7 +1609,7 @@ async function run() {
   });
 
   await step('Cutting 10m leaves 10m remaining — still above the 5m threshold, status stays "active", nobody had to mark it', async () => {
-    const cut = await fabricRollService.cutFromRoll(roll._id, { lengthToCut: 10, userId: null });
+    const cut = await fabricRollService.cutFromRoll(roll._id, { lengthToCut: 10, userId: admin._id });
     assert(cut.remainingLength === 10, `expected remainingLength 10 (20 - 10), got ${cut.remainingLength}`);
     assert(cut.status === 'active', `expected status to remain "active" at 10m remaining (above the 5m threshold), got "${cut.status}"`);
     const stock = await inventoryService.getStockLevel(warehouse._id, fabricVariantId);
@@ -1617,7 +1617,7 @@ async function run() {
   });
 
   await step('Cutting 6 more crosses below the 5m threshold (10 -> 4) — the roll automatically reclassifies itself as "remnant", no separate action taken', async () => {
-    const cut = await fabricRollService.cutFromRoll(roll._id, { lengthToCut: 6, userId: null });
+    const cut = await fabricRollService.cutFromRoll(roll._id, { lengthToCut: 6, userId: admin._id });
     assert(cut.remainingLength === 4, `expected remainingLength 4 (10 - 6), got ${cut.remainingLength}`);
     assert(cut.status === 'remnant', `expected the cut ITSELF to flip status to "remnant" now that 4 < the 5m threshold, got "${cut.status}"`);
   });
@@ -1626,13 +1626,13 @@ async function run() {
     let threw = false;
     let message = '';
     try {
-      await fabricRollService.cutFromRoll(roll._id, { lengthToCut: 100, userId: null });
+      await fabricRollService.cutFromRoll(roll._id, { lengthToCut: 100, userId: admin._id });
     } catch (err) { threw = true; message = err.message; }
     assert(threw && message.includes('only 4'), `expected a rejection specifically mentioning only 4m remain, got threw=${threw} message="${message}"`);
   });
 
   await step('Cutting the exact remaining 4m exhausts the roll — status "exhausted", real stock lands at exactly 0', async () => {
-    const cut = await fabricRollService.cutFromRoll(roll._id, { lengthToCut: 4, userId: null });
+    const cut = await fabricRollService.cutFromRoll(roll._id, { lengthToCut: 4, userId: admin._id });
     assert(cut.remainingLength === 0, `expected remainingLength exactly 0, got ${cut.remainingLength}`);
     assert(cut.status === 'exhausted', `expected status "exhausted" at 0 remaining, got "${cut.status}"`);
     const stock = await inventoryService.getStockLevel(warehouse._id, fabricVariantId);
@@ -1642,7 +1642,7 @@ async function run() {
   await step('Attempting to cut from an already-exhausted roll is rejected outright', async () => {
     let threw = false;
     try {
-      await fabricRollService.cutFromRoll(roll._id, { lengthToCut: 1, userId: null });
+      await fabricRollService.cutFromRoll(roll._id, { lengthToCut: 1, userId: admin._id });
     } catch { threw = true; }
     assert(threw, 'expected cutting from an exhausted roll to be rejected');
   });
@@ -1684,7 +1684,7 @@ async function run() {
       dailyRate: 500, depositAmount: 5000, expectedReturnDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
       depositReceivedInAccountId: cash._id, depositLiabilityAccountId: rentalDepositLiability._id,
       rentalBillingProductId: rentalUsageProduct._id, rentalBillingVariantId: rentalUsageProduct.variants[0]._id,
-      userId: null,
+      userId: admin._id,
     });
     const stockAfter = await inventoryService.getStockLevel(warehouse._id, drillVariantId);
     assert(stockAfter === stockBefore - 1, `expected stock to drop by exactly 1 on checkout, went from ${stockBefore} to ${stockAfter}`);
@@ -1696,7 +1696,7 @@ async function run() {
 
     const returned = await toolRentalService.returnRental(rental._id, {
       condition: 'good', actualReturnDate: new Date(rental.checkOutDate.getTime() + 2 * 24 * 60 * 60 * 1000),
-      warehouseId: warehouse._id, finalPaymentAccountId: cash._id, userId: null,
+      warehouseId: warehouse._id, finalPaymentAccountId: cash._id, userId: admin._id,
     });
 
     assert(returned.rentalCharge === 1000, `expected rentalCharge 1000 (2 days × 500), got ${returned.rentalCharge}`);
@@ -1720,14 +1720,14 @@ async function run() {
       dailyRate: 500, depositAmount: 5000, expectedReturnDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
       depositReceivedInAccountId: cash._id, depositLiabilityAccountId: rentalDepositLiability._id,
       rentalBillingProductId: rentalUsageProduct._id, rentalBillingVariantId: rentalUsageProduct.variants[0]._id,
-      userId: null,
+      userId: admin._id,
     });
     const [rental2] = await toolRentalService.listRentals(company._id, { status: 'out' });
     const stockBeforeReturn = await inventoryService.getStockLevel(warehouse._id, drillVariantId);
 
     const returned = await toolRentalService.returnRental(rental2._id, {
       condition: 'minor_damage', forfeitPercentForMinorDamage: 30,
-      warehouseId: warehouse._id, finalPaymentAccountId: cash._id, damageRevenueAccountId: damageRevenueAccount._id, userId: null,
+      warehouseId: warehouse._id, finalPaymentAccountId: cash._id, damageRevenueAccountId: damageRevenueAccount._id, userId: admin._id,
     });
 
     assert(returned.depositForfeited === 1500, `expected 1500 forfeited (30% of 5000), got ${returned.depositForfeited}`);
@@ -1746,13 +1746,13 @@ async function run() {
       dailyRate: 500, depositAmount: 5000, expectedReturnDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
       depositReceivedInAccountId: cash._id, depositLiabilityAccountId: rentalDepositLiability._id,
       rentalBillingProductId: rentalUsageProduct._id, rentalBillingVariantId: rentalUsageProduct.variants[0]._id,
-      userId: null,
+      userId: admin._id,
     });
     const [rental3] = await toolRentalService.listRentals(company._id, { status: 'out' });
 
     const returned = await toolRentalService.returnRental(rental3._id, {
       condition: 'lost_or_major_damage',
-      warehouseId: warehouse._id, finalPaymentAccountId: cash._id, damageRevenueAccountId: damageRevenueAccount._id, userId: null,
+      warehouseId: warehouse._id, finalPaymentAccountId: cash._id, damageRevenueAccountId: damageRevenueAccount._id, userId: admin._id,
     });
 
     assert(returned.depositForfeited === 5000 && returned.depositRefunded === 0, `expected the FULL 5000 deposit forfeited and 0 refunded for a lost/major-damage return, got forfeited=${returned.depositForfeited} refunded=${returned.depositRefunded}`);
@@ -1789,7 +1789,7 @@ async function run() {
     const p = await layawayService.createPlan({
       companyId: company._id, branchId: branch._id, warehouseId: warehouse._id,
       productId: tvProduct._id, variantId: tvVariantId, customerId: customer._id,
-      totalPrice: 3000, depositLiabilityAccountId: layawayLiabilityAccount._id, userId: null,
+      totalPrice: 3000, depositLiabilityAccountId: layawayLiabilityAccount._id, userId: admin._id,
     });
 
     const after = await StockLevel.findOne({ warehouseId: warehouse._id, variantId: tvVariantId });
@@ -1799,14 +1799,14 @@ async function run() {
   });
 
   await step('First payment of 1000 leaves the plan active with 2000 remaining — NOT completed yet', async () => {
-    const result = await layawayService.makePayment(plan._id, { amount: 1000, paymentAccountId: cash._id, userId: null });
+    const result = await layawayService.makePayment(plan._id, { amount: 1000, paymentAccountId: cash._id, userId: admin._id });
     assert(result.completed === false, 'expected the plan to still be active after only 1000 of 3000 paid');
     assert(result.remaining === 2000, `expected remaining 2000 (3000 - 1000), got ${result.remaining}`);
     assert(result.plan.status === 'active', `expected plan status "active", got "${result.plan.status}"`);
   });
 
   await step('Second payment of 1000 leaves 1000 remaining — still active', async () => {
-    const result = await layawayService.makePayment(plan._id, { amount: 1000, paymentAccountId: cash._id, userId: null });
+    const result = await layawayService.makePayment(plan._id, { amount: 1000, paymentAccountId: cash._id, userId: admin._id });
     assert(result.completed === false && result.remaining === 1000, `expected still active with 1000 remaining, got completed=${result.completed} remaining=${result.remaining}`);
   });
 
@@ -1814,7 +1814,7 @@ async function run() {
     const StockLevel = require('./models/StockLevel');
     const before = await StockLevel.findOne({ warehouseId: warehouse._id, variantId: tvVariantId });
 
-    const result = await layawayService.makePayment(plan._id, { amount: 1000, paymentAccountId: cash._id, userId: null });
+    const result = await layawayService.makePayment(plan._id, { amount: 1000, paymentAccountId: cash._id, userId: admin._id });
 
     assert(result.completed === true, 'expected the plan to auto-complete on the exact payment that crosses the threshold — no separate "finish" action should be needed');
     assert(result.plan.status === 'completed', `expected plan status "completed", got "${result.plan.status}"`);
@@ -1828,7 +1828,7 @@ async function run() {
   await step('Attempting to pay toward an already-completed plan is rejected, not silently accepted', async () => {
     let threw = false;
     try {
-      await layawayService.makePayment(plan._id, { amount: 100, paymentAccountId: cash._id, userId: null });
+      await layawayService.makePayment(plan._id, { amount: 100, paymentAccountId: cash._id, userId: admin._id });
     } catch { threw = true; }
     assert(threw, 'expected a payment toward a completed plan to be rejected');
   });
@@ -1838,12 +1838,12 @@ async function run() {
     const plan2 = await layawayService.createPlan({
       companyId: company._id, branchId: branch._id, warehouseId: warehouse._id,
       productId: tvProduct._id, variantId: tvVariantId, customerId: customer._id,
-      totalPrice: 3000, depositLiabilityAccountId: layawayLiabilityAccount._id, userId: null,
+      totalPrice: 3000, depositLiabilityAccountId: layawayLiabilityAccount._id, userId: admin._id,
     });
-    await layawayService.makePayment(plan2._id, { amount: 500, paymentAccountId: cash._id, userId: null });
+    await layawayService.makePayment(plan2._id, { amount: 500, paymentAccountId: cash._id, userId: admin._id });
 
     const before = await StockLevel.findOne({ warehouseId: warehouse._id, variantId: tvVariantId });
-    const cancelled = await layawayService.cancelPlan(plan2._id, { refundPercent: 100, refundAccountId: cash._id, userId: null });
+    const cancelled = await layawayService.cancelPlan(plan2._id, { refundPercent: 100, refundAccountId: cash._id, userId: admin._id });
     const after = await StockLevel.findOne({ warehouseId: warehouse._id, variantId: tvVariantId });
 
     assert(cancelled.status === 'cancelled', `expected status "cancelled", got "${cancelled.status}"`);
@@ -1883,7 +1883,7 @@ async function run() {
       planName: 'Coffee Club', startDate: new Date(Date.now() - 24 * 60 * 60 * 1000), endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       dailyLimit: 1, subscriptionBillingProductId: subscriptionFeeProduct._id, subscriptionBillingVariantId: subscriptionFeeProduct.variants[0]._id,
       subscriptionPrice: 2000, redeemProductId: coffeeProduct._id, redeemVariantId: coffeeProduct.variants[0]._id,
-      paymentAccountId: cash._id, userId: null,
+      paymentAccountId: cash._id, userId: admin._id,
     });
     assert(s.status === 'active', `expected subscription status "active", got "${s.status}"`);
     return s;
@@ -1891,7 +1891,7 @@ async function run() {
 
   await step('First redemption of the day succeeds and deducts real stock by 1', async () => {
     const stockBefore = await inventoryService.getStockLevel(warehouse._id, coffeeProduct.variants[0]._id);
-    const result = await cafeSubscriptionService.redeemDaily(subscription._id, { warehouseId: warehouse._id, userId: null });
+    const result = await cafeSubscriptionService.redeemDaily(subscription._id, { warehouseId: warehouse._id, userId: admin._id });
     assert(result.redemptionsToday === 1, `expected redemptionsToday 1 after the first redemption, got ${result.redemptionsToday}`);
     const stockAfter = await inventoryService.getStockLevel(warehouse._id, coffeeProduct.variants[0]._id);
     assert(stockAfter === stockBefore - 1, `expected real stock to drop by exactly 1, went from ${stockBefore} to ${stockAfter}`);
@@ -1901,7 +1901,7 @@ async function run() {
     let threw = false;
     let message = '';
     try {
-      await cafeSubscriptionService.redeemDaily(subscription._id, { warehouseId: warehouse._id, userId: null });
+      await cafeSubscriptionService.redeemDaily(subscription._id, { warehouseId: warehouse._id, userId: admin._id });
     } catch (err) { threw = true; message = err.message; }
     assert(threw && message.includes('already been used'), `expected a same-day second redemption to be rejected with a clear "already used" message, got threw=${threw} message="${message}"`);
   });
@@ -1911,7 +1911,7 @@ async function run() {
     const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
     await CafeSubscription.findByIdAndUpdate(subscription._id, { lastRedemptionDate: yesterday });
 
-    const result = await cafeSubscriptionService.redeemDaily(subscription._id, { warehouseId: warehouse._id, userId: null });
+    const result = await cafeSubscriptionService.redeemDaily(subscription._id, { warehouseId: warehouse._id, userId: admin._id });
     assert(result.redemptionsToday === 1, `expected redemptionsToday to reset to 1 on a new calendar day, not accumulate to 2, got ${result.redemptionsToday}`);
     assert(result.totalRedemptions === 2, `expected the LIFETIME total to correctly be 2 (this is the informational running count, unlike the daily one which resets), got ${result.totalRedemptions}`);
   });
@@ -1922,12 +1922,12 @@ async function run() {
       planName: 'Expired Plan', startDate: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000), endDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
       dailyLimit: 1, subscriptionBillingProductId: subscriptionFeeProduct._id, subscriptionBillingVariantId: subscriptionFeeProduct.variants[0]._id,
       subscriptionPrice: 2000, redeemProductId: coffeeProduct._id, redeemVariantId: coffeeProduct.variants[0]._id,
-      paymentAccountId: cash._id, userId: null,
+      paymentAccountId: cash._id, userId: admin._id,
     });
 
     let threw = false;
     try {
-      await cafeSubscriptionService.redeemDaily(expiredSub._id, { warehouseId: warehouse._id, userId: null });
+      await cafeSubscriptionService.redeemDaily(expiredSub._id, { warehouseId: warehouse._id, userId: admin._id });
     } catch { threw = true; }
     assert(threw, 'expected redemption against an expired subscription to be rejected');
 
@@ -1948,12 +1948,12 @@ async function run() {
       planName: 'Tea Club', startDate: new Date(Date.now() - 24 * 60 * 60 * 1000), endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       dailyLimit: 1, subscriptionBillingProductId: subscriptionFeeProduct._id, subscriptionBillingVariantId: subscriptionFeeProduct.variants[0]._id,
       subscriptionPrice: 2000, redeemProductId: teaProduct._id, redeemVariantId: teaProduct.variants[0]._id,
-      paymentAccountId: cash._id, userId: null,
+      paymentAccountId: cash._id, userId: admin._id,
     });
 
     let threw = false;
     try {
-      await cafeSubscriptionService.redeemDaily(teaSub._id, { warehouseId: warehouse._id, userId: null });
+      await cafeSubscriptionService.redeemDaily(teaSub._id, { warehouseId: warehouse._id, userId: admin._id });
     } catch { threw = true; }
     assert(threw, 'expected a redemption against a zero-stock product to be rejected, not silently given away');
   });
@@ -1995,7 +1995,7 @@ async function run() {
 
   await step('Buyer A purchases 2 sequentially — succeeds, real Sale created, registry shows 2/5 claimed', async () => {
     const result = await giftRegistryService.purchaseFromRegistry(registry._id, registryItemId, {
-      quantity: 2, purchasingCustomerId: buyerA._id, branchId: branch._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: null,
+      quantity: 2, purchasingCustomerId: buyerA._id, branchId: branch._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: admin._id,
     });
     assert(result.sale.totalAmount === 2000, `expected buyer A's sale to total 2000 (2 × 1000), got ${result.sale.totalAmount}`);
     const item = result.registry.items.id(registryItemId);
@@ -2004,8 +2004,8 @@ async function run() {
 
   await step('THE CRITICAL TEST: 3 buyers attempt to purchase 2 each — SIMULTANEOUSLY, via real concurrent requests — against only 3 remaining (5 total - 2 already claimed). A naive read-then-write implementation would let all 3 succeed (over-claiming to 8); the atomic DB-level guard must allow exactly enough to fit and reject the rest', async () => {
     const results = await Promise.allSettled([
-      giftRegistryService.purchaseFromRegistry(registry._id, registryItemId, { quantity: 2, purchasingCustomerId: buyerB._id, branchId: branch._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: null }),
-      giftRegistryService.purchaseFromRegistry(registry._id, registryItemId, { quantity: 2, purchasingCustomerId: buyerC._id, branchId: branch._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: null }),
+      giftRegistryService.purchaseFromRegistry(registry._id, registryItemId, { quantity: 2, purchasingCustomerId: buyerB._id, branchId: branch._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: admin._id }),
+      giftRegistryService.purchaseFromRegistry(registry._id, registryItemId, { quantity: 2, purchasingCustomerId: buyerC._id, branchId: branch._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: admin._id }),
     ]);
 
     const fulfilled = results.filter((r) => r.status === 'fulfilled');
@@ -2021,7 +2021,7 @@ async function run() {
 
   await step('A final purchase for the last 1 remaining unit succeeds — exactly the boundary, not one more', async () => {
     const result = await giftRegistryService.purchaseFromRegistry(registry._id, registryItemId, {
-      quantity: 1, purchasingCustomerId: buyerA._id, branchId: branch._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: null,
+      quantity: 1, purchasingCustomerId: buyerA._id, branchId: branch._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: admin._id,
     });
     const item = result.registry.items.id(registryItemId);
     assert(item.purchasedQuantity === 5, `expected purchasedQuantity to reach exactly 5 (fully claimed), got ${item.purchasedQuantity}`);
@@ -2032,7 +2032,7 @@ async function run() {
     let message = '';
     try {
       await giftRegistryService.purchaseFromRegistry(registry._id, registryItemId, {
-        quantity: 1, purchasingCustomerId: buyerB._id, branchId: branch._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: null,
+        quantity: 1, purchasingCustomerId: buyerB._id, branchId: branch._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: admin._id,
       });
     } catch (err) { threw = true; message = err.message; }
     assert(threw && message.includes('0 of this item remain'), `expected a rejection specifically stating 0 remain, got threw=${threw} message="${message}"`);
@@ -2047,7 +2047,7 @@ async function run() {
   });
   const dispenser = await fuelShiftService.createDispenser({ companyId: company._id, branchId: branch._id, name: 'Pump 1', productId: fuelProduct._id, variantId: fuelProduct.variants[0]._id, currentMeterReading: 1000 });
   await step('Opening a shift baselines at the dispenser\'s CURRENT reading (1000), not zero', async () => {
-    const shift = await fuelShiftService.openShift(dispenser._id, { pricePerLitre: 250, userId: null });
+    const shift = await fuelShiftService.openShift(dispenser._id, { pricePerLitre: 250, userId: admin._id });
     assert(shift.openingReading === 1000, `expected openingReading 1000, got ${shift.openingReading}`);
     return shift;
   });
@@ -2055,7 +2055,7 @@ async function run() {
     const [openShift] = await fuelShiftService.listShifts(company._id, { status: 'open' });
     const result = await fuelShiftService.closeShift(openShift._id, {
       closingReading: 1150, warehouseId: warehouse._id, customerId: customer._id, paymentAccountId: cash._id,
-      billingProductId: fuelProduct._id, billingVariantId: fuelProduct.variants[0]._id, userId: null,
+      billingProductId: fuelProduct._id, billingVariantId: fuelProduct.variants[0]._id, userId: admin._id,
     });
     assert(result.litresSold === 150, `expected litresSold 150 (1150-1000), got ${result.litresSold}`);
     assert(result.totalAmount === 37500, `expected totalAmount 37500 (150 × 250), got ${result.totalAmount}`);
@@ -2063,11 +2063,11 @@ async function run() {
     assert(updatedDispenser.currentMeterReading === 1150, `expected the dispenser's own running total to advance to 1150 for the next shift to open from, got ${updatedDispenser.currentMeterReading}`);
   });
   await step('A closing reading LOWER than opening is rejected — the meter cannot run backward', async () => {
-    await fuelShiftService.openShift(dispenser._id, { pricePerLitre: 250, userId: null });
+    await fuelShiftService.openShift(dispenser._id, { pricePerLitre: 250, userId: admin._id });
     let threw = false;
     try {
       const [openShift] = await fuelShiftService.listShifts(company._id, { status: 'open' });
-      await fuelShiftService.closeShift(openShift._id, { closingReading: 1000, warehouseId: warehouse._id, billingProductId: fuelProduct._id, billingVariantId: fuelProduct.variants[0]._id, userId: null });
+      await fuelShiftService.closeShift(openShift._id, { closingReading: 1000, warehouseId: warehouse._id, billingProductId: fuelProduct._id, billingVariantId: fuelProduct.variants[0]._id, userId: admin._id });
     } catch { threw = true; }
     assert(threw, 'expected a closing reading below the opening reading to be rejected');
   });
@@ -2090,7 +2090,7 @@ async function run() {
     const shippingFeeProduct = await Product.create({ companyId: company._id, name: 'Shipping Fee', sku: `SHIP-${suffix}`, trackingMode: 'service', costPrice: 0, sellingPrice: 0, variants: [{ sku: `SHIP-${suffix}`, sellingPrice: 0 }] });
     const { shipment: delivered, sale } = await shipmentService.markDelivered(shipment._id, {
       proofOfDeliveryNote: 'Signed by receptionist', shippingFeeProductId: shippingFeeProduct._id, shippingFeeVariantId: shippingFeeProduct.variants[0]._id,
-      shippingFee: 500, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: null,
+      shippingFee: 500, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: admin._id,
     });
     assert(sale.totalAmount === 500, `expected the shipping fee sale to total 500, got ${sale.totalAmount}`);
     assert(delivered.status === 'delivered', `expected status "delivered", got "${delivered.status}"`);
@@ -2110,7 +2110,7 @@ async function run() {
   await step('50 litres at exactly 4.0% fat lands on the 4.0 band (120/L), not the 3.0 band — hand-traced: 50 × 120 = 6000', async () => {
     const collection = await dairyCollectionService.recordCollection({
       companyId: company._id, branchId: branch._id, supplierId: supplier._id, litres: 50, fatPercent: 4.0,
-      scheduleId: gradeSchedule._id, expenseAccountId: expenseAcct._id, payableAccountId: payableAcct._id, userId: null,
+      scheduleId: gradeSchedule._id, expenseAccountId: expenseAcct._id, payableAccountId: payableAcct._id, userId: admin._id,
     });
     assert(collection.pricePerLitre === 120, `expected the 4.0% band (120/L) to apply at exactly 4.0%, got ${collection.pricePerLitre}`);
     assert(collection.totalPayable === 6000, `expected totalPayable 6000 (50 × 120), got ${collection.totalPayable}`);
@@ -2123,7 +2123,7 @@ async function run() {
   await step('Milk testing below the lowest band (2.5%, below the 3.0% floor) is rejected, not priced at zero or the lowest band anyway', async () => {
     let threw = false;
     try {
-      await dairyCollectionService.recordCollection({ companyId: company._id, branchId: branch._id, supplierId: supplier._id, litres: 10, fatPercent: 2.5, scheduleId: gradeSchedule._id, userId: null });
+      await dairyCollectionService.recordCollection({ companyId: company._id, branchId: branch._id, supplierId: supplier._id, litres: 10, fatPercent: 2.5, scheduleId: gradeSchedule._id, userId: admin._id });
     } catch { threw = true; }
     assert(threw, 'expected fat content below the lowest configured band to be rejected');
   });
@@ -2141,13 +2141,13 @@ async function run() {
   const carBooking1 = await step('Booking a Compact for the first time is assigned to one of the two available vehicles', () =>
     carRentalService.bookRental({
       companyId: company._id, branchId: branch._id, vehicleClass: 'Compact', customerId: customer._id,
-      startDate: rentalStart, endDate: rentalEnd, rentalBillingProductId: carUsageProduct._id, rentalBillingVariantId: carUsageProduct.variants[0]._id, userId: null,
+      startDate: rentalStart, endDate: rentalEnd, rentalBillingProductId: carUsageProduct._id, rentalBillingVariantId: carUsageProduct.variants[0]._id, userId: admin._id,
     })
   );
   await step('A SECOND overlapping booking for the same class is assigned the OTHER vehicle — pool search, not a single resource\'s calendar', async () => {
     const carBooking2 = await carRentalService.bookRental({
       companyId: company._id, branchId: branch._id, vehicleClass: 'Compact', customerId: customer._id,
-      startDate: rentalStart, endDate: rentalEnd, rentalBillingProductId: carUsageProduct._id, rentalBillingVariantId: carUsageProduct.variants[0]._id, userId: null,
+      startDate: rentalStart, endDate: rentalEnd, rentalBillingProductId: carUsageProduct._id, rentalBillingVariantId: carUsageProduct.variants[0]._id, userId: admin._id,
     });
     assert(String(carBooking2.vehicleId) !== String(carBooking1.vehicleId), 'expected the second overlapping booking to be assigned a DIFFERENT vehicle than the first');
   });
@@ -2156,13 +2156,13 @@ async function run() {
     try {
       await carRentalService.bookRental({
         companyId: company._id, branchId: branch._id, vehicleClass: 'Compact', customerId: customer._id,
-        startDate: rentalStart, endDate: rentalEnd, rentalBillingProductId: carUsageProduct._id, rentalBillingVariantId: carUsageProduct.variants[0]._id, userId: null,
+        startDate: rentalStart, endDate: rentalEnd, rentalBillingProductId: carUsageProduct._id, rentalBillingVariantId: carUsageProduct.variants[0]._id, userId: admin._id,
       });
     } catch { threw = true; }
     assert(threw, 'expected a third overlapping booking to fail once both pool vehicles are taken');
   });
   await step('Returning the first booking after 3 days bills exactly 3 × 3000 = 9000', async () => {
-    const result = await carRentalService.returnVehicle(carBooking1._id, { actualReturnDate: new Date(rentalStart.getTime() + 3 * 24 * 60 * 60 * 1000), warehouseId: warehouse._id, finalPaymentAccountId: cash._id, userId: null });
+    const result = await carRentalService.returnVehicle(carBooking1._id, { actualReturnDate: new Date(rentalStart.getTime() + 3 * 24 * 60 * 60 * 1000), warehouseId: warehouse._id, finalPaymentAccountId: cash._id, userId: admin._id });
     assert(result.days === 3 && result.rentalCharge === 9000, `expected 3 days at 9000 total, got days=${result.days} charge=${result.rentalCharge}`);
   });
 
@@ -2188,7 +2188,7 @@ async function run() {
     assert(threw, 'expected releasing more than what\'s in storage to be rejected');
   });
   await step('Billing the period charges exactly the computed fee through the ordinary checkout', async () => {
-    const { sale, fee } = await storageContractService.billPeriod(contract._id, { periodStart, periodEnd, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: null });
+    const { sale, fee } = await storageContractService.billPeriod(contract._id, { periodStart, periodEnd, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: admin._id });
     assert(fee === 1600 && sale.totalAmount === 1600, `expected the bill to total exactly the computed 1600, got fee=${fee} saleTotal=${sale.totalAmount}`);
   });
 
@@ -2196,9 +2196,9 @@ async function run() {
   await Company.findByIdAndUpdate(company._id, { $addToSet: { activeModules: 'automobile' } });
   const carProduct = await Product.create({ companyId: company._id, name: 'Sedan', sku: `SEDAN-${suffix}`, trackingMode: 'serial', costPrice: 2000000, sellingPrice: 2500000, variants: [{ sku: `SEDAN-${suffix}`, sellingPrice: 2500000 }] });
   await step('A VIN sells through the ordinary checkout exactly like an IMEI does — no new code needed for this half', async () => {
-    const carPo = await purchaseService.createPurchaseOrder({ companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, supplierId: supplier._id, items: [{ productId: carProduct._id, variantId: carProduct.variants[0]._id, quantityOrdered: 1, unitCost: 2000000 }], userId: null });
-    await purchaseService.decidePurchaseOrder(carPo._id, { approve: true, userId: null });
-    await purchaseService.receiveGoods({ purchaseOrderId: carPo._id, warehouseId: warehouse._id, items: [{ purchaseOrderItemId: carPo.items[0]._id, productId: carProduct._id, variantId: carProduct.variants[0]._id, quantity: 1, unitCost: 2000000, serialNumbers: [`VIN-${suffix}`] }], userId: null });
+    const carPo = await purchaseService.createPurchaseOrder({ companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, supplierId: supplier._id, items: [{ productId: carProduct._id, variantId: carProduct.variants[0]._id, quantityOrdered: 1, unitCost: 2000000 }], userId: admin._id });
+    await purchaseService.decidePurchaseOrder(carPo._id, { approve: true, userId: admin._id });
+    await purchaseService.receiveGoods({ purchaseOrderId: carPo._id, warehouseId: warehouse._id, items: [{ purchaseOrderItemId: carPo.items[0]._id, productId: carProduct._id, variantId: carProduct.variants[0]._id, quantity: 1, unitCost: 2000000, serialNumbers: [`VIN-${suffix}`] }], userId: admin._id });
     const sale = await posSaleService.checkout({ userId: admin._id,
       companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id,
       items: [{ productId: carProduct._id, variantId: carProduct.variants[0]._id, quantity: 1, unitPrice: 2500000, serialNumbers: [`VIN-${suffix}`] }],
@@ -2207,7 +2207,7 @@ async function run() {
     assert(sale.totalAmount === 2500000, `expected the vehicle sale to total 2500000, got ${sale.totalAmount}`);
   });
   await step('Trade-in credit is intaken, applied as a discount on a real sale, then marked applied for audit trail', async () => {
-    const credit = await tradeInService.intake({ companyId: company._id, customerId: customer._id, vehicleDescription: 'Old Corolla', appraisedValue: 100, userId: null });
+    const credit = await tradeInService.intake({ companyId: company._id, customerId: customer._id, vehicleDescription: 'Old Corolla', appraisedValue: 100, userId: admin._id });
     assert(credit.status === 'pending', 'trade-in starts pending until applied');
 
     const linkedSale = await posSaleService.checkout({ userId: admin._id,
@@ -2278,26 +2278,26 @@ async function run() {
   await step('A request for 50000 (below the 100000 threshold) only gets the FIRST step — the second step correctly does not apply', async () => {
     const approval = await approvalService.request({ companyId: company._id, entityType: 'SmokeTestWorkflow', entityId: customer._id, requestedBy: null, amount: 50000 });
     assert(approval.steps.length === 1, `expected exactly 1 applicable step for an amount below the second step's threshold, got ${approval.steps.length}`);
-    const decided = await approvalService.decide(approval._id, { approve: true, userId: null });
+    const decided = await approvalService.decide(approval._id, { approve: true, userId: admin._id });
     assert(decided.status === 'approved', `expected immediate final approval after the only applicable step, got "${decided.status}"`);
   });
 
   const bigApproval = await step('A request for 150000 (above the threshold) gets BOTH steps — approving step 1 alone does NOT complete it', async () => {
     const approval = await approvalService.request({ companyId: company._id, entityType: 'SmokeTestWorkflow', entityId: supplier._id, requestedBy: null, amount: 150000 });
     assert(approval.steps.length === 2, `expected exactly 2 applicable steps for an amount above the second step's threshold, got ${approval.steps.length}`);
-    const afterStep1 = await approvalService.decide(approval._id, { approve: true, userId: null });
+    const afterStep1 = await approvalService.decide(approval._id, { approve: true, userId: admin._id });
     assert(afterStep1.status === 'pending', `expected status to STILL be "pending" after only step 1 of 2 is approved, got "${afterStep1.status}"`);
     assert(afterStep1.currentStepIndex === 1, `expected currentStepIndex to have advanced to 1 (the second step), got ${afterStep1.currentStepIndex}`);
     return afterStep1;
   });
   await step('Approving the SECOND step completes the whole chain', async () => {
-    const final = await approvalService.decide(bigApproval._id, { approve: true, userId: null });
+    const final = await approvalService.decide(bigApproval._id, { approve: true, userId: admin._id });
     assert(final.status === 'approved', `expected final status "approved" after both steps, got "${final.status}"`);
   });
 
   await step('A REJECTION at step 1 of a 2-step chain kills the whole request immediately — step 2 never gets asked', async () => {
     const approval = await approvalService.request({ companyId: company._id, entityType: 'SmokeTestWorkflow', entityId: customer._id, requestedBy: null, amount: 150000 });
-    const decided = await approvalService.decide(approval._id, { approve: false, userId: null });
+    const decided = await approvalService.decide(approval._id, { approve: false, userId: admin._id });
     assert(decided.status === 'rejected', `expected status "rejected" immediately after step 1 alone rejects, got "${decided.status}"`);
     assert(decided.steps[1].decision === null, 'expected step 2 to have never been decided at all — the chain stopped before reaching it');
   });
@@ -2305,7 +2305,7 @@ async function run() {
   await step('Genuinely backward compatible: an entityType with NO configured workflow still gets exactly the old single implicit step', async () => {
     const approval = await approvalService.request({ companyId: company._id, entityType: 'SomeEntityTypeWithNoWorkflowConfigured', entityId: customer._id, requestedBy: null });
     assert(approval.steps.length === 1 && approval.steps[0].roleId === null, 'expected exactly one implicit step with no role target, matching the original pre-upgrade behavior');
-    const decided = await approvalService.decide(approval._id, { approve: true, userId: null });
+    const decided = await approvalService.decide(approval._id, { approve: true, userId: admin._id });
     assert(decided.status === 'approved', 'expected the single implicit step to complete the whole request, same as before this upgrade');
   });
 
@@ -2344,7 +2344,7 @@ async function run() {
   });
 
   await step('Running depreciation for period 1 posts a real, balanced voucher and advances accumulatedDepreciation to exactly 9000', async () => {
-    const result = await fixedAssetService.runDepreciation(asset._id, { period: '2026-01', userId: null });
+    const result = await fixedAssetService.runDepreciation(asset._id, { period: '2026-01', userId: admin._id });
     assert(result.amount === 9000 && result.bookValueAfter === 111000, `expected amount 9000 and bookValueAfter 111000 (120000-9000), got amount=${result.amount} bookValueAfter=${result.bookValueAfter}`);
 
     const totalDebit = result.voucher.entries.reduce((s, e) => s + e.debit, 0);
@@ -2353,21 +2353,21 @@ async function run() {
   });
 
   await step('Running depreciation for a SECOND period advances to 18000 accumulated', async () => {
-    const result = await fixedAssetService.runDepreciation(asset._id, { period: '2026-02', userId: null });
+    const result = await fixedAssetService.runDepreciation(asset._id, { period: '2026-02', userId: admin._id });
     assert(result.amount === 9000 && result.bookValueAfter === 102000, `expected amount 9000 and bookValueAfter 102000 (120000-18000), got amount=${result.amount} bookValueAfter=${result.bookValueAfter}`);
   });
 
   await step('Attempting to run the SAME period again is rejected — no accidental double depreciation for one month', async () => {
     let threw = false;
     try {
-      await fixedAssetService.runDepreciation(asset._id, { period: '2026-02', userId: null });
+      await fixedAssetService.runDepreciation(asset._id, { period: '2026-02', userId: admin._id });
     } catch { threw = true; }
     assert(threw, 'expected re-running an already-posted period to be rejected');
   });
 
   await step('Disposing the asset for 90000 (a LOSS, since book value is 102000) posts a real 4-leg voucher — hand-verified to balance BEFORE the service was ever written, now confirmed against the actual posted entries', async () => {
     const result = await fixedAssetService.disposeAsset(asset._id, {
-      disposalProceeds: 90000, receivingAccountId: cash._id, gainLossAccountId: disposalGainLossAccount._id, userId: null,
+      disposalProceeds: 90000, receivingAccountId: cash._id, gainLossAccountId: disposalGainLossAccount._id, userId: admin._id,
     });
     assert(result.bookValue === 102000, `expected bookValue 102000 (120000 - 18000 accumulated), got ${result.bookValue}`);
     assert(result.gainLoss === -12000, `expected a loss of -12000 (90000 proceeds - 102000 book value), got ${result.gainLoss}`);
@@ -2383,26 +2383,26 @@ async function run() {
 
   // --- 44. Dashboard Engine: a role's permissions genuinely determine what data comes back, not one generic view for everyone ---
   await step('A super-admin (permissions=null) gets the full owner view, with real numbers pulled straight from the balance sheet and P&L, not re-derived', async () => {
-    const result = await dashboardService.getDashboard(company._id, { userId: null, roleId: null, permissions: null });
+    const result = await dashboardService.getDashboard(company._id, { userId: admin._id, roleId: null, permissions: null });
     assert(result.sections.owner, 'expected a super-admin to receive the owner dashboard section');
     assert(typeof result.sections.owner.netProfit === 'number', 'expected a real numeric netProfit, not undefined from a wrong field name');
     assert(typeof result.sections.owner.receivables === 'number', 'expected a real numeric receivables figure resolved from the actual balance sheet');
   });
 
   await step('A cashier-only role (just pos.sell, nothing else) gets ONLY the cashier section — no owner financials leak to someone who shouldn\'t see them', async () => {
-    const result = await dashboardService.getDashboard(company._id, { userId: null, roleId: null, permissions: ['pos.sell'] });
+    const result = await dashboardService.getDashboard(company._id, { userId: admin._id, roleId: null, permissions: ['pos.sell'] });
     assert(result.sections.cashier, 'expected a cashier-only role to receive the cashier section');
     assert(!result.sections.owner, 'expected a cashier-only role to NOT receive the owner financial section');
     assert(!result.sections.warehouseManager, 'expected a cashier-only role to NOT receive the warehouse manager section');
   });
 
   await step('A role with BOTH accounts.manage and inventory.adjust gets BOTH sections — multiple relevant permission sets aren\'t forced into picking just one', async () => {
-    const result = await dashboardService.getDashboard(company._id, { userId: null, roleId: null, permissions: ['accounts.manage', 'inventory.adjust'] });
+    const result = await dashboardService.getDashboard(company._id, { userId: admin._id, roleId: null, permissions: ['accounts.manage', 'inventory.adjust'] });
     assert(result.sections.owner && result.sections.warehouseManager, 'expected both the owner and warehouse manager sections for a role with both permissions');
   });
 
   await step('An empty/irrelevant permission set falls back to the smallest, safest slice rather than showing nothing at all', async () => {
-    const result = await dashboardService.getDashboard(company._id, { userId: null, roleId: null, permissions: ['some.unrelated.permission'] });
+    const result = await dashboardService.getDashboard(company._id, { userId: admin._id, roleId: null, permissions: ['some.unrelated.permission'] });
     assert(result.sections.cashier, 'expected a fallback to the cashier section when no specific permission set matches anything');
   });
 
@@ -2426,7 +2426,7 @@ async function run() {
   });
 
   await step('Entering a manual PKR -> USD rate makes it immediately usable for real conversion — hand-traced: 278000 PKR at a manual rate of 0.0036 = exactly 1000.80 USD', async () => {
-    await currencyService.setManualRate({ companyId: company._id, fromCurrency: 'PKR', toCurrency: 'USD', rate: 0.0036, date: '2026-08-01', userId: null });
+    await currencyService.setManualRate({ companyId: company._id, fromCurrency: 'PKR', toCurrency: 'USD', rate: 0.0036, date: '2026-08-01', userId: admin._id });
     const converted = await currencyService.convert(company._id, 278000, 'PKR', 'USD', '2026-08-01');
     assert(converted === 1000.80, `expected 278000 × 0.0036 = 1000.80, got ${converted}`);
   });
@@ -2446,14 +2446,14 @@ async function run() {
     const doc = await documentService.createDocument({
       companyId: company._id, entityType: 'Employee', entityId: employeeForDoc._id, category: 'Employment Contract',
       fileUrl: 'https://example.com/files/contract-v1.pdf', fileName: 'contract-v1.pdf',
-      expiryDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), userId: null,
+      expiryDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), userId: admin._id,
     });
     assert(doc.versions.length === 1 && doc.versions[0].versionNumber === 1, `expected exactly 1 version numbered 1, got ${doc.versions.length} versions`);
     return doc;
   });
 
   await step('Uploading a SECOND version APPENDS rather than overwrites — both versions remain visible in history', async () => {
-    const doc = await documentService.uploadVersion(document._id, { fileUrl: 'https://example.com/files/contract-v2-signed.pdf', fileName: 'contract-v2-signed.pdf', userId: null, note: 'Signed copy' });
+    const doc = await documentService.uploadVersion(document._id, { fileUrl: 'https://example.com/files/contract-v2-signed.pdf', fileName: 'contract-v2-signed.pdf', userId: admin._id, note: 'Signed copy' });
     assert(doc.versions.length === 2, `expected exactly 2 versions after uploading a second one, got ${doc.versions.length}`);
     assert(doc.versions[0].fileName === 'contract-v1.pdf', 'expected the FIRST version to still be present and unmodified in history');
     assert(documentService.currentVersion(doc).fileName === 'contract-v2-signed.pdf', 'expected currentVersion() to correctly resolve to the latest (second) version');
@@ -2502,7 +2502,7 @@ async function run() {
 
   await step('A checkout WITH currency:\'USD\' specified, with a manual PKR->USD rate on file, gets a real foreignTotalAmount — hand-traced: 100 PKR × 0.0036 = exactly 0.36 USD', async () => {
     const todayStr = new Date().toISOString().slice(0, 10);
-    await currencyService.setManualRate({ companyId: company._id, fromCurrency: 'PKR', toCurrency: 'USD', rate: 0.0036, date: todayStr, userId: null });
+    await currencyService.setManualRate({ companyId: company._id, fromCurrency: 'PKR', toCurrency: 'USD', rate: 0.0036, date: todayStr, userId: admin._id });
 
     const sale = await posSaleService.checkout({ userId: admin._id,
       companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id,
@@ -2700,10 +2700,10 @@ async function run() {
 
   await step('Pilgrim A pays 50000 toward their plan, then CANCELS — pilgrim C is promoted with a FRESH plan (0 paid, not inheriting A\'s 50000), and A\'s plan is resolved with an 80% refund', async () => {
     const paymentsA = await pilgrimageService.listPayments(company._id, { groupId: hajjGroup._id, customerId: pilgrimA._id });
-    await pilgrimageService.makePayment(paymentsA[0]._id, { amount: 50000, paymentAccountId: cash._id, userId: null });
+    await pilgrimageService.makePayment(paymentsA[0]._id, { amount: 50000, paymentAccountId: cash._id, userId: admin._id });
 
     const { promotedCustomerId } = await pilgrimageService.cancelEnrollment(hajjGroup._id, pilgrimA._id, {
-      refundPercent: 80, refundAccountId: hajjRefundAccount._id, forfeitRevenueAccountId: hajjForfeitAccount._id, depositLiabilityAccountId: hajjLiabilityAccount._id, userId: null,
+      refundPercent: 80, refundAccountId: hajjRefundAccount._id, forfeitRevenueAccountId: hajjForfeitAccount._id, depositLiabilityAccountId: hajjLiabilityAccount._id, userId: admin._id,
     });
     assert(String(promotedCustomerId) === String(pilgrimC._id), `expected pilgrim C to be promoted, got ${promotedCustomerId}`);
 
@@ -2717,7 +2717,7 @@ async function run() {
   await step('Pilgrim B pays the FULL 300000 in one shot — auto-completes and bills through checkout for exactly 300000', async () => {
     const paymentsB = await pilgrimageService.listPayments(company._id, { groupId: hajjGroup._id, customerId: pilgrimB._id });
     const result = await pilgrimageService.makePayment(paymentsB[0]._id, {
-      amount: 300000, paymentAccountId: cash._id, warehouseId: warehouse._id, billingProductId: hajjBillingProduct._id, billingVariantId: hajjBillingProduct.variants[0]._id, userId: null,
+      amount: 300000, paymentAccountId: cash._id, warehouseId: warehouse._id, billingProductId: hajjBillingProduct._id, billingVariantId: hajjBillingProduct.variants[0]._id, userId: admin._id,
     });
     assert(result.completed === true && result.sale.totalAmount === 300000, `expected completion with a 300000 sale, got completed=${result.completed} saleTotal=${result.sale?.totalAmount}`);
   });
@@ -2733,9 +2733,9 @@ async function run() {
     const booking = await travelService.bookPackage({
       companyId: company._id, branchId: branch._id, customerId: customer._id, packageName: 'Istanbul Tour', travelDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       price: 100000, depositAmount: 20000, depositReceivedInAccountId: cash._id, depositLiabilityAccountId: travelLiabilityAccount._id,
-      billingProductId: travelBillingProduct._id, billingVariantId: travelBillingProduct.variants[0]._id, userId: null,
+      billingProductId: travelBillingProduct._id, billingVariantId: travelBillingProduct.variants[0]._id, userId: admin._id,
     });
-    const { sale } = await travelService.finalizeBooking(booking._id, { warehouseId: warehouse._id, finalPaymentAccountId: cash._id, userId: null });
+    const { sale } = await travelService.finalizeBooking(booking._id, { warehouseId: warehouse._id, finalPaymentAccountId: cash._id, userId: admin._id });
     assert(sale.totalAmount === 100000, `expected the finalized sale to total exactly 100000, got ${sale.totalAmount}`);
   });
 
@@ -2743,9 +2743,9 @@ async function run() {
     const booking2 = await travelService.bookPackage({
       companyId: company._id, branchId: branch._id, customerId: customer._id, packageName: 'Cancelled Tour', travelDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000),
       price: 50000, depositAmount: 10000, depositReceivedInAccountId: cash._id, depositLiabilityAccountId: travelLiabilityAccount._id,
-      billingProductId: travelBillingProduct._id, billingVariantId: travelBillingProduct.variants[0]._id, userId: null,
+      billingProductId: travelBillingProduct._id, billingVariantId: travelBillingProduct.variants[0]._id, userId: admin._id,
     });
-    const cancelled = await travelService.cancelBooking(booking2._id, { refundPercent: 50, refundAccountId: travelRefundAccount._id, forfeitRevenueAccountId: travelForfeitAccount._id, userId: null });
+    const cancelled = await travelService.cancelBooking(booking2._id, { refundPercent: 50, refundAccountId: travelRefundAccount._id, forfeitRevenueAccountId: travelForfeitAccount._id, userId: admin._id });
     assert(cancelled.status === 'cancelled', `expected status "cancelled", got "${cancelled.status}"`);
   });
 
@@ -2758,7 +2758,7 @@ async function run() {
     return insuranceService.sellPolicy({
       companyId: company._id, branchId: branch._id, customerId: customer._id, policyType: 'Motor', coverageAmount: 500000, premiumAmount: 20000,
       startDate: new Date(), endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-      billingProductId: insuranceBillingProduct._id, billingVariantId: insuranceBillingProduct.variants[0]._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: null,
+      billingProductId: insuranceBillingProduct._id, billingVariantId: insuranceBillingProduct.variants[0]._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: admin._id,
     });
   });
 
@@ -2772,7 +2772,7 @@ async function run() {
 
   await step('A claim WITHIN coverage (100000) is accepted, and approving it posts a REAL, balanced payout voucher — the genuinely new mechanic', async () => {
     const claim = await insuranceService.submitClaim(policy._id, { claimAmount: 100000, description: 'Windshield damage' });
-    const decided = await insuranceService.decideClaim(claim._id, { approve: true, decisionNote: 'Approved after inspection', payoutAccountId: cash._id, claimsExpenseAccountId: claimsExpenseAccount._id, userId: null });
+    const decided = await insuranceService.decideClaim(claim._id, { approve: true, decisionNote: 'Approved after inspection', payoutAccountId: cash._id, claimsExpenseAccountId: claimsExpenseAccount._id, userId: admin._id });
     assert(decided.status === 'paid', `expected status "paid", got "${decided.status}"`);
 
     const voucher = await require('./models/Voucher').findById(decided.voucherId);
@@ -2808,24 +2808,24 @@ async function run() {
 
   await step('The ONLY VIP seat books successfully at the VIP price (20000), a real sale created', async () => {
     const result = await eventTicketingService.bookTicket(show._id, vipTierId, {
-      customerId: vipCustomer1._id, warehouseId: warehouse._id, ticketBillingProductId: ticketBillingProduct._id, ticketBillingVariantId: ticketBillingProduct.variants[0]._id, paymentAccountId: cash._id, userId: null,
+      customerId: vipCustomer1._id, warehouseId: warehouse._id, ticketBillingProductId: ticketBillingProduct._id, ticketBillingVariantId: ticketBillingProduct.variants[0]._id, paymentAccountId: cash._id, userId: admin._id,
     });
     assert(result.booked === true && result.sale.totalAmount === 20000, `expected a real booked sale at 20000, got booked=${result.booked} saleTotal=${result.sale?.totalAmount}`);
   });
 
   await step('A SECOND VIP booking is waitlisted (VIP is now full) — even though Standard still has 2 open seats, proving the pools are genuinely independent', async () => {
     const result = await eventTicketingService.bookTicket(show._id, vipTierId, {
-      customerId: vipCustomer2._id, warehouseId: warehouse._id, ticketBillingProductId: ticketBillingProduct._id, ticketBillingVariantId: ticketBillingProduct.variants[0]._id, paymentAccountId: cash._id, userId: null,
+      customerId: vipCustomer2._id, warehouseId: warehouse._id, ticketBillingProductId: ticketBillingProduct._id, ticketBillingVariantId: ticketBillingProduct.variants[0]._id, paymentAccountId: cash._id, userId: admin._id,
     });
     assert(result.waitlisted === true && result.tierName === 'VIP', `expected the second VIP booking to be waitlisted specifically for VIP, got ${JSON.stringify(result)}`);
   });
 
   await step('BOTH Standard seats book successfully at the Standard price (5000 each) — completely unaffected by VIP being full', async () => {
     const result1 = await eventTicketingService.bookTicket(show._id, standardTierId, {
-      customerId: standardCustomer1._id, warehouseId: warehouse._id, ticketBillingProductId: ticketBillingProduct._id, ticketBillingVariantId: ticketBillingProduct.variants[0]._id, paymentAccountId: cash._id, userId: null,
+      customerId: standardCustomer1._id, warehouseId: warehouse._id, ticketBillingProductId: ticketBillingProduct._id, ticketBillingVariantId: ticketBillingProduct.variants[0]._id, paymentAccountId: cash._id, userId: admin._id,
     });
     const result2 = await eventTicketingService.bookTicket(show._id, standardTierId, {
-      customerId: standardCustomer2._id, warehouseId: warehouse._id, ticketBillingProductId: ticketBillingProduct._id, ticketBillingVariantId: ticketBillingProduct.variants[0]._id, paymentAccountId: cash._id, userId: null,
+      customerId: standardCustomer2._id, warehouseId: warehouse._id, ticketBillingProductId: ticketBillingProduct._id, ticketBillingVariantId: ticketBillingProduct.variants[0]._id, paymentAccountId: cash._id, userId: admin._id,
     });
     assert(result1.booked === true && result1.sale.totalAmount === 5000, `expected the first Standard booking to succeed at 5000, got ${JSON.stringify(result1)}`);
     assert(result2.booked === true && result2.sale.totalAmount === 5000, `expected the second Standard booking to succeed at 5000, got ${JSON.stringify(result2)}`);
@@ -2833,7 +2833,7 @@ async function run() {
 
   await step('Cancelling the VIP ticket promotes the WAITLISTED VIP customer specifically — never a Standard customer, and bills them at the VIP price', async () => {
     const { promotedCustomerId, promotedSale } = await eventTicketingService.cancelTicket(show._id, vipTierId, vipCustomer1._id, {
-      warehouseId: warehouse._id, ticketBillingProductId: ticketBillingProduct._id, ticketBillingVariantId: ticketBillingProduct.variants[0]._id, refundAccountId: cash._id, userId: null,
+      warehouseId: warehouse._id, ticketBillingProductId: ticketBillingProduct._id, ticketBillingVariantId: ticketBillingProduct.variants[0]._id, refundAccountId: cash._id, userId: admin._id,
     });
     assert(String(promotedCustomerId) === String(vipCustomer2._id), `expected VIP customer 2 (the VIP waitlist) to be promoted, got ${promotedCustomerId}`);
     assert(promotedSale.totalAmount === 20000, `expected the promoted customer to be billed at the VIP price of 20000, got ${promotedSale.totalAmount}`);
@@ -2850,7 +2850,7 @@ async function run() {
   await step('Booking 10:00-12:00 (2 hours) at 1000/hr bills exactly 2000, hand-traced', async () => {
     const result = await sportsService.bookSlot(facility._id, {
       customerId: customer._id, startTime: slot1Start, endTime: slot1End,
-      billingProductId: sportsBillingProduct._id, billingVariantId: sportsBillingProduct.variants[0]._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: null,
+      billingProductId: sportsBillingProduct._id, billingVariantId: sportsBillingProduct.variants[0]._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: admin._id,
     });
     assert(result.hours === 2 && result.price === 2000, `expected 2 hours at exactly 2000, got hours=${result.hours} price=${result.price}`);
   });
@@ -2860,7 +2860,7 @@ async function run() {
     try {
       await sportsService.bookSlot(facility._id, {
         customerId: customer._id, startTime: new Date(slot1Start.getTime() + 60 * 60 * 1000), endTime: new Date(slot1Start.getTime() + 3 * 60 * 60 * 1000),
-        billingProductId: sportsBillingProduct._id, billingVariantId: sportsBillingProduct.variants[0]._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: null,
+        billingProductId: sportsBillingProduct._id, billingVariantId: sportsBillingProduct.variants[0]._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: admin._id,
       });
     } catch { threw = true; }
     assert(threw, 'expected a genuinely overlapping booking request to be rejected');
@@ -2869,7 +2869,7 @@ async function run() {
   await step('A back-to-back booking starting EXACTLY when the existing one ends is correctly ALLOWED — the boundary is exclusive, not off-by-one', async () => {
     const result = await sportsService.bookSlot(facility._id, {
       customerId: customer._id, startTime: slot1End, endTime: new Date(slot1End.getTime() + 60 * 60 * 1000),
-      billingProductId: sportsBillingProduct._id, billingVariantId: sportsBillingProduct.variants[0]._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: null,
+      billingProductId: sportsBillingProduct._id, billingVariantId: sportsBillingProduct.variants[0]._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: admin._id,
     });
     assert(result.hours === 1 && result.price === 1000, `expected a clean back-to-back 1-hour booking to succeed at 1000, got hours=${result.hours} price=${result.price}`);
   });
@@ -2877,7 +2877,7 @@ async function run() {
   await step('A back-to-back booking ending EXACTLY when the FIRST one starts is also correctly ALLOWED — the boundary is exclusive on both sides', async () => {
     const result = await sportsService.bookSlot(facility._id, {
       customerId: customer._id, startTime: new Date(slot1Start.getTime() - 60 * 60 * 1000), endTime: slot1Start,
-      billingProductId: sportsBillingProduct._id, billingVariantId: sportsBillingProduct.variants[0]._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: null,
+      billingProductId: sportsBillingProduct._id, billingVariantId: sportsBillingProduct.variants[0]._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: admin._id,
     });
     assert(result.hours === 1 && result.price === 1000, `expected a clean back-to-back 1-hour booking before the first slot to succeed, got hours=${result.hours} price=${result.price}`);
   });
@@ -2897,17 +2897,17 @@ async function run() {
   );
 
   await step('Usage EXACTLY at quota (500 min, 1000 MB, 100 SMS) bills ONLY the flat fee — no overage line at all, boundary inclusive not triggering', async () => {
-    const sub = await telecomService.subscribeCustomer({ companyId: company._id, branchId: branch._id, customerId: customer._id, planId: telecomPlan._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: null });
+    const sub = await telecomService.subscribeCustomer({ companyId: company._id, branchId: branch._id, customerId: customer._id, planId: telecomPlan._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: admin._id });
     await telecomService.recordUsage(sub._id, { minutes: 500, dataMB: 1000, sms: 100 });
-    const { sale, usageSummary } = await telecomService.generateMonthlyBill(sub._id, { warehouseId: warehouse._id, paymentAccountId: cash._id, userId: null });
+    const { sale, usageSummary } = await telecomService.generateMonthlyBill(sub._id, { warehouseId: warehouse._id, paymentAccountId: cash._id, userId: admin._id });
     assert(usageSummary.overageCost === 0, `expected zero overage at exactly the included quota, got ${usageSummary.overageCost}`);
     assert(sale.totalAmount === 1000, `expected the bill to total just the flat 1000 fee with no overage line, got ${sale.totalAmount}`);
   });
 
   await step('Usage OVER quota on 2 of 3 metrics (550 min, 1200 MB, 80 SMS) — hand-traced: (50×2) + (200×0.5) + 0 = 100+100+0 = 200 overage, total bill 1200', async () => {
-    const sub2 = await telecomService.subscribeCustomer({ companyId: company._id, branchId: branch._id, customerId: customer._id, planId: telecomPlan._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: null });
+    const sub2 = await telecomService.subscribeCustomer({ companyId: company._id, branchId: branch._id, customerId: customer._id, planId: telecomPlan._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: admin._id });
     await telecomService.recordUsage(sub2._id, { minutes: 550, dataMB: 1200, sms: 80 });
-    const { sale, usageSummary } = await telecomService.generateMonthlyBill(sub2._id, { warehouseId: warehouse._id, paymentAccountId: cash._id, userId: null });
+    const { sale, usageSummary } = await telecomService.generateMonthlyBill(sub2._id, { warehouseId: warehouse._id, paymentAccountId: cash._id, userId: admin._id });
     assert(usageSummary.overageMinutes === 50 && usageSummary.overageDataMB === 200 && usageSummary.overageSms === 0, `expected overage exactly 50 min / 200 MB / 0 SMS, got ${JSON.stringify(usageSummary)}`);
     assert(usageSummary.overageCost === 200, `expected total overage cost exactly 200 (100 from minutes + 100 from data + 0 from SMS), got ${usageSummary.overageCost}`);
     assert(sale.totalAmount === 1200, `expected the bill to total exactly 1200 (1000 fee + 200 overage), got ${sale.totalAmount}`);
@@ -2934,7 +2934,7 @@ async function run() {
 
   await step('Generating the invoice bills the EXACT weighted sum — hand-traced: (3×5000) + (5×2000) + (2×5000) = 15000+10000+10000 = 35000, NOT the naive-average trap of 40000 (mean of the 3 rates × 10 total hours)', async () => {
     const result = await timeEntryService.generateInvoice(company._id, customer._id, {
-      warehouseId: warehouse._id, billingProductId: timeBillingProduct._id, billingVariantId: timeBillingProduct.variants[0]._id, paymentAccountId: cash._id, userId: null,
+      warehouseId: warehouse._id, billingProductId: timeBillingProduct._id, billingVariantId: timeBillingProduct.variants[0]._id, paymentAccountId: cash._id, userId: admin._id,
     });
     assert(result.entriesInvoiced === 3 && result.totalHours === 10, `expected 3 entries totaling 10 hours, got entriesInvoiced=${result.entriesInvoiced} totalHours=${result.totalHours}`);
     assert(result.totalAmount === 35000, `expected the CORRECT weighted-sum total of exactly 35000 — a naive "average rate × total hours" implementation would wrongly produce 40000 instead, got ${result.totalAmount}`);
@@ -2951,7 +2951,7 @@ async function run() {
   await step('Attempting to generate ANOTHER invoice with nothing new logged is rejected — no bogus zero-value invoice gets created', async () => {
     let threw = false;
     try {
-      await timeEntryService.generateInvoice(company._id, customer._id, { warehouseId: warehouse._id, billingProductId: timeBillingProduct._id, billingVariantId: timeBillingProduct.variants[0]._id, paymentAccountId: cash._id, userId: null });
+      await timeEntryService.generateInvoice(company._id, customer._id, { warehouseId: warehouse._id, billingProductId: timeBillingProduct._id, billingVariantId: timeBillingProduct.variants[0]._id, paymentAccountId: cash._id, userId: admin._id });
     } catch { threw = true; }
     assert(threw, 'expected generating an invoice with zero unbilled entries to be rejected');
   });
@@ -2964,7 +2964,7 @@ async function run() {
 
   const educationFund = await step('Create a restricted "Education Fund" and donate 50000 — balance becomes exactly 50000', async () => {
     const fund = await fundService.createFund({ companyId: company._id, name: 'Education Fund', type: 'restricted', purposeDescription: 'School supplies only' });
-    await fundService.recordDonation(fund._id, { donorCustomerId: donor._id, amount: 50000, branchId: branch._id, receivingAccountId: cash._id, donationRevenueAccountId: donationRevenueAccount._id, userId: null });
+    await fundService.recordDonation(fund._id, { donorCustomerId: donor._id, amount: 50000, branchId: branch._id, receivingAccountId: cash._id, donationRevenueAccountId: donationRevenueAccount._id, userId: admin._id });
     const refreshed = await require('./modules/ngo/models/Fund').findById(fund._id);
     assert(refreshed.balance === 50000, `expected balance exactly 50000 after the donation, got ${refreshed.balance}`);
     return refreshed;
@@ -2974,21 +2974,21 @@ async function run() {
     let threw = false;
     let message = '';
     try {
-      await fundService.recordDisbursement(educationFund._id, { amount: 60000, description: 'Overspend attempt', branchId: branch._id, expenseAccountId: programExpenseAccount._id, payingAccountId: cash._id, userId: null });
+      await fundService.recordDisbursement(educationFund._id, { amount: 60000, description: 'Overspend attempt', branchId: branch._id, expenseAccountId: programExpenseAccount._id, payingAccountId: cash._id, userId: admin._id });
     } catch (err) { threw = true; message = err.message; }
     assert(threw && message.includes('Insufficient fund balance'), `expected a rejection specifically citing insufficient FUND balance, got threw=${threw} message="${message}"`);
   });
 
   await step('Disbursing 30000 (within the fund) succeeds — balance drops to exactly 20000', async () => {
-    await fundService.recordDisbursement(educationFund._id, { amount: 30000, description: 'School supplies purchase', branchId: branch._id, expenseAccountId: programExpenseAccount._id, payingAccountId: cash._id, userId: null });
+    await fundService.recordDisbursement(educationFund._id, { amount: 30000, description: 'School supplies purchase', branchId: branch._id, expenseAccountId: programExpenseAccount._id, payingAccountId: cash._id, userId: admin._id });
     const refreshed = await require('./modules/ngo/models/Fund').findById(educationFund._id);
     assert(refreshed.balance === 20000, `expected balance exactly 20000 (50000 - 30000), got ${refreshed.balance}`);
   });
 
   await step('THE CRITICAL TEST: 2 SIMULTANEOUS disbursements of 15000 each against only 20000 remaining — a naive read-then-write would let both succeed (over-spending to -10000); the atomic check must allow exactly one and reject the other', async () => {
     const results = await Promise.allSettled([
-      fundService.recordDisbursement(educationFund._id, { amount: 15000, description: 'Concurrent disbursement A', branchId: branch._id, expenseAccountId: programExpenseAccount._id, payingAccountId: cash._id, userId: null }),
-      fundService.recordDisbursement(educationFund._id, { amount: 15000, description: 'Concurrent disbursement B', branchId: branch._id, expenseAccountId: programExpenseAccount._id, payingAccountId: cash._id, userId: null }),
+      fundService.recordDisbursement(educationFund._id, { amount: 15000, description: 'Concurrent disbursement A', branchId: branch._id, expenseAccountId: programExpenseAccount._id, payingAccountId: cash._id, userId: admin._id }),
+      fundService.recordDisbursement(educationFund._id, { amount: 15000, description: 'Concurrent disbursement B', branchId: branch._id, expenseAccountId: programExpenseAccount._id, payingAccountId: cash._id, userId: admin._id }),
     ]);
 
     const fulfilled = results.filter((r) => r.status === 'fulfilled');
@@ -3032,7 +3032,7 @@ async function run() {
 
   await step('Receiving allocates EXACTLY: item A share=33.33 (adjustedCost 103.33), item B share=33.33 (adjustedCost 206.67), item C gets the rounding-drift-corrected remainder share=33.34 (adjustedCost 1033.34) — each value independently hand-computed and executed before this test was written, not derived from the code being trusted to work', async () => {
     const result = await importShipmentService.receiveShipment(importShipment._id, {
-      warehouseId: warehouse._id, inventoryAssetAccountId: importInventoryAsset._id, supplierPayableAccountId: importSupplierPayable._id, userId: null,
+      warehouseId: warehouse._id, inventoryAssetAccountId: importInventoryAsset._id, supplierPayableAccountId: importSupplierPayable._id, userId: admin._id,
     });
     const items = result.shipment.items;
     assert(items[0].allocatedCost === 33.33 && items[0].adjustedUnitCost === 103.33, `expected item A share=33.33, adjustedUnitCost=103.33, got share=${items[0].allocatedCost} adjustedUnitCost=${items[0].adjustedUnitCost}`);
@@ -3074,9 +3074,9 @@ async function run() {
   async function runCropCycle(expectedYield, actualYield) {
     const cycle = await agricultureService.startCropCycle({
       companyId: company._id, branchId: branch._id, fieldId: northField._id, bomId: wheatBom._id, warehouseId: warehouse._id,
-      cropName: 'Wheat', plantedDate: new Date(), expectedYield, userId: null,
+      cropName: 'Wheat', plantedDate: new Date(), expectedYield, userId: admin._id,
     });
-    return agricultureService.completeHarvest(cycle._id, { actualYield, actualLaborCost: 10 * actualYield, actualOverheadCost: 5 * actualYield, userId: null });
+    return agricultureService.completeHarvest(cycle._id, { actualYield, actualLaborCost: 10 * actualYield, actualOverheadCost: 5 * actualYield, userId: admin._id });
   }
 
   await step('3 crop cycles on the SAME field, actual yields of 100, 120, then 80 (=yield/acre of 10, 12, then 8 on a 10-acre field) — each genuinely costed through real Manufacturing completeProduction, not reimplemented', async () => {
@@ -3121,7 +3121,7 @@ async function run() {
   });
 
   const recall = await step('Initiating a recall correctly traces and SUMS: customer A shows exactly 7 (5+2 across 2 sales), customer B shows exactly 3', async () => {
-    const r = await batchRecallService.initiateRecall({ companyId: company._id, batchId: recallBatch._id, productId: recallProduct._id, reason: 'Contamination found in lab testing', userId: null });
+    const r = await batchRecallService.initiateRecall({ companyId: company._id, batchId: recallBatch._id, productId: recallProduct._id, reason: 'Contamination found in lab testing', userId: admin._id });
     const entryA = r.affectedCustomers.find((c) => String(c.customerId) === String(recallCustomerA._id));
     const entryB = r.affectedCustomers.find((c) => String(c.customerId) === String(recallCustomerB._id));
     assert(entryA && entryA.quantitySold === 7, `expected customer A's traced quantity to be exactly 7 (5+2 correctly summed across 2 separate sales), got ${entryA?.quantitySold}`);
@@ -3192,7 +3192,7 @@ async function run() {
     const l = await leaseService.startLease({
       companyId: company._id, branchId: branch._id, propertyId: apartment._id, tenantCustomerId: customer._id,
       startDate: leaseStart, endDate: new Date(leaseStart.getTime() + 365 * DAY_MS), monthlyRent: 20000, lateFeePerDay: 100,
-      securityDeposit: 40000, depositReceivedAccountId: cash._id, securityDepositLiabilityAccountId: leaseDepositLiabilityAccount._id, userId: null,
+      securityDeposit: 40000, depositReceivedAccountId: cash._id, securityDepositLiabilityAccountId: leaseDepositLiabilityAccount._id, userId: admin._id,
     });
     const refreshedProperty = await require('./modules/real_estate/models/Property').findById(apartment._id);
     assert(refreshedProperty.status === 'leased', `expected property status "leased", got "${refreshedProperty.status}"`);
@@ -3202,24 +3202,24 @@ async function run() {
   await step('Trying to generate rent BEFORE the 30-day period is due (only 20 days in) is rejected — the same "don\'t bill early" honesty every other recurring-billing module in this app holds to', async () => {
     let threw = false;
     try {
-      await leaseService.generateRentInvoice(lease._id, { asOfDate: new Date(leaseStart.getTime() + 20 * DAY_MS), billingProductId: rentBillingProduct._id, billingVariantId: rentBillingProduct.variants[0]._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: null });
+      await leaseService.generateRentInvoice(lease._id, { asOfDate: new Date(leaseStart.getTime() + 20 * DAY_MS), billingProductId: rentBillingProduct._id, billingVariantId: rentBillingProduct.variants[0]._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: admin._id });
     } catch { threw = true; }
     assert(threw, 'expected generating rent before the period is due to be rejected');
   });
 
   await step('Generating rent 5 days AFTER the due date bills a real, hand-traced late fee: 20000 rent + (5 × 100 late fee) = exactly 20500', async () => {
-    const result = await leaseService.generateRentInvoice(lease._id, { asOfDate: new Date(leaseStart.getTime() + 35 * DAY_MS), billingProductId: rentBillingProduct._id, billingVariantId: rentBillingProduct.variants[0]._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: null });
+    const result = await leaseService.generateRentInvoice(lease._id, { asOfDate: new Date(leaseStart.getTime() + 35 * DAY_MS), billingProductId: rentBillingProduct._id, billingVariantId: rentBillingProduct.variants[0]._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: admin._id });
     assert(result.daysLate === 5 && result.lateFee === 500 && result.totalBill === 20500, `expected daysLate=5, lateFee=500, totalBill=20500, got ${JSON.stringify({ daysLate: result.daysLate, lateFee: result.lateFee, totalBill: result.totalBill })}`);
     assert(result.sale.totalAmount === 20500, `expected the actual Sale to total exactly 20500, got ${result.sale.totalAmount}`);
   });
 
   await step('The SECOND period, paid exactly ON TIME (day 60), bills NO late fee — just the flat 20000 rent', async () => {
-    const result = await leaseService.generateRentInvoice(lease._id, { asOfDate: new Date(leaseStart.getTime() + 60 * DAY_MS), billingProductId: rentBillingProduct._id, billingVariantId: rentBillingProduct.variants[0]._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: null });
+    const result = await leaseService.generateRentInvoice(lease._id, { asOfDate: new Date(leaseStart.getTime() + 60 * DAY_MS), billingProductId: rentBillingProduct._id, billingVariantId: rentBillingProduct.variants[0]._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: admin._id });
     assert(result.daysLate === 0 && result.lateFee === 0 && result.totalBill === 20000, `expected an on-time payment to have zero late fee, got ${JSON.stringify({ daysLate: result.daysLate, lateFee: result.lateFee, totalBill: result.totalBill })}`);
   });
 
   await step('Ending the lease with a 5000 damage deduction refunds exactly 35000, posts a balanced 3-leg voucher at 40000, and the PROPERTY CYCLES BACK to available — the real proof it\'s a reusable asset, not a one-time sale', async () => {
-    const { refund, deduction } = await leaseService.endLease(lease._id, { deductionAmount: 5000, refundAccountId: cash._id, forfeitRevenueAccountId: damageForfeitAccount._id, userId: null });
+    const { refund, deduction } = await leaseService.endLease(lease._id, { deductionAmount: 5000, refundAccountId: cash._id, forfeitRevenueAccountId: damageForfeitAccount._id, userId: admin._id });
     assert(refund === 35000 && deduction === 5000, `expected refund=35000 and deduction=5000 (40000 - 5000), got refund=${refund} deduction=${deduction}`);
 
     const refreshedProperty = await require('./modules/real_estate/models/Property').findById(apartment._id);
@@ -3230,7 +3230,7 @@ async function run() {
     const secondTenant = await Customer.create({ companyId: company._id, name: 'Second Tenant' });
     const secondLease = await leaseService.startLease({
       companyId: company._id, branchId: branch._id, propertyId: apartment._id, tenantCustomerId: secondTenant._id,
-      startDate: new Date(), endDate: new Date(Date.now() + 365 * DAY_MS), monthlyRent: 22000, userId: null,
+      startDate: new Date(), endDate: new Date(Date.now() + 365 * DAY_MS), monthlyRent: 22000, userId: admin._id,
     });
     assert(secondLease.status === 'active', 'expected a genuine second lease on the same property to succeed');
   });
@@ -3267,7 +3267,7 @@ async function run() {
   });
 
   await step('Paying one member\'s invoice bills a real 5000 Sale and marks it paid', async () => {
-    const { invoice, sale } = await societyService.payInvoice(firstInvoices[0]._id, { branchId: branch._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: null });
+    const { invoice, sale } = await societyService.payInvoice(firstInvoices[0]._id, { branchId: branch._id, warehouseId: warehouse._id, paymentAccountId: cash._id, userId: admin._id });
     assert(invoice.status === 'paid' && sale.totalAmount === 5000, `expected status "paid" and a real 5000 sale, got status="${invoice.status}" saleTotal=${sale.totalAmount}`);
   });
 
@@ -3388,7 +3388,7 @@ async function run() {
   });
 
   await step('Converting produces EXACTLY 2 real purchase orders — one per winning supplier — each containing only the item that supplier actually won, at the correct real subtotal', async () => {
-    const orders = await rfqService.convertBestPriceToOrders(rfq._id, { branchId: branch._id, warehouseId: warehouse._id, userId: null });
+    const orders = await rfqService.convertBestPriceToOrders(rfq._id, { branchId: branch._id, warehouseId: warehouse._id, userId: admin._id });
     assert(orders.length === 2, `expected exactly 2 purchase orders (split by winning supplier), got ${orders.length}`);
 
     const orderForY = orders.find((o) => String(o.supplierId) === String(rfqSupplierY._id));
@@ -3438,7 +3438,7 @@ async function run() {
     assert(converted[0].quantityOrdered === 576, `expected the converted quantityOrdered to be exactly 576, got ${converted[0].quantityOrdered}`);
     assert(Math.abs(converted[0].unitCost - 500 / 288) < 0.000001, `expected the converted unitCost to be exactly 500/288, got ${converted[0].unitCost}`);
 
-    const po = await purchaseService.createPurchaseOrder({ companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, supplierId: supplier._id, items: converted, userId: null });
+    const po = await purchaseService.createPurchaseOrder({ companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, supplierId: supplier._id, items: converted, userId: admin._id });
     assert(po.items[0].quantityOrdered === 576, `expected the real PO's line item to record exactly 576 (the converted quantity), got ${po.items[0].quantityOrdered}`);
     assert(Math.abs(po.subtotal - 1000) < 0.001, `expected the real PO's subtotal to be exactly 1000 (576 × 500/288, preserving the true 2-cartons-at-500 total), got ${po.subtotal}`);
   });
@@ -3482,7 +3482,7 @@ async function run() {
         { accountId: operationsExpenseAccount._id, debit: 500, credit: 0, costCenterId: ccOperations._id },
         { accountId: cash._id, debit: 0, credit: 1500 }, // deliberately untagged — the balancing leg of the SAME voucher
       ],
-      userId: null,
+      userId: admin._id,
     });
   });
 
@@ -3508,7 +3508,7 @@ async function run() {
     const voucher = await accountingService.postVoucher({
       companyId: company._id, branchId: branch._id, type: 'journal', narration: 'Regression check — no periods defined',
       entries: [{ accountId: regressionExpenseAccount._id, debit: 100, credit: 0 }, { accountId: cash._id, debit: 0, credit: 100 }],
-      userId: null,
+      userId: admin._id,
     });
     assert(voucher && voucher._id, 'expected an ordinary voucher to post successfully with zero accounting periods defined — this must remain a true no-op');
   });
@@ -3521,7 +3521,7 @@ async function run() {
     const voucher = await accountingService.postVoucher({
       companyId: company._id, branchId: branch._id, type: 'journal', narration: 'Voucher in an open period',
       entries: [{ accountId: periodExpenseAccount._id, debit: 50, credit: 0 }, { accountId: cash._id, debit: 0, credit: 50 }],
-      userId: null,
+      userId: admin._id,
     });
     assert(voucher && voucher._id, 'expected a voucher dated inside a still-OPEN period to post successfully');
   });
@@ -3533,7 +3533,7 @@ async function run() {
       await accountingService.postVoucher({
         companyId: company._id, branchId: branch._id, type: 'journal', narration: 'Attempted voucher in a CLOSED period',
         entries: [{ accountId: periodExpenseAccount._id, debit: 75, credit: 0 }, { accountId: cash._id, debit: 0, credit: 75 }],
-        userId: null,
+        userId: admin._id,
       });
     } catch { threw = true; }
     assert(threw, 'expected a voucher dated inside a CLOSED period to be rejected');
@@ -3543,7 +3543,7 @@ async function run() {
     const voucher = await accountingService.postVoucher({
       companyId: company._id, branchId: branch._id, type: 'journal', date: new Date(Date.now() + 100 * 24 * 60 * 60 * 1000), narration: 'Voucher well outside the closed period',
       entries: [{ accountId: periodExpenseAccount._id, debit: 25, credit: 0 }, { accountId: cash._id, debit: 0, credit: 25 }],
-      userId: null,
+      userId: admin._id,
     });
     assert(voucher && voucher._id, 'expected a voucher dated outside the closed period\'s range to post successfully');
   });
@@ -3553,7 +3553,7 @@ async function run() {
     const voucher = await accountingService.postVoucher({
       companyId: company._id, branchId: branch._id, type: 'journal', narration: 'Voucher after reopening',
       entries: [{ accountId: periodExpenseAccount._id, debit: 10, credit: 0 }, { accountId: cash._id, debit: 0, credit: 10 }],
-      userId: null,
+      userId: admin._id,
     });
     assert(voucher && voucher._id, 'expected a voucher to post successfully once the period was reopened');
   });
@@ -3581,7 +3581,7 @@ async function run() {
   });
 
   await step('Writing off this receivable posts a real, balanced voucher (Dr Bad Debt Expense 600, Cr Receivable 600) and permanently zeroes the sale\'s dueAmount', async () => {
-    const result = await badDebtService.writeOffReceivable(creditSale._id, { badDebtExpenseAccountId: badDebtExpenseAccount._id, receivableAccountId: receivableAccount._id, userId: null });
+    const result = await badDebtService.writeOffReceivable(creditSale._id, { badDebtExpenseAccountId: badDebtExpenseAccount._id, receivableAccountId: receivableAccount._id, userId: admin._id });
     assert(result.amountWrittenOff === 600, `expected amountWrittenOff exactly 600, got ${result.amountWrittenOff}`);
     const totalDebit = result.voucher.entries.reduce((s, e) => s + e.debit, 0);
     const totalCredit = result.voucher.entries.reduce((s, e) => s + e.credit, 0);
@@ -3598,7 +3598,7 @@ async function run() {
   await step('Attempting to write off the SAME receivable a second time is rejected — a real, permanent accounting action, not something silently repeatable', async () => {
     let threw = false;
     try {
-      await badDebtService.writeOffReceivable(creditSale._id, { badDebtExpenseAccountId: badDebtExpenseAccount._id, receivableAccountId: receivableAccount._id, userId: null });
+      await badDebtService.writeOffReceivable(creditSale._id, { badDebtExpenseAccountId: badDebtExpenseAccount._id, receivableAccountId: receivableAccount._id, userId: admin._id });
     } catch { threw = true; }
     assert(threw, 'expected writing off an already-written-off receivable to be rejected');
   });
@@ -3633,13 +3633,13 @@ async function run() {
   await step('Disburse a real 60000 loan to one employee, with a 5000 monthly installment — posts a real, balanced disbursement voucher', async () => {
     const loan = await employeeLoanService.disburseLoan({
       companyId: company._id, branchId: branch._id, employeeId: loanEmployee._id, principalAmount: 60000, monthlyInstallment: 5000,
-      loanReceivableAccountId: loanReceivableAccount._id, disbursingAccountId: cash._id, userId: null,
+      loanReceivableAccountId: loanReceivableAccount._id, disbursingAccountId: cash._id, userId: admin._id,
     });
     assert(loan.remainingBalance === 60000 && loan.status === 'active', `expected a fresh loan with remainingBalance 60000 and status "active", got remainingBalance=${loan.remainingBalance} status=${loan.status}`);
   });
 
   const employeeLoanPayrollRun = await step('One payroll run covering BOTH employees: the no-loan employee\'s advances is EXACTLY 0 (the true regression check — this field was always hardcoded to 0 before this feature, so it must stay 0 for anyone without a loan) — the loan employee\'s advances is EXACTLY 5000, netPay correctly reduced by that amount', async () => {
-    const run = await hrService.generatePayroll({ companyId: company._id, month: 6, year: 2099, userId: null }); // a deliberately far-future, never-colliding month/year
+    const run = await hrService.generatePayroll({ companyId: company._id, month: 6, year: 2099, userId: admin._id }); // a deliberately far-future, never-colliding month/year
     const noLoanEntry = run.entries.find((e) => String(e.employeeId) === String(noLoanEmployee._id));
     const loanEntry = run.entries.find((e) => String(e.employeeId) === String(loanEmployee._id));
 
@@ -3652,14 +3652,14 @@ async function run() {
   });
 
   await step('Recording the repayment reduces the real loan balance from 60000 to exactly 55000, and posts a real, balanced voucher', async () => {
-    const loan = await employeeLoanService.recordRepayment(loanEmployee._id, 5000, { companyId: company._id, branchId: branch._id, salaryPayableAccountId: salaryPayableAccount._id, userId: null });
+    const loan = await employeeLoanService.recordRepayment(loanEmployee._id, 5000, { companyId: company._id, branchId: branch._id, salaryPayableAccountId: salaryPayableAccount._id, userId: admin._id });
     assert(loan.remainingBalance === 55000, `expected remainingBalance exactly 55000 (60000 - 5000), got ${loan.remainingBalance}`);
     assert(loan.status === 'active', `expected the loan to still be "active" (not yet fully repaid), got "${loan.status}"`);
   });
 
   await step('A SECOND employee with a SMALL 3000 loan (less than the standard 5000 installment) has their deduction correctly CAPPED at 3000 — never over-collecting past a zero balance', async () => {
     const smallLoanEmployee = await hrService.createEmployee({ companyId: company._id, branchId: branch._id, name: 'Small Loan Employee', salaryStructure: { basic: 30000, allowances: 0, deductions: 0 } });
-    await employeeLoanService.disburseLoan({ companyId: company._id, branchId: branch._id, employeeId: smallLoanEmployee._id, principalAmount: 3000, monthlyInstallment: 5000, loanReceivableAccountId: loanReceivableAccount._id, disbursingAccountId: cash._id, userId: null });
+    await employeeLoanService.disburseLoan({ companyId: company._id, branchId: branch._id, employeeId: smallLoanEmployee._id, principalAmount: 3000, monthlyInstallment: 5000, loanReceivableAccountId: loanReceivableAccount._id, disbursingAccountId: cash._id, userId: admin._id });
     const deduction = await employeeLoanService.monthlyDeductionFor(smallLoanEmployee._id);
     assert(deduction === 3000, `expected the deduction to be capped at the real remaining balance of 3000, not the full 5000 installment, got ${deduction}`);
   });
@@ -3716,7 +3716,7 @@ async function run() {
   });
 
   await step('generateDueInvoices bills EXACTLY the one active, overdue template — the paused one is genuinely skipped, not billed', async () => {
-    const result = await recurringInvoiceService.generateDueInvoices(company._id, { warehouseId: warehouse._id, paymentAccountId: cash._id, userId: null });
+    const result = await recurringInvoiceService.generateDueInvoices(company._id, { warehouseId: warehouse._id, paymentAccountId: cash._id, userId: admin._id });
     const billedForActive = result.results.find((r) => String(r.templateId) === String(recurringTemplate._id));
     const billedForPaused = result.results.find((r) => String(r.templateId) === String(pausedTemplate._id));
     assert(billedForActive && billedForActive.sale.totalAmount === 15000, `expected the active template to be billed for exactly 15000, got ${JSON.stringify(billedForActive)}`);
@@ -3728,7 +3728,7 @@ async function run() {
     assert(refreshed.lastRunDate !== null, 'expected lastRunDate to be set after billing');
     assert(refreshed.nextRunDate > new Date(), `expected nextRunDate to have advanced to a genuine future date, got ${refreshed.nextRunDate}`);
 
-    const secondRun = await recurringInvoiceService.generateDueInvoices(company._id, { warehouseId: warehouse._id, paymentAccountId: cash._id, userId: null });
+    const secondRun = await recurringInvoiceService.generateDueInvoices(company._id, { warehouseId: warehouse._id, paymentAccountId: cash._id, userId: admin._id });
     const billedAgain = secondRun.results.find((r) => String(r.templateId) === String(recurringTemplate._id));
     assert(!billedAgain, 'expected the same template NOT to be billed again immediately after its schedule already advanced into the future');
   });
@@ -3749,12 +3749,12 @@ async function run() {
     await accountingService.postVoucher({
       companyId: company._id, branchId: branch._id, type: 'journal', date: new Date(2099, 8, 15), narration: 'Real September 2099 expense',
       entries: [{ accountId: budgetExpenseAccount._id, debit: 25000, credit: 0 }, { accountId: cash._id, debit: 0, credit: 25000 }],
-      userId: null,
+      userId: admin._id,
     });
     await accountingService.postVoucher({
       companyId: company._id, branchId: branch._id, type: 'journal', date: new Date(2099, 9, 5), narration: 'A DIFFERENT month\'s expense — must NOT count toward September\'s actual',
       entries: [{ accountId: budgetExpenseAccount._id, debit: 9999, credit: 0 }, { accountId: cash._id, debit: 0, credit: 9999 }],
-      userId: null,
+      userId: admin._id,
     });
   });
 
@@ -3788,7 +3788,7 @@ async function run() {
 
   await step('Applying the discount posts a REAL, balanced 3-leg voucher (Payable 10000 / Cash 9800 / Discount Income 200), and fully clears the payable to 0 even though less cash actually left the business', async () => {
     const result = await earlyPaymentDiscountService.payWithEarlyDiscount(earlyPayPO._id, {
-      paymentDate: new Date(), paymentAccountId: cash._id, discountIncomeAccountId: discountIncomeAccount._id, payableAccountId: discountPayableAccount._id, userId: null,
+      paymentDate: new Date(), paymentAccountId: cash._id, discountIncomeAccountId: discountIncomeAccount._id, payableAccountId: discountPayableAccount._id, userId: admin._id,
     });
     assert(result.discountAmount === 200 && result.amountPaid === 9800, `expected discountAmount 200 and amountPaid 9800, got discountAmount=${result.discountAmount} amountPaid=${result.amountPaid}`);
     assert(result.po.dueAmount === 0, `expected the payable to be fully cleared to 0, got ${result.po.dueAmount}`);
@@ -3815,7 +3815,7 @@ async function run() {
 
     let threw = false;
     try {
-      await earlyPaymentDiscountService.payWithEarlyDiscount(latePO._id, { paymentDate: latePaymentDate, paymentAccountId: cash._id, discountIncomeAccountId: discountIncomeAccount._id, payableAccountId: discountPayableAccount._id, userId: null });
+      await earlyPaymentDiscountService.payWithEarlyDiscount(latePO._id, { paymentDate: latePaymentDate, paymentAccountId: cash._id, discountIncomeAccountId: discountIncomeAccount._id, payableAccountId: discountPayableAccount._id, userId: admin._id });
     } catch { threw = true; }
     assert(threw, 'expected attempting an early-discount payment past the eligibility window to be rejected outright');
   });

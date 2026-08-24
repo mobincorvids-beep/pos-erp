@@ -9,6 +9,8 @@
 const Product = require('../models/Product');
 const Customer = require('../models/Customer');
 const StockLevel = require('../models/StockLevel');
+const User = require('../models/User');
+const Role = require('../models/Role');
 const posSaleService = require('./posSaleService');
 const { nanoid } = require('nanoid');
 
@@ -76,7 +78,7 @@ async function importOrder(company, payload) {
     throw new Error('E-commerce integration is enabled but missing default branch/warehouse/payment account configuration.');
   }
 
-  const { items, customerEmail, customerName, customerPhone } = payload;
+  const { items, customerEmail, customerName, customerPhone, userId } = payload;
   if (!items || items.length === 0) throw new Error('Order must contain at least one item.');
 
   const resolvedItems = [];
@@ -114,10 +116,24 @@ async function importOrder(company, payload) {
 
   const totalAmount = resolvedItems.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
 
+  // Online orders have no cashier. Attribute the sale to whichever user
+  // triggered the import if given; otherwise fall back to this company's
+  // Admin-role user, since Sale.userId is required by schema.
+  let resolvedUserId = userId || null;
+  if (!resolvedUserId) {
+    const adminRole = await Role.findOne({ companyId: company._id, name: 'Admin' });
+    const adminUser = adminRole
+      ? await User.findOne({ companyId: company._id, roleId: adminRole._id })
+      : await User.findOne({ companyId: company._id });
+    if (!adminUser) throw new Error('E-commerce order import needs a userId (no admin user found to attribute the sale to).');
+    resolvedUserId = adminUser._id;
+  }
+
   return posSaleService.checkout({
     companyId: company._id, branchId: defaultBranchId, warehouseId: defaultWarehouseId,
     customerId, channel: 'ecommerce',
     items: resolvedItems,
+    userId: resolvedUserId,
     // Online orders are assumed prepaid — the external store already
     // collected payment before this webhook fires; this just records where
     // that money landed (the configured settlement account), it doesn't
