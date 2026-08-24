@@ -27,6 +27,19 @@ function listVenues(companyId, branchId) {
   return EventVenue.find(filter);
 }
 
+/** Was missing — a capacity/fee correction had no way in. */
+function updateVenue(companyId, id, updates) {
+  const allowed = ['name', 'capacity', 'baseRentalFee'];
+  const set = {};
+  for (const key of allowed) if (updates[key] !== undefined) set[key] = updates[key];
+  return EventVenue.findOneAndUpdate({ _id: id, companyId }, set, { new: true, runValidators: true });
+}
+
+/** Soft-deactivate — past bookings reference the venue by id. */
+function deactivateVenue(companyId, id) {
+  return EventVenue.findOneAndUpdate({ _id: id, companyId }, { isActive: false }, { new: true });
+}
+
 /** Bookings, most recent event first — same gap Hotel's reservations had until fixed: without this, the UI has no way to browse existing bookings. */
 function listBookings(companyId, { status, venueId } = {}) {
   const filter = { companyId };
@@ -43,6 +56,18 @@ function createPackage(input) {
 
 function listPackages(companyId) {
   return EventPackage.find({ companyId, isActive: true });
+}
+
+/** Was missing — same reasoning as updateVenue: price correctable, sellable link is not. */
+function updatePackage(companyId, id, updates) {
+  const allowed = ['name', 'pricePerPerson', 'minGuests'];
+  const set = {};
+  for (const key of allowed) if (updates[key] !== undefined) set[key] = updates[key];
+  return EventPackage.findOneAndUpdate({ _id: id, companyId }, set, { new: true, runValidators: true });
+}
+
+function deactivatePackage(companyId, id) {
+  return EventPackage.findOneAndUpdate({ _id: id, companyId }, { isActive: false }, { new: true });
 }
 
 /** One event per venue per calendar day — simpler than Hotel's multi-night range overlap, since an event doesn't span nights. */
@@ -199,4 +224,8 @@ async function cancelBooking(bookingId, { forfeitPercent, revenueAccountId, refu
   }
 }
 
-module.exports = { createVenue, listVenues, createPackage, listPackages, isVenueAvailable, bookEvent, listBookings, completeEvent, cancelBooking };
+module.exports = {
+  createVenue, listVenues, updateVenue, deactivateVenue,
+  createPackage, listPackages, updatePackage, deactivatePackage,
+  isVenueAvailable, bookEvent, listBookings, completeEvent, cancelBooking,
+};

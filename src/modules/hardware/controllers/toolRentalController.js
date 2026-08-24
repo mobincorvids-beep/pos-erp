@@ -14,6 +14,15 @@ async function listRentals(req, res) {
   res.json(rows);
 }
 
+async function voidRental(req, res) {
+  try {
+    const agreement = await toolRentalService.voidRental(req.companyId, req.params.id, { userId: req.auth.userId });
+    res.json(agreement);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
 async function returnRental(req, res) {
   try {
     const agreement = await toolRentalService.returnRental(req.params.id, { ...req.body, userId: req.auth.userId });
@@ -23,4 +32,4 @@ async function returnRental(req, res) {
   }
 }
 
-module.exports = { checkOutRental, listRentals, returnRental };
+module.exports = { checkOutRental, listRentals, voidRental, returnRental };

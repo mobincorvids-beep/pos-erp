@@ -26,6 +26,15 @@ export function CafePage() {
     } catch (err) { toast(err.message, 'error'); }
   }
 
+  async function cancelSub(s) {
+    if (!window.confirm(`Cancel ${s.customerId?.name}'s "${s.planName}" subscription? This stops today onward, the sale record isn't affected.`)) return;
+    try {
+      await api.post(`/cafe/subscriptions/${s._id}/cancel`);
+      toast('Subscription cancelled.', 'success');
+      load();
+    } catch (err) { toast(err.message, 'error'); }
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -42,7 +51,10 @@ export function CafePage() {
               <p className="text-xs text-ink-muted">{s.customerId?.name}</p>
               <p className="text-xs text-ink-muted">Until {formatDate(s.endDate)}</p>
               <p className="mt-1"><span className={s.status === 'active' ? 'chip-accent' : 'chip-neutral'}>{s.status}</span></p>
-              {s.status === 'active' && <RedeemButton subscription={s} onRedeem={redeem} />}
+              <div className="flex items-center gap-3">
+                {s.status === 'active' && <RedeemButton subscription={s} onRedeem={redeem} />}
+                {s.status === 'active' && <button className="btn-ghost !text-danger !px-0 text-xs mt-2" onClick={() => cancelSub(s)}>Cancel</button>}
+              </div>
             </div>
           ))}
         </div>

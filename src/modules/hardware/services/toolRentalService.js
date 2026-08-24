@@ -70,6 +70,46 @@ function listRentals(companyId, { status } = {}) {
   return RentalAgreement.find(filter).populate('customerId', 'name').populate('productId', 'name').sort({ checkOutDate: -1 });
 }
 
+/** Was missing — a mistaken checkout (wrong item, wrong customer) had no way back: the item
+ * stayed permanently "out" of stock and the deposit liability stayed permanently open, with
+ * no return possible. Only allowed while still 'out' — once returnRental() has run, this is a
+ * closed transaction with its own real accounting (deposit refund/forfeit, revenue), same
+ * "correct forward, not backward" rule as Sale. Reverses both real effects of checkout:
+ * restocks the item and reverses the deposit-received voucher. */
+async function voidRental(companyId, rentalId, { userId }) {
+  const session = await mongoose.startSession();
+  try {
+    let agreement;
+    await session.withTransaction(async () => {
+      agreement = await RentalAgreement.findOne({ _id: rentalId, companyId }).session(session);
+      if (!agreement) throw new Error('Rental agreement not found.');
+      if (agreement.status !== 'out') throw new Error(`Cannot void a rental that is already "${agreement.status}".`);
+
+      await inventoryService.recordMovement({
+        companyId, warehouseId: agreement.warehouseId, productId: agreement.productId, variantId: agreement.variantId,
+        type: 'adjustment', quantity: agreement.quantity,
+        referenceType: 'RentalAgreement', referenceId: agreement._id, userId,
+        note: 'Rental checkout voided — item back on the shelf',
+      }, session);
+
+      await accountingService.postVoucher({
+        companyId, branchId: agreement.branchId, type: 'receipt', narration: 'Rental voided — security deposit reversed',
+        entries: [
+          { accountId: agreement.depositLiabilityAccountId, debit: agreement.depositAmount, credit: 0 },
+          { accountId: agreement.depositReceivedInAccountId, debit: 0, credit: agreement.depositAmount },
+        ],
+        referenceType: 'RentalAgreement', referenceId: agreement._id, userId,
+      }, session);
+
+      agreement.status = 'cancelled';
+      await agreement.save({ session });
+    });
+    return agreement;
+  } finally {
+    session.endSession();
+  }
+}
+
 /**
  * The condition-based branch — three genuinely different outcomes from
  * one input:
@@ -177,4 +217,4 @@ async function returnRental(rentalId, {
   return agreement;
 }
 
-module.exports = { checkOutRental, listRentals, returnRental };
+module.exports = { checkOutRental, listRentals, voidRental, returnRental };

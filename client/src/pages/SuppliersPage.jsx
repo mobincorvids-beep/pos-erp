@@ -11,7 +11,7 @@ export function SuppliersPage() {
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
-  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState(null); // null closed, {} new, {...} edit
 
   function load() {
     setLoading(true);
@@ -24,12 +24,12 @@ export function SuppliersPage() {
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-4">
           <p className="page-title">Suppliers</p>
-          <button className="btn-primary" onClick={() => setShowForm(true)}>New supplier</button>
+          <button className="btn-primary" onClick={() => setEditing({})}>New supplier</button>
         </div>
 
         {loading && <Loading />}
         {!loading && suppliers.length === 0 && (
-          <EmptyState title="No suppliers yet" description="Add suppliers to track purchases and payables." action={<button className="btn-primary" onClick={() => setShowForm(true)}>Add a supplier</button>} />
+          <EmptyState title="No suppliers yet" description="Add suppliers to track purchases and payables." action={<button className="btn-primary" onClick={() => setEditing({})}>Add a supplier</button>} />
         )}
         {!loading && suppliers.length > 0 && (
           <div className="card overflow-hidden">
@@ -38,13 +38,15 @@ export function SuppliersPage() {
                 <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
                   <th className="px-3 py-2 font-medium">Name</th>
                   <th className="px-3 py-2 font-medium">Phone</th>
+                  <th className="px-3 py-2 font-medium text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {suppliers.map((s) => (
-                  <tr key={s._id} onClick={() => setSelected(s)} className={`border-b border-rule last:border-0 cursor-pointer hover:bg-paper ${selected?._id === s._id ? 'bg-accent-soft/40' : ''}`}>
-                    <td className="px-3 py-2">{s.name}</td>
-                    <td className="px-3 py-2 num text-ink-muted">{s.phone || '—'}</td>
+                  <tr key={s._id} className={`border-b border-rule last:border-0 hover:bg-paper ${selected?._id === s._id ? 'bg-accent-soft/40' : ''}`}>
+                    <td className="px-3 py-2 cursor-pointer" onClick={() => setSelected(s)}>{s.name}</td>
+                    <td className="px-3 py-2 num text-ink-muted cursor-pointer" onClick={() => setSelected(s)}>{s.phone || '—'}</td>
+                    <td className="px-3 py-2 text-right"><button className="btn-ghost !text-ink-muted !px-2 text-xs" onClick={() => setEditing(s)}>Edit</button></td>
                   </tr>
                 ))}
               </tbody>
@@ -54,22 +56,28 @@ export function SuppliersPage() {
       </div>
 
       {selected && <SupplierLedgerPanel supplier={selected} onClose={() => setSelected(null)} />}
-      {showForm && <SupplierForm onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
+      {editing !== null && <SupplierForm supplier={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
     </div>
   );
 }
 
-function SupplierForm({ onClose, onSaved }) {
+function SupplierForm({ supplier, onClose, onSaved }) {
   const toast = useToast();
-  const [form, setForm] = useState({ name: '', phone: '', email: '' });
+  const isNew = !supplier._id;
+  const [form, setForm] = useState({ name: supplier.name || '', phone: supplier.phone || '', email: supplier.email || '', address: supplier.address || '' });
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setSaving(true);
     try {
-      await api.post('/suppliers', form);
-      toast('Supplier added.', 'success');
+      if (isNew) {
+        await api.post('/suppliers', form);
+        toast('Supplier added.', 'success');
+      } else {
+        await api.put(`/suppliers/${supplier._id}`, form);
+        toast('Supplier updated.', 'success');
+      }
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -81,10 +89,12 @@ function SupplierForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">New supplier</p>
+        <p className="font-display text-lg mb-4">{isNew ? 'New supplier' : 'Edit supplier'}</p>
         <div className="space-y-3">
           <div><label className="field-label">Name</label><input required autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
           <div><label className="field-label">Phone</label><input className="field-input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
+          <div><label className="field-label">Email</label><input type="email" className="field-input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+          <div><label className="field-label">Address</label><input className="field-input" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>

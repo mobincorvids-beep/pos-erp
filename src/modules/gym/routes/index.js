@@ -14,9 +14,12 @@ router.post('/classes',
   body('name').isString().trim().notEmpty().withMessage('name is required.'),
   body('capacity').isInt({ gt: 0 }).withMessage('capacity must be greater than zero.'),
   validate, controller.createClass);
+router.put('/classes/:classId', controller.updateClass);
+router.delete('/classes/:classId', controller.deactivateClass);
 
 router.get('/sessions', controller.listSessions); // ?gymClassId=
 router.post('/classes/:classId/sessions', body('startTime').isISO8601().withMessage('startTime must be a valid date/time.'), validate, controller.scheduleSession);
+router.post('/sessions/:sessionId/cancel', controller.cancelSession);
 router.get('/sessions/:sessionId/roster', controller.sessionRoster);
 router.post('/sessions/:sessionId/enroll', body('customerId').isString().notEmpty().withMessage('customerId is required.'), validate, controller.enroll);
 router.post('/sessions/:sessionId/cancel', body('customerId').isString().notEmpty().withMessage('customerId is required.'), validate, controller.cancelEnrollment);

@@ -18,4 +18,25 @@ function listUnits(companyId) {
   return Unit.find({ companyId }).populate('baseUnitId', 'name shortCode').sort({ name: 1 });
 }
 
-module.exports = { createUnit, listUnits };
+/** Was missing — a wrong conversion factor or renamed unit had no way to be fixed. */
+function updateUnit(companyId, id, updates) {
+  const { name, shortCode, baseUnitId, conversionFactor } = updates;
+  if (baseUnitId !== undefined && baseUnitId && (!conversionFactor || conversionFactor <= 0)) {
+    throw new Error('conversionFactor must be greater than zero when baseUnitId is set.');
+  }
+  const set = {};
+  if (name !== undefined) set.name = name;
+  if (shortCode !== undefined) set.shortCode = shortCode;
+  if (baseUnitId !== undefined) set.baseUnitId = baseUnitId || null;
+  if (conversionFactor !== undefined) set.conversionFactor = conversionFactor;
+  return Unit.findOneAndUpdate({ _id: id, companyId }, set, { new: true, runValidators: true });
+}
+
+/** Was missing — no way to remove a unit created by mistake. Products reference units by id
+ * and simply keep the stale reference if this is ever removed while in use, same as every
+ * other reference field in this codebase. */
+function deleteUnit(companyId, id) {
+  return Unit.findOneAndDelete({ _id: id, companyId });
+}
+
+module.exports = { createUnit, listUnits, updateUnit, deleteUnit };

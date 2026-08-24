@@ -12,7 +12,7 @@ export function PharmacyPage() {
     <div>
       <p className="page-title mb-4">Pharmacy</p>
       <div className="flex gap-1 border-b border-rule mb-5">
-        {[['prescriptions', 'Prescriptions'], ['patients', 'Patients'], ['expiry', 'Near-expiry']].map(([key, label]) => (
+        {[['prescriptions', 'Prescriptions'], ['patients', 'Patients'], ['doctors', 'Doctors'], ['expiry', 'Near-expiry']].map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)} className={`px-3 py-2 text-sm -mb-px border-b-2 ${tab === key ? 'border-accent text-accent-strong font-medium' : 'border-transparent text-ink-muted hover:text-ink'}`}>
             {label}
           </button>
@@ -20,61 +20,81 @@ export function PharmacyPage() {
       </div>
       {tab === 'prescriptions' && <PrescriptionsTab />}
       {tab === 'patients' && <PatientsTab />}
+      {tab === 'doctors' && <DoctorsTab />}
       {tab === 'expiry' && <NearExpiryTab />}
     </div>
   );
 }
 
-function PatientsTab() {
+function DoctorsTab() {
   const toast = useToast();
-  const [patients, setPatients] = useState([]);
+  const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState(null); // null closed, {} new, {...} edit
 
   function load() {
     setLoading(true);
-    api.get('/pharmacy/patients').then(setPatients).catch((err) => toast(err.message, 'error')).finally(() => setLoading(false));
+    api.get('/pharmacy/doctors').then(setDoctors).catch((err) => toast(err.message, 'error')).finally(() => setLoading(false));
   }
   useEffect(load, []);
 
+  async function handleRemove(d) {
+    if (!window.confirm(`Remove Dr. ${d.name}? Past prescriptions keep referencing them.`)) return;
+    try {
+      await api.del(`/pharmacy/doctors/${d._id}`);
+      toast('Doctor removed.', 'success');
+      load();
+    } catch (err) { toast(err.message, 'error'); }
+  }
+
   return (
     <div>
-      <div className="flex justify-end mb-3"><button className="btn-primary" onClick={() => setShowForm(true)}>Add patient</button></div>
+      <div className="flex justify-end mb-3"><button className="btn-primary" onClick={() => setEditing({})}>Add doctor</button></div>
       {loading && <Loading />}
-      {!loading && patients.length === 0 && <EmptyState title="No patients yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Add one</button>} />}
-      {!loading && patients.length > 0 && (
+      {!loading && doctors.length === 0 && <EmptyState title="No doctors yet" description="Register the doctors whose prescriptions you fill." action={<button className="btn-primary" onClick={() => setEditing({})}>Add one</button>} />}
+      {!loading && doctors.length > 0 && (
         <div className="card overflow-hidden">
           <table className="w-full text-sm">
-            <thead><tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide"><th className="px-3 py-2 font-medium">Name</th><th className="px-3 py-2 font-medium">Age</th><th className="px-3 py-2 font-medium">Phone</th><th className="px-3 py-2 font-medium">Allergies</th></tr></thead>
+            <thead><tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide"><th className="px-3 py-2 font-medium">Name</th><th className="px-3 py-2 font-medium">Specialization</th><th className="px-3 py-2 font-medium">Reg. #</th><th className="px-3 py-2 font-medium">Phone</th><th className="px-3 py-2 font-medium text-right">Actions</th></tr></thead>
             <tbody>
-              {patients.map((p) => (
-                <tr key={p._id} className="border-b border-rule last:border-0">
-                  <td className="px-3 py-2">{p.name}</td>
-                  <td className="px-3 py-2 text-ink-muted">{p.age || '—'}</td>
-                  <td className="px-3 py-2 text-ink-muted">{p.phone || '—'}</td>
-                  <td className="px-3 py-2">{p.allergies?.map((a) => <span key={a} className="chip-danger mr-1">{a}</span>)}</td>
+              {doctors.map((d) => (
+                <tr key={d._id} className="border-b border-rule last:border-0">
+                  <td className="px-3 py-2">Dr. {d.name}</td>
+                  <td className="px-3 py-2 text-ink-muted">{d.specialization || '—'}</td>
+                  <td className="px-3 py-2 text-ink-muted num">{d.registrationNumber || '—'}</td>
+                  <td className="px-3 py-2 text-ink-muted">{d.phone || '—'}</td>
+                  <td className="px-3 py-2 text-right">
+                    <button className="btn-ghost !text-ink-muted !px-2 text-xs" onClick={() => setEditing(d)}>Edit</button>
+                    <button className="btn-ghost !text-danger !px-2 text-xs" onClick={() => handleRemove(d)}>Remove</button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
-      {showForm && <PatientForm onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
+      {editing !== null && <DoctorForm doctor={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
     </div>
   );
 }
 
-function PatientForm({ onClose, onSaved }) {
+function DoctorForm({ doctor, onClose, onSaved }) {
   const toast = useToast();
-  const [form, setForm] = useState({ name: '', age: '', gender: '', phone: '', allergies: '' });
+  const isNew = !doctor._id;
+  const [form, setForm] = useState({ name: doctor.name || '', specialization: doctor.specialization || '', registrationNumber: doctor.registrationNumber || '', phone: doctor.phone || '' });
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setSaving(true);
     try {
-      await api.post('/pharmacy/patients', { ...form, age: Number(form.age) || undefined, allergies: form.allergies ? form.allergies.split(',').map((a) => a.trim()).filter(Boolean) : [] });
-      toast('Patient added.', 'success');
+      if (isNew) {
+        await api.post('/pharmacy/doctors', form);
+        toast('Doctor added.', 'success');
+      } else {
+        await api.put(`/pharmacy/doctors/${doctor._id}`, form);
+        toast('Doctor updated.', 'success');
+      }
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -86,7 +106,95 @@ function PatientForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Add patient</p>
+        <p className="font-display text-lg mb-4">{isNew ? 'Add doctor' : 'Edit doctor'}</p>
+        <div className="space-y-3">
+          <div><label className="field-label">Name</label><input required autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+          <div><label className="field-label">Specialization</label><input className="field-input" value={form.specialization} onChange={(e) => setForm({ ...form, specialization: e.target.value })} placeholder="e.g. Cardiology" /></div>
+          <div><label className="field-label">Registration number</label><input className="field-input" value={form.registrationNumber} onChange={(e) => setForm({ ...form, registrationNumber: e.target.value })} placeholder="PMDC number" /></div>
+          <div><label className="field-label">Phone</label><input className="field-input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
+        </div>
+        <div className="flex justify-end gap-2 mt-5">
+          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save'}</button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function PatientsTab() {
+  const toast = useToast();
+  const [patients, setPatients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(null); // null closed, {} new, {...} edit
+
+  function load() {
+    setLoading(true);
+    api.get('/pharmacy/patients').then(setPatients).catch((err) => toast(err.message, 'error')).finally(() => setLoading(false));
+  }
+  useEffect(load, []);
+
+  return (
+    <div>
+      <div className="flex justify-end mb-3"><button className="btn-primary" onClick={() => setEditing({})}>Add patient</button></div>
+      {loading && <Loading />}
+      {!loading && patients.length === 0 && <EmptyState title="No patients yet" action={<button className="btn-primary" onClick={() => setEditing({})}>Add one</button>} />}
+      {!loading && patients.length > 0 && (
+        <div className="card overflow-hidden">
+          <table className="w-full text-sm">
+            <thead><tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide"><th className="px-3 py-2 font-medium">Name</th><th className="px-3 py-2 font-medium">Age</th><th className="px-3 py-2 font-medium">Phone</th><th className="px-3 py-2 font-medium">Allergies</th><th className="px-3 py-2 font-medium text-right">Actions</th></tr></thead>
+            <tbody>
+              {patients.map((p) => (
+                <tr key={p._id} className="border-b border-rule last:border-0">
+                  <td className="px-3 py-2">{p.name}</td>
+                  <td className="px-3 py-2 text-ink-muted">{p.age || '—'}</td>
+                  <td className="px-3 py-2 text-ink-muted">{p.phone || '—'}</td>
+                  <td className="px-3 py-2">{p.allergies?.map((a) => <span key={a} className="chip-danger mr-1">{a}</span>)}</td>
+                  <td className="px-3 py-2 text-right"><button className="btn-ghost !text-ink-muted !px-2 text-xs" onClick={() => setEditing(p)}>Edit</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {editing !== null && <PatientForm patient={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
+    </div>
+  );
+}
+
+function PatientForm({ patient, onClose, onSaved }) {
+  const toast = useToast();
+  const isNew = !patient._id;
+  const [form, setForm] = useState({
+    name: patient.name || '', age: patient.age || '', gender: patient.gender || '',
+    phone: patient.phone || '', allergies: (patient.allergies || []).join(', '),
+  });
+  const [saving, setSaving] = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const payload = { ...form, age: Number(form.age) || undefined, allergies: form.allergies ? form.allergies.split(',').map((a) => a.trim()).filter(Boolean) : [] };
+      if (isNew) {
+        await api.post('/pharmacy/patients', payload);
+        toast('Patient added.', 'success');
+      } else {
+        await api.put(`/pharmacy/patients/${patient._id}`, payload);
+        toast('Patient updated.', 'success');
+      }
+      onSaved();
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
+      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
+        <p className="font-display text-lg mb-4">{isNew ? 'Add patient' : 'Edit patient'}</p>
         <div className="space-y-3">
           <div><label className="field-label">Name</label><input required autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
           <div className="grid grid-cols-2 gap-2">
@@ -123,6 +231,15 @@ function PrescriptionsTab() {
   }
   useEffect(load, []);
 
+  async function handleCancel(p) {
+    if (!window.confirm('Cancel this prescription? It has not been dispensed yet.')) return;
+    try {
+      await api.del(`/pharmacy/prescriptions/${p._id}`);
+      toast('Prescription cancelled.', 'success');
+      load();
+    } catch (err) { toast(err.message, 'error'); }
+  }
+
   return (
     <div>
       <div className="flex justify-end mb-3"><button className="btn-primary" onClick={() => setShowForm(true)}>New prescription</button></div>
@@ -137,7 +254,10 @@ function PrescriptionsTab() {
                 <tr key={p._id} className="border-b border-rule last:border-0">
                   <td className="px-3 py-2">{p.items.map((i) => i.medicineName).join(', ')}</td>
                   <td className="px-3 py-2"><span className={p.status === 'dispensed' ? 'chip-accent' : 'chip-neutral'}>{p.status.replace('_', ' ')}</span></td>
-                  <td className="px-3 py-2 text-right">{p.status !== 'dispensed' && <button className="btn-ghost !text-accent" onClick={() => setDispensing(p)}>Dispense</button>}</td>
+                  <td className="px-3 py-2 text-right">
+                    {p.status !== 'dispensed' && <button className="btn-ghost !text-accent !px-2 text-xs" onClick={() => setDispensing(p)}>Dispense</button>}
+                    {p.status === 'pending' && <button className="btn-ghost !text-danger !px-2 text-xs" onClick={() => handleCancel(p)}>Cancel</button>}
+                  </td>
                 </tr>
               ))}
             </tbody>

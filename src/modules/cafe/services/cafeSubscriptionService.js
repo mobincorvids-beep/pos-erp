@@ -43,6 +43,18 @@ function listSubscriptions(companyId, { customerId, status } = {}) {
   return CafeSubscription.find(filter).populate('customerId', 'name').sort({ endDate: -1 });
 }
 
+/** Was missing — the status enum already had 'cancelled', nothing ever set it. Cancels
+ * (not deletes) a subscription so staff can stop honoring it after a mistaken sale or a
+ * customer requesting a refund elsewhere, without losing the record of what was paid. */
+async function cancelSubscription(companyId, id) {
+  const subscription = await CafeSubscription.findOne({ _id: id, companyId });
+  if (!subscription) throw new Error('Subscription not found.');
+  if (subscription.status === 'cancelled') throw new Error('Already cancelled.');
+  subscription.status = 'cancelled';
+  await subscription.save();
+  return subscription;
+}
+
 /**
  * The actual daily-cap check. Three real branches:
  *   - subscription has expired (past endDate) -> reject
@@ -97,4 +109,4 @@ async function redeemDaily(subscriptionId, { warehouseId, userId }) {
   return subscription;
 }
 
-module.exports = { sellSubscription, listSubscriptions, redeemDaily };
+module.exports = { sellSubscription, listSubscriptions, cancelSubscription, redeemDaily };

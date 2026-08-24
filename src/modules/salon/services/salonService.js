@@ -28,6 +28,22 @@ function listServices(companyId) {
   return SalonService.find({ companyId, isActive: true });
 }
 
+/** Was missing — a service's price/duration/commission could never be corrected after
+ * creation. Deliberately does NOT allow editing productId/variantId (that's the sellable
+ * line-item link — changing it would retroactively reinterpret past sales). */
+function updateService(companyId, id, updates) {
+  const allowed = ['name', 'category', 'durationMinutes', 'price', 'commissionType', 'commissionRate'];
+  const set = {};
+  for (const key of allowed) if (updates[key] !== undefined) set[key] = updates[key];
+  return SalonService.findOneAndUpdate({ _id: id, companyId }, set, { new: true, runValidators: true });
+}
+
+/** Soft-deactivate, not delete — past sales and any membership packages that redeem
+ * against this service reference it by id and must keep resolving. */
+function deactivateService(companyId, id) {
+  return SalonService.findOneAndUpdate({ _id: id, companyId }, { isActive: false }, { new: true });
+}
+
 function computeCommission(service, saleAmount) {
   if (service.commissionType === 'fixed') return service.commissionRate;
   return Math.round(saleAmount * (service.commissionRate / 100) * 100) / 100;
@@ -106,6 +122,21 @@ function createMembershipPackage(input) {
   const { companyId, productId, variantId, name, salonServiceId, totalSessions, price, validityDays } = input;
   if (!name || !totalSessions || !price) throw new Error('name, totalSessions, and price are required.');
   return MembershipPackage.create({ companyId, productId, variantId, name, salonServiceId, totalSessions, price, validityDays });
+}
+
+/** Was missing — same reasoning as updateService: price/sessions/validity are correctable,
+ * the sellable link and which service it redeems for are not. */
+function updateMembershipPackage(companyId, id, updates) {
+  const allowed = ['name', 'totalSessions', 'price', 'validityDays'];
+  const set = {};
+  for (const key of allowed) if (updates[key] !== undefined) set[key] = updates[key];
+  return MembershipPackage.findOneAndUpdate({ _id: id, companyId }, set, { new: true, runValidators: true });
+}
+
+/** Soft-deactivate — customers who already bought this package keep their CustomerMembership
+ * record and remaining sessions regardless of whether the package is still for sale. */
+function deactivateMembershipPackage(companyId, id) {
+  return MembershipPackage.findOneAndUpdate({ _id: id, companyId }, { isActive: false }, { new: true });
 }
 
 function listMembershipPackages(companyId) {
@@ -196,7 +227,8 @@ function listCommissions(companyId, employeeId) {
 }
 
 module.exports = {
-  createService, listServices, billServiceWithCommission,
-  createMembershipPackage, listMembershipPackages, sellMembership, listCustomerMemberships,
+  createService, listServices, updateService, deactivateService, billServiceWithCommission,
+  createMembershipPackage, listMembershipPackages, updateMembershipPackage, deactivateMembershipPackage,
+  sellMembership, listCustomerMemberships,
   applyCommissionsToPayroll, listCommissions,
 };

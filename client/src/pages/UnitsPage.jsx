@@ -16,6 +16,15 @@ export function UnitsPage() {
   }
   useEffect(load, []);
 
+  async function handleRemove(u) {
+    if (!window.confirm(`Remove "${u.name}"? Products already using it keep their reference.`)) return;
+    try {
+      await api.del(`/units/${u._id}`);
+      toast('Unit removed.', 'success');
+      load();
+    } catch (err) { toast(err.message, 'error'); }
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -36,6 +45,7 @@ export function UnitsPage() {
                 <th className="px-3 py-2 font-medium">Name</th>
                 <th className="px-3 py-2 font-medium">Code</th>
                 <th className="px-3 py-2 font-medium">Converts to</th>
+                <th className="px-3 py-2 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -46,6 +56,7 @@ export function UnitsPage() {
                   <td className="px-3 py-2 text-ink-muted">
                     {u.baseUnitId ? `1 ${u.name} = ${u.conversionFactor} ${u.baseUnitId.name}` : <span className="chip-neutral">Base unit</span>}
                   </td>
+                  <td className="px-3 py-2 text-right"><button className="btn-ghost !text-danger !px-2 text-xs" onClick={() => handleRemove(u)}>Remove</button></td>
                 </tr>
               ))}
             </tbody>

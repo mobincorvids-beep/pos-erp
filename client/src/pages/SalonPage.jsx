@@ -29,7 +29,7 @@ function ServicesTab() {
   const toast = useToast();
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState(null); // null closed, {} new, {...} edit
   const [billing, setBilling] = useState(null);
 
   function load() {
@@ -38,13 +38,22 @@ function ServicesTab() {
   }
   useEffect(load, []);
 
+  async function handleDeactivate(s) {
+    if (!window.confirm(`Remove "${s.name}" from the menu? Past sales are unaffected.`)) return;
+    try {
+      await api.del(`/salon/services/${s._id}`);
+      toast('Service removed.', 'success');
+      load();
+    } catch (err) { toast(err.message, 'error'); }
+  }
+
   return (
     <div>
       <div className="flex justify-end mb-3">
-        <button className="btn-primary" onClick={() => setShowForm(true)}>New service</button>
+        <button className="btn-primary" onClick={() => setEditing({})}>New service</button>
       </div>
       {loading && <Loading />}
-      {!loading && services.length === 0 && <EmptyState title="No services yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Add a service</button>} />}
+      {!loading && services.length === 0 && <EmptyState title="No services yet" action={<button className="btn-primary" onClick={() => setEditing({})}>Add a service</button>} />}
       {!loading && services.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {services.map((s) => (
@@ -52,33 +61,48 @@ function ServicesTab() {
               <p className="text-sm font-medium">{s.name}</p>
               <p className="num text-sm text-accent-strong mt-1">{formatMoney(s.price)}</p>
               <p className="text-xs text-ink-muted mt-1">{s.commissionRate}{s.commissionType === 'percentage' ? '%' : ''} commission</p>
-              <button className="btn-ghost !text-accent !px-0 text-xs mt-2" onClick={() => setBilling(s)}>Bill this service</button>
+              <div className="flex items-center gap-3 mt-2">
+                <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => setBilling(s)}>Bill this service</button>
+                <button className="btn-ghost !text-ink-muted !px-0 text-xs" onClick={() => setEditing(s)}>Edit</button>
+                <button className="btn-ghost !text-danger !px-0 text-xs" onClick={() => handleDeactivate(s)}>Remove</button>
+              </div>
             </div>
           ))}
         </div>
       )}
-      {showForm && <ServiceForm onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
+      {editing !== null && <ServiceForm service={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
       {billing && <BillServiceForm service={billing} onClose={() => setBilling(null)} />}
     </div>
   );
 }
 
-function ServiceForm({ onClose, onSaved }) {
+function ServiceForm({ service, onClose, onSaved }) {
   const toast = useToast();
+  const isNew = !service._id;
   const [products, setProducts] = useState([]);
-  const [form, setForm] = useState({ productId: '', name: '', price: '', commissionType: 'percentage', commissionRate: '' });
+  const [form, setForm] = useState({
+    productId: service.productId || '', name: service.name || '', price: service.price ?? '',
+    commissionType: service.commissionType || 'percentage', commissionRate: service.commissionRate ?? '',
+  });
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { api.get('/products').then((rows) => setProducts(rows.filter((p) => p.trackingMode === 'service'))).catch(() => {}); }, []);
+  useEffect(() => { if (isNew) api.get('/products').then((rows) => setProducts(rows.filter((p) => p.trackingMode === 'service'))).catch(() => {}); }, [isNew]);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setSaving(true);
     try {
-      const product = products.find((p) => p._id === form.productId);
-      if (!product) throw new Error('Select a billing product.');
-      await api.post('/salon/services', { ...form, price: Number(form.price), commissionRate: Number(form.commissionRate) || 0, variantId: product.variants[0]?._id });
-      toast('Service created.', 'success');
+      if (isNew) {
+        const product = products.find((p) => p._id === form.productId);
+        if (!product) throw new Error('Select a billing product.');
+        await api.post('/salon/services', { ...form, price: Number(form.price), commissionRate: Number(form.commissionRate) || 0, variantId: product.variants[0]?._id });
+        toast('Service created.', 'success');
+      } else {
+        await api.put(`/salon/services/${service._id}`, {
+          name: form.name, price: Number(form.price), commissionType: form.commissionType, commissionRate: Number(form.commissionRate) || 0,
+        });
+        toast('Service updated.', 'success');
+      }
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -90,17 +114,19 @@ function ServiceForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">New service</p>
+        <p className="font-display text-lg mb-4">{isNew ? 'New service' : 'Edit service'}</p>
         <div className="space-y-3">
           <div><label className="field-label">Name</label><input required autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Haircut" /></div>
-          <div>
-            <label className="field-label">Billing product (trackingMode "service")</label>
-            <select required className="field-input" value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })}>
-              <option value="">Select…</option>
-              {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
-            </select>
-            {products.length === 0 && <p className="text-xs text-warning mt-1">Create a service-tracked product on the Products page first.</p>}
-          </div>
+          {isNew && (
+            <div>
+              <label className="field-label">Billing product (trackingMode "service")</label>
+              <select required className="field-input" value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })}>
+                <option value="">Select…</option>
+                {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
+              </select>
+              {products.length === 0 && <p className="text-xs text-warning mt-1">Create a service-tracked product on the Products page first.</p>}
+            </div>
+          )}
           <div><label className="field-label">Price</label><input type="number" required className="field-input num" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} /></div>
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -217,7 +243,7 @@ function PackagesTab() {
   const [packages, setPackages] = useState([]);
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState(null); // null closed, {} new, {...} edit
   const [selling, setSelling] = useState(null);
 
   function load() {
@@ -228,10 +254,19 @@ function PackagesTab() {
   }
   useEffect(load, []);
 
+  async function handleDeactivate(p) {
+    if (!window.confirm(`Remove "${p.name}"? Customers who already bought it keep their remaining sessions.`)) return;
+    try {
+      await api.del(`/salon/packages/${p._id}`);
+      toast('Package removed.', 'success');
+      load();
+    } catch (err) { toast(err.message, 'error'); }
+  }
+
   return (
     <div>
       <div className="flex justify-end mb-3">
-        <button className="btn-primary" onClick={() => setShowForm(true)}>New package</button>
+        <button className="btn-primary" onClick={() => setEditing({})}>New package</button>
       </div>
       {loading && <Loading />}
       {!loading && packages.length === 0 && <EmptyState title="No membership packages yet" />}
@@ -242,33 +277,48 @@ function PackagesTab() {
               <p className="text-sm font-medium">{p.name}</p>
               <p className="text-xs text-ink-muted mt-1">{p.totalSessions} sessions · {p.validityDays} days</p>
               <p className="num text-sm text-accent-strong mt-1">{formatMoney(p.price)}</p>
-              <button className="btn-ghost !text-accent !px-0 text-xs mt-2" onClick={() => setSelling(p)}>Sell to a customer</button>
+              <div className="flex items-center gap-3 mt-2">
+                <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => setSelling(p)}>Sell to a customer</button>
+                <button className="btn-ghost !text-ink-muted !px-0 text-xs" onClick={() => setEditing(p)}>Edit</button>
+                <button className="btn-ghost !text-danger !px-0 text-xs" onClick={() => handleDeactivate(p)}>Remove</button>
+              </div>
             </div>
           ))}
         </div>
       )}
-      {showForm && <PackageForm services={services} onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
+      {editing !== null && <PackageForm services={services} pkg={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
       {selling && <SellPackageForm pkg={selling} onClose={() => setSelling(null)} />}
     </div>
   );
 }
 
-function PackageForm({ services, onClose, onSaved }) {
+function PackageForm({ services, pkg, onClose, onSaved }) {
   const toast = useToast();
+  const isNew = !pkg._id;
   const [products, setProducts] = useState([]);
-  const [form, setForm] = useState({ productId: '', name: '', salonServiceId: '', totalSessions: '', price: '', validityDays: 365 });
+  const [form, setForm] = useState({
+    productId: pkg.productId || '', name: pkg.name || '', salonServiceId: pkg.salonServiceId || '',
+    totalSessions: pkg.totalSessions ?? '', price: pkg.price ?? '', validityDays: pkg.validityDays ?? 365,
+  });
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { api.get('/products').then((rows) => setProducts(rows.filter((p) => p.trackingMode === 'service'))).catch(() => {}); }, []);
+  useEffect(() => { if (isNew) api.get('/products').then((rows) => setProducts(rows.filter((p) => p.trackingMode === 'service'))).catch(() => {}); }, [isNew]);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setSaving(true);
     try {
-      const product = products.find((p) => p._id === form.productId);
-      if (!product) throw new Error('Select a billing product.');
-      await api.post('/salon/packages', { ...form, totalSessions: Number(form.totalSessions), price: Number(form.price), validityDays: Number(form.validityDays), variantId: product.variants[0]?._id });
-      toast('Package created.', 'success');
+      if (isNew) {
+        const product = products.find((p) => p._id === form.productId);
+        if (!product) throw new Error('Select a billing product.');
+        await api.post('/salon/packages', { ...form, totalSessions: Number(form.totalSessions), price: Number(form.price), validityDays: Number(form.validityDays), variantId: product.variants[0]?._id });
+        toast('Package created.', 'success');
+      } else {
+        await api.put(`/salon/packages/${pkg._id}`, {
+          name: form.name, totalSessions: Number(form.totalSessions), price: Number(form.price), validityDays: Number(form.validityDays),
+        });
+        toast('Package updated.', 'success');
+      }
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -280,23 +330,27 @@ function PackageForm({ services, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">New membership package</p>
+        <p className="font-display text-lg mb-4">{isNew ? 'New membership package' : 'Edit membership package'}</p>
         <div className="space-y-3">
           <div><label className="field-label">Name</label><input required autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-          <div>
-            <label className="field-label">Billing product (trackingMode "service")</label>
-            <select required className="field-input" value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })}>
-              <option value="">Select…</option>
-              {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="field-label">Redeemable for</label>
-            <select required className="field-input" value={form.salonServiceId} onChange={(e) => setForm({ ...form, salonServiceId: e.target.value })}>
-              <option value="">Select a service…</option>
-              {services.map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
-            </select>
-          </div>
+          {isNew && (
+            <>
+              <div>
+                <label className="field-label">Billing product (trackingMode "service")</label>
+                <select required className="field-input" value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })}>
+                  <option value="">Select…</option>
+                  {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="field-label">Redeemable for</label>
+                <select required className="field-input" value={form.salonServiceId} onChange={(e) => setForm({ ...form, salonServiceId: e.target.value })}>
+                  <option value="">Select a service…</option>
+                  {services.map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
+                </select>
+              </div>
+            </>
+          )}
           <div className="grid grid-cols-2 gap-2">
             <div><label className="field-label">Sessions</label><input type="number" required className="field-input num" value={form.totalSessions} onChange={(e) => setForm({ ...form, totalSessions: e.target.value })} /></div>
             <div><label className="field-label">Price</label><input type="number" required className="field-input num" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} /></div>

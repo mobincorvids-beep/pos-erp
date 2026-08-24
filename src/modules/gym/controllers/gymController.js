@@ -14,6 +14,22 @@ async function createClass(req, res) {
   }
 }
 
+async function updateClass(req, res) {
+  try {
+    const gymClass = await gymService.updateClass(req.companyId, req.params.classId, req.body);
+    if (!gymClass) return res.status(404).json({ error: 'Class not found.' });
+    res.json(gymClass);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function deactivateClass(req, res) {
+  const gymClass = await gymService.deactivateClass(req.companyId, req.params.classId);
+  if (!gymClass) return res.status(404).json({ error: 'Class not found.' });
+  res.json({ ok: true });
+}
+
 async function scheduleSession(req, res) {
   try {
     const gymSession = await gymService.scheduleSession(req.params.classId, req.body.startTime);
@@ -26,6 +42,15 @@ async function scheduleSession(req, res) {
 async function listSessions(req, res) {
   const rows = await gymService.listSessions(req.companyId, req.query.gymClassId || null);
   res.json(rows);
+}
+
+async function cancelSession(req, res) {
+  try {
+    const gymSession = await gymService.cancelSession(req.companyId, req.params.sessionId);
+    res.json(gymSession);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 }
 
 async function sessionRoster(req, res) {
@@ -52,4 +77,7 @@ async function cancelEnrollment(req, res) {
   }
 }
 
-module.exports = { listClasses, createClass, scheduleSession, listSessions, sessionRoster, enroll, cancelEnrollment };
+module.exports = {
+  listClasses, createClass, updateClass, deactivateClass,
+  scheduleSession, listSessions, cancelSession, sessionRoster, enroll, cancelEnrollment,
+};

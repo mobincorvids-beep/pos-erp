@@ -11,6 +11,8 @@ router.use(requireActiveModule('salon'));
 
 router.get('/services', controller.listServices);
 router.post('/services', controller.createService);
+router.put('/services/:id', controller.updateService);
+router.delete('/services/:id', controller.deactivateService);
 router.post('/services/bill',
   body('salonServiceId').isString().notEmpty().withMessage('salonServiceId is required.'),
   body('employeeId').isString().notEmpty().withMessage('employeeId is required.'),
@@ -20,6 +22,8 @@ router.post('/services/bill',
 
 router.get('/packages', controller.listPackages);
 router.post('/packages', controller.createPackage);
+router.put('/packages/:id', controller.updatePackage);
+router.delete('/packages/:id', controller.deactivatePackage);
 router.post('/packages/sell',
   body('membershipPackageId').isString().notEmpty().withMessage('membershipPackageId is required.'),
   body('customerId').isString().notEmpty().withMessage('customerId is required.'),

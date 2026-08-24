@@ -14,6 +14,26 @@ async function createRoom(req, res) {
   }
 }
 
+async function updateRoom(req, res) {
+  try {
+    const room = await hotelService.updateRoom(req.companyId, req.params.roomId, req.body);
+    if (!room) return res.status(404).json({ error: 'Room not found.' });
+    res.json(room);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function deactivateRoom(req, res) {
+  try {
+    const room = await hotelService.deactivateRoom(req.companyId, req.params.roomId);
+    if (!room) return res.status(404).json({ error: 'Room not found.' });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
 async function checkAvailability(req, res) {
   try {
     const available = await hotelService.isRoomAvailable(req.params.roomId, new Date(req.query.checkInDate), new Date(req.query.checkOutDate));
@@ -27,6 +47,15 @@ async function bookReservation(req, res) {
   try {
     const reservation = await hotelService.bookReservation({ ...req.body, companyId: req.companyId, userId: req.auth.userId });
     res.status(201).json(reservation);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function updateReservation(req, res) {
+  try {
+    const reservation = await hotelService.updateReservation(req.companyId, req.params.id, req.body);
+    res.json(reservation);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -83,6 +112,6 @@ async function cancelReservation(req, res) {
 }
 
 module.exports = {
-  listRooms, createRoom, checkAvailability,
-  bookReservation, listReservations, checkIn, addExtraCharge, checkOut, markRoomClean, cancelReservation,
+  listRooms, createRoom, updateRoom, deactivateRoom, checkAvailability,
+  bookReservation, updateReservation, listReservations, checkIn, addExtraCharge, checkOut, markRoomClean, cancelReservation,
 };

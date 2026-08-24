@@ -23,4 +23,13 @@ async function redeemDaily(req, res) {
   }
 }
 
-module.exports = { sellSubscription, listSubscriptions, redeemDaily };
+async function cancelSubscription(req, res) {
+  try {
+    const subscription = await cafeSubscriptionService.cancelSubscription(req.companyId, req.params.id);
+    res.json(subscription);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+module.exports = { sellSubscription, listSubscriptions, redeemDaily, cancelSubscription };

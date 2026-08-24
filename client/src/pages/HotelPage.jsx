@@ -293,7 +293,7 @@ function RoomsTab() {
   const toast = useToast();
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState(null); // null closed, {} new, {...} edit
 
   function load() {
     setLoading(true);
@@ -309,13 +309,22 @@ function RoomsTab() {
     } catch (err) { toast(err.message, 'error'); }
   }
 
+  async function handleRemove(r) {
+    if (!window.confirm(`Remove room ${r.roomNumber}?`)) return;
+    try {
+      await api.del(`/hotel/rooms/${r._id}`);
+      toast('Room removed.', 'success');
+      load();
+    } catch (err) { toast(err.message, 'error'); }
+  }
+
   return (
     <div>
       <div className="flex justify-end mb-3">
-        <button className="btn-primary" onClick={() => setShowForm(true)}>Add room</button>
+        <button className="btn-primary" onClick={() => setEditing({})}>Add room</button>
       </div>
       {loading && <Loading />}
-      {!loading && rooms.length === 0 && <EmptyState title="No rooms yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Add a room</button>} />}
+      {!loading && rooms.length === 0 && <EmptyState title="No rooms yet" action={<button className="btn-primary" onClick={() => setEditing({})}>Add a room</button>} />}
       {!loading && rooms.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {rooms.map((r) => (
@@ -326,36 +335,51 @@ function RoomsTab() {
               </div>
               <p className="text-xs text-ink-muted">{r.roomType}</p>
               <p className="num text-sm mt-1">{formatMoney(r.ratePerNight)}/night</p>
-              {r.status === 'cleaning' && <button className="btn-ghost !text-accent !px-0 text-xs mt-2" onClick={() => markClean(r._id)}>Mark clean</button>}
+              <div className="flex items-center gap-3 mt-2">
+                {r.status === 'cleaning' && <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => markClean(r._id)}>Mark clean</button>}
+                <button className="btn-ghost !text-ink-muted !px-0 text-xs" onClick={() => setEditing(r)}>Edit</button>
+                {r.status !== 'occupied' && <button className="btn-ghost !text-danger !px-0 text-xs" onClick={() => handleRemove(r)}>Remove</button>}
+              </div>
             </div>
           ))}
         </div>
       )}
-      {showForm && <RoomForm onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
+      {editing !== null && <RoomForm room={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
     </div>
   );
 }
 
-function RoomForm({ onClose, onSaved }) {
+function RoomForm({ room, onClose, onSaved }) {
   const toast = useToast();
+  const isNew = !room._id;
   const [branches, setBranches] = useState([]);
   const [products, setProducts] = useState([]);
-  const [form, setForm] = useState({ branchId: '', roomNumber: '', roomType: '', ratePerNight: '', billingProductId: '' });
+  const [form, setForm] = useState({
+    branchId: room.branchId || '', roomNumber: room.roomNumber || '', roomType: room.roomType || '',
+    ratePerNight: room.ratePerNight ?? '', billingProductId: room.billingProductId || '',
+  });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    api.get('/org/branches').then(setBranches).catch(() => {});
-    api.get('/products').then((rows) => setProducts(rows.filter((p) => p.trackingMode === 'service'))).catch(() => {});
-  }, []);
+    if (isNew) {
+      api.get('/org/branches').then(setBranches).catch(() => {});
+      api.get('/products').then((rows) => setProducts(rows.filter((p) => p.trackingMode === 'service'))).catch(() => {});
+    }
+  }, [isNew]);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setSaving(true);
     try {
-      const product = products.find((p) => p._id === form.billingProductId);
-      if (!product) throw new Error('Select a billing product — it must have trackingMode "service".');
-      await api.post('/hotel/rooms', { ...form, ratePerNight: Number(form.ratePerNight), billingVariantId: product.variants[0]?._id });
-      toast('Room added.', 'success');
+      if (isNew) {
+        const product = products.find((p) => p._id === form.billingProductId);
+        if (!product) throw new Error('Select a billing product — it must have trackingMode "service".');
+        await api.post('/hotel/rooms', { ...form, ratePerNight: Number(form.ratePerNight), billingVariantId: product.variants[0]?._id });
+        toast('Room added.', 'success');
+      } else {
+        await api.put(`/hotel/rooms/${room._id}`, { roomNumber: form.roomNumber, roomType: form.roomType, ratePerNight: Number(form.ratePerNight) });
+        toast('Room updated.', 'success');
+      }
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -367,26 +391,30 @@ function RoomForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Add room</p>
+        <p className="font-display text-lg mb-4">{isNew ? 'Add room' : 'Edit room'}</p>
         <div className="space-y-3">
-          <div>
-            <label className="field-label">Branch</label>
-            <select required className="field-input" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value })}>
-              <option value="">Select…</option>
-              {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
-            </select>
-          </div>
+          {isNew && (
+            <div>
+              <label className="field-label">Branch</label>
+              <select required className="field-input" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value })}>
+                <option value="">Select…</option>
+                {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
+              </select>
+            </div>
+          )}
           <div><label className="field-label">Room number</label><input required className="field-input" value={form.roomNumber} onChange={(e) => setForm({ ...form, roomNumber: e.target.value })} /></div>
           <div><label className="field-label">Type</label><input className="field-input" value={form.roomType} onChange={(e) => setForm({ ...form, roomType: e.target.value })} placeholder="e.g. Deluxe" /></div>
           <div><label className="field-label">Rate per night</label><input type="number" required className="field-input num" value={form.ratePerNight} onChange={(e) => setForm({ ...form, ratePerNight: e.target.value })} /></div>
-          <div>
-            <label className="field-label">Billing product (trackingMode "service")</label>
-            <select required className="field-input" value={form.billingProductId} onChange={(e) => setForm({ ...form, billingProductId: e.target.value })}>
-              <option value="">Select…</option>
-              {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
-            </select>
-            {products.length === 0 && <p className="text-xs text-warning mt-1">No service-tracked products found — create one on the Products page first (trackingMode: "service").</p>}
-          </div>
+          {isNew && (
+            <div>
+              <label className="field-label">Billing product (trackingMode "service")</label>
+              <select required className="field-input" value={form.billingProductId} onChange={(e) => setForm({ ...form, billingProductId: e.target.value })}>
+                <option value="">Select…</option>
+                {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
+              </select>
+              {products.length === 0 && <p className="text-xs text-warning mt-1">No service-tracked products found — create one on the Products page first (trackingMode: "service").</p>}
+            </div>
+          )}
         </div>
         <div className="flex justify-end gap-2 mt-5">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>

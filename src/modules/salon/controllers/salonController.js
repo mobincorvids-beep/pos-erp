@@ -14,6 +14,22 @@ async function createService(req, res) {
   }
 }
 
+async function updateService(req, res) {
+  try {
+    const service = await salonService.updateService(req.companyId, req.params.id, req.body);
+    if (!service) return res.status(404).json({ error: 'Service not found.' });
+    res.json(service);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function deactivateService(req, res) {
+  const service = await salonService.deactivateService(req.companyId, req.params.id);
+  if (!service) return res.status(404).json({ error: 'Service not found.' });
+  res.json({ ok: true });
+}
+
 async function billService(req, res) {
   try {
     const result = await salonService.billServiceWithCommission({ ...req.body, companyId: req.companyId, userId: req.auth.userId });
@@ -35,6 +51,22 @@ async function createPackage(req, res) {
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
+}
+
+async function updatePackage(req, res) {
+  try {
+    const pkg = await salonService.updateMembershipPackage(req.companyId, req.params.id, req.body);
+    if (!pkg) return res.status(404).json({ error: 'Package not found.' });
+    res.json(pkg);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function deactivatePackage(req, res) {
+  const pkg = await salonService.deactivateMembershipPackage(req.companyId, req.params.id);
+  if (!pkg) return res.status(404).json({ error: 'Package not found.' });
+  res.json({ ok: true });
 }
 
 async function sellMembership(req, res) {
@@ -66,7 +98,7 @@ async function listCommissions(req, res) {
 }
 
 module.exports = {
-  listServices, createService, billService,
-  listPackages, createPackage, sellMembership, customerMemberships,
+  listServices, createService, updateService, deactivateService, billService,
+  listPackages, createPackage, updatePackage, deactivatePackage, sellMembership, customerMemberships,
   applyCommissionsToPayroll, listCommissions,
 };

@@ -11,7 +11,7 @@ export function ProductsPage() {
   const toast = useToast();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState(null); // null closed, {} new, {...} edit
 
   function load() {
     setLoading(true);
@@ -20,6 +20,15 @@ export function ProductsPage() {
 
   useEffect(load, []);
 
+  async function handleRemove(p) {
+    if (!window.confirm(`Remove "${p.name}" from your catalog? Past sales and stock history are unaffected.`)) return;
+    try {
+      await api.del(`/products/${p._id}`);
+      toast('Product removed.', 'success');
+      load();
+    } catch (err) { toast(err.message, 'error'); }
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -27,7 +36,7 @@ export function ProductsPage() {
           <p className="page-title">Products</p>
           <p className="text-sm text-ink-muted mt-1">{products.length} product{products.length === 1 ? '' : 's'} in your catalog</p>
         </div>
-        <button className="btn-primary" onClick={() => setShowForm(true)}>New product</button>
+        <button className="btn-primary" onClick={() => setEditing({})}>New product</button>
       </div>
 
       {loading && <Loading />}
@@ -36,7 +45,7 @@ export function ProductsPage() {
         <EmptyState
           title="No products yet"
           description="Add your first product to start selling and tracking stock."
-          action={<button className="btn-primary" onClick={() => setShowForm(true)}>Add a product</button>}
+          action={<button className="btn-primary" onClick={() => setEditing({})}>Add a product</button>}
         />
       )}
 
@@ -50,6 +59,7 @@ export function ProductsPage() {
                 <th className="px-3 py-2 font-medium">Tracking</th>
                 <th className="px-3 py-2 font-medium text-right">Cost</th>
                 <th className="px-3 py-2 font-medium text-right">Price</th>
+                <th className="px-3 py-2 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -60,6 +70,10 @@ export function ProductsPage() {
                   <td className="px-3 py-2"><span className="chip-neutral capitalize">{p.trackingMode}</span></td>
                   <td className="px-3 py-2 num text-right">{formatMoney(p.costPrice, company?.currency)}</td>
                   <td className="px-3 py-2 num text-right text-accent-strong">{formatMoney(p.sellingPrice, company?.currency)}</td>
+                  <td className="px-3 py-2 text-right">
+                    <button className="btn-ghost !text-ink-muted !px-2 text-xs" onClick={() => setEditing(p)}>Edit</button>
+                    <button className="btn-ghost !text-danger !px-2 text-xs" onClick={() => handleRemove(p)}>Remove</button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -67,14 +81,20 @@ export function ProductsPage() {
         </div>
       )}
 
-      {showForm && <ProductForm onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
+      {editing !== null && <ProductForm product={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
     </div>
   );
 }
 
-function ProductForm({ onClose, onSaved }) {
+function ProductForm({ product, onClose, onSaved }) {
   const toast = useToast();
-  const [form, setForm] = useState({ name: '', sku: '', barcode: '', costPrice: '', sellingPrice: '', trackingMode: 'simple' });
+  const isNew = !product._id;
+  const [form, setForm] = useState({
+    name: product.name || '', sku: product.sku || '', barcode: product.barcode || '',
+    costPrice: product.costPrice ?? '', sellingPrice: product.sellingPrice ?? '',
+    minStock: product.minStock ?? '', reorderLevel: product.reorderLevel ?? '',
+    trackingMode: product.trackingMode || 'simple',
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -83,13 +103,22 @@ function ProductForm({ onClose, onSaved }) {
     setSaving(true);
     setError('');
     try {
-      await api.post('/products', {
-        name: form.name, sku: form.sku || undefined, barcode: form.barcode || undefined,
-        trackingMode: form.trackingMode,
-        costPrice: Number(form.costPrice) || 0, sellingPrice: Number(form.sellingPrice) || 0,
-        variants: [{ sku: form.sku || undefined, barcode: form.barcode || undefined, sellingPrice: Number(form.sellingPrice) || 0 }],
-      });
-      toast('Product created.', 'success');
+      if (isNew) {
+        await api.post('/products', {
+          name: form.name, sku: form.sku || undefined, barcode: form.barcode || undefined,
+          trackingMode: form.trackingMode,
+          costPrice: Number(form.costPrice) || 0, sellingPrice: Number(form.sellingPrice) || 0,
+          variants: [{ sku: form.sku || undefined, barcode: form.barcode || undefined, sellingPrice: Number(form.sellingPrice) || 0 }],
+        });
+        toast('Product created.', 'success');
+      } else {
+        await api.put(`/products/${product._id}`, {
+          name: form.name, sku: form.sku || undefined, barcode: form.barcode || undefined,
+          costPrice: Number(form.costPrice) || 0, sellingPrice: Number(form.sellingPrice) || 0,
+          minStock: Number(form.minStock) || 0, reorderLevel: Number(form.reorderLevel) || 0,
+        });
+        toast('Product updated.', 'success');
+      }
       onSaved();
     } catch (err) {
       setError(err.message);
@@ -101,7 +130,7 @@ function ProductForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-md">
-        <p className="font-display text-lg mb-4">New product</p>
+        <p className="font-display text-lg mb-4">{isNew ? 'New product' : 'Edit product'}</p>
         {error && <p className="chip-danger !inline-block w-full !rounded px-3 py-2 text-sm mb-3">{error}</p>}
 
         <div className="space-y-3">
@@ -129,17 +158,33 @@ function ProductForm({ onClose, onSaved }) {
               <input type="number" step="0.01" required className="field-input num" value={form.sellingPrice} onChange={(e) => setForm({ ...form, sellingPrice: e.target.value })} />
             </div>
           </div>
+          {!isNew && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="field-label">Min stock</label>
+                <input type="number" className="field-input num" value={form.minStock} onChange={(e) => setForm({ ...form, minStock: e.target.value })} />
+              </div>
+              <div>
+                <label className="field-label">Reorder level</label>
+                <input type="number" className="field-input num" value={form.reorderLevel} onChange={(e) => setForm({ ...form, reorderLevel: e.target.value })} />
+              </div>
+            </div>
+          )}
           <div>
             <label className="field-label">Tracking mode</label>
-            <select className="field-input" value={form.trackingMode} onChange={(e) => setForm({ ...form, trackingMode: e.target.value })}>
-              <option value="simple">Simple</option>
-              <option value="variant">Variant (size/color)</option>
-              <option value="batch">Batch/expiry</option>
-              <option value="serial">Serial/IMEI</option>
-              <option value="weight">Weight-based</option>
-              <option value="bundle">Bundle</option>
-              <option value="service">Service (no stock — a haircut, a room-night, a fee...)</option>
-            </select>
+            {isNew ? (
+              <select className="field-input" value={form.trackingMode} onChange={(e) => setForm({ ...form, trackingMode: e.target.value })}>
+                <option value="simple">Simple</option>
+                <option value="variant">Variant (size/color)</option>
+                <option value="batch">Batch/expiry</option>
+                <option value="serial">Serial/IMEI</option>
+                <option value="weight">Weight-based</option>
+                <option value="bundle">Bundle</option>
+                <option value="service">Service (no stock — a haircut, a room-night, a fee...)</option>
+              </select>
+            ) : (
+              <p className="text-sm text-ink-muted">{form.trackingMode} <span className="text-xs">(can't be changed after creation — how stock is already tracked depends on it)</span></p>
+            )}
           </div>
         </div>
 

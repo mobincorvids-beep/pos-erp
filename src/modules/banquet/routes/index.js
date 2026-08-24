@@ -17,6 +17,8 @@ router.post('/venues',
   body('rentalBillingVariantId').isString().notEmpty().withMessage('rentalBillingVariantId is required.'),
   validate, controller.createVenue);
 router.get('/venues/:venueId/availability', controller.checkAvailability); // ?eventDate=
+router.put('/venues/:venueId', controller.updateVenue);
+router.delete('/venues/:venueId', controller.deactivateVenue);
 
 router.get('/packages', controller.listPackages);
 router.post('/packages',
@@ -25,6 +27,8 @@ router.post('/packages',
   body('billingProductId').isString().notEmpty().withMessage('billingProductId is required.'),
   body('billingVariantId').isString().notEmpty().withMessage('billingVariantId is required.'),
   validate, controller.createPackage);
+router.put('/packages/:packageId', controller.updatePackage);
+router.delete('/packages/:packageId', controller.deactivatePackage);
 
 router.post('/bookings',
   body('venueId').isString().notEmpty().withMessage('venueId is required.'),

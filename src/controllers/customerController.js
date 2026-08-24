@@ -11,6 +11,20 @@ async function create(req, res) {
   res.status(201).json(customer);
 }
 
+/** Was missing entirely — a wrong phone number, address, or credit limit had no way to be
+ * corrected after intake. Deliberately excludes openingBalance and loyaltyPoints: those are
+ * ledger-derived running totals, not free-text fields — changing them here would silently
+ * desync the customer record from customerLedgerService's own math. */
+async function update(req, res) {
+  const allowed = ['name', 'phone', 'email', 'address', 'creditLimit', 'priceGroupId', 'tags'];
+  const updates = {};
+  for (const key of allowed) if (req.body[key] !== undefined) updates[key] = req.body[key];
+
+  const customer = await Customer.findOneAndUpdate({ _id: req.params.id, companyId: req.companyId }, updates, { new: true, runValidators: true });
+  if (!customer) return res.status(404).json({ error: 'Customer not found.' });
+  res.json(customer);
+}
+
 async function getLedger(req, res) {
   try {
     const ledger = await customerLedgerService.ledger(req.params.id);
@@ -36,4 +50,4 @@ async function aging(req, res) {
   res.json(rows);
 }
 
-module.exports = { list, create, getLedger, recordPayment, aging };
+module.exports = { list, create, update, getLedger, recordPayment, aging };

@@ -28,7 +28,7 @@ const rentalAgreementSchema = new Schema({
   checkOutDate: { type: Date, default: Date.now },
   expectedReturnDate: { type: Date, required: true },
   actualReturnDate: Date,
-  status: { type: String, default: 'out', enum: ['out', 'returned'] },
+  status: { type: String, default: 'out', enum: ['out', 'returned', 'cancelled'] },
   condition: { type: String, default: null, enum: [null, 'good', 'minor_damage', 'lost_or_major_damage'] },
   rentalCharge: { type: Number, default: 0 },
   depositRefunded: { type: Number, default: 0 },

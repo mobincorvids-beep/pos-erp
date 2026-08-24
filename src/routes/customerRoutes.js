@@ -14,6 +14,7 @@ const createValidation = [body('name').isString().trim().notEmpty().withMessage(
 router.use(requireAuth, scopeToCompany);
 router.get('/', controller.list);
 router.post('/', createValidation, validate, controller.create);
+router.put('/:id', createValidation, validate, controller.update);
 router.get('/aging', controller.aging); // must be before /:id/ledger to avoid route collision
 router.get('/:id/ledger', controller.getLedger);
 router.post('/:id/payments', requirePermission(CUSTOMER_PAYMENT_RECORD), paymentValidation, validate, controller.recordPayment);

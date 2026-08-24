@@ -17,6 +17,8 @@ router.post('/rooms',
   body('billingVariantId').isString().notEmpty().withMessage('billingVariantId is required.'),
   validate, controller.createRoom);
 router.get('/rooms/:roomId/availability', controller.checkAvailability); // ?checkInDate=&checkOutDate=
+router.put('/rooms/:roomId', controller.updateRoom);
+router.delete('/rooms/:roomId', controller.deactivateRoom);
 router.post('/rooms/:roomId/mark-clean', controller.markRoomClean);
 
 router.post('/reservations',
@@ -24,6 +26,7 @@ router.post('/reservations',
   body('checkInDate').isISO8601().withMessage('checkInDate must be a valid date.'),
   body('checkOutDate').isISO8601().withMessage('checkOutDate must be a valid date.'),
   validate, controller.bookReservation);
+router.put('/reservations/:id', controller.updateReservation);
 router.get('/reservations', controller.listReservations); // ?status=&roomId=
 router.post('/reservations/:id/check-in', controller.checkIn);
 router.post('/reservations/:id/extras',

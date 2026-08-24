@@ -21,6 +21,7 @@ router.post('/rentals',
   body('rentalBillingVariantId').isString().notEmpty().withMessage('rentalBillingVariantId is required.'),
   validate, controller.checkOutRental);
 router.get('/rentals', controller.listRentals); // ?status=
+router.post('/rentals/:id/void', controller.voidRental);
 router.post('/rentals/:id/return',
   body('condition').isIn(['good', 'minor_damage', 'lost_or_major_damage']).withMessage('condition must be "good", "minor_damage", or "lost_or_major_damage".'),
   body('finalPaymentAccountId').isString().notEmpty().withMessage('finalPaymentAccountId is required.'),

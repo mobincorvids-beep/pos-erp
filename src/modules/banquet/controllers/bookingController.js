@@ -14,6 +14,22 @@ async function createVenue(req, res) {
   }
 }
 
+async function updateVenue(req, res) {
+  try {
+    const venue = await bookingService.updateVenue(req.companyId, req.params.venueId, req.body);
+    if (!venue) return res.status(404).json({ error: 'Venue not found.' });
+    res.json(venue);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function deactivateVenue(req, res) {
+  const venue = await bookingService.deactivateVenue(req.companyId, req.params.venueId);
+  if (!venue) return res.status(404).json({ error: 'Venue not found.' });
+  res.json({ ok: true });
+}
+
 async function listPackages(req, res) {
   const rows = await bookingService.listPackages(req.companyId);
   res.json(rows);
@@ -26,6 +42,22 @@ async function createPackage(req, res) {
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
+}
+
+async function updatePackage(req, res) {
+  try {
+    const pkg = await bookingService.updatePackage(req.companyId, req.params.packageId, req.body);
+    if (!pkg) return res.status(404).json({ error: 'Package not found.' });
+    res.json(pkg);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function deactivatePackage(req, res) {
+  const pkg = await bookingService.deactivatePackage(req.companyId, req.params.packageId);
+  if (!pkg) return res.status(404).json({ error: 'Package not found.' });
+  res.json({ ok: true });
 }
 
 async function checkAvailability(req, res) {
@@ -69,4 +101,8 @@ async function cancelBooking(req, res) {
   }
 }
 
-module.exports = { listVenues, createVenue, listPackages, createPackage, checkAvailability, bookEvent, listBookings, completeEvent, cancelBooking };
+module.exports = {
+  listVenues, createVenue, updateVenue, deactivateVenue,
+  listPackages, createPackage, updatePackage, deactivatePackage,
+  checkAvailability, bookEvent, listBookings, completeEvent, cancelBooking,
+};

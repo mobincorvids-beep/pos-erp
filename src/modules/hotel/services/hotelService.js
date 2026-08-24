@@ -30,6 +30,28 @@ function listRooms(companyId, branchId) {
   return Room.find(filter);
 }
 
+/** Was missing — a typo'd room number or a rate correction had no way to be fixed. Deliberately
+ * excludes billingProductId/billingVariantId (the sellable link — changing it would retroactively
+ * reinterpret past reservations' bills). */
+function updateRoom(companyId, id, updates) {
+  const allowed = ['roomNumber', 'roomType', 'ratePerNight'];
+  const set = {};
+  for (const key of allowed) if (updates[key] !== undefined) set[key] = updates[key];
+  return Room.findOneAndUpdate({ _id: id, companyId }, set, { new: true, runValidators: true });
+}
+
+/** Soft-deactivate — past reservations reference rooms by id and must keep resolving.
+ * Refuses on a room that's currently occupied, same "can't remove what's in active use"
+ * rule as Branch/Table elsewhere in this codebase. */
+async function deactivateRoom(companyId, id) {
+  const room = await Room.findOne({ _id: id, companyId });
+  if (!room) return null;
+  if (room.status === 'occupied') throw new Error('Cannot remove an occupied room — check the guest out first.');
+  room.isActive = false;
+  await room.save();
+  return room;
+}
+
 /** Reservations, most recent first — the UI's only way to browse existing bookings without knowing an ID up front. */
 function listReservations(companyId, { status, roomId } = {}) {
   const filter = { companyId };
@@ -205,7 +227,32 @@ async function cancelReservation(reservationId) {
   return reservation;
 }
 
+/** Was missing — correcting a wrong date range or guest count meant cancel-and-rebook, which
+ * loses the original booking record. Only allowed while still 'booked' (pre-arrival); once
+ * checked in, the stay is underway and dates shouldn't move retroactively. Re-checks room
+ * availability for the new range, same as booking fresh. */
+async function updateReservation(companyId, reservationId, { checkInDate, checkOutDate, guests }) {
+  const reservation = await Reservation.findOne({ _id: reservationId, companyId });
+  if (!reservation) throw new Error('Reservation not found.');
+  if (reservation.status !== 'booked') throw new Error(`Cannot edit a reservation with status "${reservation.status}".`);
+
+  const newCheckIn = checkInDate ? new Date(checkInDate) : reservation.checkInDate;
+  const newCheckOut = checkOutDate ? new Date(checkOutDate) : reservation.checkOutDate;
+  if (!(newCheckIn < newCheckOut)) throw new Error('checkOutDate must be after checkInDate.');
+
+  if (checkInDate || checkOutDate) {
+    const available = await isRoomAvailable(reservation.roomId, newCheckIn, newCheckOut, reservationId);
+    if (!available) throw new Error('This room is already booked for part or all of that new date range.');
+  }
+
+  reservation.checkInDate = newCheckIn;
+  reservation.checkOutDate = newCheckOut;
+  if (guests !== undefined) reservation.guests = guests;
+  await reservation.save();
+  return reservation;
+}
+
 module.exports = {
-  createRoom, listRooms, isRoomAvailable, nightsBetween,
-  bookReservation, listReservations, checkIn, addExtraCharge, checkOut, markRoomClean, cancelReservation,
+  createRoom, listRooms, updateRoom, deactivateRoom, isRoomAvailable, nightsBetween,
+  bookReservation, updateReservation, listReservations, checkIn, addExtraCharge, checkOut, markRoomClean, cancelReservation,
 };

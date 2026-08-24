@@ -20,6 +20,15 @@ export function HardwarePage() {
   }
   useEffect(load, []);
 
+  async function handleVoid(r) {
+    if (!window.confirm(`Void this rental for ${r.customerId?.name}? Restocks the item and reverses the deposit — use this for a mistaken checkout, not a real return.`)) return;
+    try {
+      await api.post(`/hardware/rentals/${r._id}/void`);
+      toast('Rental voided.', 'success');
+      load();
+    } catch (err) { toast(err.message, 'error'); }
+  }
+
   return (
     <div className="flex flex-col lg:flex-row gap-6">
       <div className="flex-1 min-w-0">
@@ -36,7 +45,10 @@ export function HardwarePage() {
                     <td className="px-3 py-2">{r.productId?.name}</td>
                     <td className="px-3 py-2 text-ink-muted">{r.customerId?.name}</td>
                     <td className="px-3 py-2"><span className={r.status === 'out' ? 'chip-warning' : 'chip-accent'}>{r.status}</span></td>
-                    <td className="px-3 py-2 text-right">{r.status === 'out' && <button className="btn-ghost !text-accent" onClick={() => setReturning(r)}>Return</button>}</td>
+                    <td className="px-3 py-2 text-right">
+                      {r.status === 'out' && <button className="btn-ghost !text-accent !px-2" onClick={() => setReturning(r)}>Return</button>}
+                      {r.status === 'out' && <button className="btn-ghost !text-danger !px-2" onClick={() => handleVoid(r)}>Void</button>}
+                    </td>
                   </tr>
                 ))}
               </tbody>

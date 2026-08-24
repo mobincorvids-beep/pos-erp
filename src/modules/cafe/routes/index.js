@@ -21,5 +21,6 @@ router.post('/subscriptions',
   validate, controller.sellSubscription);
 router.get('/subscriptions', controller.listSubscriptions); // ?customerId=&status=
 router.post('/subscriptions/:id/redeem', body('warehouseId').isString().notEmpty().withMessage('warehouseId is required.'), validate, controller.redeemDaily);
+router.post('/subscriptions/:id/cancel', controller.cancelSubscription);
 
 module.exports = router;

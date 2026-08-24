@@ -11,7 +11,7 @@ export function CustomersPage() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
-  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState(null); // null closed, {} new, {...} edit
 
   function load() {
     setLoading(true);
@@ -24,12 +24,12 @@ export function CustomersPage() {
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-4">
           <p className="page-title">Customers</p>
-          <button className="btn-primary" onClick={() => setShowForm(true)}>New customer</button>
+          <button className="btn-primary" onClick={() => setEditing({})}>New customer</button>
         </div>
 
         {loading && <Loading />}
         {!loading && customers.length === 0 && (
-          <EmptyState title="No customers yet" description="Add customers to track credit sales and loyalty." action={<button className="btn-primary" onClick={() => setShowForm(true)}>Add a customer</button>} />
+          <EmptyState title="No customers yet" description="Add customers to track credit sales and loyalty." action={<button className="btn-primary" onClick={() => setEditing({})}>Add a customer</button>} />
         )}
 
         {!loading && customers.length > 0 && (
@@ -41,15 +41,17 @@ export function CustomersPage() {
                   <th className="px-3 py-2 font-medium">Phone</th>
                   <th className="px-3 py-2 font-medium">Tags</th>
                   <th className="px-3 py-2 font-medium text-right">Loyalty pts</th>
+                  <th className="px-3 py-2 font-medium text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {customers.map((c) => (
-                  <tr key={c._id} onClick={() => setSelected(c)} className={`border-b border-rule last:border-0 cursor-pointer hover:bg-paper ${selected?._id === c._id ? 'bg-accent-soft/40' : ''}`}>
-                    <td className="px-3 py-2">{c.name}</td>
-                    <td className="px-3 py-2 num text-ink-muted">{c.phone || '—'}</td>
-                    <td className="px-3 py-2">{c.tags?.map((t) => <span key={t} className="chip-neutral mr-1">{t}</span>)}</td>
-                    <td className="px-3 py-2 num text-right">{c.loyaltyPoints}</td>
+                  <tr key={c._id} className={`border-b border-rule last:border-0 hover:bg-paper ${selected?._id === c._id ? 'bg-accent-soft/40' : ''}`}>
+                    <td className="px-3 py-2 cursor-pointer" onClick={() => setSelected(c)}>{c.name}</td>
+                    <td className="px-3 py-2 num text-ink-muted cursor-pointer" onClick={() => setSelected(c)}>{c.phone || '—'}</td>
+                    <td className="px-3 py-2 cursor-pointer" onClick={() => setSelected(c)}>{c.tags?.map((t) => <span key={t} className="chip-neutral mr-1">{t}</span>)}</td>
+                    <td className="px-3 py-2 num text-right cursor-pointer" onClick={() => setSelected(c)}>{c.loyaltyPoints}</td>
+                    <td className="px-3 py-2 text-right"><button className="btn-ghost !text-ink-muted !px-2 text-xs" onClick={() => setEditing(c)}>Edit</button></td>
                   </tr>
                 ))}
               </tbody>
@@ -59,22 +61,32 @@ export function CustomersPage() {
       </div>
 
       {selected && <CustomerLedgerPanel customer={selected} onClose={() => setSelected(null)} />}
-      {showForm && <CustomerForm onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
+      {editing !== null && <CustomerForm customer={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
     </div>
   );
 }
 
-function CustomerForm({ onClose, onSaved }) {
+function CustomerForm({ customer, onClose, onSaved }) {
   const toast = useToast();
-  const [form, setForm] = useState({ name: '', phone: '', email: '', creditLimit: '' });
+  const isNew = !customer._id;
+  const [form, setForm] = useState({
+    name: customer.name || '', phone: customer.phone || '', email: customer.email || '',
+    address: customer.address || '', creditLimit: customer.creditLimit ?? '',
+  });
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setSaving(true);
     try {
-      await api.post('/customers', { ...form, creditLimit: Number(form.creditLimit) || 0 });
-      toast('Customer added.', 'success');
+      const payload = { ...form, creditLimit: Number(form.creditLimit) || 0 };
+      if (isNew) {
+        await api.post('/customers', payload);
+        toast('Customer added.', 'success');
+      } else {
+        await api.put(`/customers/${customer._id}`, payload);
+        toast('Customer updated.', 'success');
+      }
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -86,10 +98,12 @@ function CustomerForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">New customer</p>
+        <p className="font-display text-lg mb-4">{isNew ? 'New customer' : 'Edit customer'}</p>
         <div className="space-y-3">
           <div><label className="field-label">Name</label><input required autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
           <div><label className="field-label">Phone</label><input className="field-input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
+          <div><label className="field-label">Email</label><input type="email" className="field-input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+          <div><label className="field-label">Address</label><input className="field-input" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
           <div><label className="field-label">Credit limit</label><input type="number" className="field-input num" value={form.creditLimit} onChange={(e) => setForm({ ...form, creditLimit: e.target.value })} /></div>
         </div>
         <div className="flex justify-end gap-2 mt-5">

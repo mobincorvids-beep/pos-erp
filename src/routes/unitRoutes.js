@@ -11,5 +11,7 @@ router.post('/',
   body('shortCode').isString().trim().notEmpty().withMessage('shortCode is required.'),
   validate, controller.createUnit);
 router.get('/', controller.listUnits);
+router.put('/:id', controller.updateUnit);
+router.delete('/:id', controller.deleteUnit);
 
 module.exports = router;

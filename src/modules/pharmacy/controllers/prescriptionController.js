@@ -11,6 +11,34 @@ async function list(req, res) {
   res.json(prescriptions);
 }
 
+/** Only a still-pending prescription can be edited — once dispensing has started it's a
+ * billing record (same reasoning as Sale, SaleReturn: you correct forward, not backward). */
+async function update(req, res) {
+  const prescription = await Prescription.findOne({ _id: req.params.id, companyId: req.companyId });
+  if (!prescription) return res.status(404).json({ error: 'Prescription not found.' });
+  if (prescription.status !== 'pending') {
+    return res.status(400).json({ error: `Cannot edit a prescription that is already "${prescription.status}".` });
+  }
+  const { doctorId, items, notes } = req.body;
+  if (doctorId !== undefined) prescription.doctorId = doctorId;
+  if (items !== undefined) prescription.items = items;
+  if (notes !== undefined) prescription.notes = notes;
+  await prescription.save();
+  res.json(prescription);
+}
+
+/** Cancels a prescription that was never dispensed — nothing to reverse in stock/accounting
+ * since dispense() is what actually touches those. */
+async function cancel(req, res) {
+  const prescription = await Prescription.findOne({ _id: req.params.id, companyId: req.companyId });
+  if (!prescription) return res.status(404).json({ error: 'Prescription not found.' });
+  if (prescription.status !== 'pending') {
+    return res.status(400).json({ error: `Cannot cancel a prescription that is already "${prescription.status}".` });
+  }
+  await prescription.deleteOne();
+  res.json({ ok: true });
+}
+
 async function dispense(req, res) {
   try {
     const result = await pharmacyService.dispensePrescription({
@@ -29,4 +57,4 @@ async function nearExpiry(req, res) {
   res.json(rows);
 }
 
-module.exports = { create, list, dispense, nearExpiry };
+module.exports = { create, list, update, cancel, dispense, nearExpiry };

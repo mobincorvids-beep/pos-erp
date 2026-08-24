@@ -25,6 +25,21 @@ function listClasses(companyId, branchId) {
   return GymClass.find(filter);
 }
 
+/** Was missing — a mistyped name or a capacity change had no way in. Deliberately doesn't
+ * retroactively resize already-scheduled sessions (they snapshot capacity at creation, see
+ * scheduleSession) — only affects sessions scheduled after the edit. */
+function updateClass(companyId, id, updates) {
+  const allowed = ['name', 'instructorEmployeeId', 'capacity', 'durationMinutes'];
+  const set = {};
+  for (const key of allowed) if (updates[key] !== undefined) set[key] = updates[key];
+  return GymClass.findOneAndUpdate({ _id: id, companyId }, set, { new: true, runValidators: true });
+}
+
+/** Soft-deactivate, not delete — past sessions reference the class by id. */
+function deactivateClass(companyId, id) {
+  return GymClass.findOneAndUpdate({ _id: id, companyId }, { isActive: false }, { new: true });
+}
+
 /** Capacity is snapshotted from the class at creation time — deliberately, so a later capacity change never retroactively resizes an already-scheduled session. */
 async function scheduleSession(gymClassId, startTime) {
   const gymClass = await GymClass.findById(gymClassId);
@@ -107,4 +122,22 @@ function sessionRoster(sessionId) {
   return ClassSession.findById(sessionId).populate('enrolledCustomerIds', 'name').populate('waitlistCustomerIds', 'name');
 }
 
-module.exports = { createClass, listClasses, scheduleSession, listSessions, enroll, cancelEnrollment, sessionRoster };
+/** Was missing — a scheduling mistake (wrong time, instructor unavailable) had no way to be
+ * called off entirely; only individual enrollments could be cancelled one at a time. Marks
+ * the whole session cancelled and clears both rosters — the UI is expected to notify
+ * everyone who was enrolled or waitlisted, since this doesn't send anything itself. */
+async function cancelSession(companyId, sessionId) {
+  const classSession = await ClassSession.findOne({ _id: sessionId, companyId });
+  if (!classSession) throw new Error('Session not found.');
+  if (classSession.status === 'completed') throw new Error('Cannot cancel a session that already completed.');
+  classSession.status = 'cancelled';
+  classSession.enrolledCustomerIds = [];
+  classSession.waitlistCustomerIds = [];
+  await classSession.save();
+  return classSession;
+}
+
+module.exports = {
+  createClass, listClasses, updateClass, deactivateClass,
+  scheduleSession, listSessions, cancelSession, enroll, cancelEnrollment, sessionRoster,
+};
