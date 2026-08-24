@@ -72,8 +72,20 @@ async function verifyLoginCode(userId, token) {
   const user = await User.findById(userId);
   if (!user || !user.twoFactorEnabled) throw new Error('2FA is not enabled for this account.');
 
-  const totpResult = await verify({ token, secret: user.twoFactorSecret });
-  if (totpResult.valid) return { verified: true, usedBackupCode: false };
+  // otplib's verify() throws TokenLengthError (rather than returning
+  // { valid: false }) for anything that isn't a well-formed 6-digit TOTP
+  // token — and a backup code is a 10-char hex string, not a TOTP token.
+  // Without this guard, submitting a backup code here would crash the
+  // request before it ever reached the backup-code check below, instead
+  // of falling through to it as intended.
+  let totpValid = false;
+  try {
+    const totpResult = await verify({ token, secret: user.twoFactorSecret });
+    totpValid = totpResult.valid;
+  } catch (err) {
+    totpValid = false; // malformed/wrong-shape token — not a valid TOTP code, try backup codes instead
+  }
+  if (totpValid) return { verified: true, usedBackupCode: false };
 
   for (let i = 0; i < user.twoFactorBackupCodeHashes.length; i++) {
     if (await bcrypt.compare(token, user.twoFactorBackupCodeHashes[i])) {
