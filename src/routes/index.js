@@ -39,6 +39,7 @@ router.use('/currency', require('./currencyRoutes'));
 router.use('/documents', require('./documentRoutes'));
 router.use('/tickets', require('./ticketRoutes'));
 router.use('/notifications', require('./notificationRoutes'));
+router.use('/chat', require('./chatRoutes'));
 router.use('/workflows', require('./workflowRoutes'));
 router.use('/webhooks', require('./webhookRoutes'));
 router.use('/payment-gateway', require('./paymentGatewayRoutes')); // JazzCash/Easypaisa — callback/:provider is public, see that file

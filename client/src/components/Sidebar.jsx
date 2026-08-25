@@ -82,6 +82,7 @@ const SECTIONS = [
       { to: '/crm', label: 'CRM' },
       { to: '/loyalty', label: 'Loyalty' },
       { to: '/tickets', label: 'Helpdesk' },
+      { to: '/chat', label: 'Team Chat' },
     ],
   },
   {

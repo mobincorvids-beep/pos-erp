@@ -17,6 +17,7 @@ import { StockTransfersPage } from './pages/StockTransfersPage';
 import { StockCountsPage } from './pages/StockCountsPage';
 import { ExpensesPage } from './pages/ExpensesPage';
 import { TicketsPage } from './pages/TicketsPage';
+import { ChatPage } from './pages/ChatPage';
 import { SecurityPage } from './pages/SecurityPage';
 import { RfqPage } from './pages/RfqPage';
 import { BudgetsPage } from './pages/BudgetsPage';
@@ -115,6 +116,7 @@ export default function App() {
               <Route path="/stock-counts" element={<StockCountsPage />} />
               <Route path="/expenses" element={<ExpensesPage />} />
               <Route path="/tickets" element={<TicketsPage />} />
+              <Route path="/chat" element={<ChatPage />} />
               <Route path="/security" element={<SecurityPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/rfqs" element={<RfqPage />} />
