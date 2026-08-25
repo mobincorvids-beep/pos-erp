@@ -74,6 +74,84 @@ function listBookings(companyId, { status } = {}) {
   return RentalBooking.find(filter).populate('vehicleId', 'registrationNumber').populate('customerId', 'name').sort({ startDate: -1 });
 }
 
+/** Corrects a vehicle's class/rate, or takes it in/out of maintenance. */
+async function updateVehicle(vehicleId, { vehicleClass, dailyRate, status }) {
+  const vehicle = await FleetVehicle.findById(vehicleId);
+  if (!vehicle) throw new Error('Vehicle not found.');
+
+  if (vehicleClass !== undefined) vehicle.vehicleClass = vehicleClass;
+  if (dailyRate !== undefined) {
+    if (!dailyRate || dailyRate <= 0) throw new Error('dailyRate must be greater than zero.');
+    vehicle.dailyRate = dailyRate;
+  }
+  if (status !== undefined) {
+    if (!['available', 'rented', 'maintenance'].includes(status)) throw new Error(`Invalid status "${status}".`);
+    vehicle.status = status;
+  }
+
+  await vehicle.save();
+  return vehicle;
+}
+
+/** Retires a vehicle from the fleet — refused while it has any active (not yet returned/cancelled) booking, since that booking still needs this exact unit for its date range. */
+async function deleteVehicle(vehicleId) {
+  const activeBooking = await RentalBooking.findOne({ vehicleId, status: 'booked' });
+  if (activeBooking) throw new Error('Cannot remove a vehicle with an active booking — return or cancel that booking first.');
+
+  const vehicle = await FleetVehicle.findByIdAndDelete(vehicleId);
+  if (!vehicle) throw new Error('Vehicle not found.');
+  return vehicle;
+}
+
+/**
+ * Cancels a booking before pickup — the same gap Hardware's rental
+ * module had before voidRental was added there: without this, a
+ * mistaken booking (wrong dates, customer backed out) permanently
+ * occupied that date range against the assigned vehicle with no way
+ * back, and any deposit taken stayed stuck as an open liability forever.
+ * Only valid while still 'booked' — once actually returned, that's a
+ * closed, billed transaction with its own real accounting, same
+ * "correct forward, not backward" rule Sale/Prescription/RentalAgreement
+ * all follow elsewhere in this app. No vehicle-status release is needed:
+ * FleetVehicle.status is never flipped to 'rented' by bookRental in the
+ * first place — availability is determined purely by checking for
+ * overlapping 'booked' RentalBookings, so cancelling one simply removes
+ * it from that overlap check going forward.
+ */
+async function cancelBooking(bookingId, { refundPercent, refundAccountId, forfeitRevenueAccountId, userId }) {
+  const booking = await RentalBooking.findById(bookingId);
+  if (!booking) throw new Error('Booking not found.');
+  if (booking.status !== 'booked') throw new Error(`Cannot cancel a booking with status "${booking.status}".`);
+
+  if (booking.depositAmount > 0) {
+    const pct = Math.max(0, Math.min(100, refundPercent ?? 100));
+    const refunded = Math.round(booking.depositAmount * (pct / 100) * 100) / 100;
+    const forfeited = Math.round((booking.depositAmount - refunded) * 100) / 100;
+
+    const entries = [{ accountId: booking.depositLiabilityAccountId, debit: booking.depositAmount, credit: 0 }];
+    if (refunded > 0) {
+      if (!refundAccountId) throw new Error('refundAccountId is required when any amount is refunded.');
+      entries.push({ accountId: refundAccountId, debit: 0, credit: refunded });
+    }
+    if (forfeited > 0) {
+      if (!forfeitRevenueAccountId) throw new Error('forfeitRevenueAccountId is required when any amount is forfeited.');
+      entries.push({ accountId: forfeitRevenueAccountId, debit: 0, credit: forfeited });
+    }
+
+    await accountingService.postVoucher({
+      companyId: booking.companyId, branchId: booking.branchId, type: 'journal',
+      narration: `Rental booking cancelled — ${pct}% of deposit refunded`,
+      entries, referenceType: 'RentalBooking', referenceId: booking._id, userId,
+    });
+  }
+
+  booking.status = 'cancelled';
+  await booking.save();
+  return booking;
+}
+
+module.exports = { addVehicle, listFleet, findAvailableVehicle, bookRental, listBookings, returnVehicle, updateVehicle, deleteVehicle, cancelBooking };
+
 async function returnVehicle(bookingId, { actualReturnDate, warehouseId, finalPaymentAccountId, userId }) {
   const booking = await RentalBooking.findById(bookingId);
   if (!booking) throw new Error('Booking not found.');
@@ -105,5 +183,3 @@ async function returnVehicle(bookingId, { actualReturnDate, warehouseId, finalPa
 
   return { booking, sale, days, rentalCharge };
 }
-
-module.exports = { addVehicle, listFleet, findAvailableVehicle, bookRental, listBookings, returnVehicle };

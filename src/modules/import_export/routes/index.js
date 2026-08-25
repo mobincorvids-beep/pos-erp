@@ -18,6 +18,10 @@ router.post('/shipments',
   body('items.*.unitPrice').isFloat({ gt: 0 }).withMessage('Each item needs a unitPrice greater than zero.'),
   validate, controller.createShipment);
 router.get('/shipments', controller.listShipments); // ?status=
+router.put('/shipments/:id',
+  body('items').optional().isArray({ min: 1 }).withMessage('At least one item is required.'),
+  validate, controller.updateShipment);
+router.delete('/shipments/:id', controller.cancelShipment);
 router.post('/shipments/:id/receive',
   body('warehouseId').isString().notEmpty().withMessage('warehouseId is required.'),
   body('inventoryAssetAccountId').isString().notEmpty().withMessage('inventoryAssetAccountId is required.'),

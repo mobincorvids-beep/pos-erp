@@ -20,5 +20,9 @@ router.post('/bookings',
 router.get('/bookings', controller.listBookings); // ?status=
 router.post('/bookings/:id/finalize', body('warehouseId').isString().notEmpty().withMessage('warehouseId is required.'), validate, controller.finalizeBooking);
 router.post('/bookings/:id/cancel', controller.cancelBooking);
+router.put('/bookings/:id',
+  body('travelDate').optional().isISO8601().withMessage('travelDate must be a valid date.'),
+  body('price').optional().isFloat({ gt: 0 }).withMessage('price must be greater than zero.'),
+  validate, controller.updateBooking);
 
 module.exports = router;

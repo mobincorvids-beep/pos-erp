@@ -13,6 +13,10 @@ router.post('/quality-schedules',
   body('bands').isArray({ min: 1 }).withMessage('At least one band is required.'),
   validate, controller.createSchedule);
 router.get('/quality-schedules', controller.listSchedules);
+router.put('/quality-schedules/:id',
+  body('bands').optional().isArray({ min: 1 }).withMessage('At least one band is required.'),
+  validate, controller.updateSchedule);
+router.delete('/quality-schedules/:id', controller.deleteSchedule);
 router.post('/collections',
   body('branchId').isString().notEmpty().withMessage('branchId is required.'),
   body('supplierId').isString().notEmpty().withMessage('supplierId is required.'),

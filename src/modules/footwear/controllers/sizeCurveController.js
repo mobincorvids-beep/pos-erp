@@ -14,6 +14,25 @@ async function listCurves(req, res) {
   res.json(rows);
 }
 
+async function updateCurve(req, res) {
+  try {
+    const curve = await sizeCurveService.updateCurve(req.companyId, req.params.id, req.body);
+    if (!curve) return res.status(404).json({ error: 'Size curve not found.' });
+    res.json(curve);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function deleteCurve(req, res) {
+  try {
+    await sizeCurveService.deleteCurve(req.companyId, req.params.id);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(404).json({ error: err.message });
+  }
+}
+
 async function applyCurve(req, res) {
   try {
     const { productId, totalQuantity } = req.body;
@@ -24,4 +43,4 @@ async function applyCurve(req, res) {
   }
 }
 
-module.exports = { createCurve, listCurves, applyCurve };
+module.exports = { createCurve, listCurves, updateCurve, deleteCurve, applyCurve };

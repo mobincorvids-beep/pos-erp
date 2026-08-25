@@ -44,4 +44,18 @@ function listFitmentsForProduct(companyId, productId) {
   return VehicleFitment.find({ companyId, productId }).sort({ make: 1, model: 1, yearFrom: 1 });
 }
 
-module.exports = { addFitment, removeFitment, findPartsForVehicle, listFitmentsForProduct };
+/** Corrects a fitment record's vehicle range/product mapping — pure lookup data, nothing downstream references a fitment record's own id, so a plain field update is safe. */
+async function updateFitment(fitmentId, { make, model, yearFrom, yearTo, variantId }) {
+  const fitment = await VehicleFitment.findById(fitmentId);
+  if (!fitment) throw new Error('Fitment record not found.');
+  if (make !== undefined) fitment.make = make;
+  if (model !== undefined) fitment.model = model;
+  if (yearFrom !== undefined) fitment.yearFrom = yearFrom;
+  if (yearTo !== undefined) fitment.yearTo = yearTo;
+  if (variantId !== undefined) fitment.variantId = variantId || null;
+  if (fitment.yearFrom > fitment.yearTo) throw new Error('yearFrom cannot be after yearTo.');
+  await fitment.save();
+  return fitment;
+}
+
+module.exports = { addFitment, removeFitment, updateFitment, findPartsForVehicle, listFitmentsForProduct };

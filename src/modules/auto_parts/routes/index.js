@@ -19,5 +19,9 @@ router.post('/fitments',
   body('yearTo').isInt({ min: 1900 }).withMessage('yearTo must be a valid year.'),
   validate, controller.addFitment);
 router.delete('/fitments/:id', controller.removeFitment);
+router.put('/fitments/:id',
+  body('yearFrom').optional().isInt({ min: 1900 }).withMessage('yearFrom must be a valid year.'),
+  body('yearTo').optional().isInt({ min: 1900 }).withMessage('yearTo must be a valid year.'),
+  validate, controller.updateFitment);
 
 module.exports = router;

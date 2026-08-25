@@ -15,6 +15,7 @@ export function HajjUmrahPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [enrolling, setEnrolling] = useState(null);
+  const [editing, setEditing] = useState(null);
 
   function load() {
     setLoading(true);
@@ -52,7 +53,8 @@ export function HajjUmrahPage() {
                   <td className="px-3 py-2 text-ink-muted">{g.enrolledCustomerIds.length}/{g.capacity} {g.waitlistCustomerIds.length > 0 && `(+${g.waitlistCustomerIds.length} waitlist)`}</td>
                   <td className="px-3 py-2 num text-right">{formatMoney(g.packagePrice, company?.currency)}</td>
                   <td className="px-3 py-2"><span className={STATUS_CHIP[g.status]}>{g.status}</span></td>
-                  <td className="px-3 py-2 text-right">
+                  <td className="px-3 py-2 text-right space-x-2">
+                    {g.status === 'open' && <button className="btn-ghost !text-accent" onClick={() => setEditing(g)}>Edit</button>}
                     {g.status === 'open' && <button className="btn-ghost !text-accent" onClick={() => setEnrolling(g)}>Enroll</button>}
                   </td>
                 </tr>
@@ -63,7 +65,50 @@ export function HajjUmrahPage() {
       )}
 
       {showForm && <GroupForm onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
+      {editing && <GroupEditForm group={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
       {enrolling && <EnrollForm group={enrolling} onClose={() => setEnrolling(null)} onSaved={() => { setEnrolling(null); load(); }} />}
+    </div>
+  );
+}
+
+function GroupEditForm({ group, onClose, onSaved }) {
+  const toast = useToast();
+  const [form, setForm] = useState({ packageName: group.packageName, departureDate: group.departureDate?.slice(0, 10) || '', capacity: group.capacity, packagePrice: group.packagePrice });
+  const [saving, setSaving] = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.put(`/hajj-umrah/groups/${group._id}`, { ...form, capacity: Number(form.capacity), packagePrice: Number(form.packagePrice) });
+      toast('Group updated.', 'success');
+      onSaved();
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
+      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
+        <p className="font-display text-lg mb-4">Edit group</p>
+        <div className="space-y-3">
+          <input required className="field-input" placeholder="Package name" value={form.packageName} onChange={(e) => setForm({ ...form, packageName: e.target.value })} />
+          <div className="grid grid-cols-2 gap-2">
+            <input type="date" required className="field-input" value={form.departureDate} onChange={(e) => setForm({ ...form, departureDate: e.target.value })} />
+            <input type="number" required min={group.enrolledCustomerIds.length} className="field-input num" placeholder="Capacity" value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} />
+          </div>
+          {Number(form.capacity) < group.enrolledCustomerIds.length && <p className="text-xs text-danger">Cannot go below {group.enrolledCustomerIds.length} already enrolled.</p>}
+          <input type="number" required className="field-input num" placeholder="Package price" value={form.packagePrice} onChange={(e) => setForm({ ...form, packagePrice: e.target.value })} />
+          <p className="text-xs text-ink-muted">Changing the price only affects pilgrims who enroll from now on — those already enrolled keep the price they signed up at.</p>
+        </div>
+        <div className="flex justify-end gap-2 mt-5">
+          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save'}</button>
+        </div>
+      </form>
     </div>
   );
 }

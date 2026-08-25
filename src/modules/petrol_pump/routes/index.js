@@ -15,6 +15,9 @@ router.post('/dispensers',
   body('variantId').isString().notEmpty().withMessage('variantId is required.'),
   validate, controller.createDispenser);
 router.get('/dispensers', controller.listDispensers);
+router.put('/dispensers/:id',
+  body('currentMeterReading').optional().isFloat({ min: 0 }).withMessage('currentMeterReading cannot be negative.'),
+  validate, controller.updateDispenser);
 router.post('/dispensers/:dispenserId/shifts/open', body('pricePerLitre').isFloat({ gt: 0 }).withMessage('pricePerLitre must be greater than zero.'), validate, controller.openShift);
 router.get('/shifts', controller.listShifts);
 router.post('/shifts/:id/close',

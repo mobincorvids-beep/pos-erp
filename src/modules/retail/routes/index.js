@@ -23,5 +23,9 @@ router.post('/layaway/:id/payments',
   body('paymentAccountId').isString().notEmpty().withMessage('paymentAccountId is required.'),
   validate, controller.makePayment);
 router.post('/layaway/:id/cancel', controller.cancelPlan);
+router.put('/layaway/:id',
+  body('totalPrice').optional().isFloat({ gt: 0 }).withMessage('totalPrice must be greater than zero.'),
+  body('quantity').optional().isInt({ gt: 0 }).withMessage('quantity must be greater than zero.'),
+  validate, controller.updatePlan);
 
 module.exports = router;

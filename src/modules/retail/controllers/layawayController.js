@@ -32,4 +32,13 @@ async function cancelPlan(req, res) {
   }
 }
 
-module.exports = { createPlan, listPlans, makePayment, cancelPlan };
+async function updatePlan(req, res) {
+  try {
+    const plan = await layawayService.updatePlan(req.params.id, req.body);
+    res.json(plan);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+module.exports = { createPlan, listPlans, makePayment, cancelPlan, updatePlan };

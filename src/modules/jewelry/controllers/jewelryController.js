@@ -30,6 +30,20 @@ async function configureItem(req, res) {
   }
 }
 
+async function listConfigs(req, res) {
+  const rows = await jewelryPricingService.listConfigs(req.companyId);
+  res.json(rows);
+}
+
+async function deleteConfig(req, res) {
+  try {
+    await jewelryPricingService.deleteConfig(req.companyId, req.params.id);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(404).json({ error: err.message });
+  }
+}
+
 async function quote(req, res) {
   try {
     const result = await jewelryPricingService.quotePrice(req.companyId, req.params.variantId);
@@ -72,6 +86,6 @@ async function customerBuybacks(req, res) {
 }
 
 module.exports = {
-  currentRates, setRate, configureItem, quote,
+  currentRates, setRate, configureItem, listConfigs, deleteConfig, quote,
   intakeBuyback, markBuybackApplied, cancelBuyback, customerBuybacks,
 };

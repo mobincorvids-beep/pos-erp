@@ -17,5 +17,8 @@ router.post('/rolls',
   validate, controller.receiveRoll);
 router.get('/rolls', controller.listRolls); // ?status=&productId=
 router.post('/rolls/:id/cut', body('lengthToCut').isFloat({ gt: 0 }).withMessage('lengthToCut must be greater than zero.'), validate, controller.cutFromRoll);
+router.put('/rolls/:id',
+  body('remnantThreshold').optional().isFloat({ min: 0 }).withMessage('remnantThreshold cannot be negative.'),
+  validate, controller.updateRoll);
 
 module.exports = router;

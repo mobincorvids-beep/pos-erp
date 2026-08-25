@@ -39,6 +39,19 @@ function listRecalls(companyId, { status } = {}) {
   return BatchRecall.find(filter).populate('productId', 'name').sort({ initiatedDate: -1 });
 }
 
+/** Corrects the recall's stated reason — a typo or clarification, common right after filing one in a hurry. affectedCustomers/quantitySold/batchId are deliberately never editable here: they're a real trace of actual sales history, not data anyone should be able to hand-edit. */
+async function updateRecall(recallId, { reason }) {
+  const recall = await BatchRecall.findById(recallId);
+  if (!recall) throw new Error('Recall not found.');
+  if (recall.status !== 'active') throw new Error(`Cannot edit a recall with status "${recall.status}".`);
+  if (reason !== undefined) {
+    if (!reason || !reason.trim()) throw new Error('reason cannot be empty.');
+    recall.reason = reason;
+  }
+  await recall.save();
+  return recall;
+}
+
 /** Records a return against one affected customer — checked against how much THAT SPECIFIC customer actually received, so a return can never be recorded beyond what real Sale history shows they got. */
 async function recordReturn(recallId, { customerId, quantity }) {
   if (!quantity || quantity <= 0) throw new Error('quantity must be greater than zero.');
@@ -78,4 +91,4 @@ async function closeRecall(recallId) {
   return recall;
 }
 
-module.exports = { initiateRecall, listRecalls, recordReturn, getRecall, closeRecall };
+module.exports = { initiateRecall, listRecalls, recordReturn, getRecall, closeRecall, updateRecall };

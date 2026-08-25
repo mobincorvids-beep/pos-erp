@@ -18,5 +18,9 @@ async function makePayment(req, res) {
   catch (err) { res.status(400).json({ error: err.message }); }
 }
 async function listPayments(req, res) { res.json(await pilgrimageService.listPayments(req.companyId, req.query)); }
+async function updateGroup(req, res) {
+  try { res.json(await pilgrimageService.updateGroup(req.params.groupId, req.body)); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+}
 
-module.exports = { createGroup, listGroups, enroll, cancelEnrollment, makePayment, listPayments };
+module.exports = { createGroup, listGroups, enroll, cancelEnrollment, makePayment, listPayments, updateGroup };

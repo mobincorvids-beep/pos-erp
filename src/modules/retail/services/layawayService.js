@@ -134,4 +134,41 @@ async function cancelPlan(planId, { refundPercent, refundAccountId, forfeitReven
   return plan;
 }
 
-module.exports = { createPlan, listPlans, makePayment, cancelPlan };
+/**
+ * Corrects a plan's terms before any money has actually been paid toward
+ * it — a mistyped price at open time, or the customer changing their mind
+ * on quantity, is common; once even one payment has been recorded, the
+ * plan's math (amountPaid tracked against totalPrice, completion
+ * triggered by crossing it) depends on that price being stable, so this
+ * is deliberately locked out the moment amountPaid > 0. Quantity changes
+ * re-check and adjust the stock reservation to match, the same
+ * reserve/release pair createPlan/cancelPlan already use.
+ */
+async function updatePlan(planId, { totalPrice, quantity, customerId }) {
+  const plan = await LayawayPlan.findById(planId);
+  if (!plan) throw new Error('Layaway plan not found.');
+  if (plan.status !== 'active') throw new Error(`Cannot edit a plan with status "${plan.status}".`);
+  if (plan.amountPaid > 0) throw new Error('Cannot edit terms after a payment has already been made toward this plan — cancel and reopen instead if the terms genuinely need to change.');
+
+  if (quantity !== undefined && quantity !== plan.quantity) {
+    if (!quantity || quantity <= 0) throw new Error('quantity must be greater than zero.');
+    const delta = quantity - plan.quantity;
+    if (delta > 0) {
+      await inventoryService.assertSufficientStock(plan.warehouseId, plan.variantId, null, delta);
+      await inventoryService.reserve(plan.warehouseId, plan.variantId, null, delta);
+    } else if (delta < 0) {
+      await inventoryService.releaseReservation(plan.warehouseId, plan.variantId, null, -delta);
+    }
+    plan.quantity = quantity;
+  }
+  if (totalPrice !== undefined) {
+    if (!totalPrice || totalPrice <= 0) throw new Error('totalPrice must be greater than zero.');
+    plan.totalPrice = totalPrice;
+  }
+  if (customerId !== undefined) plan.customerId = customerId;
+
+  await plan.save();
+  return plan;
+}
+
+module.exports = { createPlan, listPlans, makePayment, cancelPlan, updatePlan };

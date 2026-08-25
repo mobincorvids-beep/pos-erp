@@ -35,6 +35,27 @@ function listBOQs(companyId, projectId) {
   return BillOfQuantities.find(filter).sort({ createdAt: -1 });
 }
 
+/** Corrects a mistaken estimate — a pure planning document nothing else in the app references, so a full re-edit (title and/or line items, with totals recomputed the same way createBOQ does) is safe at any time. */
+async function updateBOQ(boqId, { title, lineItems }) {
+  const boq = await BillOfQuantities.findById(boqId);
+  if (!boq) throw new Error('Bill of Quantities not found.');
+  if (title !== undefined) boq.title = title;
+  if (lineItems !== undefined) {
+    if (!lineItems.length) throw new Error('At least one line item is required.');
+    boq.lineItems = lineItems.map((line) => ({
+      ...line,
+      estimatedAmount: Math.round(line.estimatedQuantity * line.estimatedRate * 100) / 100,
+    }));
+    boq.totalEstimated = Math.round(boq.lineItems.reduce((sum, l) => sum + l.estimatedAmount, 0) * 100) / 100;
+  }
+  await boq.save();
+  return boq;
+}
+
+function deleteBOQ(boqId) {
+  return BillOfQuantities.findByIdAndDelete(boqId);
+}
+
 /**
  * Groups the BOQ's own line items by costType (a project can have several
  * line items sharing one type — two different material lines both
@@ -77,4 +98,4 @@ async function varianceReport(boqId) {
   return { boqId: boq._id, byType, totalEstimated, totalActual, totalVariance: Math.round((totalActual - totalEstimated) * 100) / 100 };
 }
 
-module.exports = { createBOQ, getBOQ, listBOQs, varianceReport };
+module.exports = { createBOQ, getBOQ, listBOQs, varianceReport, updateBOQ, deleteBOQ };

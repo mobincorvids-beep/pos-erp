@@ -37,6 +37,23 @@ function configureItem(input) {
 /**
  * @returns {Promise<{ weightGrams, karat, ratePerGram, goldValue, makingCharge, stoneCharge, totalPrice }>}
  */
+/** Was missing — configured items could be created but never listed or removed.
+ * Lists every jewelry pricing config for the company (item catalog view). */
+function listConfigs(companyId) {
+  return JewelryItemConfig.find({ companyId }).sort({ createdAt: -1 });
+}
+
+/** Removes a jewelry pricing config. Deliberately a hard delete, not a soft-deactivate:
+ * unlike a salon service or membership, a config carries no history of its own — it's
+ * pure pricing metadata (karat/making charge) with no other record referencing its id.
+ * Past sales reference the Sale/Product, never the config. Safe to remove outright once
+ * the item is no longer sold as jewelry-priced. */
+async function deleteConfig(companyId, id) {
+  const result = await JewelryItemConfig.findOneAndDelete({ _id: id, companyId });
+  if (!result) throw new Error('Jewelry item configuration not found.');
+  return result;
+}
+
 async function quotePrice(companyId, variantId) {
   const config = await JewelryItemConfig.findOne({ companyId, variantId });
   if (!config) throw new Error('This item has no jewelry pricing configuration — set its karat and making charge first.');
@@ -59,4 +76,4 @@ async function quotePrice(companyId, variantId) {
   };
 }
 
-module.exports = { setGoldRate, getCurrentRate, configureItem, quotePrice };
+module.exports = { setGoldRate, getCurrentRate, configureItem, listConfigs, deleteConfig, quotePrice };

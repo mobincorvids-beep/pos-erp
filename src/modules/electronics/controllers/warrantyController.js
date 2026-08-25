@@ -14,6 +14,15 @@ async function checkWarranty(req, res) {
   res.json(result);
 }
 
+async function updateWarranty(req, res) {
+  try {
+    const warranty = await warrantyService.updateWarranty(req.params.id, req.body);
+    res.json(warranty);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
 async function submitClaim(req, res) {
   try {
     const claim = await warrantyService.submitClaim(req.params.warrantyId, { ...req.body, userId: req.auth.userId });
@@ -55,4 +64,4 @@ async function listClaims(req, res) {
   res.json(rows);
 }
 
-module.exports = { registerWarranty, checkWarranty, submitClaim, decideClaim, linkRepairJob, resolveClaim, listClaims };
+module.exports = { registerWarranty, checkWarranty, updateWarranty, submitClaim, decideClaim, linkRepairJob, resolveClaim, listClaims };

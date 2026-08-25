@@ -22,6 +22,28 @@ function listDispensers(companyId, branchId) {
   return FuelDispenser.find(filter);
 }
 
+/**
+ * Corrects a dispenser's name (a data-entry typo) or its initial meter
+ * baseline. currentMeterReading is only editable while the dispenser has
+ * never had ANY shift run against it — once even one shift exists, the
+ * meter's climbing-total invariant (every later shift's opening reading
+ * IS the prior shift's closing reading) depends on it being real history,
+ * not a value someone can silently rewrite.
+ */
+async function updateDispenser(dispenserId, { name, currentMeterReading }) {
+  const dispenser = await FuelDispenser.findById(dispenserId);
+  if (!dispenser) throw new Error('Dispenser not found.');
+  if (name !== undefined) dispenser.name = name;
+  if (currentMeterReading !== undefined) {
+    const anyShiftExists = await FuelShift.findOne({ dispenserId });
+    if (anyShiftExists) throw new Error('Cannot change the meter reading once shifts have been recorded against this dispenser — its running total is now real operating history.');
+    if (currentMeterReading < 0) throw new Error('currentMeterReading cannot be negative.');
+    dispenser.currentMeterReading = currentMeterReading;
+  }
+  await dispenser.save();
+  return dispenser;
+}
+
 /** Opens a shift — captures the meter's CURRENT reading as the baseline, whatever it happens to be, not assumed to be zero. */
 async function openShift(dispenserId, { pricePerLitre, userId }) {
   const dispenser = await FuelDispenser.findById(dispenserId);
@@ -85,4 +107,4 @@ async function closeShift(shiftId, { closingReading, warehouseId, customerId, pa
   return { shift, litresSold, totalAmount, sale };
 }
 
-module.exports = { createDispenser, listDispensers, openShift, listShifts, closeShift };
+module.exports = { createDispenser, listDispensers, updateDispenser, openShift, listShifts, closeShift };

@@ -13,6 +13,9 @@ router.post('/warranties',
   body('warrantyMonths').isInt({ gt: 0 }).withMessage('warrantyMonths must be greater than zero.'),
   validate, controller.registerWarranty);
 router.get('/warranties/:serialNumber/check', controller.checkWarranty);
+router.put('/warranties/:id',
+  body('warrantyMonths').optional().isInt({ gt: 0 }).withMessage('warrantyMonths must be greater than zero.'),
+  validate, controller.updateWarranty);
 
 router.post('/warranties/:warrantyId/claims',
   body('issueDescription').isString().trim().notEmpty().withMessage('issueDescription is required.'),

@@ -189,4 +189,35 @@ function listPayments(companyId, { groupId, customerId } = {}) {
   return PilgrimPayment.find(filter).populate('customerId', 'name').sort({ createdAt: -1 });
 }
 
-module.exports = { createGroup, listGroups, enroll, cancelEnrollment, makePayment, listPayments };
+/**
+ * Corrects a departure's details. packagePrice is safe to change at any
+ * time — enroll() snapshots the price onto each pilgrim's OWN
+ * PilgrimPayment.totalPrice at the moment they join, so existing plans
+ * are never affected, only pilgrims who enroll after the change.
+ * capacity can be raised freely but never dropped below how many people
+ * are already actually enrolled — that would silently orphan real seats.
+ */
+async function updateGroup(groupId, { packageName, departureDate, capacity, packagePrice }) {
+  const group = await PilgrimageGroup.findById(groupId);
+  if (!group) throw new Error('Pilgrimage group not found.');
+  if (group.status !== 'open') throw new Error(`Cannot edit a group with status "${group.status}".`);
+
+  if (packageName !== undefined) group.packageName = packageName;
+  if (departureDate !== undefined) group.departureDate = departureDate;
+  if (packagePrice !== undefined) {
+    if (!packagePrice || packagePrice <= 0) throw new Error('packagePrice must be greater than zero.');
+    group.packagePrice = packagePrice;
+  }
+  if (capacity !== undefined) {
+    if (!capacity || capacity <= 0) throw new Error('capacity must be greater than zero.');
+    if (capacity < group.enrolledCustomerIds.length) {
+      throw new Error(`Cannot set capacity below the ${group.enrolledCustomerIds.length} pilgrims already enrolled.`);
+    }
+    group.capacity = capacity;
+  }
+
+  await group.save();
+  return group;
+}
+
+module.exports = { createGroup, listGroups, enroll, cancelEnrollment, makePayment, listPayments, updateGroup };

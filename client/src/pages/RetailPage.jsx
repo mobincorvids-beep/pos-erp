@@ -13,6 +13,7 @@ export function RetailPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [paying, setPaying] = useState(null);
+  const [editing, setEditing] = useState(null);
   const [amount, setAmount] = useState('');
   const [accounts, setAccounts] = useState([]);
   const [paymentAccountId, setPaymentAccountId] = useState('');
@@ -53,7 +54,10 @@ export function RetailPage() {
                   <td className="px-3 py-2 text-ink-muted">{p.customerId?.name}</td>
                   <td className="px-3 py-2 num text-right">{formatMoney(p.amountPaid, company?.currency)} / {formatMoney(p.totalPrice, company?.currency)}</td>
                   <td className="px-3 py-2"><span className={p.status === 'completed' ? 'chip-accent' : p.status === 'cancelled' ? 'chip-danger' : 'chip-neutral'}>{p.status}</span></td>
-                  <td className="px-3 py-2 text-right">{p.status === 'active' && <button className="btn-ghost !text-accent" onClick={() => setPaying(p)}>Pay</button>}</td>
+                  <td className="px-3 py-2 text-right space-x-2">
+                    {p.status === 'active' && p.amountPaid === 0 && <button className="btn-ghost !text-accent" onClick={() => setEditing(p)}>Edit</button>}
+                    {p.status === 'active' && <button className="btn-ghost !text-accent" onClick={() => setPaying(p)}>Pay</button>}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -61,6 +65,7 @@ export function RetailPage() {
         </div>
       )}
       {showForm && <PlanForm onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
+      {editing && <PlanEditForm plan={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
       {paying && (
         <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
           <form onSubmit={pay} className="card p-5 w-full max-w-xs">
@@ -71,6 +76,35 @@ export function RetailPage() {
           </form>
         </div>
       )}
+    </div>
+  );
+}
+
+function PlanEditForm({ plan, onClose, onSaved }) {
+  const toast = useToast();
+  const [form, setForm] = useState({ totalPrice: plan.totalPrice, quantity: plan.quantity || 1 });
+  const [saving, setSaving] = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.put(`/retail/layaway/${plan._id}`, { totalPrice: Number(form.totalPrice), quantity: Number(form.quantity) });
+      toast('Plan updated.', 'success');
+      onSaved();
+    } catch (err) { toast(err.message, 'error'); } finally { setSaving(false); }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
+      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-xs">
+        <p className="font-display text-lg mb-4">Edit plan — {plan.productId?.name}</p>
+        <div className="space-y-3">
+          <div><label className="field-label">Total price</label><input type="number" required className="field-input num" value={form.totalPrice} onChange={(e) => setForm({ ...form, totalPrice: e.target.value })} /></div>
+          <div><label className="field-label">Quantity</label><input type="number" min="1" required className="field-input num" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} /></div>
+        </div>
+        <div className="flex justify-end gap-2 mt-5"><button type="button" className="btn-secondary" onClick={onClose}>Cancel</button><button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save'}</button></div>
+      </form>
     </div>
   );
 }

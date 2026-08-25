@@ -18,6 +18,8 @@ router.post('/contracts',
   body('billingVariantId').isString().notEmpty().withMessage('billingVariantId is required.'),
   validate, controller.createContract);
 router.get('/contracts', controller.listContracts);
+router.put('/contracts/:id', body('ratePerUnitPerDay').optional().isFloat({ gt: 0 }).withMessage('ratePerUnitPerDay must be greater than zero.'), validate, controller.updateContract);
+router.post('/contracts/:id/close', controller.closeContract);
 router.post('/contracts/:id/receive', body('quantity').isFloat({ gt: 0 }).withMessage('quantity must be greater than zero.'), validate, controller.receiveGoods);
 router.post('/contracts/:id/release', body('quantity').isFloat({ gt: 0 }).withMessage('quantity must be greater than zero.'), validate, controller.releaseGoods);
 router.get('/contracts/:id/fee', controller.computeStorageFee); // ?periodStart=&periodEnd=

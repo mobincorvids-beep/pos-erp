@@ -51,7 +51,10 @@ const INDUSTRY_VISIBLE_ITEMS = {
   grocery: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts'],
   pharmacy: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'appointments'],
   jewelry: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts'],
-  electronics: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'ecommerce'],
+  // Approved warranty claims open a real core ServiceOrder repair job
+  // (warrantyService.js) — confirmed via direct model reference, not
+  // inferred — so Service Orders needs to be visible here too.
+  electronics: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'ecommerce', 'service-orders'],
   furniture: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'manufacturing'],
   fashion: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'ecommerce', 'loyalty'],
   bakery: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'manufacturing'],

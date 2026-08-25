@@ -14,6 +14,9 @@ router.post('/fields',
   body('areaAcres').isFloat({ gt: 0 }).withMessage('areaAcres must be greater than zero.'),
   validate, controller.createFarmField);
 router.get('/fields', controller.listFields);
+router.put('/fields/:fieldId',
+  body('areaAcres').optional().isFloat({ gt: 0 }).withMessage('areaAcres must be greater than zero.'),
+  validate, controller.updateField);
 router.get('/fields/:fieldId/yield-history', controller.fieldYieldHistory);
 router.post('/crop-cycles',
   body('branchId').isString().notEmpty().withMessage('branchId is required.'),
@@ -25,6 +28,10 @@ router.post('/crop-cycles',
   body('expectedYield').isFloat({ gt: 0 }).withMessage('expectedYield must be greater than zero.'),
   validate, controller.startCropCycle);
 router.get('/crop-cycles', controller.listCropCycles); // ?fieldId=&status=
+router.put('/crop-cycles/:id',
+  body('expectedYield').optional().isFloat({ gt: 0 }).withMessage('expectedYield must be greater than zero.'),
+  body('plantedDate').optional().isISO8601().withMessage('plantedDate must be a valid date.'),
+  validate, controller.updateCropCycle);
 router.post('/crop-cycles/:id/harvest',
   body('actualYield').isFloat({ gt: 0 }).withMessage('actualYield must be greater than zero.'),
   validate, controller.completeHarvest);

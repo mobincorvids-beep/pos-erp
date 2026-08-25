@@ -13,4 +13,8 @@ async function cancelBooking(req, res) {
   try { res.json(await travelService.cancelBooking(req.params.id, { ...req.body, userId: req.auth.userId })); }
   catch (err) { res.status(400).json({ error: err.message }); }
 }
-module.exports = { bookPackage, listBookings, finalizeBooking, cancelBooking };
+async function updateBooking(req, res) {
+  try { res.json(await travelService.updateBooking(req.params.id, req.body)); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+}
+module.exports = { bookPackage, listBookings, finalizeBooking, cancelBooking, updateBooking };

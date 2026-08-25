@@ -19,6 +19,10 @@ router.post('/boqs',
   validate, controller.createBOQ);
 router.get('/boqs', controller.listBOQs); // ?projectId=
 router.get('/boqs/:id', controller.getBOQ);
+router.put('/boqs/:id',
+  body('lineItems').optional().isArray({ min: 1 }).withMessage('At least one line item is required.'),
+  validate, controller.updateBOQ);
+router.delete('/boqs/:id', controller.deleteBOQ);
 router.get('/boqs/:id/variance', controller.varianceReport);
 
 module.exports = router;

@@ -23,4 +23,13 @@ async function cutFromRoll(req, res) {
   }
 }
 
-module.exports = { receiveRoll, listRolls, cutFromRoll };
+async function updateRoll(req, res) {
+  try {
+    const roll = await fabricRollService.updateRoll(req.params.id, req.body);
+    res.json(roll);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+module.exports = { receiveRoll, listRolls, cutFromRoll, updateRoll };

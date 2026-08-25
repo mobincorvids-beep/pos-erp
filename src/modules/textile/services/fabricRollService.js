@@ -91,4 +91,23 @@ async function cutFromRoll(rollId, { lengthToCut, userId }) {
   }
 }
 
-module.exports = { receiveRoll, listRolls, cutFromRoll };
+/** Corrects roll metadata that isn't tied to real stock — rollNumber (a data-entry typo) and remnantThreshold (a policy choice). remainingLength/originalLength are deliberately never editable here: they're driven by real inventoryService movements (the initial receipt, every cut), and a direct edit would desync the roll from the actual stock ledger it's supposed to mirror. */
+async function updateRoll(rollId, { rollNumber, remnantThreshold }) {
+  const roll = await FabricRoll.findById(rollId);
+  if (!roll) throw new Error('Roll not found.');
+  if (rollNumber !== undefined) roll.rollNumber = rollNumber;
+  if (remnantThreshold !== undefined) {
+    if (remnantThreshold < 0) throw new Error('remnantThreshold cannot be negative.');
+    roll.remnantThreshold = remnantThreshold;
+    // Re-apply the same reclassification cutFromRoll uses, since raising
+    // or lowering the threshold can immediately put the CURRENT remaining
+    // length on the other side of it.
+    if (roll.status !== 'exhausted') {
+      roll.status = roll.remainingLength < roll.remnantThreshold ? 'remnant' : 'active';
+    }
+  }
+  await roll.save();
+  return roll;
+}
+
+module.exports = { receiveRoll, listRolls, cutFromRoll, updateRoll };

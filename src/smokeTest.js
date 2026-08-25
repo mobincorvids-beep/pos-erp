@@ -3570,8 +3570,21 @@ async function run() {
       receivableAccountId: receivableAccount._id,
     });
     assert(sale.dueAmount === 600, `expected a real outstanding dueAmount of exactly 600 (1000 - 400 paid), got ${sale.dueAmount}`);
-    await Sale.findByIdAndUpdate(sale._id, { invoiceDate: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000) });
-    return sale;
+    // Explicit $set (not relying on Mongoose's implicit wrapping) + { new: true }
+    // so we get the POST-update document back and can verify the backdate
+    // actually landed, rather than silently trusting a fire-and-forget
+    // update and finding out three steps later, from a confusing aging
+    // assertion, that it didn't.
+    const updated = await Sale.findByIdAndUpdate(
+      sale._id,
+      { $set: { invoiceDate: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000) } },
+      { new: true }
+    );
+    assert(
+      updated && (Date.now() - new Date(updated.invoiceDate).getTime()) > 40 * 24 * 60 * 60 * 1000,
+      `expected the credit sale's invoiceDate to be backdated ~45 days, got ${updated?.invoiceDate}`
+    );
+    return updated; // the freshly-updated document, not the stale pre-backdate one
   });
 
   await step('AR Aging correctly buckets this 45-day-old receivable into "31-60", with the real outstanding amount of 600', async () => {

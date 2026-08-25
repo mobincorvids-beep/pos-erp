@@ -180,6 +180,8 @@ function BookingPanel({ booking, onClose, onChanged }) {
   const [accounts, setAccounts] = useState([]);
   const [warehouseId, setWarehouseId] = useState('');
   const [showCancelForm, setShowCancelForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editForm, setEditForm] = useState({ packageName: booking.packageName, destination: booking.destination || '', travelDate: booking.travelDate?.slice(0, 10) || '', price: booking.price });
   const [refundPercent, setRefundPercent] = useState(100);
   const [refundAccountId, setRefundAccountId] = useState('');
   const [forfeitRevenueAccountId, setForfeitRevenueAccountId] = useState('');
@@ -189,6 +191,17 @@ function BookingPanel({ booking, onClose, onChanged }) {
     if (booking.branchId) api.get(`/org/warehouses?branchId=${booking.branchId}`).then(setWarehouses).catch(() => {});
     if (booking.depositAmount > 0) api.get('/org/accounts').then(setAccounts).catch(() => {});
   }, [booking._id]);
+
+  async function saveEdit(e) {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      await api.put(`/travel/bookings/${booking._id}`, { ...editForm, price: Number(editForm.price) });
+      toast('Booking updated.', 'success');
+      setShowEditForm(false);
+      onChanged(); onClose();
+    } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }
+  }
 
   async function finalize() {
     setBusy(true);
@@ -220,17 +233,35 @@ function BookingPanel({ booking, onClose, onChanged }) {
       <p className="text-sm text-ink-muted mb-4">{formatDate(booking.travelDate)} · {formatMoney(booking.price, company?.currency)}</p>
       {booking.depositAmount > 0 && <p className="text-sm mb-4">Deposit already taken: {formatMoney(booking.depositAmount, company?.currency)}</p>}
 
-      {booking.status === 'booked' && !showCancelForm && (
+      {booking.status === 'booked' && !showCancelForm && !showEditForm && (
         <>
           <select className="field-input mb-2" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
             <option value="">Warehouse (for the Sale document)…</option>
             {warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
           </select>
-          <div className="flex gap-2">
+          <div className="flex gap-2 mb-2">
             <button className="btn-primary flex-1" disabled={!warehouseId || busy} onClick={finalize}>{busy ? 'Finalizing…' : 'Finalize & bill'}</button>
             <button className="btn-secondary" disabled={busy} onClick={() => booking.depositAmount > 0 ? setShowCancelForm(true) : cancel()}>Cancel</button>
           </div>
+          <button className="btn-ghost !text-accent !px-0 text-sm" onClick={() => setShowEditForm(true)}>Edit details</button>
         </>
+      )}
+
+      {booking.status === 'booked' && showEditForm && (
+        <form onSubmit={saveEdit} className="space-y-2">
+          <div><label className="field-label">Package name</label><input required className="field-input" value={editForm.packageName} onChange={(e) => setEditForm({ ...editForm, packageName: e.target.value })} /></div>
+          <div><label className="field-label">Destination</label><input className="field-input" value={editForm.destination} onChange={(e) => setEditForm({ ...editForm, destination: e.target.value })} /></div>
+          <div><label className="field-label">Travel date</label><input type="date" required className="field-input" value={editForm.travelDate} onChange={(e) => setEditForm({ ...editForm, travelDate: e.target.value })} /></div>
+          <div>
+            <label className="field-label">Price</label>
+            <input type="number" required disabled={booking.depositAmount > 0} className="field-input num" value={editForm.price} onChange={(e) => setEditForm({ ...editForm, price: e.target.value })} />
+            {booking.depositAmount > 0 && <p className="text-xs text-ink-muted mt-1">Price is locked — a deposit has already been posted against it.</p>}
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button type="button" className="btn-secondary flex-1" onClick={() => setShowEditForm(false)}>Back</button>
+            <button type="submit" disabled={busy} className="btn-primary flex-1">{busy ? 'Saving…' : 'Save'}</button>
+          </div>
+        </form>
       )}
 
       {booking.status === 'booked' && showCancelForm && (

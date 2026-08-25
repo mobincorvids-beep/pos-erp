@@ -15,6 +15,8 @@ router.post('/orders',
   body('price').isFloat({ gt: 0 }).withMessage('price must be greater than zero.'),
   validate, controller.placeOrder);
 router.get('/orders', controller.listOrders); // ?status=&customerId=
+router.put('/orders/:id', controller.updateOrder);
+router.post('/orders/:id/cancel', controller.cancelOrder);
 router.post('/orders/:id/start-production', body('bomId').isString().notEmpty().withMessage('bomId is required.'), validate, controller.startProduction);
 router.post('/orders/:id/mark-ready', controller.markReady);
 router.post('/orders/:id/deliver', body('warehouseId').isString().notEmpty().withMessage('warehouseId is required.'), validate, controller.deliver);

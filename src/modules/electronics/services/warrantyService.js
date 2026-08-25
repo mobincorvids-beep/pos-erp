@@ -110,4 +110,26 @@ function listClaims(companyId, warrantyId) {
   return WarrantyClaim.find(filter).sort({ createdAt: -1 });
 }
 
-module.exports = { registerWarranty, checkWarranty, submitClaim, decideClaim, linkRepairJob, resolveClaim, listClaims };
+/** Corrects a mistakenly-registered warranty (wrong startDate/warrantyMonths typed at registration) — recomputes expiryDate the same way registerWarranty does. Locked the moment any claim has ever been submitted against it: submitClaim/checkWarranty both depend on expiryDate being stable once a claim's expired/active determination has actually been made against it. */
+async function updateWarranty(warrantyId, { warrantyMonths, startDate }) {
+  const warranty = await Warranty.findById(warrantyId);
+  if (!warranty) throw new Error('Warranty not found.');
+
+  const anyClaimExists = await WarrantyClaim.findOne({ warrantyId });
+  if (anyClaimExists) throw new Error('Cannot edit a warranty that already has a claim on file — its coverage window is now real claim history.');
+
+  if (warrantyMonths !== undefined) {
+    if (!warrantyMonths || warrantyMonths <= 0) throw new Error('warrantyMonths must be greater than zero.');
+    warranty.warrantyMonths = warrantyMonths;
+  }
+  if (startDate !== undefined) warranty.startDate = new Date(startDate);
+
+  const expiryDate = new Date(warranty.startDate);
+  expiryDate.setMonth(expiryDate.getMonth() + warranty.warrantyMonths);
+  warranty.expiryDate = expiryDate;
+
+  await warranty.save();
+  return warranty;
+}
+
+module.exports = { registerWarranty, checkWarranty, updateWarranty, submitClaim, decideClaim, linkRepairJob, resolveClaim, listClaims };

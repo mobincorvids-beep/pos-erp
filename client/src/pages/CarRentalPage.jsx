@@ -30,12 +30,24 @@ function FleetTab() {
   const [fleet, setFleet] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState(null);
 
   function load() {
     setLoading(true);
     api.get('/car-rental/fleet').then(setFleet).catch((err) => toast(err.message, 'error')).finally(() => setLoading(false));
   }
   useEffect(load, []);
+
+  async function handleDelete(v) {
+    if (!confirm(`Remove ${v.registrationNumber} from the fleet?`)) return;
+    try {
+      await api.del(`/car-rental/fleet/${v._id}`);
+      toast('Vehicle removed.', 'success');
+      load();
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  }
 
   return (
     <div>
@@ -52,11 +64,60 @@ function FleetTab() {
               <p className="text-xs text-ink-muted mt-1">{v.registrationNumber}</p>
               <p className="num text-sm text-accent-strong mt-1">{formatMoney(v.dailyRate, company?.currency)}/day</p>
               <p className="text-xs text-ink-muted mt-1 capitalize">{v.status}</p>
+              <div className="flex gap-3 mt-2">
+                <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => setEditing(v)}>Edit</button>
+                <button className="btn-ghost !text-red-600 !px-0 text-xs" onClick={() => handleDelete(v)}>Remove</button>
+              </div>
             </div>
           ))}
         </div>
       )}
       {showForm && <VehicleForm onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
+      {editing && <VehicleEditForm vehicle={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
+    </div>
+  );
+}
+
+function VehicleEditForm({ vehicle, onClose, onSaved }) {
+  const toast = useToast();
+  const [form, setForm] = useState({ vehicleClass: vehicle.vehicleClass, dailyRate: vehicle.dailyRate, status: vehicle.status });
+  const [saving, setSaving] = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.put(`/car-rental/fleet/${vehicle._id}`, { ...form, dailyRate: Number(form.dailyRate) });
+      toast('Vehicle updated.', 'success');
+      onSaved();
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
+      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
+        <p className="font-display text-lg mb-4">Edit vehicle — {vehicle.registrationNumber}</p>
+        <div className="space-y-3">
+          <div><label className="field-label">Vehicle class</label><input required className="field-input" value={form.vehicleClass} onChange={(e) => setForm({ ...form, vehicleClass: e.target.value })} /></div>
+          <div><label className="field-label">Daily rate</label><input type="number" required className="field-input num" value={form.dailyRate} onChange={(e) => setForm({ ...form, dailyRate: e.target.value })} /></div>
+          <div>
+            <label className="field-label">Status</label>
+            <select className="field-input" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+              <option value="available">Available</option>
+              <option value="rented">Rented</option>
+              <option value="maintenance">Maintenance</option>
+            </select>
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 mt-5">
+          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save'}</button>
+        </div>
+      </form>
     </div>
   );
 }
@@ -114,6 +175,7 @@ function BookingsTab() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [returning, setReturning] = useState(null);
+  const [cancelling, setCancelling] = useState(null);
 
   function load() {
     setLoading(true);
@@ -135,8 +197,11 @@ function BookingsTab() {
               <p className="text-sm font-medium">{b.vehicleClass}</p>
               <p className="text-xs text-ink-muted mt-1">{b.startDate?.slice(0, 10)} → {b.endDate?.slice(0, 10)}</p>
               <p className="text-xs text-ink-muted mt-1 capitalize">{b.status}</p>
-              {b.status !== 'returned' && b.status !== 'completed' && b.status !== 'cancelled' && (
-                <button className="btn-ghost !text-accent !px-0 text-xs mt-2" onClick={() => setReturning(b)}>Return vehicle</button>
+              {b.status === 'booked' && (
+                <div className="flex gap-3 mt-2">
+                  <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => setReturning(b)}>Return vehicle</button>
+                  <button className="btn-ghost !text-red-600 !px-0 text-xs" onClick={() => setCancelling(b)}>Cancel</button>
+                </div>
               )}
             </div>
           ))}
@@ -144,6 +209,71 @@ function BookingsTab() {
       )}
       {showForm && <BookingForm onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
       {returning && <ReturnForm booking={returning} onClose={() => setReturning(null)} onSaved={() => { setReturning(null); load(); }} />}
+      {cancelling && <CancelBookingForm booking={cancelling} onClose={() => setCancelling(null)} onSaved={() => { setCancelling(null); load(); }} />}
+    </div>
+  );
+}
+
+function CancelBookingForm({ booking, onClose, onSaved }) {
+  const toast = useToast();
+  const [accounts, setAccounts] = useState([]);
+  const [refundPercent, setRefundPercent] = useState(100);
+  const [refundAccountId, setRefundAccountId] = useState('');
+  const [forfeitRevenueAccountId, setForfeitRevenueAccountId] = useState('');
+  const [saving, setSaving] = useState(false);
+  const hasDeposit = booking.depositAmount > 0;
+
+  useEffect(() => { if (hasDeposit) api.get('/org/accounts').then(setAccounts).catch(() => {}); }, [hasDeposit]);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.post(`/car-rental/bookings/${booking._id}/cancel`, hasDeposit ? { refundPercent: Number(refundPercent), refundAccountId, forfeitRevenueAccountId } : {});
+      toast('Booking cancelled.', 'success');
+      onSaved();
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
+      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
+        <p className="font-display text-lg mb-4">Cancel booking — {booking.vehicleClass}</p>
+        {hasDeposit ? (
+          <div className="space-y-3">
+            <p className="text-xs text-ink-muted">A deposit of {booking.depositAmount} was taken for this booking. Set how much of it is refunded vs. kept.</p>
+            <div><label className="field-label">Refund percent</label><input type="number" min="0" max="100" required className="field-input num" value={refundPercent} onChange={(e) => setRefundPercent(e.target.value)} /></div>
+            {Number(refundPercent) > 0 && (
+              <div>
+                <label className="field-label">Refund from account</label>
+                <select required className="field-input" value={refundAccountId} onChange={(e) => setRefundAccountId(e.target.value)}>
+                  <option value="">Select…</option>
+                  {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
+                </select>
+              </div>
+            )}
+            {Number(refundPercent) < 100 && (
+              <div>
+                <label className="field-label">Forfeited amount posts to</label>
+                <select required className="field-input" value={forfeitRevenueAccountId} onChange={(e) => setForfeitRevenueAccountId(e.target.value)}>
+                  <option value="">Select…</option>
+                  {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
+                </select>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-ink-muted">No deposit was taken — this booking will simply be marked cancelled.</p>
+        )}
+        <div className="flex justify-end gap-2 mt-5">
+          <button type="button" className="btn-secondary" onClick={onClose}>Back</button>
+          <button type="submit" disabled={saving} className="btn-primary !bg-red-600 hover:!bg-red-700">{saving ? 'Cancelling…' : 'Confirm cancel'}</button>
+        </div>
+      </form>
     </div>
   );
 }

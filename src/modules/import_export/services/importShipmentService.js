@@ -35,6 +35,26 @@ function listShipments(companyId, { status } = {}) {
   return ImportShipment.find(filter).populate('supplierId', 'name').sort({ createdAt: -1 });
 }
 
+/** Corrects a shipment's items/costs before receipt — only while 'pending', since receiveShipment() computes and posts the real allocation, voucher, and stock movements from whatever is on the shipment at that moment; editing afterward would desync all three from the actual books. */
+async function updateShipment(shipmentId, { supplierId, items, additionalCosts }) {
+  const shipment = await ImportShipment.findById(shipmentId);
+  if (!shipment) throw new Error('Shipment not found.');
+  if (shipment.status !== 'pending') throw new Error(`Cannot edit a shipment with status "${shipment.status}".`);
+  if (supplierId !== undefined) shipment.supplierId = supplierId;
+  if (items !== undefined) {
+    if (!items.length) throw new Error('At least one item is required.');
+    shipment.items = items;
+  }
+  if (additionalCosts !== undefined) shipment.additionalCosts = additionalCosts;
+  await shipment.save();
+  return shipment;
+}
+
+/** Cancels a shipment that was created in error — only while still 'pending', since nothing (no stock, no voucher) has been posted for it yet. */
+function cancelShipment(shipmentId) {
+  return ImportShipment.findOneAndDelete({ _id: shipmentId, status: 'pending' });
+}
+
 async function receiveShipment(shipmentId, { warehouseId, inventoryAssetAccountId, supplierPayableAccountId, userId }) {
   const shipment = await ImportShipment.findById(shipmentId);
   if (!shipment) throw new Error('Shipment not found.');
@@ -90,4 +110,4 @@ async function receiveShipment(shipmentId, { warehouseId, inventoryAssetAccountI
   return { shipment, voucher, totalLandedCost: totalShipmentValue + totalAdditionalCosts };
 }
 
-module.exports = { createShipment, listShipments, receiveShipment };
+module.exports = { createShipment, listShipments, receiveShipment, updateShipment, cancelShipment };

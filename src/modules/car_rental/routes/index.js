@@ -15,6 +15,11 @@ router.post('/fleet',
   body('dailyRate').isFloat({ gt: 0 }).withMessage('dailyRate must be greater than zero.'),
   validate, controller.addVehicle);
 router.get('/fleet', controller.listFleet);
+router.put('/fleet/:id',
+  body('dailyRate').optional().isFloat({ gt: 0 }).withMessage('dailyRate must be greater than zero.'),
+  body('status').optional().isIn(['available', 'rented', 'maintenance']).withMessage('Invalid status.'),
+  validate, controller.updateVehicle);
+router.delete('/fleet/:id', controller.deleteVehicle);
 router.post('/bookings',
   body('branchId').isString().notEmpty().withMessage('branchId is required.'),
   body('vehicleClass').isString().notEmpty().withMessage('vehicleClass is required.'),
@@ -26,5 +31,6 @@ router.post('/bookings',
   validate, controller.bookRental);
 router.get('/bookings', controller.listBookings);
 router.post('/bookings/:id/return', body('warehouseId').isString().notEmpty().withMessage('warehouseId is required.'), validate, controller.returnVehicle);
+router.post('/bookings/:id/cancel', controller.cancelBooking);
 
 module.exports = router;

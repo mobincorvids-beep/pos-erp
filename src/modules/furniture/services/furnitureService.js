@@ -57,6 +57,65 @@ async function placeOrder(input) {
   }
 }
 
+/** Was missing — a custom order's description/price/promised date could never be
+ * corrected after placing it. Only allowed while still 'ordered' (pre-production):
+ * once a WorkOrder exists, the price and spec are what production was actually
+ * costed and started against, so they lock. Deliberately never allows editing
+ * deposit fields here — a deposit is real posted money; changing it needs its own
+ * voucher-aware flow, not a silent field edit. */
+async function updateOrder(companyId, id, updates) {
+  const order = await CustomOrder.findOne({ _id: id, companyId });
+  if (!order) throw new Error('Custom order not found.');
+  if (order.status !== 'ordered') throw new Error(`Cannot edit an order with status "${order.status}" — only orders not yet in production can be edited.`);
+
+  const allowed = ['description', 'promisedDeliveryDate', 'price'];
+  for (const key of allowed) if (updates[key] !== undefined) order[key] = updates[key];
+  await order.save();
+  return order;
+}
+
+/**
+ * Cancels an order before delivery. Mirrors Hardware's void-rental pattern: reverses
+ * whatever was actually posted rather than just flipping a status flag. If a deposit
+ * was taken, it must be settled one of two ways — refunded back to the customer
+ * (refundAccountId) or forfeited to company income (forfeitIncomeAccountId) — so the
+ * deposit liability never sits open on an order that's going nowhere. Refuses to
+ * cancel an order that's already been delivered/billed (that needs a return, not a cancel).
+ */
+async function cancelOrder(companyId, id, { refundAccountId, forfeitIncomeAccountId, userId } = {}) {
+  const order = await CustomOrder.findOne({ _id: id, companyId });
+  if (!order) throw new Error('Custom order not found.');
+  if (order.status === 'delivered') throw new Error('Cannot cancel a delivered order.');
+  if (order.status === 'cancelled') throw new Error('This order is already cancelled.');
+
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      if (order.depositAmount > 0) {
+        if (!refundAccountId && !forfeitIncomeAccountId) {
+          throw new Error('A deposit was taken — provide refundAccountId (to refund it) or forfeitIncomeAccountId (to forfeit it) to cancel.');
+        }
+        const settleAccountId = refundAccountId || forfeitIncomeAccountId;
+        await accountingService.postVoucher({
+          companyId: order.companyId, branchId: order.branchId,
+          type: refundAccountId ? 'payment' : 'journal',
+          narration: refundAccountId ? 'Deposit refund on cancelled custom order' : 'Deposit forfeited on cancelled custom order',
+          entries: [
+            { accountId: order.depositLiabilityAccountId, debit: order.depositAmount, credit: 0 },
+            { accountId: settleAccountId, debit: 0, credit: order.depositAmount },
+          ],
+          referenceType: 'CustomOrder', referenceId: order._id, userId,
+        }, session);
+      }
+      order.status = 'cancelled';
+      await order.save({ session });
+    });
+    return order;
+  } finally {
+    session.endSession();
+  }
+}
+
 function listOrders(companyId, { status, customerId } = {}) {
   const filter = { companyId };
   if (status) filter.status = status;
@@ -151,4 +210,4 @@ async function onTimeDeliveryRate(companyId) {
   };
 }
 
-module.exports = { placeOrder, listOrders, startProduction, markReady, deliver, onTimeDeliveryRate };
+module.exports = { placeOrder, listOrders, updateOrder, cancelOrder, startProduction, markReady, deliver, onTimeDeliveryRate };

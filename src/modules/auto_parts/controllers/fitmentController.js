@@ -31,4 +31,14 @@ async function listFitmentsForProduct(req, res) {
   res.json(rows);
 }
 
-module.exports = { addFitment, removeFitment, findPartsForVehicle, listFitmentsForProduct };
+
+async function updateFitment(req, res) {
+  try {
+    const fitment = await fitmentService.updateFitment(req.params.id, req.body);
+    res.json(fitment);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+module.exports = { addFitment, removeFitment, updateFitment, findPartsForVehicle, listFitmentsForProduct };

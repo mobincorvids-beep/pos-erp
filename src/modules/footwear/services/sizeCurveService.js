@@ -23,6 +23,26 @@ function listCurves(companyId) {
   return SizeCurve.find({ companyId });
 }
 
+/** Was missing — a size curve's ratios could never be corrected after creation,
+ * only recreated from scratch under a new id (breaking anything that referenced
+ * the old one). Replaces name/ratios in place. */
+function updateCurve(companyId, id, updates) {
+  const allowed = ['name', 'ratios'];
+  const set = {};
+  for (const key of allowed) if (updates[key] !== undefined) set[key] = updates[key];
+  if (set.ratios && set.ratios.length === 0) throw new Error('At least one size ratio is required.');
+  return SizeCurve.findOneAndUpdate({ _id: id, companyId }, set, { new: true, runValidators: true });
+}
+
+/** Hard delete — a curve is pure ratio metadata with no downstream reference
+ * (applyCurve produces plain quantities consumed immediately by a purchase/transfer,
+ * it never stores a link back to the curve id), so nothing breaks by removing it. */
+async function deleteCurve(companyId, id) {
+  const result = await SizeCurve.findOneAndDelete({ _id: id, companyId });
+  if (!result) throw new Error('Size curve not found.');
+  return result;
+}
+
 /**
  * @returns {Promise<Array<{ sizeLabel, variantId, percent, quantity }>>} —
  *   quantities are guaranteed to sum to exactly totalQuantity.
@@ -68,4 +88,4 @@ async function applyCurve(curveId, productId, totalQuantity) {
   return result;
 }
 
-module.exports = { createCurve, listCurves, applyCurve };
+module.exports = { createCurve, listCurves, updateCurve, deleteCurve, applyCurve };

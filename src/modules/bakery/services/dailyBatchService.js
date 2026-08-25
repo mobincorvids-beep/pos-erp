@@ -108,4 +108,47 @@ async function closeBatch(batchId, { userId } = {}) {
   }
 }
 
-module.exports = { produceBatch, listBatches, closeBatch };
+/**
+ * Corrects a same-day production entry before it's closed out — a
+ * mistyped quantity or cost is common at the counter. Only valid while
+ * still 'open': closeBatch() has already computed and posted a real
+ * waste write-off against whatever was recorded, so editing afterward
+ * would desync the batch from both the stock ledger and that voucher.
+ * A quantity change adjusts real stock by exactly the delta, the same
+ * pattern Retail's layaway quantity edit uses.
+ */
+async function updateBatch(batchId, { producedQuantity, unitCost, userId }) {
+  const session = await mongoose.startSession();
+  try {
+    let batch;
+    await session.withTransaction(async () => {
+      batch = await DailyBatch.findById(batchId).session(session);
+      if (!batch) throw new Error('Batch not found.');
+      if (batch.status !== 'open') throw new Error(`Cannot edit a batch with status "${batch.status}".`);
+
+      if (producedQuantity !== undefined && producedQuantity !== batch.producedQuantity) {
+        if (!producedQuantity || producedQuantity <= 0) throw new Error('producedQuantity must be greater than zero.');
+        const delta = producedQuantity - batch.producedQuantity;
+        await inventoryService.recordMovement({
+          companyId: batch.companyId, warehouseId: batch.warehouseId,
+          productId: batch.productId, variantId: batch.variantId,
+          type: 'adjustment', quantity: delta, unitCost: unitCost ?? batch.unitCost,
+          referenceType: 'DailyBatch', referenceId: batch._id, userId,
+          note: 'Correction to same-day production entry',
+        }, session);
+        batch.producedQuantity = producedQuantity;
+      }
+      if (unitCost !== undefined) {
+        if (unitCost < 0) throw new Error('unitCost cannot be negative.');
+        batch.unitCost = unitCost;
+      }
+
+      await batch.save({ session });
+    });
+    return batch;
+  } finally {
+    session.endSession();
+  }
+}
+
+module.exports = { produceBatch, listBatches, closeBatch, updateBatch };

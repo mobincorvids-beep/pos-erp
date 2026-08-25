@@ -18,4 +18,12 @@ async function fieldYieldHistory(req, res) {
   try { res.json(await agricultureService.fieldYieldHistory(req.params.fieldId)); }
   catch (err) { res.status(400).json({ error: err.message }); }
 }
-module.exports = { createFarmField, listFields, startCropCycle, listCropCycles, completeHarvest, fieldYieldHistory };
+async function updateField(req, res) {
+  try { res.json(await agricultureService.updateField(req.params.fieldId, req.body)); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+}
+async function updateCropCycle(req, res) {
+  try { res.json(await agricultureService.updateCropCycle(req.params.id, req.body)); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+}
+module.exports = { createFarmField, listFields, startCropCycle, listCropCycles, completeHarvest, fieldYieldHistory, updateField, updateCropCycle };

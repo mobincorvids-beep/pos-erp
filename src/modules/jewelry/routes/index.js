@@ -20,6 +20,8 @@ router.post('/items/config',
   body('variantId').isString().notEmpty().withMessage('variantId is required.'),
   body('karat').isFloat({ gt: 0 }).withMessage('karat is required.'),
   validate, controller.configureItem);
+router.get('/items/config', controller.listConfigs);
+router.delete('/items/config/:id', controller.deleteConfig);
 router.get('/items/:variantId/quote', controller.quote);
 
 router.post('/buybacks',

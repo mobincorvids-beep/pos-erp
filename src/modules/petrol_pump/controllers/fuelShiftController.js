@@ -5,6 +5,10 @@ async function createDispenser(req, res) {
   catch (err) { res.status(400).json({ error: err.message }); }
 }
 async function listDispensers(req, res) { res.json(await fuelShiftService.listDispensers(req.companyId, req.query.branchId)); }
+async function updateDispenser(req, res) {
+  try { res.json(await fuelShiftService.updateDispenser(req.params.id, req.body)); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+}
 async function openShift(req, res) {
   try { res.status(201).json(await fuelShiftService.openShift(req.params.dispenserId, { ...req.body, userId: req.auth.userId })); }
   catch (err) { res.status(400).json({ error: err.message }); }
@@ -14,4 +18,4 @@ async function closeShift(req, res) {
   try { res.json(await fuelShiftService.closeShift(req.params.id, { ...req.body, userId: req.auth.userId })); }
   catch (err) { res.status(400).json({ error: err.message }); }
 }
-module.exports = { createDispenser, listDispensers, openShift, listShifts, closeShift };
+module.exports = { createDispenser, listDispensers, updateDispenser, openShift, listShifts, closeShift };

@@ -24,6 +24,29 @@ function listSchedules(companyId) {
   return QualityGradeSchedule.find({ companyId }).sort({ createdAt: -1 });
 }
 
+/**
+ * Edits/removes are always safe regardless of past collections —
+ * recordCollection() snapshots pricePerLitre directly onto the
+ * MilkCollection at intake time and never stores a scheduleId back-
+ * reference, so a schedule change only affects future intakes priced
+ * against it, never rewrites what a supplier was already actually paid.
+ */
+async function updateSchedule(scheduleId, { name, bands }) {
+  const schedule = await QualityGradeSchedule.findById(scheduleId);
+  if (!schedule) throw new Error('Quality grade schedule not found.');
+  if (name !== undefined) schedule.name = name;
+  if (bands !== undefined) {
+    if (!bands.length) throw new Error('At least one band is required.');
+    schedule.bands = [...bands].sort((a, b) => a.minFatPercent - b.minFatPercent);
+  }
+  await schedule.save();
+  return schedule;
+}
+
+function deleteSchedule(scheduleId) {
+  return QualityGradeSchedule.findByIdAndDelete(scheduleId);
+}
+
 /** Highest band whose minFatPercent the reading actually meets — the boundary itself counts. */
 async function computePrice(scheduleId, fatPercent) {
   const schedule = await QualityGradeSchedule.findById(scheduleId);
@@ -70,4 +93,4 @@ function listCollections(companyId, { supplierId, paid } = {}) {
   return MilkCollection.find(filter).populate('supplierId', 'name').sort({ collectedAt: -1 });
 }
 
-module.exports = { createSchedule, listSchedules, computePrice, recordCollection, listCollections };
+module.exports = { createSchedule, listSchedules, computePrice, recordCollection, listCollections, updateSchedule, deleteSchedule };

@@ -41,6 +41,34 @@ function listCropCycles(companyId, { fieldId, status } = {}) {
   return CropCycle.find(filter).sort({ plantedDate: -1 });
 }
 
+/** Corrects a field's name or acreage. No delete is offered — crop cycles reference fieldId, and removing a field would orphan its own yield history, the exact thing this module exists to preserve. */
+async function updateField(fieldId, { name, areaAcres }) {
+  const field = await FarmField.findById(fieldId);
+  if (!field) throw new Error('Field not found.');
+  if (name !== undefined) field.name = name;
+  if (areaAcres !== undefined) {
+    if (!areaAcres || areaAcres <= 0) throw new Error('areaAcres must be greater than zero.');
+    field.areaAcres = areaAcres;
+  }
+  await field.save();
+  return field;
+}
+
+/** Corrects a cycle's crop/plan details before harvest — locked once harvested since completeHarvest() has already posted real Manufacturing costing against it. */
+async function updateCropCycle(cropCycleId, { cropName, plantedDate, expectedYield }) {
+  const cycle = await CropCycle.findById(cropCycleId);
+  if (!cycle) throw new Error('Crop cycle not found.');
+  if (cycle.status !== 'growing') throw new Error(`Cannot edit a cycle with status "${cycle.status}".`);
+  if (cropName !== undefined) cycle.cropName = cropName;
+  if (plantedDate !== undefined) cycle.plantedDate = plantedDate;
+  if (expectedYield !== undefined) {
+    if (!expectedYield || expectedYield <= 0) throw new Error('expectedYield must be greater than zero.');
+    cycle.expectedYield = expectedYield;
+  }
+  await cycle.save();
+  return cycle;
+}
+
 /** Harvest — genuinely reuses core Manufacturing's real costing (total input cost ÷ ACTUAL yield, correctly reflecting that a poor harvest raises the true cost per unit for the same spend). This function's own job is only the field-level bookkeeping on top. */
 async function completeHarvest(cropCycleId, { actualYield, actualLaborCost, actualOverheadCost, wastageNote, userId }) {
   const cycle = await CropCycle.findById(cropCycleId);
@@ -88,4 +116,4 @@ async function fieldYieldHistory(fieldId) {
   return { fieldId, areaAcres: field.areaAcres, history, historicalAverageYieldPerAcre, latestVsHistoryPercent };
 }
 
-module.exports = { createFarmField, listFields, startCropCycle, listCropCycles, completeHarvest, fieldYieldHistory };
+module.exports = { createFarmField, listFields, startCropCycle, listCropCycles, completeHarvest, fieldYieldHistory, updateField, updateCropCycle };

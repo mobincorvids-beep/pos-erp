@@ -14,6 +14,24 @@ async function listOrders(req, res) {
   res.json(rows);
 }
 
+async function updateOrder(req, res) {
+  try {
+    const order = await furnitureService.updateOrder(req.companyId, req.params.id, req.body);
+    res.json(order);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function cancelOrder(req, res) {
+  try {
+    const order = await furnitureService.cancelOrder(req.companyId, req.params.id, { ...req.body, userId: req.auth.userId });
+    res.json(order);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
 async function startProduction(req, res) {
   try {
     const order = await furnitureService.startProduction(req.params.id, { ...req.body, userId: req.auth.userId });
@@ -46,4 +64,4 @@ async function onTimeDeliveryRate(req, res) {
   res.json(result);
 }
 
-module.exports = { placeOrder, listOrders, startProduction, markReady, deliver, onTimeDeliveryRate };
+module.exports = { placeOrder, listOrders, updateOrder, cancelOrder, startProduction, markReady, deliver, onTimeDeliveryRate };

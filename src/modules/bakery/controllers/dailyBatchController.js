@@ -23,4 +23,13 @@ async function closeBatch(req, res) {
   }
 }
 
-module.exports = { produceBatch, listBatches, closeBatch };
+async function updateBatch(req, res) {
+  try {
+    const batch = await dailyBatchService.updateBatch(req.params.id, { ...req.body, userId: req.auth.userId });
+    res.json(batch);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+module.exports = { produceBatch, listBatches, closeBatch, updateBatch };

@@ -17,5 +17,9 @@ router.post('/batches',
   validate, controller.produceBatch);
 router.get('/batches', controller.listBatches); // ?status=&warehouseId=
 router.post('/batches/:id/close', controller.closeBatch);
+router.put('/batches/:id',
+  body('producedQuantity').optional().isFloat({ gt: 0 }).withMessage('producedQuantity must be greater than zero.'),
+  body('unitCost').optional().isFloat({ min: 0 }).withMessage('unitCost cannot be negative.'),
+  validate, controller.updateBatch);
 
 module.exports = router;

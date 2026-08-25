@@ -15,6 +15,8 @@ router.post('/size-curves',
   body('ratios.*.sizeLabel').isString().trim().notEmpty().withMessage('Each ratio needs a sizeLabel.'),
   body('ratios.*.percent').isFloat({ gt: 0 }).withMessage('Each ratio needs a percent greater than zero.'),
   validate, controller.createCurve);
+router.put('/size-curves/:id', controller.updateCurve);
+router.delete('/size-curves/:id', controller.deleteCurve);
 router.post('/size-curves/:id/apply',
   body('productId').isString().notEmpty().withMessage('productId is required.'),
   body('totalQuantity').isInt({ gt: 0 }).withMessage('totalQuantity must be a positive whole number.'),

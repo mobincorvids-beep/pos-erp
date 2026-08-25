@@ -102,4 +102,31 @@ async function cancelBooking(bookingId, { refundPercent, refundAccountId, forfei
   return booking;
 }
 
-module.exports = { bookPackage, listBookings, finalizeBooking, cancelBooking };
+/**
+ * Corrects a booking's details before it's finalized or cancelled.
+ * packageName/destination/travelDate are always safe to change while
+ * still 'booked' — nothing downstream depends on their exact value.
+ * price is locked once a deposit has actually been posted (the deposit
+ * voucher was calculated against the original price; changing it after
+ * would leave the books referencing an amount that no longer matches
+ * what's on the booking).
+ */
+async function updateBooking(bookingId, { packageName, destination, travelDate, price }) {
+  const booking = await TravelBooking.findById(bookingId);
+  if (!booking) throw new Error('Booking not found.');
+  if (booking.status !== 'booked') throw new Error(`Cannot edit a booking with status "${booking.status}".`);
+
+  if (packageName !== undefined) booking.packageName = packageName;
+  if (destination !== undefined) booking.destination = destination;
+  if (travelDate !== undefined) booking.travelDate = travelDate;
+  if (price !== undefined && price !== booking.price) {
+    if (booking.depositAmount > 0) throw new Error('Cannot change price after a deposit has already been posted against the original price.');
+    if (!price || price <= 0) throw new Error('price must be greater than zero.');
+    booking.price = price;
+  }
+
+  await booking.save();
+  return booking;
+}
+
+module.exports = { bookPackage, listBookings, finalizeBooking, cancelBooking, updateBooking };

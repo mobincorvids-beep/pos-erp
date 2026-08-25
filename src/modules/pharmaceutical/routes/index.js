@@ -15,6 +15,7 @@ router.post('/recalls',
   validate, controller.initiateRecall);
 router.get('/recalls', controller.listRecalls); // ?status=
 router.get('/recalls/:id', controller.getRecall);
+router.put('/recalls/:id', body('reason').optional().isString().trim().notEmpty().withMessage('reason cannot be empty.'), validate, controller.updateRecall);
 router.post('/recalls/:id/returns',
   body('customerId').isString().notEmpty().withMessage('customerId is required.'),
   body('quantity').isFloat({ gt: 0 }).withMessage('quantity must be greater than zero.'),

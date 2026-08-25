@@ -16,6 +16,11 @@ router.post('/groups',
   body('packagePrice').isFloat({ gt: 0 }).withMessage('packagePrice must be greater than zero.'),
   validate, controller.createGroup);
 router.get('/groups', controller.listGroups); // ?status=
+router.put('/groups/:groupId',
+  body('departureDate').optional().isISO8601().withMessage('departureDate must be a valid date.'),
+  body('capacity').optional().isInt({ gt: 0 }).withMessage('capacity must be greater than zero.'),
+  body('packagePrice').optional().isFloat({ gt: 0 }).withMessage('packagePrice must be greater than zero.'),
+  validate, controller.updateGroup);
 router.post('/groups/:groupId/enroll',
   body('customerId').isString().notEmpty().withMessage('customerId is required.'),
   body('depositLiabilityAccountId').isString().notEmpty().withMessage('depositLiabilityAccountId is required.'),

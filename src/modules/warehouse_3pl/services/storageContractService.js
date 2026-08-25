@@ -111,4 +111,37 @@ async function billPeriod(contractId, { periodStart, periodEnd, warehouseId, pay
   return { sale, fee };
 }
 
-module.exports = { createContract, listContracts, currentQuantityHeld, receiveGoods, releaseGoods, computeStorageFee, billPeriod };
+/**
+ * Corrects the contract's rate going forward. Since computeStorageFee()
+ * always uses the CURRENT ratePerUnitPerDay for an entire requested
+ * period (there's no rate-history table), changing it here is inherently
+ * a "from now on" correction — same as any live price list — not a
+ * retroactive rewrite of fees already actually billed via billPeriod
+ * (those became real Sale documents at whatever fee was computed at the
+ * time, and are untouched by this).
+ */
+async function updateContract(contractId, { ratePerUnitPerDay }) {
+  const contract = await StorageContract.findById(contractId);
+  if (!contract) throw new Error('Contract not found.');
+  if (contract.status !== 'active') throw new Error(`Cannot edit a contract with status "${contract.status}".`);
+  if (ratePerUnitPerDay !== undefined) {
+    if (!ratePerUnitPerDay || ratePerUnitPerDay <= 0) throw new Error('ratePerUnitPerDay must be greater than zero.');
+    contract.ratePerUnitPerDay = ratePerUnitPerDay;
+  }
+  await contract.save();
+  return contract;
+}
+
+/** Closes a contract out — refused while any of the client's goods are still physically held, same as every other "still in use" refusal elsewhere in this app (an occupied hotel room, a booked rental vehicle). */
+async function closeContract(contractId) {
+  const contract = await StorageContract.findById(contractId);
+  if (!contract) throw new Error('Contract not found.');
+  if (contract.status !== 'active') throw new Error(`Contract already has status "${contract.status}".`);
+  const held = currentQuantityHeld(contract);
+  if (held > 0) throw new Error(`Cannot close this contract — ${held} units are still held in storage under it. Release them first.`);
+  contract.status = 'closed';
+  await contract.save();
+  return contract;
+}
+
+module.exports = { createContract, listContracts, currentQuantityHeld, receiveGoods, releaseGoods, computeStorageFee, billPeriod, updateContract, closeContract };
