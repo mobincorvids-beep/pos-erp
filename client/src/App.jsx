@@ -21,6 +21,7 @@ import { ChatPage } from './pages/ChatPage';
 import { CalendarPage } from './pages/CalendarPage';
 import { MaintenancePage } from './pages/MaintenancePage';
 import { FixedAssetsPage } from './pages/FixedAssetsPage';
+import { PortalApp } from './portal/PortalApp';
 import { SecurityPage } from './pages/SecurityPage';
 import { RfqPage } from './pages/RfqPage';
 import { BudgetsPage } from './pages/BudgetsPage';
@@ -157,6 +158,10 @@ export default function App() {
               ))}
             </Route>
           </Route>
+
+          {/* Customer portal — completely separate auth context/token (see
+              api/portalClient.js), never mixed with the staff app above. */}
+          <Route path="/portal/*" element={<PortalApp />} />
 
           {/* Platform-admin section — completely separate auth context/token
               (see admin/api.js), never mixed with the tenant app above. */}

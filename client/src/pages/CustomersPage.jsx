@@ -153,6 +153,8 @@ function CustomerLedgerPanel({ customer, onClose }) {
         <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button>
       </div>
 
+      <InvitePortalButton customer={customer} />
+
       {loading && <Loading />}
       {ledger && (
         <>
@@ -224,6 +226,55 @@ function LoyaltyRedeem({ customer }) {
       </div>
       {quote && (
         <p className="text-sm mt-2">Discount value: <span className="num text-accent-strong">{quote.discountValue}</span> for {quote.points} points.</p>
+      )}
+    </div>
+  );
+}
+
+function InvitePortalButton({ customer }) {
+  const toast = useToast();
+  const [showForm, setShowForm] = useState(false);
+  const [email, setEmail] = useState(customer.email || '');
+  const [inviteLink, setInviteLink] = useState('');
+  const [sending, setSending] = useState(false);
+
+  async function handleInvite(e) {
+    e.preventDefault();
+    setSending(true);
+    try {
+      const result = await api.post('/portal/invite', { customerId: customer._id, email });
+      // No email provider is wired up yet, so the invite link is shown
+      // directly here to copy/send manually — see portalController.js.
+      setInviteLink(`${window.location.origin}/portal/activate?token=${result.inviteToken}`);
+      toast('Portal invite created.', 'success');
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setSending(false);
+    }
+  }
+
+  if (!showForm) {
+    return <button className="text-xs text-accent mb-3" onClick={() => setShowForm(true)}>Invite to customer portal</button>;
+  }
+
+  return (
+    <div className="mb-3 p-3 border border-ink/10 rounded">
+      {!inviteLink ? (
+        <form onSubmit={handleInvite} className="space-y-2">
+          <label className="field-label">Portal email</label>
+          <input type="email" required className="field-input" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <div className="flex gap-2">
+            <button type="button" className="btn-secondary text-xs" onClick={() => setShowForm(false)}>Cancel</button>
+            <button type="submit" disabled={sending} className="btn-primary text-xs">{sending ? 'Sending…' : 'Create invite'}</button>
+          </div>
+        </form>
+      ) : (
+        <div>
+          <p className="text-xs text-ink-muted mb-1">Send this activation link to the customer:</p>
+          <input readOnly className="field-input text-xs" value={inviteLink} onClick={(e) => e.target.select()} />
+          <button className="text-xs text-accent mt-2" onClick={() => { setShowForm(false); setInviteLink(''); }}>Done</button>
+        </div>
       )}
     </div>
   );
