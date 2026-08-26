@@ -39,6 +39,7 @@ const OPTIONAL_ITEMS = new Set([
   '/products', '/units', '/purchases', '/rfqs', '/early-payment-discount',
   '/stock-transfers', '/stock-counts', '/ecommerce', '/loyalty',
   '/recurring-invoices',
+  '/fleet', '/field-service', '/quality', '/contracts',
 ]);
 
 // Explicit, per-industry list of which optional items that business
@@ -54,35 +55,38 @@ const INDUSTRY_VISIBLE_ITEMS = {
   // Approved warranty claims open a real core ServiceOrder repair job
   // (warrantyService.js) — confirmed via direct model reference, not
   // inferred — so Service Orders needs to be visible here too.
-  electronics: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'ecommerce', 'service-orders'],
-  furniture: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'manufacturing'],
+  electronics: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'ecommerce', 'service-orders', 'field-service', 'quality'],
+  furniture: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'manufacturing', 'quality'],
   fashion: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'ecommerce', 'loyalty'],
-  bakery: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'manufacturing'],
+  bakery: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'manufacturing', 'quality'],
   footwear: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'ecommerce'],
-  textile: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'manufacturing'],
-  hardware: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts'],
-  auto_parts: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'service-orders'],
+  textile: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'manufacturing', 'quality'],
+  hardware: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'field-service'],
+  auto_parts: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'service-orders', 'field-service', 'quality'],
   toys_gifts: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'ecommerce'],
-  dairy: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'manufacturing'],
-  distribution: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts'],
+  dairy: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'manufacturing', 'quality'],
+  distribution: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'fleet'],
   // 3PL bills storage on a schedule and never buys the stock it holds —
-  // no Purchases, but Recurring Invoices for contract billing.
-  warehouse_3pl: ['products', 'units', 'stock-transfers', 'stock-counts', 'recurring-invoices'],
-  import_export: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts'],
-  agriculture: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'manufacturing'],
+  // no Purchases, but Recurring Invoices for contract billing. Fleet
+  // covers its own delivery trucks; Contracts tracks the legal storage
+  // agreement itself (separate from StorageContract's billing math — see
+  // contractService.js header comment).
+  warehouse_3pl: ['products', 'units', 'stock-transfers', 'stock-counts', 'recurring-invoices', 'fleet', 'contracts'],
+  import_export: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'contracts'],
+  agriculture: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'manufacturing', 'fleet', 'field-service', 'quality'],
   petrol_pump: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts'],
-  pharmaceutical: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'manufacturing'],
+  pharmaceutical: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'manufacturing', 'quality'],
   cafe: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts'],
 
   // ---- Appointment / service-led ----
   salon: ['appointments', 'loyalty'],
   gym: ['appointments', 'recurring-invoices'],
-  professional_services: ['recurring-invoices'],
+  professional_services: ['recurring-invoices', 'contracts'],
   hospital: ['appointments'],
-  service_station: ['appointments', 'service-orders'],
-  automobile: ['products', 'purchases', 'stock-transfers', 'stock-counts', 'service-orders'],
-  telecom: ['recurring-invoices'],
-  courier: [],
+  service_station: ['appointments', 'service-orders', 'field-service'],
+  automobile: ['products', 'purchases', 'stock-transfers', 'stock-counts', 'service-orders', 'field-service'],
+  telecom: ['recurring-invoices', 'field-service'],
+  courier: ['fleet'],
 
   // ---- Hospitality ----
   restaurant: ['products', 'purchases', 'stock-transfers', 'stock-counts'],
@@ -92,16 +96,18 @@ const INDUSTRY_VISIBLE_ITEMS = {
   // ---- Projects / one-off, mostly non-inventory ----
   // Construction materials procurement is real goods AND needs formal
   // supplier RFQs for material sourcing (flagged as a real gap before —
-  // fixed here).
-  construction: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'manufacturing'],
-  real_estate: ['recurring-invoices'],
-  insurance: ['recurring-invoices'],
+  // fixed here). Also runs vehicles/equipment (Fleet), field crews
+  // (Field service), formal client/supplier contracts, and NCR/CAPA
+  // quality tracking on build defects.
+  construction: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'manufacturing', 'fleet', 'field-service', 'quality', 'contracts'],
+  real_estate: ['recurring-invoices', 'contracts'],
+  insurance: ['recurring-invoices', 'contracts'],
   travel: [],
-  car_rental: ['appointments'],
-  logistics: [],
+  car_rental: ['appointments', 'fleet'],
+  logistics: ['fleet'],
   ngo: [],
   school: ['appointments', 'recurring-invoices'],
-  housing_society: ['recurring-invoices'],
+  housing_society: ['recurring-invoices', 'contracts'],
   hajj_umrah: [],
   media_entertainment: ['appointments'],
   sports: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'appointments'],
@@ -113,6 +119,7 @@ const PATH_TO_KEY = {
   '/early-payment-discount': 'early-payment-discount', '/stock-transfers': 'stock-transfers',
   '/stock-counts': 'stock-counts', '/ecommerce': 'ecommerce', '/loyalty': 'loyalty',
   '/recurring-invoices': 'recurring-invoices',
+  '/fleet': 'fleet', '/field-service': 'field-service', '/quality': 'quality', '/contracts': 'contracts',
 };
 
 /**

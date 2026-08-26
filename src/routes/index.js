@@ -52,6 +52,10 @@ router.use('/ecommerce-config', require('./ecommerceConfigRoutes')); // tenant-s
 router.use('/ecommerce', require('./ecommerceWebhookRoutes'));        // external store calls this — webhook-token auth, not JWT
 router.use('/ai', require('./aiInsightsRoutes'));
 router.use('/account-settings', require('./accountSettingsRoutes'));
+router.use('/fleet', require('./fleetRoutes'));
+router.use('/field-service', require('./fieldServiceRoutes'));
+router.use('/quality', require('./qualityRoutes'));
+router.use('/contracts', require('./contractRoutes'));
 router.use('/admin', require('./admin')); // platform-admin layer — separate JWT namespace, see middleware/platformAuth.js
 
 // Industry modules auto-mount themselves here — every folder under

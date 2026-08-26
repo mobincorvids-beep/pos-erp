@@ -5,7 +5,7 @@ import {
   ClipboardList, Factory, Banknote, Landmark, FolderKanban, PieChart,
   Contact, Truck, UserCog, HeartHandshake, Gift, Sparkles, Store, Circle,
   Ticket, Shield, FileSearch, TrendingUp, HandCoins, Repeat, Hourglass, Lock, Layers, Ruler, Percent, X,
-  LayoutDashboard, Settings,
+  LayoutDashboard, Settings, Car, MapPin, ShieldAlert, FileSignature,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { INDUSTRY_MODULES } from '../industryModuleRegistry';
@@ -26,6 +26,7 @@ const ITEM_ICONS = {
   '/customers': Contact, '/suppliers': Truck, '/team': UserCog, '/hr': Users, '/employee-loans': HandCoins,
   '/crm': HeartHandshake, '/loyalty': Gift,
   '/ai-insights': Sparkles, '/ecommerce': Store, '/tickets': Ticket, '/security': Shield,
+  '/fleet': Car, '/field-service': MapPin, '/quality': ShieldAlert, '/contracts': FileSignature,
 };
 
 const SECTION_ICONS = { Sell: ShoppingCart, Stock: Package, Money: Wallet, People: Users, Insights: BarChart3, Industry: Building2 };
@@ -42,6 +43,7 @@ const SECTIONS = [
       { to: '/sales-workflow', label: 'Quotations & orders' },
       { to: '/appointments', label: 'Appointments' },
       { to: '/service-orders', label: 'Service orders' },
+      { to: '/field-service', label: 'Field service' },
     ],
   },
   {
@@ -55,6 +57,8 @@ const SECTIONS = [
       { to: '/stock-transfers', label: 'Transfers' },
       { to: '/stock-counts', label: 'Stocktakes' },
       { to: '/manufacturing', label: 'Manufacturing' },
+      { to: '/quality', label: 'Quality' },
+      { to: '/fleet', label: 'Fleet & transport' },
     ],
   },
   {
@@ -69,6 +73,7 @@ const SECTIONS = [
       { to: '/cost-centers', label: 'Cost centers' },
       { to: '/periods', label: 'Fiscal years & periods' },
       { to: '/fixed-assets', label: 'Fixed Assets' },
+      { to: '/contracts', label: 'Contracts & legal' },
     ],
   },
   {

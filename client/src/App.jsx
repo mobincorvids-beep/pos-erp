@@ -47,6 +47,10 @@ import { LoyaltyPage } from './pages/LoyaltyPage';
 import { AppointmentsPage } from './pages/AppointmentsPage';
 import { EcommercePage } from './pages/EcommercePage';
 import { AiInsightsPage } from './pages/AiInsightsPage';
+import { FleetPage } from './pages/FleetPage';
+import { FieldServicePage } from './pages/FieldServicePage';
+import { QualityPage } from './pages/QualityPage';
+import { ContractsPage } from './pages/ContractsPage';
 import { INDUSTRY_MODULES } from './industryModuleRegistry';
 import { Suspense } from 'react';
 import { useAuth } from './context/AuthContext';
@@ -149,6 +153,10 @@ export default function App() {
               <Route path="/appointments" element={<AppointmentsPage />} />
               <Route path="/ecommerce" element={<EcommercePage />} />
               <Route path="/ai-insights" element={<AiInsightsPage />} />
+              <Route path="/fleet" element={<FleetPage />} />
+              <Route path="/field-service" element={<FieldServicePage />} />
+              <Route path="/quality" element={<QualityPage />} />
+              <Route path="/contracts" element={<ContractsPage />} />
               {INDUSTRY_MODULES.map(({ key, path, label, component: Component }) => (
                 <Route key={key} path={path} element={
                   <IndustryModuleGate industryKey={key} label={label}>

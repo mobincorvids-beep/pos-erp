@@ -55,6 +55,11 @@ const KEYS = {
   // be visible to every role that can see ordinary documents.
   VENDOR_COMPANY_DOCUMENTS_VIEW: 'documents.vendor_company.view',
   VENDOR_COMPANY_DOCUMENTS_MANAGE: 'documents.vendor_company.manage',
+
+  FLEET_MANAGE: 'fleet.manage',
+  FIELD_SERVICE_MANAGE: 'field_service.manage',
+  QUALITY_MANAGE: 'quality.manage',
+  CONTRACTS_MANAGE: 'contracts.manage',
 };
 
 // Human-readable catalog for the role-editor UI — grouped so checkboxes
@@ -123,6 +128,15 @@ const CATALOG = [
     items: [
       { key: KEYS.MANUFACTURING_MANAGE, label: 'Manage bills of materials and work orders' },
       { key: KEYS.SERVICE_ORDER_MANAGE, label: 'Manage service/job orders' },
+      { key: KEYS.FIELD_SERVICE_MANAGE, label: 'Manage field service dispatch jobs' },
+      { key: KEYS.QUALITY_MANAGE, label: 'Manage quality NCRs and corrective actions' },
+    ],
+  },
+  {
+    group: 'Fleet & contracts',
+    items: [
+      { key: KEYS.FLEET_MANAGE, label: 'Manage vehicles, fuel logs, and trips' },
+      { key: KEYS.CONTRACTS_MANAGE, label: 'Manage contracts' },
     ],
   },
   {
