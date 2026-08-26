@@ -18,6 +18,9 @@ import { StockCountsPage } from './pages/StockCountsPage';
 import { ExpensesPage } from './pages/ExpensesPage';
 import { TicketsPage } from './pages/TicketsPage';
 import { ChatPage } from './pages/ChatPage';
+import { CalendarPage } from './pages/CalendarPage';
+import { MaintenancePage } from './pages/MaintenancePage';
+import { FixedAssetsPage } from './pages/FixedAssetsPage';
 import { SecurityPage } from './pages/SecurityPage';
 import { RfqPage } from './pages/RfqPage';
 import { BudgetsPage } from './pages/BudgetsPage';
@@ -117,6 +120,9 @@ export default function App() {
               <Route path="/expenses" element={<ExpensesPage />} />
               <Route path="/tickets" element={<TicketsPage />} />
               <Route path="/chat" element={<ChatPage />} />
+              <Route path="/calendar" element={<CalendarPage />} />
+              <Route path="/maintenance" element={<MaintenancePage />} />
+              <Route path="/fixed-assets" element={<FixedAssetsPage />} />
               <Route path="/security" element={<SecurityPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/rfqs" element={<RfqPage />} />

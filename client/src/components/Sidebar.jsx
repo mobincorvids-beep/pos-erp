@@ -68,6 +68,7 @@ const SECTIONS = [
       { to: '/aging', label: 'AR / AP Aging' },
       { to: '/cost-centers', label: 'Cost centers' },
       { to: '/periods', label: 'Fiscal years & periods' },
+      { to: '/fixed-assets', label: 'Fixed Assets' },
     ],
   },
   {
@@ -83,6 +84,8 @@ const SECTIONS = [
       { to: '/loyalty', label: 'Loyalty' },
       { to: '/tickets', label: 'Helpdesk' },
       { to: '/chat', label: 'Team Chat' },
+      { to: '/calendar', label: 'Calendar' },
+      { to: '/maintenance', label: 'Maintenance' },
     ],
   },
   {
