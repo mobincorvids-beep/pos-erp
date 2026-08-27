@@ -39,6 +39,8 @@ const KEYS = {
   SERVICE_ORDER_MANAGE: 'service_orders.manage',
   BANKING_MANAGE: 'banking.manage',
   LOYALTY_MANAGE: 'loyalty.manage',
+  COUPON_MANAGE: 'coupons.manage',
+  GIFT_CARDS_MANAGE: 'gift_cards.manage',
   CRM_MANAGE: 'crm.manage',
 
   HR_MANAGE: 'hr.manage',
@@ -65,8 +67,12 @@ const KEYS = {
   WAREHOUSE_MANAGE: 'warehouse.manage',
   RECRUITMENT_MANAGE: 'recruitment.manage',
   PERFORMANCE_MANAGE: 'performance.manage',
+  TIMESHEETS_LOG: 'timesheets.log',
+  TIMESHEETS_APPROVE: 'timesheets.approve',
   FUNNELS_MANAGE: 'funnels.manage',
   DEVELOPER_PLATFORM_MANAGE: 'developer_platform.manage',
+
+  PROJECT_TASKS_MANAGE: 'project_tasks.manage',
 };
 
 // Human-readable catalog for the role-editor UI — grouped so checkboxes
@@ -158,6 +164,8 @@ const CATALOG = [
     items: [
       { key: KEYS.BANKING_MANAGE, label: 'Transfer funds, reverse vouchers, reconcile accounts' },
       { key: KEYS.LOYALTY_MANAGE, label: 'Configure the loyalty program' },
+      { key: KEYS.COUPON_MANAGE, label: 'Create and manage discount coupons' },
+      { key: KEYS.GIFT_CARDS_MANAGE, label: 'Issue and manage gift cards' },
       { key: KEYS.CRM_MANAGE, label: 'Create and send marketing campaigns' },
     ],
   },
@@ -168,6 +176,14 @@ const CATALOG = [
       { key: KEYS.PAYROLL_POST, label: 'Generate and post payroll' },
       { key: KEYS.RECRUITMENT_MANAGE, label: 'Manage job openings, candidates, and hiring' },
       { key: KEYS.PERFORMANCE_MANAGE, label: 'Manage goals and performance reviews' },
+      { key: KEYS.TIMESHEETS_LOG, label: 'Log and submit own timesheets' },
+      { key: KEYS.TIMESHEETS_APPROVE, label: 'Approve or reject submitted timesheets' },
+    ],
+  },
+  {
+    group: 'Projects',
+    items: [
+      { key: KEYS.PROJECT_TASKS_MANAGE, label: 'Create, assign, and manage project tasks' },
     ],
   },
   {

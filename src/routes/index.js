@@ -11,6 +11,7 @@ router.use('/cost-centers', require('./costCenterRoutes'));
 router.use('/units', require('./unitRoutes'));
 router.use('/accounting-periods', require('./periodRoutes'));
 router.use('/employee-loans', require('./employeeLoanRoutes'));
+router.use('/timesheets', require('./timesheetRoutes'));
 router.use('/recurring-invoices', require('./recurringInvoiceRoutes'));
 router.use('/budgets', require('./budgetRoutes'));
 router.use('/purchase-orders/early-payment', require('./earlyPaymentDiscountRoutes'));
@@ -30,6 +31,8 @@ router.use('/expenses', require('./expenseRoutes'));
 router.use('/customers', require('./customerRoutes'));
 router.use('/suppliers', require('./supplierRoutes'));
 router.use('/loyalty', require('./loyaltyRoutes'));
+router.use('/coupons', require('./couponRoutes'));
+router.use('/gift-cards', require('./giftCardRoutes'));
 router.use('/appointments', require('./appointmentRoutes'));
 router.use('/crm', require('./crmRoutes'));
 router.use('/hr', require('./hrRoutes'));
@@ -48,6 +51,7 @@ router.use('/workflows', require('./workflowRoutes'));
 router.use('/webhooks', require('./webhookRoutes'));
 router.use('/payment-gateway', require('./paymentGatewayRoutes')); // JazzCash/Easypaisa — callback/:provider is public, see that file
 router.use('/projects', require('./projectRoutes'));
+router.use('/tasks', require('./taskRoutes'));
 router.use('/ecommerce-config', require('./ecommerceConfigRoutes')); // tenant-side setup
 router.use('/ecommerce', require('./ecommerceWebhookRoutes'));        // external store calls this — webhook-token auth, not JWT
 router.use('/ai', require('./aiInsightsRoutes'));

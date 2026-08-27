@@ -17,6 +17,13 @@ export function PosPage() {
   const [gatewayPhone, setGatewayPhone] = useState('');
   const [gatewayStatus, setGatewayStatus] = useState(null); // null | 'waiting' | 'failed'
   const isGatewayMethod = paymentMethod === 'jazzcash' || paymentMethod === 'easypaisa';
+  const isGiftCardMethod = paymentMethod === 'gift_card';
+  const [giftCardNumber, setGiftCardNumber] = useState('');
+  const [giftCardLookup, setGiftCardLookup] = useState(null); // null | { balance, usable, reason }
+  const [giftCardChecking, setGiftCardChecking] = useState(false);
+  const [couponCode, setCouponCode] = useState('');
+  const [couponResult, setCouponResult] = useState(null); // null | { coupon, discountAmount } | { error }
+  const [couponChecking, setCouponChecking] = useState(false);
   const [context, setContext] = useState(() => {
     try {
       const stored = localStorage.getItem('pos_erp_checkout_context');
@@ -30,6 +37,16 @@ export function PosPage() {
   useEffect(() => {
     api.get('/products').then(setProducts).catch((err) => setError(err.message)).finally(() => setLoadingProducts(false));
   }, []);
+
+  // A coupon's discount amount is a snapshot of the cart total at the
+  // moment it was applied — if the cart changes afterward the preview is
+  // stale, so drop it rather than charge the wrong amount (checkout
+  // re-validates server-side regardless, but the displayed total should
+  // never lie to the cashier).
+  useEffect(() => {
+    if (couponResult) setCouponResult(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cart]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return products;
@@ -73,8 +90,30 @@ export function PosPage() {
 
   const subtotal = cart.reduce((sum, l) => sum + l.unitPrice * l.quantity, 0);
   const taxTotal = cart.reduce((sum, l) => sum + (l.unitPrice * l.quantity) * (l.taxRate / 100), 0);
-  const total = subtotal + taxTotal;
+  const preCouponTotal = subtotal + taxTotal;
+  const couponDiscount = couponResult?.discountAmount || 0;
+  const total = Math.max(preCouponTotal - couponDiscount, 0);
   const itemCount = cart.reduce((sum, l) => sum + l.quantity, 0);
+
+  /** Previews a coupon code against the current cart total — mirrors checkGiftCard()'s "look up before committing" shape. Re-validated server-side again at actual checkout, so this is purely a cashier-facing preview. */
+  async function applyCoupon() {
+    if (!couponCode.trim()) return;
+    setCouponChecking(true);
+    try {
+      const result = await api.post('/coupons/validate', { code: couponCode.toUpperCase().trim(), purchaseAmount: preCouponTotal });
+      setCouponResult(result);
+    } catch (err) {
+      setCouponResult(null);
+      toast(err.message, 'error');
+    } finally {
+      setCouponChecking(false);
+    }
+  }
+
+  function removeCoupon() {
+    setCouponCode('');
+    setCouponResult(null);
+  }
 
   // Quick cash suggestions: round the total up to the nearest note-sized
   // amounts, deduped, so cashiers can hand-key a tender without a keypad —
@@ -94,11 +133,41 @@ export function PosPage() {
       posTerminalId: context.posTerminalId || undefined,
       items: cart.map((l) => ({ productId: l.productId, variantId: l.variantId, quantity: l.quantity, unitPrice: l.unitPrice, taxRate: l.taxRate })),
       payments: [{ paymentAccountId: context.cashAccountId, method: paymentMethod, amount: total }],
+      couponCode: couponResult ? couponCode.toUpperCase().trim() : undefined,
     });
+
+    // Gift card is redeemed AFTER the sale exists, so the redemption's
+    // GiftCardTransaction can record a real saleId — same "create the real
+    // record first, then link the side-effect to it" order checkout
+    // already uses for inventory movements/serials above.
+    if (isGiftCardMethod) {
+      await api.post(`/gift-cards/${giftCardNumber.toUpperCase().trim()}/redeem`, { amount: total, saleId: sale._id });
+    }
+
     toast(`Sale ${sale.invoiceNumber} completed — ${formatMoney(sale.totalAmount, company?.currency)}`, 'success');
     setCart([]);
     setGatewayStatus(null);
     setGatewayPhone('');
+    setGiftCardNumber('');
+    setGiftCardLookup(null);
+    setCouponCode('');
+    setCouponResult(null);
+  }
+
+  /** Checks a gift card's balance/usability before charging it — same idea as the JazzCash/Easypaisa flow confirming before it commits, just synchronous instead of polled. */
+  async function checkGiftCard() {
+    if (!giftCardNumber.trim()) return;
+    setGiftCardChecking(true);
+    try {
+      const result = await api.get(`/gift-cards/${giftCardNumber.toUpperCase().trim()}/lookup`);
+      setGiftCardLookup(result);
+      if (!result.usable) toast(result.reason || 'This gift card cannot be used.', 'error');
+    } catch (err) {
+      setGiftCardLookup({ usable: false, reason: err.message, balance: 0 });
+      toast(err.message, 'error');
+    } finally {
+      setGiftCardChecking(false);
+    }
   }
 
   /** Waits for a mobile-wallet transaction to resolve, polling every 3s, and finalizes the sale once it's completed — same ledger-posting flow cash/card checkout already uses. */
@@ -136,6 +205,16 @@ export function PosPage() {
     if (isGatewayMethod && !/^03\d{9}$/.test(gatewayPhone)) {
       toast('Enter a valid mobile number (03XXXXXXXXX) to charge via ' + (paymentMethod === 'jazzcash' ? 'JazzCash' : 'Easypaisa') + '.', 'error');
       return;
+    }
+    if (isGiftCardMethod) {
+      if (!giftCardNumber.trim() || !giftCardLookup?.usable) {
+        toast('Look up a valid, usable gift card before checking out.', 'error');
+        return;
+      }
+      if (giftCardLookup.balance + 0.01 < total) {
+        toast(`This gift card only has ${formatMoney(giftCardLookup.balance, company?.currency)} remaining — not enough to cover ${formatMoney(total, company?.currency)}.`, 'error');
+        return;
+      }
     }
     setCheckingOut(true);
     setError('');
@@ -269,9 +348,36 @@ export function PosPage() {
 
         {/* Totals & checkout */}
         <div className="border-t border-rule p-4 shrink-0 bg-surface">
+          <div className="mb-3">
+            <label className="field-label">Coupon code</label>
+            {couponResult ? (
+              <div className="flex items-center justify-between bg-accent-soft border border-transparent rounded-lg px-3 py-2">
+                <span className="text-sm font-semibold text-accent-strong">{couponCode.toUpperCase()} applied — −{formatMoney(couponResult.discountAmount, company?.currency)}</span>
+                <button type="button" className="text-xs font-semibold text-ink-muted hover:text-danger" onClick={removeCoupon}>Remove</button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  type="text" placeholder="e.g. SAVE10" className="field-input flex-1"
+                  value={couponCode} onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                  disabled={checkingOut}
+                />
+                <button
+                  type="button" className="btn-secondary shrink-0"
+                  onClick={applyCoupon} disabled={!couponCode.trim() || couponChecking || checkingOut || cart.length === 0}
+                >
+                  {couponChecking ? 'Checking…' : 'Apply'}
+                </button>
+              </div>
+            )}
+          </div>
+
           <div className="flex flex-col gap-1.5 text-sm text-ink-muted mb-3">
             <div className="flex justify-between"><span>Subtotal ({itemCount} item{itemCount === 1 ? '' : 's'})</span><span className="num">{formatMoney(subtotal, company?.currency)}</span></div>
             <div className="flex justify-between"><span>Tax</span><span className="num">{formatMoney(taxTotal, company?.currency)}</span></div>
+            {couponDiscount > 0 && (
+              <div className="flex justify-between text-accent-strong"><span>Coupon discount</span><span className="num">−{formatMoney(couponDiscount, company?.currency)}</span></div>
+            )}
           </div>
           <div className="tear-line mb-3" />
           <div className="flex justify-between items-end mb-4">
@@ -297,13 +403,14 @@ export function PosPage() {
             <select
               className="field-input"
               value={paymentMethod}
-              onChange={(e) => { setPaymentMethod(e.target.value); setGatewayStatus(null); }}
+              onChange={(e) => { setPaymentMethod(e.target.value); setGatewayStatus(null); setGiftCardLookup(null); }}
             >
               <option value="cash">Cash</option>
               <option value="card">Card</option>
               <option value="bank_transfer">Bank transfer</option>
               <option value="jazzcash">JazzCash</option>
               <option value="easypaisa">Easypaisa</option>
+              <option value="gift_card">Gift card</option>
             </select>
           </div>
 
@@ -315,6 +422,35 @@ export function PosPage() {
                 value={gatewayPhone} onChange={(e) => setGatewayPhone(e.target.value.trim())}
                 disabled={checkingOut}
               />
+            </div>
+          )}
+
+          {isGiftCardMethod && (
+            <div className="mb-2">
+              <label className="field-label">Gift card number</label>
+              <div className="flex gap-2">
+                <input
+                  type="text" placeholder="Scan or enter card number" className="field-input flex-1"
+                  value={giftCardNumber}
+                  onChange={(e) => { setGiftCardNumber(e.target.value.toUpperCase()); setGiftCardLookup(null); }}
+                  disabled={checkingOut}
+                />
+                <button
+                  type="button" className="btn-secondary shrink-0"
+                  onClick={checkGiftCard} disabled={!giftCardNumber.trim() || giftCardChecking || checkingOut}
+                >
+                  {giftCardChecking ? 'Checking…' : 'Check'}
+                </button>
+              </div>
+              {giftCardLookup && giftCardLookup.usable && (
+                <p className="text-sm text-accent-strong mt-1.5">
+                  Balance: {formatMoney(giftCardLookup.balance, company?.currency)}
+                  {giftCardLookup.balance + 0.01 < total && ' — not enough to cover this sale.'}
+                </p>
+              )}
+              {giftCardLookup && !giftCardLookup.usable && (
+                <p className="text-sm text-danger mt-1.5">{giftCardLookup.reason}</p>
+              )}
             </div>
           )}
 

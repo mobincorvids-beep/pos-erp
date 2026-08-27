@@ -15,6 +15,7 @@ const defaultAccountsService = require('./defaultAccountsService');
 const currencyService = require('./currencyService');
 const { nextInvoiceNumber, nextDocumentNumber } = require('./numberingService');
 const { computeLineItems } = require('./saleCalculations');
+const couponService = require('./couponService');
 
 /**
  * @param {Object} input
@@ -33,6 +34,7 @@ const { computeLineItems } = require('./saleCalculations');
  * @param {String} [input.revenueAccountId] - falls back to company's default "Sales Revenue" account
  * @param {String} [input.taxAccountId] - falls back to company's default "Sales Tax Payable" account
  * @param {String} [input.receivableAccountId] - used when part of the sale is on credit
+ * @param {String} [input.couponCode] - optional promo code, re-validated server-side and applied as a straight subtraction from totalAmount
  */
 async function checkout(input) {
   // Resolved BEFORE the transaction starts, deliberately — getRate() can
@@ -60,7 +62,7 @@ async function checkout(input) {
     await session.withTransaction(async () => {
       const {
         companyId, branchId, warehouseId, posTerminalId, customerId, userId, projectId, channel,
-        items, payments = [], revenueAccountId, taxAccountId, receivableAccountId,
+        items, payments = [], revenueAccountId, taxAccountId, receivableAccountId, couponCode,
       } = input;
 
       if (!items || items.length === 0) {
@@ -93,7 +95,24 @@ async function checkout(input) {
       }
 
       // 2. Compute totals server-side — never trust client-sent totals.
-      const { lineItems, subtotal, discountTotal, taxTotal, totalAmount } = computeLineItems(items);
+      const { lineItems, subtotal, discountTotal, taxTotal, totalAmount: computedTotal } = computeLineItems(items);
+
+      // 2b. Optional coupon: re-validated here (never trust a client-sent
+      // discount amount, same rule as the totals above), a straightforward
+      // subtraction from the sale's total since Sale has no other
+      // header-level discount field — same "quote, then a separate
+      // recordCouponUsage() commits the real effect" shape
+      // loyaltyService.redeemPoints() already follows for points.
+      let couponDiscountAmount = 0;
+      let appliedCoupon = null;
+      if (couponCode) {
+        const result = await couponService.validateCoupon(companyId, couponCode, {
+          customerId, purchaseAmount: computedTotal,
+        });
+        appliedCoupon = result.coupon;
+        couponDiscountAmount = Math.min(result.discountAmount, computedTotal);
+      }
+      const totalAmount = Math.round((computedTotal - couponDiscountAmount) * 100) / 100;
       const paidAmount = payments.reduce((sum, p) => sum + p.amount, 0);
       const dueAmount = Math.max(totalAmount - paidAmount, 0);
 
@@ -115,6 +134,8 @@ async function checkout(input) {
           items: lineItems, payments,
           subtotal, discountAmount: discountTotal, taxAmount: taxTotal,
           totalAmount, paidAmount, dueAmount,
+          couponCode: appliedCoupon ? appliedCoupon.code : null,
+          couponDiscountAmount,
           currency: resolvedExchangeRate ? input.currency.toUpperCase() : null,
           exchangeRate: resolvedExchangeRate || 1,
           foreignTotalAmount: resolvedExchangeRate ? Math.round(totalAmount * resolvedExchangeRate * 100) / 100 : null,
@@ -177,7 +198,10 @@ async function checkout(input) {
         }
       }
       if (revenueAccount) {
-        entries.push({ accountId: revenueAccount, debit: 0, credit: subtotal - discountTotal });
+        // Coupon discount reduces recognized revenue the same way per-line
+        // discounts already do — this is what keeps the voucher balanced
+        // against the (now coupon-reduced) totalAmount above.
+        entries.push({ accountId: revenueAccount, debit: 0, credit: subtotal - discountTotal - couponDiscountAmount });
       }
       if (taxTotal > 0 && taxAccountId) {
         entries.push({ accountId: taxAccountId, debit: 0, credit: taxTotal });
@@ -209,6 +233,25 @@ async function checkout(input) {
         }
       }
     });
+
+    // Coupon usage is recorded only now, after the sale has genuinely
+    // committed — never inside the transaction above, so a coupon can
+    // never be marked "used" for a sale that didn't actually go through.
+    // Best-effort: a failure here must never undo or fail the sale that
+    // already completed (same rule the webhook calls below already follow).
+    if (sale.couponCode) {
+      try {
+        const coupon = await require('../models/Coupon').findOne({ companyId: sale.companyId, code: sale.couponCode });
+        if (coupon) {
+          await couponService.recordCouponUsage(coupon._id, {
+            companyId: sale.companyId, customerId: sale.customerId || null,
+            saleId: sale._id, discountAmount: sale.couponDiscountAmount,
+          });
+        }
+      } catch (err) {
+        console.error('Recording coupon usage failed (sale itself still succeeded):', err.message);
+      }
+    }
 
     // Fired AFTER the transaction has fully committed, deliberately outside
     // it — an external HTTP call (which is exactly what firing a webhook

@@ -26,6 +26,7 @@ import { SecurityPage } from './pages/SecurityPage';
 import { RfqPage } from './pages/RfqPage';
 import { BudgetsPage } from './pages/BudgetsPage';
 import { EmployeeLoansPage } from './pages/EmployeeLoansPage';
+import { TimesheetsPage } from './pages/TimesheetsPage';
 import { RecurringInvoicesPage } from './pages/RecurringInvoicesPage';
 import { AgingPage } from './pages/AgingPage';
 import { PeriodsPage } from './pages/PeriodsPage';
@@ -143,6 +144,7 @@ export default function App() {
               <Route path="/rfqs" element={<RfqPage />} />
               <Route path="/budgets" element={<BudgetsPage />} />
               <Route path="/employee-loans" element={<EmployeeLoansPage />} />
+              <Route path="/timesheets" element={<TimesheetsPage />} />
               <Route path="/recurring-invoices" element={<RecurringInvoicesPage />} />
               <Route path="/aging" element={<AgingPage />} />
               <Route path="/periods" element={<PeriodsPage />} />

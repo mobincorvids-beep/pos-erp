@@ -6,7 +6,7 @@ import {
   Contact, Truck, UserCog, HeartHandshake, Gift, Sparkles, Store, Circle,
   Ticket, Shield, FileSearch, TrendingUp, HandCoins, Repeat, Hourglass, Lock, Layers, Ruler, Percent, X,
   LayoutDashboard, Settings, Car, MapPin, ShieldAlert, FileSignature,
-  PackageCheck, Warehouse, UserPlus, Target, Rocket, KeyRound, Radio,
+  PackageCheck, Warehouse, UserPlus, Target, Rocket, KeyRound, Radio, Timer,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { INDUSTRY_MODULES } from '../industryModuleRegistry';
@@ -24,7 +24,7 @@ const ITEM_ICONS = {
   '/products': Boxes, '/units': Ruler, '/purchases': ClipboardList, '/rfqs': FileSearch, '/early-payment-discount': Percent, '/stock-transfers': ArrowLeftRight,
   '/stock-counts': Package, '/manufacturing': Factory,
   '/expenses': Banknote, '/banking': Landmark, '/projects': FolderKanban, '/reports': PieChart, '/budgets': TrendingUp, '/aging': Hourglass, '/periods': Lock, '/cost-centers': Layers,
-  '/customers': Contact, '/suppliers': Truck, '/team': UserCog, '/hr': Users, '/employee-loans': HandCoins,
+  '/customers': Contact, '/suppliers': Truck, '/team': UserCog, '/hr': Users, '/employee-loans': HandCoins, '/timesheets': Timer,
   '/crm': HeartHandshake, '/loyalty': Gift,
   '/ai-insights': Sparkles, '/ecommerce': Store, '/tickets': Ticket, '/security': Shield,
   '/fleet': Car, '/field-service': MapPin, '/quality': ShieldAlert, '/contracts': FileSignature,
@@ -90,6 +90,7 @@ const SECTIONS = [
       { to: '/security', label: 'Security' },
       { to: '/hr', label: 'HR & Payroll' },
       { to: '/employee-loans', label: 'Employee loans' },
+      { to: '/timesheets', label: 'Timesheets' },
       { to: '/recruitment', label: 'Recruitment' },
       { to: '/performance', label: 'Performance & Goals' },
       { to: '/crm', label: 'CRM' },
