@@ -129,10 +129,12 @@ function SupplierLedgerPanel({ supplier, onClose }) {
   const [paymentAccountId, setPaymentAccountId] = useState('');
   const [accounts, setAccounts] = useState([]);
   const [busy, setBusy] = useState(false);
+  const [debitNotes, setDebitNotes] = useState([]);
 
   function load() {
     setLoading(true);
     api.get(`/suppliers/${supplier._id}/ledger`).then(setLedger).catch((err) => toast(err.message, 'error')).finally(() => setLoading(false));
+    api.get(`/debit-notes?supplierId=${supplier._id}`).then(setDebitNotes).catch(() => {});
   }
   useEffect(() => { load(); api.get('/org/accounts?paymentOnly=true').then(setAccounts).catch(() => {}); }, [supplier._id]);
 
@@ -200,10 +202,103 @@ function SupplierLedgerPanel({ supplier, onClose }) {
                 {busy ? 'Recording…' : 'Record payment'}
               </button>
             </div>
+
+            <IssueDebitNote supplier={supplier} onIssued={load} />
+            <DebitNoteHistory debitNotes={debitNotes} onVoided={load} />
           </>
         )}
       </div>
     </aside>
+  );
+}
+
+function IssueDebitNote({ supplier, onIssued }) {
+  const toast = useToast();
+  const [showForm, setShowForm] = useState(false);
+  const [amount, setAmount] = useState('');
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function issue() {
+    const value = Number(amount);
+    if (!value || value <= 0) return;
+    setBusy(true);
+    try {
+      await api.post('/debit-notes', { supplierId: supplier._id, amount: value, reason });
+      toast('Debit note issued.', 'success');
+      setAmount(''); setReason(''); setShowForm(false);
+      onIssued();
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!showForm) {
+    return <button className="btn-secondary w-full" onClick={() => setShowForm(true)}>Issue debit note</button>;
+  }
+
+  return (
+    <div>
+      <p className="text-sm font-semibold text-ink mb-2">Issue debit note</p>
+      <p className="text-xs text-ink-muted mb-2">Reduces what's owed to this supplier without moving any stock (e.g. a pricing dispute or billing correction).</p>
+      <div className="space-y-2 mb-2">
+        <input type="number" min="0" step="0.01" placeholder="Amount" className="field-input num" value={amount} onChange={(e) => setAmount(e.target.value)} />
+        <input placeholder="Reason" className="field-input" value={reason} onChange={(e) => setReason(e.target.value)} />
+      </div>
+      <div className="flex gap-2">
+        <button className="btn-secondary flex-1" onClick={() => setShowForm(false)}>Cancel</button>
+        <button className="btn-primary flex-1" disabled={busy || !amount || Number(amount) <= 0} onClick={issue}>{busy ? 'Issuing…' : 'Issue'}</button>
+      </div>
+    </div>
+  );
+}
+
+function DebitNoteHistory({ debitNotes, onVoided }) {
+  const { company } = useAuth();
+  const toast = useToast();
+  const [busyId, setBusyId] = useState(null);
+
+  async function voidNote(id) {
+    setBusyId(id);
+    try {
+      await api.post(`/debit-notes/${id}/void`, {});
+      toast('Debit note voided.', 'success');
+      onVoided();
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  const STATUS_CHIP = { issued: 'chip-warning', applied: 'chip-accent', void: 'chip-danger' };
+
+  return (
+    <div>
+      <p className="text-sm font-semibold text-ink mb-2">Debit notes</p>
+      {debitNotes.length === 0 && <p className="text-xs text-ink-muted">No debit notes issued.</p>}
+      <div className="space-y-1.5 text-sm max-h-56 overflow-y-auto">
+        {debitNotes.map((dn) => (
+          <div key={dn._id} className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="num font-medium truncate">{dn.noteNumber}</p>
+              {dn.reason && <p className="text-xs text-ink-muted truncate">{dn.reason}</p>}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="num">{formatMoney(dn.amount, company?.currency)}</span>
+              <span className={STATUS_CHIP[dn.status] || 'chip-neutral'}>{dn.status}</span>
+              {dn.status === 'issued' && (
+                <button className="btn-ghost !text-danger !px-1.5 text-xs" disabled={busyId === dn._id} onClick={() => voidNote(dn._id)}>
+                  {busyId === dn._id ? '…' : 'Void'}
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 

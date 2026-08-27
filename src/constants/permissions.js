@@ -27,6 +27,8 @@ const KEYS = {
 
   CUSTOMER_PAYMENT_RECORD: 'customers.record_payment',
   SUPPLIER_PAYMENT_RECORD: 'suppliers.record_payment',
+  CREDIT_NOTES_MANAGE: 'credit_notes.manage',
+  DEBIT_NOTES_MANAGE: 'debit_notes.manage',
 
   REPORTS_VIEW: 'reports.view',
   REPORTS_FINANCIAL: 'reports.financial', // P&L, balance sheet, cash/bank book — more sensitive than sales/stock reports
@@ -109,6 +111,8 @@ const CATALOG = [
       { key: KEYS.EXPENSE_APPROVE, label: 'Approve or reject expenses' },
       { key: KEYS.CUSTOMER_PAYMENT_RECORD, label: 'Record customer payments' },
       { key: KEYS.SUPPLIER_PAYMENT_RECORD, label: 'Record supplier payments' },
+      { key: KEYS.CREDIT_NOTES_MANAGE, label: 'Issue/void customer credit notes' },
+      { key: KEYS.DEBIT_NOTES_MANAGE, label: 'Issue/void supplier debit notes' },
       { key: KEYS.ACCOUNTS_MANAGE, label: 'Manage chart of accounts' },
     ],
   },

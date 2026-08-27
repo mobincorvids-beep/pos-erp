@@ -18,6 +18,23 @@ router.get('/leave-requests', controller.listLeaveRequests); // ?status=
 router.post('/leave-requests', controller.requestLeave);      // an employee/their manager requesting — left open like expense submission
 router.post('/leave-requests/:id/decide', requirePermission(HR_MANAGE), controller.decideLeave); // { approve }
 
+router.get('/shifts', controller.listShifts);
+router.post('/shifts', requirePermission(HR_MANAGE),
+  body('name').isString().trim().notEmpty().withMessage('Name is required.'),
+  body('startTime').isString().trim().notEmpty().withMessage('startTime is required.'),
+  body('endTime').isString().trim().notEmpty().withMessage('endTime is required.'),
+  validate, controller.createShift);
+router.post('/shifts/assign', requirePermission(HR_MANAGE),
+  body('employeeId').isString().notEmpty().withMessage('employeeId is required.'),
+  validate, controller.assignShift); // { employeeId, shiftId }
+
+router.get('/leave-policies', controller.listLeavePolicies);
+router.post('/leave-policies', requirePermission(HR_MANAGE),
+  body('name').isString().trim().notEmpty().withMessage('Name is required.'),
+  validate, controller.createLeavePolicy);
+
+router.get('/leave-balances/:employeeId', controller.getLeaveBalances);
+
 router.get('/payroll-runs', requirePermission(HR_MANAGE), controller.listPayrollRuns);
 router.get('/payroll-runs/:id', requirePermission(HR_MANAGE), controller.getPayrollRun);
 router.post('/payroll-runs', requirePermission(HR_MANAGE),

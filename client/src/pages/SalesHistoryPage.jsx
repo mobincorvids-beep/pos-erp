@@ -109,12 +109,14 @@ export function SalesHistoryPage() {
 function SaleDetailPanel({ sale, onClose, onChanged }) {
   const { company } = useAuth();
   const toast = useToast();
-  const [mode, setMode] = useState('view'); // view | return | void
+  const [mode, setMode] = useState('view'); // view | return | void | credit_note
   const [reason, setReason] = useState('');
   const [refundAccountId, setRefundAccountId] = useState('');
   const [accounts, setAccounts] = useState([]);
   const [returnQty, setReturnQty] = useState(() => sale.items.map(() => 0));
   const [busy, setBusy] = useState(false);
+  const [creditAmount, setCreditAmount] = useState('');
+  const [creditReason, setCreditReason] = useState('');
 
   useEffect(() => { api.get('/org/accounts?paymentOnly=true').then(setAccounts).catch(() => {}); }, []);
 
@@ -146,6 +148,25 @@ function SaleDetailPanel({ sale, onClose, onChanged }) {
         refundAccountId, reason,
       });
       toast('Return processed.', 'success');
+      onChanged();
+      onClose();
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleIssueCreditNote() {
+    const amount = Number(creditAmount);
+    if (!amount || amount <= 0) return;
+    setBusy(true);
+    try {
+      await api.post('/credit-notes', {
+        customerId: sale.customerId?._id || sale.customerId,
+        saleId: sale._id, amount, reason: creditReason,
+      });
+      toast('Credit note issued.', 'success');
       onChanged();
       onClose();
     } catch (err) {
@@ -201,9 +222,36 @@ function SaleDetailPanel({ sale, onClose, onChanged }) {
       </div>
 
       {sale.status === 'completed' && mode === 'view' && (
-        <div className="flex gap-2">
-          <button className="btn-secondary flex-1" onClick={() => setMode('return')}>Return items</button>
-          <button className="btn-danger flex-1" onClick={() => setMode('void')}>Void sale</button>
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-2">
+            <button className="btn-secondary flex-1" onClick={() => setMode('return')}>Return items</button>
+            <button className="btn-danger flex-1" onClick={() => setMode('void')}>Void sale</button>
+          </div>
+          <button className="btn-secondary" onClick={() => { setCreditAmount(String(sale.totalAmount)); setMode('credit_note'); }}>Issue credit note</button>
+        </div>
+      )}
+
+      {mode === 'credit_note' && (
+        <div>
+          <p className="text-xs text-ink-muted mb-2">Issue a credit note against this invoice — reduces what the customer owes without moving any stock (e.g. a pricing correction or goodwill credit).</p>
+          <label className="field-label">Amount</label>
+          <input
+            type="number" min="0" max={sale.totalAmount} step="0.01"
+            className="field-input num mb-2" value={creditAmount}
+            onChange={(e) => setCreditAmount(e.target.value)}
+          />
+          <label className="field-label">Reason</label>
+          <input className="field-input mb-2" value={creditReason} onChange={(e) => setCreditReason(e.target.value)} placeholder="e.g. pricing correction, goodwill credit" />
+          <div className="flex gap-2">
+            <button className="btn-secondary flex-1" onClick={() => setMode('view')}>Back</button>
+            <button
+              className="btn-primary flex-1"
+              disabled={busy || !creditAmount || Number(creditAmount) <= 0 || Number(creditAmount) > sale.totalAmount}
+              onClick={handleIssueCreditNote}
+            >
+              {busy ? 'Issuing…' : 'Issue credit note'}
+            </button>
+          </div>
         </div>
       )}
 

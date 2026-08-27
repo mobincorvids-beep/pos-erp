@@ -1,12 +1,14 @@
 const Employee = require('../models/Employee');
 const LeaveRequest = require('../models/LeaveRequest');
 const PayrollRun = require('../models/PayrollRun');
+const Shift = require('../models/Shift');
+const LeavePolicy = require('../models/LeavePolicy');
 const hrService = require('../services/hrService');
 
 async function listEmployees(req, res) {
   const filter = { companyId: req.companyId };
   if (req.query.status) filter.status = req.query.status;
-  const rows = await Employee.find(filter).populate('departmentId', 'name');
+  const rows = await Employee.find(filter).populate('departmentId', 'name').populate('shiftId', 'name startTime endTime');
   res.json(rows);
 }
 
@@ -71,6 +73,52 @@ async function decideLeave(req, res) {
   }
 }
 
+async function listShifts(req, res) {
+  const rows = await Shift.find({ companyId: req.companyId }).sort({ name: 1 });
+  res.json(rows);
+}
+
+async function createShift(req, res) {
+  try {
+    const shift = await hrService.createShift({ ...req.body, companyId: req.companyId });
+    res.status(201).json(shift);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function assignShift(req, res) {
+  try {
+    const employee = await hrService.assignShiftToEmployee(req.body.employeeId, req.body.shiftId);
+    res.json(employee);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function listLeavePolicies(req, res) {
+  const rows = await LeavePolicy.find({ companyId: req.companyId }).sort({ name: 1 });
+  res.json(rows);
+}
+
+async function createLeavePolicy(req, res) {
+  try {
+    const policy = await hrService.createLeavePolicy({ ...req.body, companyId: req.companyId });
+    res.status(201).json(policy);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function getLeaveBalances(req, res) {
+  try {
+    const rows = await hrService.getLeaveBalances(req.params.employeeId);
+    res.json(rows);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
 async function generatePayroll(req, res) {
   try {
     const run = await hrService.generatePayroll({ ...req.body, companyId: req.companyId, userId: req.auth.userId });
@@ -103,6 +151,8 @@ async function postPayroll(req, res) {
 module.exports = {
   listEmployees, createEmployee, terminateEmployee,
   markAttendance, attendanceForMonth,
+  listShifts, createShift, assignShift,
+  listLeavePolicies, createLeavePolicy, getLeaveBalances,
   requestLeave, listLeaveRequests, decideLeave,
   generatePayroll, listPayrollRuns, getPayrollRun, postPayroll,
 };

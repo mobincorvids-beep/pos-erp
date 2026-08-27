@@ -11,6 +11,8 @@ router.use('/cost-centers', require('./costCenterRoutes'));
 router.use('/units', require('./unitRoutes'));
 router.use('/accounting-periods', require('./periodRoutes'));
 router.use('/employee-loans', require('./employeeLoanRoutes'));
+router.use('/credit-notes', require('./creditNoteRoutes'));
+router.use('/debit-notes', require('./debitNoteRoutes'));
 router.use('/timesheets', require('./timesheetRoutes'));
 router.use('/recurring-invoices', require('./recurringInvoiceRoutes'));
 router.use('/budgets', require('./budgetRoutes'));

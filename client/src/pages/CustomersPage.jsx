@@ -155,10 +155,12 @@ function CustomerLedgerPanel({ customer, onClose }) {
   const [paymentAccountId, setPaymentAccountId] = useState('');
   const [accounts, setAccounts] = useState([]);
   const [busy, setBusy] = useState(false);
+  const [creditNotes, setCreditNotes] = useState([]);
 
   function load() {
     setLoading(true);
     api.get(`/customers/${customer._id}/ledger`).then(setLedger).catch((err) => toast(err.message, 'error')).finally(() => setLoading(false));
+    api.get(`/credit-notes?customerId=${customer._id}`).then(setCreditNotes).catch(() => {});
   }
   useEffect(() => { load(); api.get('/org/accounts?paymentOnly=true').then(setAccounts).catch(() => {}); }, [customer._id]);
 
@@ -226,8 +228,58 @@ function CustomerLedgerPanel({ customer, onClose }) {
 
           <div className="tear-line my-3" />
           <LoyaltyRedeem customer={customer} />
+
+          <div className="tear-line my-3" />
+          <CreditNoteHistory creditNotes={creditNotes} onVoided={load} />
         </>
       )}
+    </div>
+  );
+}
+
+function CreditNoteHistory({ creditNotes, onVoided }) {
+  const { company } = useAuth();
+  const toast = useToast();
+  const [busyId, setBusyId] = useState(null);
+
+  async function voidNote(id) {
+    setBusyId(id);
+    try {
+      await api.post(`/credit-notes/${id}/void`, {});
+      toast('Credit note voided.', 'success');
+      onVoided();
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  const STATUS_CHIP = { issued: 'chip-warning', applied: 'chip-accent', void: 'chip-danger' };
+
+  return (
+    <div>
+      <p className="text-sm font-semibold mb-2">Credit notes</p>
+      {creditNotes.length === 0 && <p className="text-xs text-ink-muted">No credit notes issued.</p>}
+      <div className="space-y-1.5 text-sm max-h-56 overflow-y-auto">
+        {creditNotes.map((cn) => (
+          <div key={cn._id} className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="num font-medium truncate">{cn.noteNumber}</p>
+              {cn.reason && <p className="text-xs text-ink-muted truncate">{cn.reason}</p>}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="num">{formatMoney(cn.amount, company?.currency)}</span>
+              <span className={STATUS_CHIP[cn.status] || 'chip-neutral'}>{cn.status}</span>
+              {cn.status === 'issued' && (
+                <button className="btn-ghost !text-danger !px-1.5 text-xs" disabled={busyId === cn._id} onClick={() => voidNote(cn._id)}>
+                  {busyId === cn._id ? '…' : 'Void'}
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
