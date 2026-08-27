@@ -9,7 +9,10 @@ import { formatMoney } from '../lib/format';
 export function Warehouse3plPage() {
   return (
     <div>
-      <p className="page-title mb-4">Warehouse (3PL)</p>
+      <div className="mb-5">
+        <p className="page-title">Warehouse (3PL)</p>
+        <p className="text-sm text-ink-muted mt-1">Storage contracts, receiving, and billing for third-party logistics clients.</p>
+      </div>
       <ContractsTab />
     </div>
   );
@@ -31,36 +34,43 @@ function ContractsTab() {
   return (
     <div>
       <div className="flex justify-end mb-3">
-        <button className="btn-primary" onClick={() => setShowForm(true)}>New contract</button>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>
+          <span className="font-icon text-base leading-none">add</span>
+          New contract
+        </button>
       </div>
       {loading && <Loading />}
       {!loading && contracts.length === 0 && <EmptyState title="No storage contracts yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Create a contract</button>} />}
       {!loading && contracts.length > 0 && (
         <div className="card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                <th className="px-3 py-2 font-medium">Client</th>
-                <th className="px-3 py-2 font-medium">Product</th>
-                <th className="px-3 py-2 font-medium">Rate/unit/day</th>
-                <th className="px-3 py-2 font-medium">Stored qty</th>
-                <th className="px-3 py-2 font-medium"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {contracts.map((c) => (
-                <tr key={c._id} className="border-b border-rule last:border-0">
-                  <td className="px-3 py-2">{c.clientCustomerId?.name || c.clientCustomerId}</td>
-                  <td className="px-3 py-2">{c.productId?.name || c.productId}</td>
-                  <td className="px-3 py-2 num">{formatMoney(c.ratePerUnitPerDay)}</td>
-                  <td className="px-3 py-2 num">{c.storedQuantity ?? c.currentQuantity ?? 0}</td>
-                  <td className="px-3 py-2 text-right">
-                    <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => setActive(c)}>Manage</button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken/60">
+                  <th className="px-4 py-2.5 font-semibold">Client</th>
+                  <th className="px-4 py-2.5 font-semibold">Product</th>
+                  <th className="px-4 py-2.5 font-semibold">Rate/unit/day</th>
+                  <th className="px-4 py-2.5 font-semibold">Stored qty</th>
+                  <th className="px-4 py-2.5 font-semibold"></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {contracts.map((c) => (
+                  <tr key={c._id} className="border-b border-rule last:border-0 hover:bg-surface-sunken/40">
+                    <td className="px-4 py-2.5 font-medium text-ink">{c.clientCustomerId?.name || c.clientCustomerId}</td>
+                    <td className="px-4 py-2.5 text-ink-muted">{c.productId?.name || c.productId}</td>
+                    <td className="px-4 py-2.5 num">{formatMoney(c.ratePerUnitPerDay)}</td>
+                    <td className="px-4 py-2.5">
+                      <span className="chip-accent num">{c.storedQuantity ?? c.currentQuantity ?? 0}</span>
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      <button className="btn-ghost !px-2 !py-1 text-xs" onClick={() => setActive(c)}>Manage</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
       {showForm && <ContractForm onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
@@ -109,7 +119,7 @@ function ContractForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm max-h-[90vh] overflow-y-auto">
-        <p className="font-display text-lg mb-4">New storage contract</p>
+        <p className="font-display text-lg font-semibold text-ink mb-4">New storage contract</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Branch</label>
@@ -158,7 +168,7 @@ function ContractForm({ onClose, onSaved }) {
             </select>
           </div>
         </div>
-        <div className="flex justify-end gap-2 mt-5">
+        <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-rule">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
           <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save'}</button>
         </div>
@@ -238,12 +248,14 @@ function ContractManage({ contract, onClose, onChanged }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <div className="card p-5 w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <p className="font-display text-lg mb-1">{contract.clientCustomerId?.name || 'Contract'}</p>
-        <p className="text-sm text-ink-muted mb-4">{contract.productId?.name} · {formatMoney(contract.ratePerUnitPerDay, company?.currency)}/unit/day · Stored: <span className="num">{contract.storedQuantity ?? contract.currentQuantity ?? 0}</span></p>
+        <p className="font-display text-lg font-semibold text-ink mb-1">{contract.clientCustomerId?.name || 'Contract'}</p>
+        <p className="text-sm text-ink-muted mb-4">
+          {contract.productId?.name} <span className="text-rule-strong">·</span> <span className="num">{formatMoney(contract.ratePerUnitPerDay, company?.currency)}</span>/unit/day <span className="text-rule-strong">·</span> Stored: <span className="chip-accent num align-middle">{contract.storedQuantity ?? contract.currentQuantity ?? 0}</span>
+        </p>
 
         <div className="space-y-5">
           <form onSubmit={handleReceive} className="border-t border-rule pt-4">
-            <p className="text-sm font-medium mb-2">Receive goods</p>
+            <p className="text-sm font-semibold text-ink mb-2">Receive goods</p>
             <div className="flex gap-2">
               <input type="number" step="any" required className="field-input num" placeholder="Quantity" value={receiveQty} onChange={(e) => setReceiveQty(e.target.value)} />
               <button type="submit" disabled={busy} className="btn-secondary whitespace-nowrap">Receive</button>
@@ -251,7 +263,7 @@ function ContractManage({ contract, onClose, onChanged }) {
           </form>
 
           <form onSubmit={handleRelease} className="border-t border-rule pt-4">
-            <p className="text-sm font-medium mb-2">Release goods</p>
+            <p className="text-sm font-semibold text-ink mb-2">Release goods</p>
             <div className="flex gap-2">
               <input type="number" step="any" required className="field-input num" placeholder="Quantity" value={releaseQty} onChange={(e) => setReleaseQty(e.target.value)} />
               <button type="submit" disabled={busy} className="btn-secondary whitespace-nowrap">Release</button>
@@ -259,21 +271,21 @@ function ContractManage({ contract, onClose, onChanged }) {
           </form>
 
           <form onSubmit={handleComputeFee} className="border-t border-rule pt-4">
-            <p className="text-sm font-medium mb-2">Compute fee</p>
+            <p className="text-sm font-semibold text-ink mb-2">Compute fee</p>
             <div className="grid grid-cols-2 gap-2 mb-2">
               <div><label className="field-label">Period start</label><input type="date" required className="field-input" value={fee.periodStart} onChange={(e) => setFee({ ...fee, periodStart: e.target.value })} /></div>
               <div><label className="field-label">Period end</label><input type="date" required className="field-input" value={fee.periodEnd} onChange={(e) => setFee({ ...fee, periodEnd: e.target.value })} /></div>
             </div>
             <button type="submit" disabled={busy} className="btn-secondary">Compute</button>
             {feeResult && (
-              <p className="text-sm mt-2 num text-accent-strong">
+              <p className="text-sm mt-2 num font-semibold text-accent-strong bg-accent-soft rounded-lg px-3 py-2">
                 Fee: {formatMoney(feeResult.fee ?? feeResult.amount ?? feeResult.totalFee, company?.currency)}
               </p>
             )}
           </form>
 
           <form onSubmit={handleBill} className="border-t border-rule pt-4">
-            <p className="text-sm font-medium mb-2">Bill period</p>
+            <p className="text-sm font-semibold text-ink mb-2">Bill period</p>
             <div className="grid grid-cols-2 gap-2 mb-2">
               <div><label className="field-label">Period start</label><input type="date" required className="field-input" value={bill.periodStart} onChange={(e) => setBill({ ...bill, periodStart: e.target.value })} /></div>
               <div><label className="field-label">Period end</label><input type="date" required className="field-input" value={bill.periodEnd} onChange={(e) => setBill({ ...bill, periodEnd: e.target.value })} /></div>
@@ -282,7 +294,7 @@ function ContractManage({ contract, onClose, onChanged }) {
           </form>
         </div>
 
-        <div className="flex justify-end mt-5">
+        <div className="flex justify-end mt-5 pt-4 border-t border-rule">
           <button type="button" className="btn-secondary" onClick={onClose}>Close</button>
         </div>
       </div>

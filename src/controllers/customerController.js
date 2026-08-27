@@ -8,6 +8,15 @@ async function list(req, res) {
 
 async function create(req, res) {
   const customer = await Customer.create({ ...req.body, companyId: req.companyId });
+  // Developer Platform outbound webhook — fire-and-forget, must never
+  // block or fail the actual customer creation that already succeeded.
+  try {
+    await require('../services/webhookSubscriptionService').triggerWebhook(String(req.companyId), 'customer.created', {
+      customerId: customer._id, name: customer.name, phone: customer.phone, email: customer.email,
+    });
+  } catch (err) {
+    console.error('Developer Platform webhook delivery for customer.created failed:', err.message);
+  }
   res.status(201).json(customer);
 }
 

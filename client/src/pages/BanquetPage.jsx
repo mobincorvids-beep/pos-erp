@@ -12,10 +12,10 @@ export function BanquetPage() {
   const [tab, setTab] = useState('bookings');
   return (
     <div>
-      <p className="page-title mb-4">Banquet</p>
-      <div className="flex gap-1 border-b border-rule mb-5">
+      <p className="page-title mb-4">Banquet &amp; event management</p>
+      <div className="flex gap-2 mb-5">
         {[['bookings', 'Bookings'], ['venues', 'Venues & packages']].map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} className={`px-3 py-2 text-sm -mb-px border-b-2 ${tab === key ? 'border-accent text-accent-strong font-medium' : 'border-transparent text-ink-muted hover:text-ink'}`}>
+          <button key={key} onClick={() => setTab(key)} className={tab === key ? 'pill-active' : 'pill'}>
             {label}
           </button>
         ))}
@@ -43,31 +43,32 @@ function BookingsTab() {
   return (
     <div className="flex flex-col lg:flex-row gap-6">
       <div className="flex-1 min-w-0">
-        <div className="flex justify-end mb-3">
-          <button className="btn-primary" onClick={() => setShowForm(true)}>Book event</button>
-        </div>
         {loading && <Loading />}
         {!loading && bookings.length === 0 && <EmptyState title="No bookings yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Book one</button>} />}
         {!loading && bookings.length > 0 && (
           <div className="card overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-rule">
+              <p className="font-display text-lg">Upcoming events</p>
+              <button className="btn-primary" onClick={() => setShowForm(true)}>Book event</button>
+            </div>
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                  <th className="px-3 py-2 font-medium">Venue</th>
-                  <th className="px-3 py-2 font-medium">Customer</th>
-                  <th className="px-3 py-2 font-medium">Date</th>
-                  <th className="px-3 py-2 font-medium text-right">Guests</th>
-                  <th className="px-3 py-2 font-medium">Status</th>
+                  <th className="px-4 py-2 font-medium">Venue</th>
+                  <th className="px-4 py-2 font-medium">Customer</th>
+                  <th className="px-4 py-2 font-medium">Date</th>
+                  <th className="px-4 py-2 font-medium text-right">Guests</th>
+                  <th className="px-4 py-2 font-medium">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {bookings.map((b) => (
                   <tr key={b._id} onClick={() => setSelected(b)} className={`border-b border-rule last:border-0 cursor-pointer hover:bg-paper ${selected?._id === b._id ? 'bg-accent-soft/40' : ''}`}>
-                    <td className="px-3 py-2">{b.venueId?.name}</td>
-                    <td className="px-3 py-2">{b.customerId?.name || '—'}</td>
-                    <td className="px-3 py-2 text-ink-muted">{formatDate(b.eventDate)}</td>
-                    <td className="px-3 py-2 num text-right">{b.guestCount}</td>
-                    <td className="px-3 py-2"><span className={STATUS_CHIP[b.status]}>{b.status}</span></td>
+                    <td className="px-4 py-2.5 font-medium">{b.venueId?.name}</td>
+                    <td className="px-4 py-2.5">{b.customerId?.name || '—'}</td>
+                    <td className="px-4 py-2.5 text-ink-muted">{formatDate(b.eventDate)}</td>
+                    <td className="px-4 py-2.5 num text-right">{b.guestCount}</td>
+                    <td className="px-4 py-2.5"><span className={STATUS_CHIP[b.status]}>{b.status}</span></td>
                   </tr>
                 ))}
               </tbody>
@@ -220,15 +221,15 @@ function BookingPanel({ booking, onClose, onChanged }) {
 
   return (
     <div className="w-full lg:w-96 shrink-0 card p-4 h-fit">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-1">
         <p className="font-display text-lg">{booking.venueId?.name}</p>
-        <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button>
+        <button className="btn-ghost !px-1.5 !py-1 text-xs" onClick={onClose}>Close</button>
       </div>
-      <p className="text-sm text-ink-muted mb-4">{formatDate(booking.eventDate)} · {booking.guestCount} guests</p>
+      <p className="text-sm text-ink-muted mb-4">{formatDate(booking.eventDate)} · <span className="num">{booking.guestCount}</span> guests</p>
 
       {booking.status === 'booked' && (
         <>
-          <p className="text-sm font-medium mb-2">Complete event</p>
+          <p className="eyebrow mb-2">Complete event</p>
           <select className="field-input mb-2" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
             <option value="">Warehouse…</option>
             {warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
@@ -237,10 +238,10 @@ function BookingPanel({ booking, onClose, onChanged }) {
             <option value="">Final payment account (if balance remains)…</option>
             {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
           </select>
-          <button className="btn-primary w-full mb-4" disabled={!warehouseId || busy} onClick={complete}>Complete & bill</button>
+          <button className="btn-primary w-full mb-4" disabled={!warehouseId || busy} onClick={complete}>Complete &amp; bill</button>
 
           <div className="tear-line my-3" />
-          <p className="text-sm font-medium mb-2">Or cancel</p>
+          <p className="eyebrow mb-2">Or cancel</p>
           {booking.depositAmount > 0 && (
             <>
               <label className="field-label">Forfeit % of deposit</label>
@@ -258,8 +259,8 @@ function BookingPanel({ booking, onClose, onChanged }) {
           <button className="btn-secondary w-full" disabled={busy} onClick={cancel}>Cancel booking</button>
         </>
       )}
-      {booking.status === 'completed' && <p className="text-sm text-accent-strong">Completed and billed.</p>}
-      {booking.status === 'cancelled' && <p className="text-sm text-danger">Cancelled.</p>}
+      {booking.status === 'completed' && <span className="chip-accent">Completed and billed</span>}
+      {booking.status === 'cancelled' && <span className="chip-danger">Cancelled</span>}
     </div>
   );
 }
@@ -301,40 +302,40 @@ function VenuesTab() {
   if (loading) return <Loading />;
 
   return (
-    <div className="grid grid-cols-2 gap-6">
-      <div>
-        <div className="flex justify-between items-center mb-2">
-          <p className="text-sm font-medium">Venues</p>
-          <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => setEditingVenue({})}>+ Add</button>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="card p-4">
+        <div className="flex justify-between items-center mb-3">
+          <p className="eyebrow">Venues</p>
+          <button className="btn-ghost !px-2 !py-1 text-xs" onClick={() => setEditingVenue({})}>+ Add venue</button>
         </div>
         {venues.length === 0 && <p className="text-sm text-ink-muted">None yet.</p>}
         <div className="space-y-2">
           {venues.map((v) => (
-            <div key={v._id} className="card p-3">
-              <p className="text-sm font-medium">{v.name}</p>
-              <p className="text-xs text-ink-muted">Capacity {v.capacity} · {formatMoney(v.baseRentalFee)} rental</p>
+            <div key={v._id} className="card p-3 bg-surface-sunken/40">
+              <p className="text-sm font-semibold">{v.name}</p>
+              <p className="text-xs text-ink-muted">Capacity <span className="num">{v.capacity}</span> · <span className="num">{formatMoney(v.baseRentalFee)}</span> rental</p>
               <div className="flex items-center gap-3 mt-1.5">
-                <button className="btn-ghost !text-ink-muted !px-0 text-xs" onClick={() => setEditingVenue(v)}>Edit</button>
-                <button className="btn-ghost !text-danger !px-0 text-xs" onClick={() => handleRemoveVenue(v)}>Remove</button>
+                <button className="btn-ghost !px-1.5 !py-0.5 text-xs" onClick={() => setEditingVenue(v)}>Edit</button>
+                <button className="btn-ghost !px-1.5 !py-0.5 text-xs !text-danger" onClick={() => handleRemoveVenue(v)}>Remove</button>
               </div>
             </div>
           ))}
         </div>
       </div>
-      <div>
-        <div className="flex justify-between items-center mb-2">
-          <p className="text-sm font-medium">Packages</p>
-          <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => setEditingPackage({})}>+ Add</button>
+      <div className="card p-4">
+        <div className="flex justify-between items-center mb-3">
+          <p className="eyebrow">Packages</p>
+          <button className="btn-ghost !px-2 !py-1 text-xs" onClick={() => setEditingPackage({})}>+ Add package</button>
         </div>
         {packages.length === 0 && <p className="text-sm text-ink-muted">None yet.</p>}
         <div className="space-y-2">
           {packages.map((p) => (
-            <div key={p._id} className="card p-3">
-              <p className="text-sm font-medium">{p.name}</p>
-              <p className="text-xs text-ink-muted">{formatMoney(p.pricePerPerson)}/person · min {p.minGuests} guests</p>
+            <div key={p._id} className="card p-3 bg-surface-sunken/40">
+              <p className="text-sm font-semibold">{p.name}</p>
+              <p className="text-xs text-ink-muted"><span className="num">{formatMoney(p.pricePerPerson)}</span>/person · min <span className="num">{p.minGuests}</span> guests</p>
               <div className="flex items-center gap-3 mt-1.5">
-                <button className="btn-ghost !text-ink-muted !px-0 text-xs" onClick={() => setEditingPackage(p)}>Edit</button>
-                <button className="btn-ghost !text-danger !px-0 text-xs" onClick={() => handleRemovePackage(p)}>Remove</button>
+                <button className="btn-ghost !px-1.5 !py-0.5 text-xs" onClick={() => setEditingPackage(p)}>Edit</button>
+                <button className="btn-ghost !px-1.5 !py-0.5 text-xs !text-danger" onClick={() => handleRemovePackage(p)}>Remove</button>
               </div>
             </div>
           ))}

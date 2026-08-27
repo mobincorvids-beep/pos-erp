@@ -20,39 +20,53 @@ export function EarlyPaymentDiscountPage() {
   if (!orders) return <Loading />;
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6">
-      <div className="flex-1 min-w-0">
-        <p className="page-title mb-1">Early payment discount</p>
-        <p className="text-sm text-ink-muted mb-4 max-w-lg">Set a real "2/10 net 30"-style term on any purchase order with a balance due, then pay early to take the discount — no third-party financier, just your own cash paid ahead of schedule.</p>
-
-        {orders.length === 0 && <EmptyState title="No outstanding purchase orders" description="Every purchase order is either fully paid or has no balance due." />}
-        {orders.length > 0 && (
-          <div className="card overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                  <th className="px-3 py-2 font-medium">PO #</th>
-                  <th className="px-3 py-2 font-medium">Ordered</th>
-                  <th className="px-3 py-2 font-medium text-right">Due</th>
-                  <th className="px-3 py-2 font-medium">Terms</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map((po) => (
-                  <tr key={po._id} onClick={() => setSelected(po)} className={`border-b border-rule last:border-0 cursor-pointer hover:bg-paper ${selected?._id === po._id ? 'bg-accent-soft/40' : ''}`}>
-                    <td className="px-3 py-2 num">{po.poNumber}</td>
-                    <td className="px-3 py-2 text-ink-muted">{formatDate(po.createdAt)}</td>
-                    <td className="px-3 py-2 num text-right">{formatMoney(po.dueAmount, company?.currency)}</td>
-                    <td className="px-3 py-2 text-ink-muted">{po.earlyPaymentDiscountPercent > 0 ? `${po.earlyPaymentDiscountPercent}% / ${po.earlyPaymentDiscountDays}d` : '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+    <div>
+      <div className="mb-6">
+        <p className="page-title">Early payment discount</p>
+        <p className="text-sm text-ink-muted mt-1 max-w-lg">Set a real "2/10 net 30"-style term on any purchase order with a balance due, then pay early to take the discount — no third-party financier, just your own cash paid ahead of schedule.</p>
       </div>
 
-      {selected && <PoDiscountPanel po={selected} onChanged={() => { load(); setSelected(null); }} onClose={() => setSelected(null)} />}
+      <div className="flex flex-col lg:flex-row gap-6">
+        <div className="flex-1 min-w-0">
+          {orders.length === 0 && <EmptyState title="No outstanding purchase orders" description="Every purchase order is either fully paid or has no balance due." />}
+          {orders.length > 0 && (
+            <div className="card overflow-hidden">
+              <div className="px-5 py-4 border-b border-rule flex justify-between items-center bg-surface-sunken/40">
+                <p className="font-display text-lg font-semibold text-ink">Outstanding Purchase Orders</p>
+                <span className="eyebrow">{orders.length} orders</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse min-w-[560px]">
+                  <thead>
+                    <tr className="border-b border-rule bg-surface-sunken/60">
+                      <th className="py-3 px-5 eyebrow font-medium">PO #</th>
+                      <th className="py-3 px-5 eyebrow font-medium">Ordered</th>
+                      <th className="py-3 px-5 eyebrow font-medium text-right">Due</th>
+                      <th className="py-3 px-5 eyebrow font-medium">Terms</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-rule">
+                    {orders.map((po) => (
+                      <tr key={po._id} onClick={() => setSelected(po)} className={`cursor-pointer hover:bg-accent-soft/30 transition-colors ${selected?._id === po._id ? 'bg-accent-soft/40' : ''}`}>
+                        <td className="py-3 px-5 text-sm font-semibold text-ink num">{po.poNumber}</td>
+                        <td className="py-3 px-5 text-sm text-ink-muted">{formatDate(po.createdAt)}</td>
+                        <td className="py-3 px-5 text-sm text-ink font-semibold text-right num">{formatMoney(po.dueAmount, company?.currency)}</td>
+                        <td className="py-3 px-5 text-sm text-ink-muted">
+                          {po.earlyPaymentDiscountPercent > 0
+                            ? <span className="chip-accent">{po.earlyPaymentDiscountPercent}% / {po.earlyPaymentDiscountDays}d</span>
+                            : <span className="chip-neutral">No terms</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {selected && <PoDiscountPanel po={selected} onChanged={() => { load(); setSelected(null); }} onClose={() => setSelected(null)} />}
+      </div>
     </div>
   );
 }
@@ -91,9 +105,12 @@ function PoDiscountPanel({ po, onChanged, onClose }) {
 
   return (
     <div className="w-full lg:w-96 shrink-0">
-      <div className="card p-4">
-        <div className="flex items-center justify-between mb-3">
-          <p className="font-display text-lg">{po.poNumber}</p>
+      <div className="card p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="eyebrow mb-1">Purchase Order</p>
+            <p className="font-display text-lg font-bold text-ink num">{po.poNumber}</p>
+          </div>
           <button className="btn-ghost text-xs" onClick={onClose}>Close</button>
         </div>
 
@@ -114,10 +131,10 @@ function PoDiscountPanel({ po, onChanged, onClose }) {
 
         {hasTerms && check && (
           <div>
-            <p className="text-sm mb-2">{po.earlyPaymentDiscountPercent}% off if paid within {po.earlyPaymentDiscountDays} days.</p>
+            <p className="text-sm text-ink mb-3">{po.earlyPaymentDiscountPercent}% off if paid within {po.earlyPaymentDiscountDays} days.</p>
             {check.eligible ? (
               <>
-                <p className="text-sm text-accent-strong font-medium mb-3">Eligible today — {formatMoney(check.discountAmount, company?.currency)} discount.</p>
+                <div className="chip-accent mb-4">Eligible today — {formatMoney(check.discountAmount, company?.currency)} discount</div>
                 <PayForm po={po} onPaid={onChanged} />
               </>
             ) : (
@@ -156,15 +173,15 @@ function PayForm({ po, onPaid }) {
 
   return (
     <form onSubmit={pay} className="space-y-2">
-      <select required className="field-input !text-xs" value={paymentAccountId} onChange={(e) => setPaymentAccountId(e.target.value)}>
+      <select required className="field-input" value={paymentAccountId} onChange={(e) => setPaymentAccountId(e.target.value)}>
         <option value="">Pay from…</option>
         {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
       </select>
-      <select required className="field-input !text-xs" value={payableAccountId} onChange={(e) => setPayableAccountId(e.target.value)}>
+      <select required className="field-input" value={payableAccountId} onChange={(e) => setPayableAccountId(e.target.value)}>
         <option value="">Payable account…</option>
         {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
       </select>
-      <select required className="field-input !text-xs" value={discountIncomeAccountId} onChange={(e) => setDiscountIncomeAccountId(e.target.value)}>
+      <select required className="field-input" value={discountIncomeAccountId} onChange={(e) => setDiscountIncomeAccountId(e.target.value)}>
         <option value="">Discount income account…</option>
         {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
       </select>

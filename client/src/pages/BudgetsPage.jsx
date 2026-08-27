@@ -26,9 +26,12 @@ export function BudgetsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <p className="page-title">Budget vs Actual</p>
-        {can('reports.financial') && <button className="btn-primary" onClick={() => setShowForm(true)}>Set a budget</button>}
+      <div className="flex items-end justify-between mb-6">
+        <div>
+          <p className="page-title">Budget vs Actual</p>
+          <p className="text-sm text-ink-muted mt-1">Budgeted figures compared against real posted vouchers, per account.</p>
+        </div>
+        {can('reports.financial') && <button className="btn-primary" onClick={() => setShowForm(true)}>+ Set a budget</button>}
       </div>
 
       <div className="flex gap-2 mb-5">
@@ -44,46 +47,66 @@ export function BudgetsPage() {
       )}
       {!loading && report?.rows.length > 0 && (
         <>
-          <div className="grid grid-cols-3 gap-3 mb-5 max-w-lg">
-            <div className="card p-3">
-              <p className="text-xs text-ink-muted uppercase tracking-wide">Total budgeted</p>
-              <p className="font-display text-2xl mt-1 num">{formatMoney(report.totalBudgeted, company?.currency)}</p>
+          <div className="grid grid-cols-3 gap-4 mb-6 max-w-2xl">
+            <div className="card p-4">
+              <p className="eyebrow">Total budgeted</p>
+              <p className="font-display text-2xl font-semibold mt-1.5 num text-ink">{formatMoney(report.totalBudgeted, company?.currency)}</p>
             </div>
-            <div className="card p-3">
-              <p className="text-xs text-ink-muted uppercase tracking-wide">Total actual</p>
-              <p className="font-display text-2xl mt-1 num">{formatMoney(report.totalActual, company?.currency)}</p>
+            <div className="card p-4">
+              <p className="eyebrow">Total actual</p>
+              <p className="font-display text-2xl font-semibold mt-1.5 num text-ink">{formatMoney(report.totalActual, company?.currency)}</p>
             </div>
-            <div className="card p-3">
-              <p className="text-xs text-ink-muted uppercase tracking-wide">Variance</p>
-              <p className={`font-display text-2xl mt-1 num ${report.totalVariance > 0 ? 'text-danger' : 'text-accent-strong'}`}>{formatMoney(report.totalVariance, company?.currency)}</p>
+            <div className="card p-4">
+              <p className="eyebrow">Variance</p>
+              <p className={`font-display text-2xl font-semibold mt-1.5 num ${report.totalVariance > 0 ? 'text-danger' : 'text-accent-strong'}`}>{formatMoney(report.totalVariance, company?.currency)}</p>
             </div>
           </div>
 
-          <div className="card overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                  <th className="px-3 py-2 font-medium">Account</th>
-                  <th className="px-3 py-2 font-medium">Type</th>
-                  <th className="px-3 py-2 font-medium text-right">Budgeted</th>
-                  <th className="px-3 py-2 font-medium text-right">Actual</th>
-                  <th className="px-3 py-2 font-medium text-right">Variance</th>
-                  <th className="px-3 py-2 font-medium text-right">%</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.rows.map((r) => (
-                  <tr key={r.accountId} className="border-b border-rule last:border-0">
-                    <td className="px-3 py-2">{r.accountName}</td>
-                    <td className="px-3 py-2 text-ink-muted capitalize">{r.accountType}</td>
-                    <td className="px-3 py-2 num text-right">{formatMoney(r.budgeted, company?.currency)}</td>
-                    <td className="px-3 py-2 num text-right">{formatMoney(r.actual, company?.currency)}</td>
-                    <td className={`px-3 py-2 num text-right ${r.variance > 0 ? 'text-danger' : 'text-accent-strong'}`}>{formatMoney(r.variance, company?.currency)}</td>
-                    <td className={`px-3 py-2 num text-right ${r.variance > 0 ? 'text-danger' : 'text-accent-strong'}`}>{r.variancePercent !== null ? `${r.variancePercent}%` : '—'}</td>
+          <div className="card p-5">
+            <h3 className="font-display text-lg font-semibold text-accent mb-4">Budget Utilization Deep-Dive</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[760px]">
+                <thead>
+                  <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-widest">
+                    <th className="px-3 py-2 font-semibold">Account</th>
+                    <th className="px-3 py-2 font-semibold">Type</th>
+                    <th className="px-3 py-2 font-semibold">Utilization</th>
+                    <th className="px-3 py-2 font-semibold text-right">Budgeted</th>
+                    <th className="px-3 py-2 font-semibold text-right">Actual</th>
+                    <th className="px-3 py-2 font-semibold text-right">Variance</th>
+                    <th className="px-3 py-2 font-semibold text-right">%</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {report.rows.map((r) => {
+                    const overBudget = r.variance > 0;
+                    const pct = r.budgeted > 0 ? Math.min(100, Math.round((r.actual / r.budgeted) * 100)) : 0;
+                    return (
+                      <tr key={r.accountId} className="border-b border-rule last:border-0">
+                        <td className="px-3 py-3 font-medium text-ink">{r.accountName}</td>
+                        <td className="px-3 py-3 text-ink-muted capitalize">{r.accountType}</td>
+                        <td className="px-3 py-3">
+                          <div className="flex items-center gap-2 min-w-[120px]">
+                            <div className="w-full bg-surface-sunken h-2 rounded-full overflow-hidden">
+                              <div className={`h-full rounded-full ${overBudget ? 'bg-danger' : 'bg-accent'}`} style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className="num text-xs text-ink-muted w-9 text-right">{pct}%</span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 num text-right">{formatMoney(r.budgeted, company?.currency)}</td>
+                        <td className="px-3 py-3 num text-right">{formatMoney(r.actual, company?.currency)}</td>
+                        <td className={`px-3 py-3 num text-right ${overBudget ? 'text-danger' : 'text-accent-strong'}`}>{formatMoney(r.variance, company?.currency)}</td>
+                        <td className="px-3 py-3 text-right">
+                          {r.variancePercent !== null ? (
+                            <span className={overBudget ? 'chip-danger' : 'chip-accent'}>{overBudget ? '+' : ''}{r.variancePercent}%</span>
+                          ) : <span className="text-ink-muted">—</span>}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </>
       )}
@@ -118,7 +141,7 @@ function BudgetForm({ defaultMonth, defaultYear, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Set a budget</p>
+        <p className="font-display text-lg font-semibold text-accent mb-4">Set a budget</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Account</label>

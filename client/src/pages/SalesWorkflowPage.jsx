@@ -11,13 +11,16 @@ export function SalesWorkflowPage() {
   const [showForm, setShowForm] = useState(false);
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <p className="page-title">Quotations &amp; sales orders</p>
+      <div className="flex items-end justify-between mb-6">
+        <div>
+          <p className="page-title">Quotations &amp; orders</p>
+          <p className="text-sm text-ink-muted mt-1.5">Manage active quotes, track conversions, and monitor order fulfillment.</p>
+        </div>
         <button className="btn-primary" onClick={() => setShowForm(true)}>New {tab === 'quotations' ? 'quotation' : 'sales order'}</button>
       </div>
-      <div className="flex gap-1 border-b border-rule mb-5">
+      <div className="flex gap-2 mb-5">
         {[['quotations', 'Quotations'], ['sales-orders', 'Sales orders']].map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} className={`px-3 py-2 text-sm -mb-px border-b-2 ${tab === key ? 'border-accent text-accent-strong font-medium' : 'border-transparent text-ink-muted hover:text-ink'}`}>
+          <button key={key} onClick={() => setTab(key)} className={tab === key ? 'pill-active' : 'pill'}>
             {label}
           </button>
         ))}
@@ -28,15 +31,30 @@ export function SalesWorkflowPage() {
   );
 }
 
+const STATUS_CHIP = {
+  quotation: 'chip-info',
+  sales_order: 'chip-accent',
+  cancelled: 'chip-danger',
+  invoiced: 'chip-accent',
+};
+
+function statusChipClass(status) {
+  return STATUS_CHIP[status] || 'chip-neutral';
+}
+
 function DocumentList({ kind, showForm, onCloseForm }) {
   const { company } = useAuth();
   const toast = useToast();
   const [docs, setDocs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedId, setSelectedId] = useState(null);
 
   function load() {
     setLoading(true);
-    api.get(`/sales-workflow/${kind}`).then(setDocs).catch((err) => toast(err.message, 'error')).finally(() => setLoading(false));
+    api.get(`/sales-workflow/${kind}`).then((data) => {
+      setDocs(data);
+      setSelectedId((prev) => (data.some((d) => d._id === prev) ? prev : data[0]?._id ?? null));
+    }).catch((err) => toast(err.message, 'error')).finally(() => setLoading(false));
   }
   useEffect(load, [kind]);
 
@@ -56,6 +74,8 @@ function DocumentList({ kind, showForm, onCloseForm }) {
     } catch (err) { toast(err.message, 'error'); }
   }
 
+  const selected = docs.find((d) => d._id === selectedId) || null;
+
   return (
     <>
       {showForm && (
@@ -68,42 +88,120 @@ function DocumentList({ kind, showForm, onCloseForm }) {
       {loading ? <Loading /> : docs.length === 0 ? (
         <EmptyState title={`No ${kind === 'quotations' ? 'quotations' : 'sales orders'} yet`} description="These don't touch stock or the ledger until converted to an invoice." />
       ) : (
-        <div className="card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                <th className="px-3 py-2 font-medium">Document #</th>
-                <th className="px-3 py-2 font-medium">Date</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-                <th className="px-3 py-2 font-medium text-right">Total</th>
-                <th className="px-3 py-2 font-medium"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {docs.map((d) => (
-                <tr key={d._id} className="border-b border-rule last:border-0">
-                  <td className="px-3 py-2 num">{d.documentNumber}</td>
-                  <td className="px-3 py-2 text-ink-muted">{formatDate(d.createdAt)}</td>
-                  <td className="px-3 py-2"><span className="chip-neutral">{d.status.replace('_', ' ')}</span></td>
-                  <td className="px-3 py-2 num text-right">{formatMoney(d.totalAmount, company?.currency)}</td>
-                  <td className="px-3 py-2 text-right">
-                    {kind === 'quotations' && d.status === 'quotation' && (
-                      <button className="btn-ghost !text-accent" onClick={() => accept(d._id)}>Accept</button>
-                    )}
-                    {(d.status === 'quotation' || d.status === 'sales_order') && (
-                      <button className="btn-ghost !text-danger" onClick={() => cancel(d._id)}>Cancel</button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <p className="text-xs text-ink-muted px-3 py-2 border-t border-rule">
-            Converting a sales order to an invoice (checkout) isn't yet wired into this UI — use <code className="num">POST /sales-workflow/:id/convert-to-invoice</code> directly for now.
-          </p>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          {/* Ledger panel */}
+          <div className="lg:col-span-8 card overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-rule flex items-center justify-between bg-surface-sunken/40">
+              <p className="font-display text-lg font-semibold text-accent">Active {kind === 'quotations' ? 'quotations' : 'sales orders'}</p>
+              <span className="chip-accent">{docs.length} active</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-surface-sunken text-left text-xs text-ink-muted uppercase tracking-wide border-b border-rule">
+                    <th className="px-6 py-3 font-semibold">Doc ref</th>
+                    <th className="px-6 py-3 font-semibold">Date</th>
+                    <th className="px-6 py-3 font-semibold">Status</th>
+                    <th className="px-6 py-3 font-semibold text-right">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {docs.map((d) => (
+                    <tr
+                      key={d._id}
+                      onClick={() => setSelectedId(d._id)}
+                      className={`border-b border-rule last:border-0 cursor-pointer transition-colors hover:bg-accent-soft/40 ${selectedId === d._id ? 'bg-accent-soft/60' : ''}`}
+                    >
+                      <td className="px-6 py-3 num text-accent-strong">{d.documentNumber}</td>
+                      <td className="px-6 py-3 text-ink-muted">{formatDate(d.createdAt)}</td>
+                      <td className="px-6 py-3"><span className={statusChipClass(d.status)}>{d.status.replace('_', ' ')}</span></td>
+                      <td className="px-6 py-3 num text-right">{formatMoney(d.totalAmount, company?.currency)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs text-ink-muted px-6 py-3 border-t border-rule mt-auto">
+              Converting a sales order to an invoice (checkout) isn't yet wired into this UI — use <code className="num">POST /sales-workflow/:id/convert-to-invoice</code> directly for now.
+            </p>
+          </div>
+
+          {/* Detail panel */}
+          <div className="lg:col-span-4 space-y-5">
+            {selected ? (
+              <div className="card p-5">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <p className="font-display text-lg font-semibold text-accent">{selected.documentNumber}</p>
+                    <p className="text-sm text-ink-muted">{formatDate(selected.createdAt)}</p>
+                  </div>
+                  <span className={statusChipClass(selected.status)}>{selected.status.replace('_', ' ')}</span>
+                </div>
+
+                <div className="flex items-center justify-between bg-surface-sunken rounded-lg px-4 py-3 mb-4">
+                  <span className="eyebrow text-accent-strong">Total ({company?.currency || 'amount'})</span>
+                  <span className="font-display text-xl font-bold text-accent num">{formatMoney(selected.totalAmount, company?.currency)}</span>
+                </div>
+
+                <div className="flex gap-2">
+                  {kind === 'quotations' && selected.status === 'quotation' && (
+                    <button className="btn-primary flex-1" onClick={() => accept(selected._id)}>Accept</button>
+                  )}
+                  {(selected.status === 'quotation' || selected.status === 'sales_order') && (
+                    <button className="btn-secondary flex-1 !text-danger" onClick={() => cancel(selected._id)}>Cancel</button>
+                  )}
+                </div>
+              </div>
+            ) : null}
+
+            {/* Lifecycle tracker */}
+            {selected && (
+              <div className="card p-5">
+                <p className="font-display text-base font-semibold text-accent mb-5">Lifecycle tracker</p>
+                <div className="relative pl-7 space-y-6 before:absolute before:inset-y-0 before:left-[9px] before:w-px before:bg-rule">
+                  <LifecycleStep label={`${kind === 'quotations' ? 'Quotation' : 'Sales order'} created`} detail={formatDate(selected.createdAt)} done />
+                  {kind === 'quotations' && (
+                    <LifecycleStep
+                      label="Accepted → sales order"
+                      detail={selected.status === 'quotation' ? 'Awaiting acceptance' : 'Converted'}
+                      done={selected.status !== 'quotation'}
+                      active={selected.status === 'quotation'}
+                    />
+                  )}
+                  <LifecycleStep
+                    label="Converted to invoice"
+                    detail={selected.status === 'invoiced' ? 'Invoiced' : 'Not yet converted'}
+                    done={selected.status === 'invoiced'}
+                    active={selected.status === 'sales_order'}
+                  />
+                  <LifecycleStep
+                    label="Cancelled"
+                    detail={selected.status === 'cancelled' ? 'Cancelled' : '—'}
+                    done={selected.status === 'cancelled'}
+                    muted={selected.status !== 'cancelled'}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </>
+  );
+}
+
+function LifecycleStep({ label, detail, done, active, muted }) {
+  return (
+    <div className={`relative ${muted && !done ? 'opacity-50' : ''}`}>
+      <div className={`absolute -left-7 top-0.5 w-5 h-5 rounded-full flex items-center justify-center ${
+        done ? 'bg-accent' : active ? 'bg-surface border-2 border-accent' : 'bg-surface-sunken border-2 border-rule-strong'
+      }`}>
+        {done && <span className="text-white text-[10px] leading-none">✓</span>}
+        {!done && active && <span className="w-1.5 h-1.5 rounded-full bg-accent" />}
+      </div>
+      <p className="text-sm font-semibold text-ink">{label}</p>
+      <p className="text-xs text-ink-muted mt-0.5">{detail}</p>
+    </div>
   );
 }
 

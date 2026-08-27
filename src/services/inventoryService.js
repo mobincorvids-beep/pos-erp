@@ -144,6 +144,16 @@ async function checkLowStockAndNotify({ companyId, warehouseId, productId, varia
       entityType: 'Product', entityId: productId,
     });
   }
+
+  // Developer Platform outbound webhook — same "never let this block or
+  // fail the real operation" rule as the in-app notification above.
+  try {
+    await require('./webhookSubscriptionService').triggerWebhook(String(companyId), 'product.low_stock', {
+      productId, variantId, warehouseId, currentQuantity, reorderLevel: product.reorderLevel, productName: product.name,
+    });
+  } catch (err) {
+    console.error('Developer Platform webhook delivery for product.low_stock failed:', err.message);
+  }
 }
 
 /** Current on-hand quantity for a variant at a warehouse (optionally a specific batch). */

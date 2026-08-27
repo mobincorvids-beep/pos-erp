@@ -5,8 +5,9 @@ import { useToast } from '../components/Toast';
 export function BankingPage() {
   return (
     <div>
-      <p className="page-title mb-4">Banking</p>
-      <div className="grid grid-cols-2 gap-4">
+      <p className="eyebrow mb-1">Finance</p>
+      <p className="page-title mb-6">Banking</p>
+      <div className="grid grid-cols-2 gap-5">
         <TransferCard />
         <ReconciliationCard />
       </div>
@@ -35,20 +36,32 @@ function TransferCard() {
   }
 
   return (
-    <form onSubmit={submit} className="card p-4">
-      <p className="text-sm font-medium mb-3">Transfer between accounts</p>
-      <div className="space-y-2">
-        <select required className="field-input" value={fromAccountId} onChange={(e) => setFromAccountId(e.target.value)}>
-          <option value="">From account…</option>
-          {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
-        </select>
-        <select required className="field-input" value={toAccountId} onChange={(e) => setToAccountId(e.target.value)}>
-          <option value="">To account…</option>
-          {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
-        </select>
-        <input type="number" step="0.01" required placeholder="Amount" className="field-input num" value={amount} onChange={(e) => setAmount(e.target.value)} />
+    <form onSubmit={submit} className="card p-5">
+      <div className="flex items-center justify-between mb-4">
+        <p className="font-display text-base font-bold text-ink">Transfer between accounts</p>
+        <span className="material-symbols-outlined text-ink-muted text-[20px]">sync_alt</span>
       </div>
-      <button type="submit" disabled={busy} className="btn-primary w-full mt-3">{busy ? 'Posting…' : 'Transfer'}</button>
+      <div className="space-y-3">
+        <div>
+          <label className="field-label">From account</label>
+          <select required className="field-input" value={fromAccountId} onChange={(e) => setFromAccountId(e.target.value)}>
+            <option value="">Select account…</option>
+            {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="field-label">To account</label>
+          <select required className="field-input" value={toAccountId} onChange={(e) => setToAccountId(e.target.value)}>
+            <option value="">Select account…</option>
+            {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="field-label">Amount</label>
+          <input type="number" step="0.01" required placeholder="0.00" className="field-input num" value={amount} onChange={(e) => setAmount(e.target.value)} />
+        </div>
+      </div>
+      <button type="submit" disabled={busy} className="btn-primary w-full mt-4">{busy ? 'Posting…' : 'Transfer'}</button>
     </form>
   );
 }
@@ -76,22 +89,42 @@ function ReconciliationCard() {
   }
 
   return (
-    <form onSubmit={submit} className="card p-4">
-      <p className="text-sm font-medium mb-3">Reconcile against a statement</p>
-      <div className="space-y-2">
-        <select required className="field-input" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
-          <option value="">Account…</option>
-          {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
-        </select>
-        <input type="date" required className="field-input" value={statementDate} onChange={(e) => setStatementDate(e.target.value)} />
-        <input type="number" step="0.01" required placeholder="Statement balance" className="field-input num" value={statementBalance} onChange={(e) => setStatementBalance(e.target.value)} />
+    <form onSubmit={submit} className="card p-5">
+      <div className="flex items-center justify-between mb-4">
+        <p className="font-display text-base font-bold text-ink">Reconcile against a statement</p>
+        <span className="material-symbols-outlined text-ink-muted text-[20px]">fact_check</span>
       </div>
-      <button type="submit" disabled={busy} className="btn-primary w-full mt-3">{busy ? 'Checking…' : 'Compare to book balance'}</button>
+      <div className="space-y-3">
+        <div>
+          <label className="field-label">Account</label>
+          <select required className="field-input" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+            <option value="">Select account…</option>
+            {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="field-label">Statement date</label>
+          <input type="date" required className="field-input" value={statementDate} onChange={(e) => setStatementDate(e.target.value)} />
+        </div>
+        <div>
+          <label className="field-label">Statement balance</label>
+          <input type="number" step="0.01" required placeholder="0.00" className="field-input num" value={statementBalance} onChange={(e) => setStatementBalance(e.target.value)} />
+        </div>
+      </div>
+      <button type="submit" disabled={busy} className="btn-primary w-full mt-4">{busy ? 'Checking…' : 'Compare to book balance'}</button>
 
       {result && (
-        <div className="tear-line mt-3 pt-3 text-sm">
-          <div className="flex justify-between"><span className="text-ink-muted">Book balance</span><span className="num">{result.bookBalanceAtCompletion}</span></div>
-          <div className="flex justify-between"><span className="text-ink-muted">Difference</span><span className={`num ${result.difference === 0 ? 'text-accent-strong' : 'text-warning'}`}>{result.difference}</span></div>
+        <div className="tear-line mt-4 pt-4 text-sm space-y-1.5">
+          <div className="flex justify-between items-center">
+            <span className="text-ink-muted">Book balance</span>
+            <span className="num font-semibold text-ink">{result.bookBalanceAtCompletion}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-ink-muted">Difference</span>
+            <span className={result.difference === 0 ? 'chip-accent' : 'chip-warning'}>
+              <span className="num">{result.difference}</span>
+            </span>
+          </div>
         </div>
       )}
     </form>

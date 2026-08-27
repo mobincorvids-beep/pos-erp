@@ -1,41 +1,53 @@
-/** Design tokens for the POS/ERP client — see client/DESIGN.md for the rationale. */
+/**
+ * Design tokens for the POS/ERP client.
+ *
+ * Reskinned to match the "SafePOS" design system (Manrope + Hanken Grotesk,
+ * a deep forest-green primary, warm off-white surfaces, rounded-xl cards) —
+ * the same TOKEN NAMES as before are kept (paper/surface/ink/accent/rule/
+ * danger/warning/info) so every existing page, which already builds its UI
+ * out of those tokens and the shared .btn-, .card, .chip-, .field- classes
+ * in src/index.css, picks up the new look automatically without needing to
+ * be rewritten file by file. Only the underlying values changed.
+ */
 export default {
   content: ['./index.html', './src/**/*.{js,jsx}'],
   theme: {
     extend: {
       colors: {
-        paper: '#FAF9F6',       // app background — unbleached ledger paper, not stark white
+        paper: '#FAF9F7',        // app background
         surface: '#FFFFFF',      // cards, panels
-        ink: '#16201D',          // primary text — warm near-black, ties to the accent family
-        'ink-muted': '#5B6864',
-        rule: '#D8DED9',         // borders, dividers, the receipt "tear line"
-        accent: '#0F6B5C',       // ledger green — the single accent color, used deliberately
-        'accent-soft': '#E4F1EC',
-        'accent-strong': '#0B534A',
-        danger: '#A3352B',       // returns, voids, negative amounts
-        'danger-soft': '#FBEAE7',
-        warning: '#9C6B0A',      // pending, due balances
+        'surface-sunken': '#EEEEEC', // sidebar / recessed panels — one shade down from paper
+        ink: '#1A1C1B',          // primary text
+        'ink-muted': '#5A625F',
+        rule: '#E3E2E1',         // borders, dividers (subtle)
+        'rule-strong': '#C1C8C5', // stronger dividers, input borders
+        accent: '#17352F',       // deep forest green — the single accent color
+        'accent-soft': '#DCEBE6',
+        'accent-strong': '#0E211D',
+        danger: '#BA1A1A',
+        'danger-soft': '#FFDAD6',
+        warning: '#7A5B12',
         'warning-soft': '#FBF1DE',
         info: '#2B5C8A',
+        'info-soft': '#E5EEFF',
       },
       fontFamily: {
-        // Display: used ONLY for page titles and empty-state headlines — a
-        // handful of instances per screen, so it can carry real character
-        // without hurting density elsewhere.
-        display: ['"Fraunces"', 'ui-serif', 'Georgia', 'serif'],
-        // Body: the workhorse for dense tables and forms used all day —
-        // legibility at 12–13px wins over novelty here.
-        sans: ['"Inter"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        // Display: page titles, empty-state headlines, the wordmark.
+        display: ['"Manrope"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        // Body: the workhorse for dense tables and forms used all day.
+        sans: ['"Hanken Grotesk"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         // Every amount, quantity, invoice/document number, and phone number
         // in the app renders in this — tabular figures so columns of money
-        // actually line up, like a receipt tape. This is the app's signature.
+        // actually line up, like a receipt tape.
         mono: ['"IBM Plex Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+        icon: ['"Material Symbols Outlined"'],
       },
       borderRadius: {
-        DEFAULT: '3px', // sharp, paper-like — not the soft bubbly SaaS default
-        sm: '2px',
-        md: '4px',
-        lg: '6px',
+        DEFAULT: '0.5rem',
+        sm: '0.375rem',
+        md: '0.5rem',
+        lg: '0.75rem',
+        xl: '1rem',
       },
     },
   },

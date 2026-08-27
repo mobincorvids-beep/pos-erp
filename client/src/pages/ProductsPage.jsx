@@ -6,12 +6,23 @@ import { Loading } from '../components/Loading';
 import { EmptyState } from '../components/EmptyState';
 import { formatMoney } from '../lib/format';
 
+const TRACKING_LABELS = {
+  simple: 'Simple',
+  variant: 'Variant',
+  batch: 'Batch/expiry',
+  serial: 'Serial/IMEI',
+  weight: 'Weight-based',
+  bundle: 'Bundle',
+  service: 'Service',
+};
+
 export function ProductsPage() {
   const { company } = useAuth();
   const toast = useToast();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null); // null closed, {} new, {...} edit
+  const [query, setQuery] = useState('');
 
   function load() {
     setLoading(true);
@@ -29,14 +40,25 @@ export function ProductsPage() {
     } catch (err) { toast(err.message, 'error'); }
   }
 
+  const lowStockCount = products.filter((p) => p.reorderLevel != null && p.minStock != null && Number(p.minStock) <= Number(p.reorderLevel)).length;
+
+  const filtered = products.filter((p) => {
+    if (!query.trim()) return true;
+    const q = query.trim().toLowerCase();
+    return p.name?.toLowerCase().includes(q) || p.sku?.toLowerCase().includes(q) || p.barcode?.toLowerCase().includes(q);
+  });
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-end justify-between mb-6">
         <div>
           <p className="page-title">Products</p>
           <p className="text-sm text-ink-muted mt-1">{products.length} product{products.length === 1 ? '' : 's'} in your catalog</p>
         </div>
-        <button className="btn-primary" onClick={() => setEditing({})}>New product</button>
+        <button className="btn-primary" onClick={() => setEditing({})}>
+          <span className="font-icon text-[18px] leading-none">add</span>
+          New product
+        </button>
       </div>
 
       {loading && <Loading />}
@@ -50,35 +72,106 @@ export function ProductsPage() {
       )}
 
       {!loading && products.length > 0 && (
-        <div className="card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                <th className="px-3 py-2 font-medium">Name</th>
-                <th className="px-3 py-2 font-medium">SKU</th>
-                <th className="px-3 py-2 font-medium">Tracking</th>
-                <th className="px-3 py-2 font-medium text-right">Cost</th>
-                <th className="px-3 py-2 font-medium text-right">Price</th>
-                <th className="px-3 py-2 font-medium text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((p) => (
-                <tr key={p._id} className="border-b border-rule last:border-0 hover:bg-paper">
-                  <td className="px-3 py-2">{p.name}</td>
-                  <td className="px-3 py-2 num text-ink-muted">{p.sku || '—'}</td>
-                  <td className="px-3 py-2"><span className="chip-neutral capitalize">{p.trackingMode}</span></td>
-                  <td className="px-3 py-2 num text-right">{formatMoney(p.costPrice, company?.currency)}</td>
-                  <td className="px-3 py-2 num text-right text-accent-strong">{formatMoney(p.sellingPrice, company?.currency)}</td>
-                  <td className="px-3 py-2 text-right">
-                    <button className="btn-ghost !text-ink-muted !px-2 text-xs" onClick={() => setEditing(p)}>Edit</button>
-                    <button className="btn-ghost !text-danger !px-2 text-xs" onClick={() => handleRemove(p)}>Remove</button>
-                  </td>
+        <>
+          {/* Catalog overview strip */}
+          <div className="grid grid-cols-12 gap-6 mb-6">
+            <div className="col-span-12 lg:col-span-4 card p-6">
+              <p className="font-display text-lg font-semibold text-accent mb-4">Catalog Overview</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-surface-sunken p-4 rounded-lg">
+                  <p className="eyebrow mb-1">Total items</p>
+                  <p className="font-display text-3xl font-bold text-accent num">{products.length}</p>
+                </div>
+                <div className="bg-surface-sunken p-4 rounded-lg">
+                  <p className="eyebrow mb-1">Reorder alerts</p>
+                  <p className="font-display text-3xl font-bold text-danger num">{lowStockCount}</p>
+                </div>
+              </div>
+            </div>
+            <div className="col-span-12 lg:col-span-8 card p-6 flex flex-col justify-center">
+              <p className="font-display text-lg font-semibold text-accent mb-2">Tracking modes in use</p>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(TRACKING_LABELS).map(([key, label]) => {
+                  const count = products.filter((p) => p.trackingMode === key).length;
+                  if (!count) return null;
+                  return <span key={key} className="chip-neutral">{label} · <span className="num">{count}</span></span>;
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div className="card overflow-hidden">
+            <div className="p-5 border-b border-rule flex items-center justify-between gap-4 flex-wrap">
+              <p className="font-display text-lg font-semibold text-accent">Current Catalog</p>
+              <div className="relative">
+                <span className="font-icon text-[18px] absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted">search</span>
+                <input
+                  type="text"
+                  className="field-input !w-64 pl-9"
+                  placeholder="Search SKU or product…"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-rule text-left bg-surface-sunken">
+                  <th className="px-6 py-3 font-semibold text-ink-muted text-xs uppercase tracking-wide">SKU</th>
+                  <th className="px-6 py-3 font-semibold text-ink-muted text-xs uppercase tracking-wide">Product name</th>
+                  <th className="px-6 py-3 font-semibold text-ink-muted text-xs uppercase tracking-wide">Tracking</th>
+                  <th className="px-6 py-3 font-semibold text-ink-muted text-xs uppercase tracking-wide text-right">Cost</th>
+                  <th className="px-6 py-3 font-semibold text-ink-muted text-xs uppercase tracking-wide text-right">Price</th>
+                  <th className="px-6 py-3"></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {filtered.map((p) => {
+                  const lowStock = p.reorderLevel != null && p.minStock != null && Number(p.minStock) <= Number(p.reorderLevel);
+                  return (
+                    <tr
+                      key={p._id}
+                      className={`border-b border-rule last:border-0 hover:bg-paper cursor-pointer group ${lowStock ? 'bg-danger-soft/30' : ''}`}
+                      onClick={() => setEditing(p)}
+                    >
+                      <td className="px-6 py-3 num text-ink-muted">{p.sku || '—'}</td>
+                      <td className="px-6 py-3 font-medium text-ink">
+                        <span className="inline-flex items-center gap-2">
+                          {p.name}
+                          {lowStock && <span className="font-icon text-[16px] text-danger" title="Low stock">warning</span>}
+                        </span>
+                      </td>
+                      <td className="px-6 py-3"><span className="chip-neutral capitalize">{TRACKING_LABELS[p.trackingMode] || p.trackingMode}</span></td>
+                      <td className="px-6 py-3 num text-right">{formatMoney(p.costPrice, company?.currency)}</td>
+                      <td className="px-6 py-3 num text-right text-accent-strong font-medium">{formatMoney(p.sellingPrice, company?.currency)}</td>
+                      <td className="px-6 py-3 text-right whitespace-nowrap">
+                        <button
+                          className="btn-ghost !text-ink-muted !px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => { e.stopPropagation(); setEditing(p); }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="btn-ghost !text-danger !px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => { e.stopPropagation(); handleRemove(p); }}
+                        >
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {filtered.length === 0 && (
+                  <tr><td colSpan={6} className="px-6 py-8 text-center text-sm text-ink-muted">No products match "{query}".</td></tr>
+                )}
+              </tbody>
+            </table>
+            <div className="px-6 py-3 border-t border-rule bg-surface-sunken flex items-center justify-between">
+              <span className="text-sm text-ink-muted">Showing {filtered.length} of {products.length} product{products.length === 1 ? '' : 's'}</span>
+            </div>
+          </div>
+        </>
       )}
 
       {editing !== null && <ProductForm product={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}

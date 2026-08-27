@@ -13,10 +13,11 @@ export function HotelPage() {
   const [tab, setTab] = useState('reservations');
   return (
     <div>
-      <p className="page-title mb-4">Hotel</p>
+      <p className="page-title mb-1">Hotel</p>
+      <p className="text-sm text-ink-muted mb-5">Room status, reservations and check-in / check-out billing.</p>
       <div className="flex gap-1 border-b border-rule mb-5">
         {[['reservations', 'Reservations'], ['rooms', 'Rooms']].map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} className={`px-3 py-2 text-sm -mb-px border-b-2 ${tab === key ? 'border-accent text-accent-strong font-medium' : 'border-transparent text-ink-muted hover:text-ink'}`}>
+          <button key={key} onClick={() => setTab(key)} className={`px-3 py-2 text-sm -mb-px border-b-2 transition-colors ${tab === key ? 'border-accent text-accent-strong font-semibold' : 'border-transparent text-ink-muted hover:text-ink'}`}>
             {label}
           </button>
         ))}
@@ -44,37 +45,40 @@ function ReservationsTab() {
   return (
     <div className="flex flex-col lg:flex-row gap-6">
       <div className="flex-1 min-w-0">
-        <div className="flex justify-end mb-3">
-          <button className="btn-primary" onClick={() => setShowForm(true)}>Book reservation</button>
-        </div>
         {loading && <Loading />}
         {!loading && reservations.length === 0 && (
           <EmptyState title="No reservations yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Book one</button>} />
         )}
         {!loading && reservations.length > 0 && (
           <div className="card overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                  <th className="px-3 py-2 font-medium">Room</th>
-                  <th className="px-3 py-2 font-medium">Guest</th>
-                  <th className="px-3 py-2 font-medium">Check-in</th>
-                  <th className="px-3 py-2 font-medium">Check-out</th>
-                  <th className="px-3 py-2 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reservations.map((r) => (
-                  <tr key={r._id} onClick={() => setSelected(r)} className={`border-b border-rule last:border-0 cursor-pointer hover:bg-paper ${selected?._id === r._id ? 'bg-accent-soft/40' : ''}`}>
-                    <td className="px-3 py-2">{r.roomId?.roomNumber} <span className="text-ink-muted text-xs">({r.roomId?.roomType})</span></td>
-                    <td className="px-3 py-2">{r.customerId?.name || r.guestName || 'Walk-in'}</td>
-                    <td className="px-3 py-2 text-ink-muted">{formatDate(r.checkInDate)}</td>
-                    <td className="px-3 py-2 text-ink-muted">{formatDate(r.checkOutDate)}</td>
-                    <td className="px-3 py-2"><span className={STATUS_CHIP[r.status]}>{r.status.replace('_', ' ')}</span></td>
+            <div className="px-4 py-3 border-b border-rule flex items-center justify-between bg-paper">
+              <p className="font-display font-semibold text-ink">Room Status &amp; Reservation Ledger</p>
+              <button className="btn-primary" onClick={() => setShowForm(true)}>Book reservation</button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-rule bg-surface-sunken text-left text-xs text-ink-muted uppercase tracking-wide">
+                    <th className="px-4 py-2.5 font-semibold">Room</th>
+                    <th className="px-4 py-2.5 font-semibold">Guest</th>
+                    <th className="px-4 py-2.5 font-semibold">Check-in</th>
+                    <th className="px-4 py-2.5 font-semibold">Check-out</th>
+                    <th className="px-4 py-2.5 font-semibold">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {reservations.map((r) => (
+                    <tr key={r._id} onClick={() => setSelected(r)} className={`border-b border-rule last:border-0 cursor-pointer hover:bg-paper transition-colors ${selected?._id === r._id ? 'bg-accent-soft/40' : ''}`}>
+                      <td className="px-4 py-3 num font-medium">{r.roomId?.roomNumber} <span className="font-sans font-normal text-ink-muted text-xs">({r.roomId?.roomType})</span></td>
+                      <td className="px-4 py-3">{r.customerId?.name || r.guestName || 'Walk-in'}</td>
+                      <td className="px-4 py-3 text-ink-muted">{formatDate(r.checkInDate)}</td>
+                      <td className="px-4 py-3 text-ink-muted">{formatDate(r.checkOutDate)}</td>
+                      <td className="px-4 py-3"><span className={STATUS_CHIP[r.status]}>{r.status.replace('_', ' ')}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
@@ -124,7 +128,7 @@ function BookingForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm max-h-[85vh] overflow-y-auto">
-        <p className="font-display text-lg mb-4">Book a reservation</p>
+        <p className="font-display text-lg font-semibold mb-4">Book a reservation</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Room</label>
@@ -241,7 +245,7 @@ function ReservationPanel({ reservation, onClose, onChanged }) {
   return (
     <div className="w-full lg:w-96 shrink-0 card p-4 h-fit">
       <div className="flex items-center justify-between mb-3">
-        <p className="font-display text-lg">{reservation.roomId?.roomNumber}</p>
+        <p className="font-display text-lg font-semibold">{reservation.roomId?.roomNumber}</p>
         <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button>
       </div>
       <p className="text-sm text-ink-muted mb-4">{formatDate(reservation.checkInDate)} → {formatDate(reservation.checkOutDate)} · {reservation.guests} guest{reservation.guests === 1 ? '' : 's'}</p>
@@ -255,7 +259,7 @@ function ReservationPanel({ reservation, onClose, onChanged }) {
 
       {reservation.status === 'checked_in' && (
         <>
-          <p className="text-sm font-medium mb-2">Add an extra charge</p>
+          <p className="eyebrow mb-2">Add an extra charge</p>
           <div className="grid grid-cols-3 gap-2 mb-2">
             <select className="field-input col-span-2" value={extraProductId} onChange={(e) => setExtraProductId(e.target.value)}>
               <option value="">Select…</option>
@@ -266,7 +270,7 @@ function ReservationPanel({ reservation, onClose, onChanged }) {
           <button className="btn-secondary w-full mb-4" disabled={!extraProductId || busy} onClick={addExtra}>Add charge</button>
 
           <div className="tear-line my-2" />
-          <p className="text-sm font-medium mb-2">Check out</p>
+          <p className="eyebrow mb-2">Check out</p>
           <div className="space-y-2 mb-2">
             <select className="field-input" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
               <option value="">Warehouse (for the Sale document)…</option>
@@ -283,8 +287,8 @@ function ReservationPanel({ reservation, onClose, onChanged }) {
         </>
       )}
 
-      {reservation.status === 'checked_out' && <p className="text-sm text-accent-strong">Checked out — billed and closed.</p>}
-      {reservation.status === 'cancelled' && <p className="text-sm text-danger">Cancelled.</p>}
+      {reservation.status === 'checked_out' && <p className="text-sm text-accent-strong font-medium">Checked out — billed and closed.</p>}
+      {reservation.status === 'cancelled' && <p className="text-sm text-danger font-medium">Cancelled.</p>}
     </div>
   );
 }
@@ -330,11 +334,11 @@ function RoomsTab() {
           {rooms.map((r) => (
             <div key={r._id} className="card p-3">
               <div className="flex items-center justify-between mb-1">
-                <p className="text-sm font-medium">{r.roomNumber}</p>
+                <p className="text-sm font-semibold">{r.roomNumber}</p>
                 <span className={ROOM_CHIP[r.status]}>{r.status}</span>
               </div>
               <p className="text-xs text-ink-muted">{r.roomType}</p>
-              <p className="num text-sm mt-1">{formatMoney(r.ratePerNight)}/night</p>
+              <p className="num text-sm mt-1 font-medium">{formatMoney(r.ratePerNight)}/night</p>
               <div className="flex items-center gap-3 mt-2">
                 {r.status === 'cleaning' && <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => markClean(r._id)}>Mark clean</button>}
                 <button className="btn-ghost !text-ink-muted !px-0 text-xs" onClick={() => setEditing(r)}>Edit</button>
@@ -391,7 +395,7 @@ function RoomForm({ room, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">{isNew ? 'Add room' : 'Edit room'}</p>
+        <p className="font-display text-lg font-semibold mb-4">{isNew ? 'Add room' : 'Edit room'}</p>
         <div className="space-y-3">
           {isNew && (
             <div>

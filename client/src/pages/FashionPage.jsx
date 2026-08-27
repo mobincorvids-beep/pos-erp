@@ -30,32 +30,55 @@ export function FashionPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <p className="page-title">Markdown Schedules</p>
-        <button className="btn-primary" onClick={() => setShowForm(true)}>New schedule</button>
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <p className="eyebrow mb-1">Fashion operations</p>
+          <p className="page-title">Markdown schedules</p>
+        </div>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>
+          <span className="material-symbols-outlined text-sm">add</span>
+          New schedule
+        </button>
       </div>
-      <div className="card p-4 mb-4 max-w-sm">
-        <label className="field-label">Check current price (variant ID)</label>
+
+      <div className="card p-5 mb-6 max-w-sm">
+        <p className="text-sm font-semibold text-ink flex items-center gap-2 mb-3">
+          <span className="material-symbols-outlined text-accent">search</span>
+          Check current price
+        </p>
+        <label className="field-label">Variant ID</label>
         <div className="flex gap-2">
           <input className="field-input" value={checking} onChange={(e) => setChecking(e.target.value)} />
           <button className="btn-secondary shrink-0" onClick={checkPrice}>Check</button>
         </div>
         {price && (
-          <div className="mt-3 text-sm space-y-1">
+          <div className="mt-4 text-sm space-y-2">
             <div className="flex justify-between"><span className="text-ink-muted">Base price</span><span className="num">{formatMoney(price.basePrice, company?.currency)}</span></div>
             <div className="flex justify-between"><span className="text-ink-muted">Discount</span><span className="num">{price.discountPercent}%</span></div>
-            <div className="flex justify-between font-medium"><span>Current price</span><span className="num text-accent-strong">{formatMoney(price.currentPrice, company?.currency)}</span></div>
+            <div className="tear-line my-1" />
+            <div className="flex justify-between text-base font-semibold"><span>Current price</span><span className="num text-accent-strong">{formatMoney(price.currentPrice, company?.currency)}</span></div>
           </div>
         )}
       </div>
+
       {loading && <Loading />}
       {!loading && schedules.length === 0 && <EmptyState title="No markdown schedules yet" />}
       {!loading && schedules.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {schedules.map((s) => (
-            <div key={s._id} className="card p-3">
-              <p className="text-sm font-medium">{s.productId?.name}</p>
-              {s.stages.map((st, i) => <p key={i} className="text-xs text-ink-muted">Day {st.daysSinceLaunch}: {st.discountPercent}% off</p>)}
+            <div key={s._id} className="card p-4">
+              <p className="text-sm font-semibold text-ink flex items-center gap-2 mb-2">
+                <span className="material-symbols-outlined text-accent text-base">trending_down</span>
+                {s.productId?.name}
+              </p>
+              <div className="divide-y divide-rule">
+                {s.stages.map((st, i) => (
+                  <div key={i} className="flex justify-between items-center py-1.5 text-xs">
+                    <span className="text-ink-muted">Day {st.daysSinceLaunch}</span>
+                    <span className="chip-warning">{st.discountPercent}% off</span>
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
         </div>
@@ -94,12 +117,24 @@ function ScheduleForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">New markdown schedule</p>
-        <div className="space-y-3 mb-3">
-          <div><label className="field-label">Product</label><select required className="field-input" value={productId} onChange={(e) => setProductId(e.target.value)}><option value="">Select…</option>{products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}</select></div>
-          <div><label className="field-label">Launch date (blank = today)</label><input type="date" className="field-input" value={launchDate} onChange={(e) => setLaunchDate(e.target.value)} /></div>
+        <p className="font-display text-lg font-bold text-ink mb-4 flex items-center gap-2">
+          <span className="material-symbols-outlined text-accent">trending_down</span>
+          New markdown schedule
+        </p>
+        <div className="space-y-3 mb-4">
+          <div>
+            <label className="field-label">Product</label>
+            <select required className="field-input" value={productId} onChange={(e) => setProductId(e.target.value)}>
+              <option value="">Select…</option>
+              {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="field-label">Launch date (blank = today)</label>
+            <input type="date" className="field-input" value={launchDate} onChange={(e) => setLaunchDate(e.target.value)} />
+          </div>
         </div>
-        <p className="field-label mb-1">Stages (first must start at day 0)</p>
+        <p className="field-label mb-2">Stages (first must start at day 0)</p>
         <div className="space-y-2 mb-2">
           {stages.map((s, i) => (
             <div key={i} className="grid grid-cols-2 gap-2">
@@ -109,7 +144,10 @@ function ScheduleForm({ onClose, onSaved }) {
           ))}
         </div>
         <button type="button" className="btn-ghost !px-0 text-xs mb-4" onClick={() => setStages([...stages, { daysSinceLaunch: '', discountPercent: '' }])}>+ Add stage</button>
-        <div className="flex justify-end gap-2"><button type="button" className="btn-secondary" onClick={onClose}>Cancel</button><button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save'}</button></div>
+        <div className="flex justify-end gap-2">
+          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save'}</button>
+        </div>
       </form>
     </div>
   );

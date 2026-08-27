@@ -23,35 +23,49 @@ export function ServiceOrdersPage() {
 
   return (
     <div className="flex flex-col lg:flex-row gap-6">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between mb-4">
-          <p className="page-title">Service orders</p>
+      <div className="flex-1 min-w-0 flex flex-col gap-6">
+        <div className="flex items-end justify-between">
+          <div>
+            <p className="eyebrow mb-1">Warranty &amp; service</p>
+            <p className="page-title">Service job cards</p>
+            <p className="text-sm text-ink-muted mt-1">Track repairs, parts consumption, and labor billing.</p>
+          </div>
           <button className="btn-primary" onClick={() => setShowForm(true)}>New job card</button>
         </div>
+
         {loading && <Loading />}
         {!loading && orders.length === 0 && (
           <EmptyState title="No job cards yet" description="Track repairs and service jobs — parts, labor, and billing." action={<button className="btn-primary" onClick={() => setShowForm(true)}>Open a job card</button>} />
         )}
         {!loading && orders.length > 0 && (
-          <div className="card overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                  <th className="px-3 py-2 font-medium">Item</th>
-                  <th className="px-3 py-2 font-medium">Status</th>
-                  <th className="px-3 py-2 font-medium text-right">Labor</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map((o) => (
-                  <tr key={o._id} onClick={() => setSelected(o)} className={`border-b border-rule last:border-0 cursor-pointer hover:bg-paper ${selected?._id === o._id ? 'bg-accent-soft/40' : ''}`}>
-                    <td className="px-3 py-2">{o.itemDescription}</td>
-                    <td className="px-3 py-2"><span className={STATUS_CHIP[o.status]}>{o.status.replace('_', ' ')}</span></td>
-                    <td className="px-3 py-2 num text-right">{formatMoney(o.laborCharge)}</td>
+          <div className="card flex flex-col overflow-hidden">
+            <div className="px-5 py-4 border-b border-rule flex items-center justify-between">
+              <p className="font-display text-lg font-semibold text-ink">Job orders</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-sm">
+                <thead>
+                  <tr className="border-b border-rule bg-surface-sunken/60">
+                    <th className="px-5 py-3 eyebrow font-medium">Item</th>
+                    <th className="px-5 py-3 eyebrow font-medium">Status</th>
+                    <th className="px-5 py-3 eyebrow font-medium text-right">Labor</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-rule">
+                  {orders.map((o) => (
+                    <tr
+                      key={o._id}
+                      onClick={() => setSelected(o)}
+                      className={`group cursor-pointer transition-colors hover:bg-accent-soft/30 ${selected?._id === o._id ? 'bg-accent-soft/40' : ''}`}
+                    >
+                      <td className="px-5 py-4 font-medium text-ink group-hover:text-accent transition-colors">{o.itemDescription}</td>
+                      <td className="px-5 py-4"><span className={STATUS_CHIP[o.status]}>{o.status.replace('_', ' ')}</span></td>
+                      <td className="px-5 py-4 num text-right text-ink-muted">{formatMoney(o.laborCharge)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
@@ -92,7 +106,7 @@ function ServiceOrderForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">New job card</p>
+        <p className="font-display text-lg font-semibold text-ink mb-4">New job card</p>
         <div className="space-y-3">
           <div><label className="field-label">Item / description</label><input required autoFocus className="field-input" value={form.itemDescription} onChange={(e) => setForm({ ...form, itemDescription: e.target.value })} placeholder="e.g. iPhone 12 — screen repair" /></div>
           <div><label className="field-label">Reported issue</label><input className="field-input" value={form.reportedIssue} onChange={(e) => setForm({ ...form, reportedIssue: e.target.value })} /></div>
@@ -169,46 +183,59 @@ function ServiceOrderPanel({ order, onClose, onChanged }) {
   }
 
   return (
-    <div className="w-full lg:w-96 shrink-0 card p-4 h-fit">
-      <div className="flex items-center justify-between mb-3">
-        <p className="font-display text-lg">{order.itemDescription}</p>
-        <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button>
-      </div>
+    <div className="w-full lg:w-96 shrink-0 flex flex-col gap-4 h-fit">
+      <div className="card overflow-hidden">
+        <div className="bg-surface-sunken/60 px-5 py-4 border-b border-rule flex items-center justify-between">
+          <p className="font-display text-lg font-semibold text-ink truncate pr-2">{order.itemDescription}</p>
+          <button className="text-ink-muted hover:text-ink text-sm shrink-0" onClick={onClose}>Close</button>
+        </div>
 
-      <select className="field-input mb-4" value={order.status} onChange={(e) => updateStatus(e.target.value)}>
-        <option value="received">Received</option>
-        <option value="diagnosed">Diagnosed</option>
-        <option value="in_progress">In progress</option>
-        <option value="completed">Completed</option>
-        <option value="delivered">Delivered</option>
-        <option value="cancelled">Cancelled</option>
-      </select>
+        <div className="p-5 flex flex-col gap-4">
+          <div>
+            <label className="field-label">Status</label>
+            <select className="field-input" value={order.status} onChange={(e) => updateStatus(e.target.value)}>
+              <option value="received">Received</option>
+              <option value="diagnosed">Diagnosed</option>
+              <option value="in_progress">In progress</option>
+              <option value="completed">Completed</option>
+              <option value="delivered">Delivered</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
 
-      <p className="text-sm font-medium mb-2">Parts used</p>
-      <div className="space-y-1 text-sm mb-2">
-        {order.partsUsed?.length === 0 && <p className="text-ink-muted text-xs">None yet.</p>}
-        {order.partsUsed?.map((p, i) => (
-          <div key={i} className="flex justify-between"><span className="text-ink-muted">× {p.quantity}</span><span className="num">{formatMoney(p.unitPrice * p.quantity, company?.currency)}</span></div>
-        ))}
-      </div>
-      <div className="grid grid-cols-3 gap-2 mb-4">
-        <select className="field-input col-span-2" value={partProductId} onChange={(e) => setPartProductId(e.target.value)}>
-          <option value="">Add a part…</option>
-          {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
-        </select>
-        <input type="number" min="1" className="field-input num" value={partQty} onChange={(e) => setPartQty(e.target.value)} />
-      </div>
-      <button className="btn-secondary w-full mb-4" disabled={!partProductId || busy} onClick={addPart}>Add part</button>
+          <div className="p-4 rounded-lg bg-surface-sunken border border-rule relative overflow-hidden">
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-accent" />
+            <p className="field-label mb-2">Parts used</p>
+            <div className="space-y-1 text-sm mb-1">
+              {order.partsUsed?.length === 0 && <p className="text-ink-muted text-xs">None yet.</p>}
+              {order.partsUsed?.map((p, i) => (
+                <div key={i} className="flex justify-between"><span className="text-ink-muted">× {p.quantity}</span><span className="num text-ink">{formatMoney(p.unitPrice * p.quantity, company?.currency)}</span></div>
+              ))}
+            </div>
+          </div>
 
-      <p className="text-sm font-medium mb-2">Labor charge</p>
-      <div className="flex gap-2">
-        <input type="number" className="field-input num" value={laborCharge} onChange={(e) => setLaborCharge(e.target.value)} />
-        <button className="btn-secondary" onClick={saveLabor}>Save</button>
-      </div>
+          <div className="grid grid-cols-3 gap-2">
+            <select className="field-input col-span-2" value={partProductId} onChange={(e) => setPartProductId(e.target.value)}>
+              <option value="">Add a part…</option>
+              {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
+            </select>
+            <input type="number" min="1" className="field-input num" value={partQty} onChange={(e) => setPartQty(e.target.value)} />
+          </div>
+          <button className="btn-secondary w-full" disabled={!partProductId || busy} onClick={addPart}>Add part</button>
 
-      {order.status === 'completed' && (
-        <p className="text-xs text-ink-muted mt-4">Billing (parts + labor as a single invoice) requires a company "Labor" service product and payment account — use the API's <code className="num">POST /service-orders/:id/bill</code> for now.</p>
-      )}
+          <div>
+            <label className="field-label">Labor charge</label>
+            <div className="flex gap-2">
+              <input type="number" className="field-input num" value={laborCharge} onChange={(e) => setLaborCharge(e.target.value)} />
+              <button className="btn-secondary" onClick={saveLabor}>Save</button>
+            </div>
+          </div>
+
+          {order.status === 'completed' && (
+            <p className="text-xs text-ink-muted pt-2 border-t border-rule">Billing (parts + labor as a single invoice) requires a company "Labor" service product and payment account — use the API's <code className="num">POST /service-orders/:id/bill</code> for now.</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

@@ -4,22 +4,72 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { Loading } from '../components/Loading';
 import { EmptyState } from '../components/EmptyState';
+import { formatDate } from '../lib/format';
 
-const TABS = ['Work Orders', 'Plans'];
+const TABS = [
+  { key: 'Work Orders', icon: 'build' },
+  { key: 'Plans', icon: 'event_repeat' },
+];
 
 export function MaintenancePage() {
   const [tab, setTab] = useState('Work Orders');
   return (
     <div>
-      <div className="flex gap-1 mb-4 border-b border-ink/10">
-        {TABS.map((t) => (
-          <button key={t} onClick={() => setTab(t)} className={`px-3 py-2 text-sm ${tab === t ? 'border-b-2 border-accent text-accent-strong' : 'text-ink-muted'}`}>{t}</button>
-        ))}
+      <div className="flex justify-between items-end flex-wrap gap-4 mb-6">
+        <div>
+          <p className="page-title">Maintenance</p>
+          <p className="text-sm text-ink-muted mt-1">Track asset work orders and scheduled maintenance plans.</p>
+        </div>
+        <div className="flex gap-2">
+          {TABS.map((t) => (
+            <button key={t.key} onClick={() => setTab(t.key)} className={tab === t.key ? 'pill-active' : 'pill'}>
+              <span className="material-symbols-outlined text-sm mr-1 align-middle">{t.icon}</span>
+              {t.key}
+            </button>
+          ))}
+        </div>
       </div>
       {tab === 'Work Orders' && <WorkOrdersTab />}
       {tab === 'Plans' && <PlansTab />}
     </div>
   );
+}
+
+const STATUS_CHIP = {
+  open: 'chip-info',
+  in_progress: 'chip-warning',
+  completed: 'chip-accent',
+  cancelled: 'chip-neutral',
+};
+
+function StatusChip({ status }) {
+  const cls = STATUS_CHIP[status] || 'chip-neutral';
+  return (
+    <span className={`${cls} gap-1.5 capitalize`}>
+      <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
+      {status?.replace('_', ' ')}
+    </span>
+  );
+}
+
+const PRIORITY_CHIP = {
+  low: 'chip-neutral',
+  medium: 'chip-info',
+  high: 'chip-warning',
+  critical: 'chip-danger',
+};
+
+function PriorityChip({ priority }) {
+  const cls = PRIORITY_CHIP[priority] || 'chip-neutral';
+  return <span className={`${cls} capitalize`}>{priority}</span>;
+}
+
+function Avatar({ name }) {
+  if (!name) {
+    return <div className="w-8 h-8 rounded-full bg-surface-sunken border border-rule flex items-center justify-center text-[11px] font-semibold text-ink-muted">UN</div>;
+  }
+  const initials = name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
+  return <div className="w-8 h-8 rounded-full bg-accent-soft border border-rule flex items-center justify-center text-[11px] font-semibold text-accent-strong">{initials}</div>;
 }
 
 function WorkOrdersTab() {
@@ -43,25 +93,66 @@ function WorkOrdersTab() {
 
   return (
     <div>
-      <div className="flex justify-end mb-3"><button className="btn-primary" onClick={() => setShowForm(true)}>New work order</button></div>
+      <div className="flex justify-end mb-3">
+        <button className="btn-primary" onClick={() => setShowForm(true)}>
+          <span className="material-symbols-outlined text-sm">add</span>
+          New work order
+        </button>
+      </div>
       {loading && <Loading />}
       {!loading && orders.length === 0 && <EmptyState title="No maintenance work orders" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Open one</button>} />}
       {!loading && orders.length > 0 && (
-        <div className="space-y-2">
-          {orders.map((o) => (
-            <div key={o._id} className="card p-3 flex justify-between items-start">
-              <div>
-                <p className="text-sm font-medium">{o.assetId?.name} — {o.issue}</p>
-                <p className="text-xs text-ink-muted mt-0.5 capitalize">{o.status} · {o.priority} priority{o.assignedTechnicianId && ` · ${o.assignedTechnicianId.name}`}</p>
-              </div>
-              {(o.status === 'open' || o.status === 'in_progress') && (
-                <div className="flex gap-2">
-                  <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => setCompleting(o)}>Complete</button>
-                  <button className="btn-ghost !text-red-600 !px-0 text-xs" onClick={() => cancel(o._id)}>Cancel</button>
-                </div>
-              )}
-            </div>
-          ))}
+        <div className="card overflow-hidden">
+          <div className="px-5 py-4 border-b border-rule flex justify-between items-center bg-surface-sunken/40">
+            <p className="font-display text-lg font-semibold text-ink">Work Orders</p>
+            <span className="eyebrow">{orders.length} orders</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[760px]">
+              <thead>
+                <tr className="border-b border-rule bg-surface-sunken/60">
+                  <th className="py-3 px-5 eyebrow font-medium">Asset / Issue</th>
+                  <th className="py-3 px-5 eyebrow font-medium">Priority</th>
+                  <th className="py-3 px-5 eyebrow font-medium">Status</th>
+                  <th className="py-3 px-5 eyebrow font-medium">Technician</th>
+                  <th className="py-3 px-5 eyebrow font-medium text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-rule">
+                {orders.map((o) => (
+                  <tr key={o._id} className="hover:bg-accent-soft/30 transition-colors">
+                    <td className="py-3 px-5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-surface-sunken flex items-center justify-center text-ink-muted shrink-0">
+                          <span className="material-symbols-outlined">build</span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-ink">{o.assetId?.name}</p>
+                          <p className="text-xs text-ink-muted">{o.issue}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-5"><PriorityChip priority={o.priority} /></td>
+                    <td className="py-3 px-5"><StatusChip status={o.status} /></td>
+                    <td className="py-3 px-5">
+                      <div className="flex items-center gap-2">
+                        <Avatar name={o.assignedTechnicianId?.name} />
+                        <span className={`text-sm ${o.assignedTechnicianId ? 'text-ink' : 'text-ink-muted italic'}`}>{o.assignedTechnicianId?.name || 'Unassigned'}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-5 text-right">
+                      {(o.status === 'open' || o.status === 'in_progress') ? (
+                        <div className="flex gap-3 justify-end">
+                          <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => setCompleting(o)}>Complete</button>
+                          <button className="btn-ghost !text-danger !px-0 text-xs" onClick={() => cancel(o._id)}>Cancel</button>
+                        </div>
+                      ) : <span className="text-xs text-ink-muted">—</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
       {showForm && <WorkOrderForm onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
@@ -211,17 +302,50 @@ function PlansTab() {
 
   return (
     <div>
-      <div className="flex justify-end mb-3"><button className="btn-primary" onClick={() => setShowForm(true)}>New plan</button></div>
+      <div className="flex justify-end mb-3">
+        <button className="btn-primary" onClick={() => setShowForm(true)}>
+          <span className="material-symbols-outlined text-sm">add</span>
+          New plan
+        </button>
+      </div>
       {loading && <Loading />}
       {!loading && plans.length === 0 && <EmptyState title="No maintenance plans" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Create one</button>} />}
       {!loading && plans.length > 0 && (
-        <div className="space-y-2">
-          {plans.map((p) => (
-            <div key={p._id} className="card p-3">
-              <p className="text-sm font-medium">{p.name} — {p.assetId?.name}</p>
-              <p className="text-xs text-ink-muted mt-0.5">Every {p.frequencyDays} days · Next due {new Date(p.nextDueDate).toLocaleDateString()}</p>
-            </div>
-          ))}
+        <div className="card overflow-hidden">
+          <div className="px-5 py-4 border-b border-rule flex justify-between items-center bg-surface-sunken/40">
+            <p className="font-display text-lg font-semibold text-ink">Maintenance Plans</p>
+            <span className="eyebrow">{plans.length} plans</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[560px]">
+              <thead>
+                <tr className="border-b border-rule bg-surface-sunken/60">
+                  <th className="py-3 px-5 eyebrow font-medium">Plan / Asset</th>
+                  <th className="py-3 px-5 eyebrow font-medium">Frequency</th>
+                  <th className="py-3 px-5 eyebrow font-medium">Next Due</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-rule">
+                {plans.map((p) => (
+                  <tr key={p._id} className="hover:bg-accent-soft/30 transition-colors">
+                    <td className="py-3 px-5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-surface-sunken flex items-center justify-center text-ink-muted shrink-0">
+                          <span className="material-symbols-outlined">event_repeat</span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-ink">{p.name}</p>
+                          <p className="text-xs text-ink-muted">{p.assetId?.name}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-5 text-sm text-ink-muted num">Every {p.frequencyDays} days</td>
+                    <td className="py-3 px-5 text-sm text-ink-muted">{formatDate(p.nextDueDate)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
       {showForm && <PlanForm onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}

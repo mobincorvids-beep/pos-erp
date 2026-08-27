@@ -25,9 +25,15 @@ export function PurchasesPage() {
   return (
     <div className="flex flex-col lg:flex-row gap-6">
       <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between mb-4">
-          <p className="page-title">Purchase orders</p>
-          <button className="btn-primary" onClick={() => setShowForm(true)}>New purchase order</button>
+        <div className="flex items-end justify-between mb-6">
+          <div>
+            <p className="page-title mb-1">Purchase orders</p>
+            <p className="text-sm text-ink-muted">Manage supplier orders, monitor spend, and track incoming shipments.</p>
+          </div>
+          <button className="btn-primary" onClick={() => setShowForm(true)}>
+            <span className="material-symbols-outlined text-[18px]">add</span>
+            New purchase order
+          </button>
         </div>
 
         {loading && <Loading />}
@@ -36,26 +42,31 @@ export function PurchasesPage() {
         )}
         {!loading && orders.length > 0 && (
           <div className="card overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                  <th className="px-3 py-2 font-medium">PO #</th>
-                  <th className="px-3 py-2 font-medium">Date</th>
-                  <th className="px-3 py-2 font-medium">Status</th>
-                  <th className="px-3 py-2 font-medium text-right">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map((po) => (
-                  <tr key={po._id} onClick={() => setSelected(po)} className={`border-b border-rule last:border-0 cursor-pointer hover:bg-paper ${selected?._id === po._id ? 'bg-accent-soft/40' : ''}`}>
-                    <td className="px-3 py-2 num">{po.poNumber}</td>
-                    <td className="px-3 py-2 text-ink-muted">{formatDate(po.createdAt)}</td>
-                    <td className="px-3 py-2"><span className={STATUS_CHIP[po.status] || 'chip-neutral'}>{po.status.replace('_', ' ')}</span></td>
-                    <td className="px-3 py-2 num text-right">{formatMoney(po.totalAmount, company?.currency)}</td>
+            <div className="px-5 py-4 border-b border-rule flex items-center justify-between">
+              <p className="font-display text-lg font-semibold text-ink">Active purchase orders</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-surface-sunken/60 border-b border-rule">
+                    <th className="px-5 py-3 eyebrow font-medium">PO #</th>
+                    <th className="px-5 py-3 eyebrow font-medium">Date</th>
+                    <th className="px-5 py-3 eyebrow font-medium">Status</th>
+                    <th className="px-5 py-3 eyebrow font-medium text-right">Total</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-rule text-sm">
+                  {orders.map((po) => (
+                    <tr key={po._id} onClick={() => setSelected(po)} className={`cursor-pointer transition-colors hover:bg-accent-soft/30 ${selected?._id === po._id ? 'bg-accent-soft/40' : ''}`}>
+                      <td className="px-5 py-4 num font-medium text-accent">{po.poNumber}</td>
+                      <td className="px-5 py-4 text-ink-muted">{formatDate(po.createdAt)}</td>
+                      <td className="px-5 py-4"><span className={STATUS_CHIP[po.status] || 'chip-neutral'}>{po.status.replace('_', ' ')}</span></td>
+                      <td className="px-5 py-4 num text-right font-medium">{formatMoney(po.totalAmount, company?.currency)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
@@ -112,13 +123,16 @@ function PurchaseOrderPanel({ po: initialPo, onClose, onChanged }) {
   const fullyReceived = po.items.every((l) => l.quantityReceived >= l.quantityOrdered);
 
   return (
-    <div className="w-full lg:w-[26rem] shrink-0 card p-4 h-fit">
-      <div className="flex items-center justify-between mb-3">
-        <p className="font-display text-lg num">{po.poNumber}</p>
+    <div className="w-full lg:w-[26rem] shrink-0 card p-5 h-fit">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <p className="eyebrow mb-0.5">Purchase order</p>
+          <p className="font-display text-lg font-semibold num text-accent">{po.poNumber}</p>
+        </div>
         <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button>
       </div>
 
-      <div className="space-y-1 text-sm mb-3">
+      <div className="space-y-1.5 text-sm mb-3 bg-surface-sunken/50 rounded-lg p-3">
         {po.items.map((item, i) => (
           <div key={i} className="flex justify-between">
             <span className="text-ink-muted">{formatMoney(item.unitCost, company?.currency)} × {item.quantityOrdered}</span>
@@ -142,12 +156,12 @@ function PurchaseOrderPanel({ po: initialPo, onClose, onChanged }) {
         <button className="btn-primary w-full mb-4" onClick={() => setShowReceiveForm(true)}>Receive goods</button>
       )}
 
-      <p className="text-sm font-medium mb-2">Goods received notes</p>
+      <p className="eyebrow mb-2">Goods received notes</p>
       {loadingGrns && <p className="text-xs text-ink-muted">Loading…</p>}
       {!loadingGrns && grns.length === 0 && <p className="text-xs text-ink-muted">Nothing received yet.</p>}
       <div className="space-y-3">
         {grns.map((grn) => (
-          <div key={grn._id} className="border border-rule rounded p-2.5">
+          <div key={grn._id} className="border border-rule rounded-lg p-3">
             <div className="flex justify-between items-center mb-1.5">
               <span className="num text-xs text-ink-muted">{grn.grnNumber}</span>
               <span className="text-xs text-ink-muted">{formatDate(grn.receivedDate)}</span>
@@ -248,8 +262,8 @@ function ReceiveGoodsForm({ po, onClose, onReceived }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-50 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-lg max-h-[85vh] overflow-y-auto">
-        <p className="font-display text-lg mb-1">Receive goods</p>
-        <p className="text-xs text-ink-muted mb-4">Against {po.poNumber}. Leave a line at 0 to skip it — partial receiving is fine, you can receive the rest later.</p>
+        <p className="font-display text-lg font-semibold text-ink mb-1">Receive goods</p>
+        <p className="text-xs text-ink-muted mb-4">Against <span className="num">{po.poNumber}</span>. Leave a line at 0 to skip it — partial receiving is fine, you can receive the rest later.</p>
 
         <div className="space-y-3">
           {lines.map((line, i) => {
@@ -258,7 +272,7 @@ function ReceiveGoodsForm({ po, onClose, onReceived }) {
             const needsSerial = product?.trackingMode === 'serial';
             const enteredSerialCount = line.serialNumbersText.split(/[\n,]/).map((s) => s.trim()).filter(Boolean).length;
             return (
-              <div key={line.purchaseOrderItemId} className="border border-rule rounded p-3">
+              <div key={line.purchaseOrderItemId} className="border border-rule rounded-lg p-3 bg-surface-sunken/30">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm font-medium">{product?.name || 'Product'}</p>
                   <span className="text-xs text-ink-muted num">{line.remaining} outstanding</span>
@@ -371,7 +385,7 @@ function PurchaseOrderForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-lg max-h-[85vh] overflow-y-auto">
-        <p className="font-display text-lg mb-4">New purchase order</p>
+        <p className="font-display text-lg font-semibold text-ink mb-4">New purchase order</p>
 
         <div className="grid grid-cols-3 gap-2 mb-3">
           <select required className="field-input" value={branchId} onChange={(e) => setBranchId(e.target.value)}>

@@ -3,7 +3,7 @@ import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { Loading } from '../components/Loading';
-import { Pencil, Trash2, Plus } from 'lucide-react';
+import { Pencil, Trash2, Plus, Building2 } from 'lucide-react';
 
 const CURRENCIES = ['PKR', 'USD', 'AED', 'SAR', 'GBP', 'EUR', 'INR'];
 
@@ -14,19 +14,22 @@ export function SettingsPage() {
 
   return (
     <div>
-      <p className="page-title mb-1">Settings</p>
-      <p className="text-sm text-ink-muted mb-5 max-w-2xl">Business profile and branch management for your account.</p>
-
-      <div className="flex gap-1 border-b border-rule mb-5">
-        {[['business', 'Business details'], ['branches', 'Branches']].map(([key, label]) => (
-          <button
-            key={key}
-            onClick={() => setTab(key)}
-            className={`px-3 py-2 text-sm border-b-2 -mb-px ${tab === key ? 'border-accent-strong text-accent-strong font-medium' : 'border-transparent text-ink-muted hover:text-ink'}`}
-          >
-            {label}
-          </button>
-        ))}
+      <div className="flex justify-between items-end mb-5 gap-4 flex-wrap">
+        <div>
+          <p className="page-title mb-1">Settings</p>
+          <p className="text-sm text-ink-muted max-w-2xl">Business profile and branch management for your account.</p>
+        </div>
+        <div className="flex gap-1 p-1 rounded-lg bg-surface-sunken border border-rule">
+          {[['business', 'Business details'], ['branches', 'Branches']].map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className={tab === key ? 'pill-active' : 'pill border-transparent hover:bg-surface'}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {tab === 'business' && <BusinessDetailsTab canManage={canManage} onSaved={refreshUser} />}
@@ -73,9 +76,14 @@ function BusinessDetailsTab({ canManage, onSaved }) {
   if (loading || !form) return <Loading />;
 
   return (
-    <form onSubmit={handleSubmit} className="card p-5 max-w-2xl space-y-4">
+    <form onSubmit={handleSubmit} className="card max-w-2xl overflow-hidden">
+      <div className="p-5 border-b border-rule flex items-center gap-2">
+        <Building2 size={18} className="text-accent" />
+        <p className="font-display text-lg font-semibold text-ink">Company profile</p>
+      </div>
+      <div className="p-5 space-y-4">
       {!canManage && (
-        <p className="text-xs text-ink-muted bg-paper rounded px-3 py-2">You can view business details, but only an admin can change them.</p>
+        <p className="text-xs text-ink-muted bg-surface-sunken rounded-lg px-3 py-2">You can view business details, but only an admin can change them.</p>
       )}
       <fieldset disabled={!canManage} className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
@@ -134,6 +142,7 @@ function BusinessDetailsTab({ canManage, onSaved }) {
           <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save changes'}</button>
         </div>
       )}
+      </div>
     </form>
   );
 }
@@ -163,37 +172,40 @@ function BranchesTab({ canManage }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-ink-muted max-w-md">Every branch gets its own warehouse and POS counter automatically, so it's ready to sell from as soon as it's created.</p>
-        {canManage && (
-          <button className="btn-primary flex items-center gap-1.5" onClick={() => setEditing({})}>
-            <Plus size={14} /> New branch
-          </button>
-        )}
-      </div>
+      <div className="card overflow-hidden">
+        <div className="p-5 border-b border-rule flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <p className="font-display text-lg font-semibold text-ink">Branches</p>
+            <p className="text-sm text-ink-muted max-w-md mt-0.5">Every branch gets its own warehouse and POS counter automatically, so it's ready to sell from as soon as it's created.</p>
+          </div>
+          {canManage && (
+            <button className="btn-primary flex items-center gap-1.5 shrink-0" onClick={() => setEditing({})}>
+              <Plus size={14} /> New branch
+            </button>
+          )}
+        </div>
 
-      {loading && <Loading />}
-      {!loading && (
-        <div className="card overflow-hidden">
+        {loading && <div className="p-5"><Loading /></div>}
+        {!loading && (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                <th className="px-3 py-2 font-medium">Name</th>
-                <th className="px-3 py-2 font-medium">Code</th>
-                <th className="px-3 py-2 font-medium">Address</th>
-                <th className="px-3 py-2 font-medium">Phone</th>
-                {canManage && <th className="px-3 py-2 font-medium text-right">Actions</th>}
+              <tr className="bg-surface-sunken border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
+                <th className="px-4 py-3 font-semibold">Name</th>
+                <th className="px-4 py-3 font-semibold">Code</th>
+                <th className="px-4 py-3 font-semibold">Address</th>
+                <th className="px-4 py-3 font-semibold">Phone</th>
+                {canManage && <th className="px-4 py-3 font-semibold text-right">Actions</th>}
               </tr>
             </thead>
             <tbody>
               {branches.map((b) => (
-                <tr key={b._id} className="border-b border-rule last:border-0">
-                  <td className="px-3 py-2">{b.name}</td>
-                  <td className="px-3 py-2 text-ink-muted">{b.code || '—'}</td>
-                  <td className="px-3 py-2 text-ink-muted">{b.address || '—'}</td>
-                  <td className="px-3 py-2 text-ink-muted">{b.phone || '—'}</td>
+                <tr key={b._id} className="border-b border-rule last:border-0 hover:bg-accent-soft/30 transition-colors">
+                  <td className="px-4 py-3 font-medium text-ink">{b.name}</td>
+                  <td className="px-4 py-3 text-ink-muted num">{b.code || '—'}</td>
+                  <td className="px-4 py-3 text-ink-muted">{b.address || '—'}</td>
+                  <td className="px-4 py-3 text-ink-muted num">{b.phone || '—'}</td>
                   {canManage && (
-                    <td className="px-3 py-2">
+                    <td className="px-4 py-3">
                       <div className="flex justify-end gap-2">
                         <button className="text-ink-muted hover:text-accent-strong" onClick={() => setEditing(b)} aria-label="Edit branch">
                           <Pencil size={15} />
@@ -208,8 +220,8 @@ function BranchesTab({ canManage }) {
               ))}
             </tbody>
           </table>
-        </div>
-      )}
+        )}
+      </div>
 
       {editing !== null && (
         <BranchForm branch={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />
@@ -246,7 +258,7 @@ function BranchForm({ branch, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">{isNew ? 'New branch' : 'Edit branch'}</p>
+        <p className="font-display text-lg font-semibold text-ink mb-4">{isNew ? 'New branch' : 'Edit branch'}</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Branch name</label>

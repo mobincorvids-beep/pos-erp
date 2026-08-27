@@ -8,6 +8,25 @@ import { formatMoney, formatDateTime } from '../lib/format';
 
 const STATUS_CHIP = { completed: 'chip-accent', returned: 'chip-warning', cancelled: 'chip-danger' };
 
+const AVATAR_PALETTE = [
+  'bg-accent-soft text-accent-strong border-accent-soft',
+  'bg-info-soft text-info border-info-soft',
+  'bg-warning-soft text-warning border-warning-soft',
+  'bg-danger-soft text-danger border-danger-soft',
+];
+
+function avatarInitials(name) {
+  if (!name) return 'WI';
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] || '') + (parts[1]?.[0] || parts[0]?.[1] || '')).toUpperCase();
+}
+
+function avatarClass(name) {
+  let hash = 0;
+  for (let i = 0; i < (name || '').length; i++) hash = (hash * 31 + name.charCodeAt(i)) % AVATAR_PALETTE.length;
+  return AVATAR_PALETTE[hash];
+}
+
 export function SalesHistoryPage() {
   const { company } = useAuth();
   const toast = useToast();
@@ -25,40 +44,59 @@ export function SalesHistoryPage() {
   return (
     <div className="flex flex-col lg:flex-row gap-6">
       <div className="flex-1 min-w-0">
-        <p className="page-title mb-1">Sales history</p>
-        <p className="text-sm text-ink-muted mb-4">Most recent 100 invoices. Click one to view or take an action.</p>
+        <div className="flex items-end justify-between gap-4 mb-5">
+          <div>
+            <p className="page-title mb-1">Sales history</p>
+            <p className="text-sm text-ink-muted">Most recent 100 invoices. Click one to view or take an action.</p>
+          </div>
+        </div>
 
         {loading && <Loading />}
         {!loading && sales.length === 0 && <EmptyState title="No sales yet" description="Completed checkouts will show up here." />}
 
         {!loading && sales.length > 0 && (
           <div className="card overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                  <th className="px-3 py-2 font-medium">Invoice</th>
-                  <th className="px-3 py-2 font-medium">Customer</th>
-                  <th className="px-3 py-2 font-medium">Date</th>
-                  <th className="px-3 py-2 font-medium">Status</th>
-                  <th className="px-3 py-2 font-medium text-right">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sales.map((sale) => (
-                  <tr
-                    key={sale._id}
-                    onClick={() => setSelected(sale)}
-                    className={`border-b border-rule last:border-0 cursor-pointer hover:bg-paper ${selected?._id === sale._id ? 'bg-accent-soft/40' : ''}`}
-                  >
-                    <td className="px-3 py-2 num">{sale.invoiceNumber || sale.documentNumber}</td>
-                    <td className="px-3 py-2">{sale.customerId?.name || 'Walk-in'}</td>
-                    <td className="px-3 py-2 text-ink-muted">{formatDateTime(sale.createdAt)}</td>
-                    <td className="px-3 py-2"><span className={STATUS_CHIP[sale.status] || 'chip-neutral'}>{sale.status}</span></td>
-                    <td className="px-3 py-2 num text-right">{formatMoney(sale.totalAmount, company?.currency)}</td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-sm">
+                <thead>
+                  <tr className="bg-surface-sunken/60 border-y border-rule">
+                    <th className="py-3 px-4 eyebrow font-semibold">Invoice</th>
+                    <th className="py-3 px-4 eyebrow font-semibold">Customer</th>
+                    <th className="py-3 px-4 eyebrow font-semibold">Date</th>
+                    <th className="py-3 px-4 eyebrow font-semibold">Status</th>
+                    <th className="py-3 px-4 eyebrow font-semibold text-right">Total</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {sales.map((sale) => {
+                    const name = sale.customerId?.name || 'Walk-in';
+                    return (
+                      <tr
+                        key={sale._id}
+                        onClick={() => setSelected(sale)}
+                        className={`border-b border-rule last:border-0 cursor-pointer transition-colors hover:bg-surface-sunken/50 ${selected?._id === sale._id ? 'bg-accent-soft/40' : ''}`}
+                      >
+                        <td className="py-3.5 px-4 num font-medium text-accent">{sale.invoiceNumber || sale.documentNumber}</td>
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-3">
+                            <span className={`w-8 h-8 shrink-0 rounded-full border flex items-center justify-center text-xs font-semibold ${avatarClass(name)}`}>
+                              {avatarInitials(name)}
+                            </span>
+                            <span className="font-medium text-ink">{name}</span>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 text-ink-muted">{formatDateTime(sale.createdAt)}</td>
+                        <td className="py-3.5 px-4"><span className={STATUS_CHIP[sale.status] || 'chip-neutral'}>{sale.status}</span></td>
+                        <td className="py-3.5 px-4 num font-medium text-right">{formatMoney(sale.totalAmount, company?.currency)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-4 border-t border-rule flex items-center justify-between bg-surface">
+              <span className="text-xs text-ink-muted">Showing {sales.length} {sales.length === 1 ? 'entry' : 'entries'}</span>
+            </div>
           </div>
         )}
       </div>
@@ -120,7 +158,7 @@ function SaleDetailPanel({ sale, onClose, onChanged }) {
   return (
     <div className="w-full lg:w-80 shrink-0 card p-4 h-fit">
       <div className="flex items-center justify-between mb-3">
-        <p className="font-display text-lg num">{sale.invoiceNumber || sale.documentNumber}</p>
+        <p className="font-display font-bold text-lg num text-accent">{sale.invoiceNumber || sale.documentNumber}</p>
         <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button>
       </div>
 

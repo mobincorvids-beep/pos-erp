@@ -6,6 +6,22 @@ import { Loading } from '../components/Loading';
 import { EmptyState } from '../components/EmptyState';
 import { formatMoney } from '../lib/format';
 
+const STATUS_CHIP = {
+  active: 'chip-accent',
+  disposed: 'chip-neutral',
+  fully_depreciated: 'chip-warning',
+};
+
+function StatusChip({ status }) {
+  const cls = STATUS_CHIP[status] || 'chip-neutral';
+  return (
+    <span className={`${cls} gap-1.5 capitalize`}>
+      <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
+      {status?.replace('_', ' ')}
+    </span>
+  );
+}
+
 export function FixedAssetsPage() {
   const { company } = useAuth();
   const toast = useToast();
@@ -23,28 +39,62 @@ export function FixedAssetsPage() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <p className="font-display text-lg">Fixed Assets</p>
-        <button className="btn-primary" onClick={() => setShowForm(true)}>Register asset</button>
+      <div className="flex justify-between items-end flex-wrap gap-4 mb-6">
+        <div>
+          <p className="page-title">Fixed Assets</p>
+          <p className="text-sm text-ink-muted mt-1">Register, track, and depreciate company-owned assets.</p>
+        </div>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>
+          <span className="material-symbols-outlined text-sm">add</span>
+          New asset
+        </button>
       </div>
 
       {loading && <Loading />}
       {!loading && assets.length === 0 && <EmptyState title="No fixed assets registered" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Register one</button>} />}
 
       {!loading && assets.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {assets.map((a) => (
-            <div key={a._id} className="card p-3">
-              <p className="text-sm font-medium">{a.name}</p>
-              {a.category && <p className="text-xs text-ink-muted">{a.category}</p>}
-              <p className="num text-sm mt-1">{formatMoney(a.purchaseCost, company?.currency)}</p>
-              <p className="text-xs text-ink-muted mt-0.5 capitalize">{a.status}</p>
-              <div className="flex gap-3 mt-2">
-                <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => setHistoryFor(a)}>Maintenance history</button>
-                {a.status === 'active' && <button className="btn-ghost !text-red-600 !px-0 text-xs" onClick={() => setDisposing(a)}>Dispose</button>}
-              </div>
-            </div>
-          ))}
+        <div className="card overflow-hidden">
+          <div className="px-5 py-4 border-b border-rule flex justify-between items-center bg-surface-sunken/40">
+            <p className="font-display text-lg font-semibold text-ink">Asset Register</p>
+            <span className="eyebrow">{assets.length} assets</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[720px]">
+              <thead>
+                <tr className="border-b border-rule bg-surface-sunken/60">
+                  <th className="py-3 px-5 eyebrow font-medium">Asset</th>
+                  <th className="py-3 px-5 eyebrow font-medium">Category</th>
+                  <th className="py-3 px-5 eyebrow font-medium text-right">Purchase Cost</th>
+                  <th className="py-3 px-5 eyebrow font-medium">Status</th>
+                  <th className="py-3 px-5 eyebrow font-medium text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-rule">
+                {assets.map((a) => (
+                  <tr key={a._id} className="hover:bg-accent-soft/30 transition-colors">
+                    <td className="py-3 px-5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-surface-sunken flex items-center justify-center text-ink-muted shrink-0">
+                          <span className="material-symbols-outlined">inventory_2</span>
+                        </div>
+                        <p className="text-sm font-semibold text-ink">{a.name}</p>
+                      </div>
+                    </td>
+                    <td className="py-3 px-5 text-sm text-ink-muted">{a.category || '—'}</td>
+                    <td className="py-3 px-5 text-sm text-ink font-semibold text-right num">{formatMoney(a.purchaseCost, company?.currency)}</td>
+                    <td className="py-3 px-5"><StatusChip status={a.status} /></td>
+                    <td className="py-3 px-5 text-right">
+                      <div className="flex gap-3 justify-end">
+                        <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => setHistoryFor(a)}>Maintenance history</button>
+                        {a.status === 'active' && <button className="btn-ghost !text-danger !px-0 text-xs" onClick={() => setDisposing(a)}>Dispose</button>}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -159,7 +209,7 @@ function DisposeForm({ asset, onClose, onSaved }) {
         <input type="number" min="0" required className="field-input num" value={disposalProceeds} onChange={(e) => setDisposalProceeds(e.target.value)} />
         <div className="flex justify-end gap-2 mt-5">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary !bg-red-600 hover:!bg-red-700">{saving ? 'Disposing…' : 'Confirm dispose'}</button>
+          <button type="submit" disabled={saving} className="btn-danger">{saving ? 'Disposing…' : 'Confirm dispose'}</button>
         </div>
       </form>
     </div>

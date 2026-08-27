@@ -44,6 +44,7 @@ export function SignupPage() {
     <div className="min-h-screen bg-paper flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-accent text-white font-display text-xl font-bold mb-3">M</div>
           <p className="font-display text-3xl text-ink">Muhasib</p>
           <p className="text-sm text-ink-muted mt-1">Create your business's own account</p>
         </div>
@@ -54,39 +55,49 @@ export function SignupPage() {
           )}
 
           <div>
-            <label className="field-label" htmlFor="businessName">Business name</label>
-            <input
-              id="businessName" required autoFocus className="field-input"
-              value={form.businessName} onChange={update('businessName')}
-              placeholder="e.g. Al-Karam Traders"
-            />
+            <p className="eyebrow mb-2">Business</p>
+            <div className="space-y-4">
+              <div>
+                <label className="field-label" htmlFor="businessName">Business name</label>
+                <input
+                  id="businessName" required autoFocus className="field-input"
+                  value={form.businessName} onChange={update('businessName')}
+                  placeholder="e.g. Al-Karam Traders"
+                />
+              </div>
+
+              <div>
+                <label className="field-label" htmlFor="industryType">Business type</label>
+                <select id="industryType" required className="field-input" value={form.industryType} onChange={update('industryType')}>
+                  {BUSINESS_TYPES.map((t) => (
+                    <option key={t.key} value={t.key}>{t.label}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-ink-muted mt-1">
+                  This decides what your dashboard and sidebar show — pick the closest match.
+                </p>
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label className="field-label" htmlFor="industryType">Business type</label>
-            <select id="industryType" required className="field-input" value={form.industryType} onChange={update('industryType')}>
-              {BUSINESS_TYPES.map((t) => (
-                <option key={t.key} value={t.key}>{t.label}</option>
-              ))}
-            </select>
-            <p className="text-xs text-ink-muted mt-1">
-              This decides what your dashboard and sidebar show — pick the closest match.
-            </p>
-          </div>
-
-          <div className="pt-2 border-t border-rule" />
+          <div className="tear-line" />
 
           <div>
-            <label className="field-label" htmlFor="adminName">Your name</label>
-            <input id="adminName" required className="field-input" value={form.adminName} onChange={update('adminName')} placeholder="Full name" />
-          </div>
-          <div>
-            <label className="field-label" htmlFor="adminEmail">Email</label>
-            <input id="adminEmail" type="email" required className="field-input" value={form.adminEmail} onChange={update('adminEmail')} placeholder="you@business.com" />
-          </div>
-          <div>
-            <label className="field-label" htmlFor="adminPassword">Password</label>
-            <input id="adminPassword" type="password" required minLength={8} className="field-input" value={form.adminPassword} onChange={update('adminPassword')} placeholder="At least 8 characters" />
+            <p className="eyebrow mb-2">Admin account</p>
+            <div className="space-y-4">
+              <div>
+                <label className="field-label" htmlFor="adminName">Your name</label>
+                <input id="adminName" required className="field-input" value={form.adminName} onChange={update('adminName')} placeholder="Full name" />
+              </div>
+              <div>
+                <label className="field-label" htmlFor="adminEmail">Email</label>
+                <input id="adminEmail" type="email" required className="field-input" value={form.adminEmail} onChange={update('adminEmail')} placeholder="you@business.com" />
+              </div>
+              <div>
+                <label className="field-label" htmlFor="adminPassword">Password</label>
+                <input id="adminPassword" type="password" required minLength={8} className="field-input" value={form.adminPassword} onChange={update('adminPassword')} placeholder="At least 8 characters" />
+              </div>
+            </div>
           </div>
 
           <button type="submit" disabled={loading} className="btn-primary w-full">
@@ -94,10 +105,10 @@ export function SignupPage() {
           </button>
         </form>
 
-        <p className="text-xs text-ink-muted text-center mt-4">
+        <p className="text-sm text-ink-muted text-center mt-4">
           Already have an account? <Link to="/login" className="underline">Sign in</Link>
         </p>
-        <p className="text-xs text-ink-muted text-center mt-1">
+        <p className="text-xs text-ink-muted text-center mt-4">
           Your business's data is completely private — no other business on this platform can see it, and you won't see theirs.
         </p>
       </div>

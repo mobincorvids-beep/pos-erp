@@ -7,7 +7,12 @@ import { EmptyState } from '../components/EmptyState';
 import { formatDate } from '../lib/format';
 
 const PRIORITY_CHIP = { low: 'chip-neutral', medium: 'chip-warning', high: 'chip-danger', emergency: 'chip-danger' };
-const STATUS_CHIP = { open: 'chip-neutral', assigned: 'chip-accent', resolved: 'chip-accent', closed: 'chip-neutral' };
+const STATUS_CHIP = { open: 'chip-info', assigned: 'chip-accent', resolved: 'chip-neutral', closed: 'chip-neutral' };
+
+function initials(name) {
+  if (!name) return '';
+  return name.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('');
+}
 
 export function TicketsPage() {
   const toast = useToast();
@@ -29,60 +34,87 @@ export function TicketsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <p className="page-title">Helpdesk</p>
-        <button className="btn-primary" onClick={() => setShowForm(true)}>New ticket</button>
+      <div className="flex items-end justify-between mb-6">
+        <div>
+          <p className="page-title">Helpdesk Overview</p>
+          <p className="text-sm text-ink-muted mt-1">Manage support requests and monitor performance.</p>
+        </div>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>
+          <span className="material-symbols-outlined text-base leading-none">add_task</span>
+          New ticket
+        </button>
       </div>
 
       {compliance && compliance.overall.total > 0 && (
-        <div className="grid grid-cols-3 gap-3 mb-5 max-w-lg">
-          <div className="card p-3">
-            <p className="text-xs text-ink-muted uppercase tracking-wide">SLA met</p>
-            <p className="font-display text-2xl mt-1">{compliance.overall.met}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <div className="card p-4">
+            <div className="flex items-center justify-between mb-2">
+              <p className="eyebrow">Open tickets</p>
+              <div className="w-8 h-8 rounded-full bg-danger-soft text-danger flex items-center justify-center">
+                <span className="material-symbols-outlined text-base leading-none">warning</span>
+              </div>
+            </div>
+            <p className="font-display text-3xl font-bold num">{tickets.filter((t) => t.status === 'open' || t.status === 'assigned').length}</p>
           </div>
-          <div className="card p-3">
-            <p className="text-xs text-ink-muted uppercase tracking-wide">Breached</p>
-            <p className="font-display text-2xl mt-1 text-danger">{compliance.overall.breached}</p>
+          <div className="card p-4">
+            <div className="flex items-center justify-between mb-2">
+              <p className="eyebrow">SLA met</p>
+              <div className="w-8 h-8 rounded-full bg-accent-soft text-accent-strong flex items-center justify-center">
+                <span className="material-symbols-outlined text-base leading-none">check_circle</span>
+              </div>
+            </div>
+            <p className="font-display text-3xl font-bold num">{compliance.overall.met}</p>
           </div>
-          <div className="card p-3">
-            <p className="text-xs text-ink-muted uppercase tracking-wide">Compliance</p>
-            <p className="font-display text-2xl mt-1">{compliance.overall.complianceRate ?? '—'}%</p>
+          <div className="card p-4">
+            <div className="flex items-center justify-between mb-2">
+              <p className="eyebrow">Compliance</p>
+              <div className="w-8 h-8 rounded-full bg-info-soft text-info flex items-center justify-center">
+                <span className="material-symbols-outlined text-base leading-none">timer</span>
+              </div>
+            </div>
+            <p className="font-display text-3xl font-bold num">{compliance.overall.complianceRate ?? '—'}%</p>
           </div>
         </div>
       )}
 
-      <div className="flex gap-1 border-b border-rule mb-4">
-        {[['', 'All'], ['open', 'Open'], ['assigned', 'Assigned'], ['resolved', 'Resolved'], ['closed', 'Closed']].map(([key, label]) => (
-          <button key={key} onClick={() => setStatusFilter(key)} className={`px-3 py-2 text-sm -mb-px border-b-2 ${statusFilter === key ? 'border-accent text-accent-strong font-medium' : 'border-transparent text-ink-muted hover:text-ink'}`}>
-            {label}
-          </button>
-        ))}
-      </div>
+      <div className="card overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-rule bg-surface-sunken/50">
+          <p className="font-display text-lg font-semibold">Ticket queue</p>
+          <div className="flex gap-1.5">
+            {[['', 'All'], ['open', 'Open'], ['assigned', 'Assigned'], ['resolved', 'Resolved'], ['closed', 'Closed']].map(([key, label]) => (
+              <button key={key} onClick={() => setStatusFilter(key)} className={statusFilter === key ? 'pill-active' : 'pill'}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
 
-      {loading && <Loading />}
-      {!loading && tickets.length === 0 && (
-        <EmptyState title="No tickets" description="Customer complaints and internal support requests both live here, with a real SLA clock running on each one." action={<button className="btn-primary" onClick={() => setShowForm(true)}>Raise a ticket</button>} />
-      )}
-      {!loading && tickets.length > 0 && (
-        <div className="card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                <th className="px-3 py-2 font-medium">Subject</th>
-                <th className="px-3 py-2 font-medium">Category</th>
-                <th className="px-3 py-2 font-medium">Priority</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-                <th className="px-3 py-2 font-medium">SLA</th>
-                <th className="px-3 py-2 font-medium">Raised</th>
-                <th className="px-3 py-2 font-medium"></th>
-              </tr>
-            </thead>
-            <tbody>
+        {loading && <div className="p-6"><Loading /></div>}
+        {!loading && tickets.length === 0 && (
+          <div className="p-6">
+            <EmptyState title="No tickets" description="Customer complaints and internal support requests both live here, with a real SLA clock running on each one." action={<button className="btn-primary" onClick={() => setShowForm(true)}>Raise a ticket</button>} />
+          </div>
+        )}
+        {!loading && tickets.length > 0 && (
+          <>
+            <div className="grid grid-cols-[1.6fr_100px_120px_120px_130px_110px_170px] gap-3 px-5 py-2.5 bg-surface-sunken border-b border-rule text-xs text-ink-muted uppercase tracking-wide font-semibold">
+              <div>Subject</div>
+              <div>Category</div>
+              <div>Priority</div>
+              <div>Status</div>
+              <div>SLA</div>
+              <div>Raised</div>
+              <div className="text-right">Action</div>
+            </div>
+            <div>
               {tickets.map((t) => <TicketRow key={t._id} ticket={t} onChanged={load} />)}
-            </tbody>
-          </table>
-        </div>
-      )}
+            </div>
+            <div className="flex items-center justify-between px-5 py-3 border-t border-rule text-sm text-ink-muted">
+              <span>Showing {tickets.length} ticket{tickets.length === 1 ? '' : 's'}</span>
+            </div>
+          </>
+        )}
+      </div>
 
       {showForm && <TicketForm onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
     </div>
@@ -93,7 +125,7 @@ function slaLabel(ticket) {
   if (ticket.slaBreached === true) return <span className="chip-danger">Breached</span>;
   if (ticket.slaBreached === false) return <span className="chip-accent">Met</span>;
   const overdue = new Date(ticket.slaDueAt) < new Date();
-  return overdue ? <span className="chip-danger">Overdue</span> : <span className="chip-neutral">Awaiting response</span>;
+  return overdue ? <span className="chip-danger">Overdue</span> : <span className="chip-neutral">Awaiting</span>;
 }
 
 function TicketRow({ ticket, onChanged }) {
@@ -132,18 +164,20 @@ function TicketRow({ ticket, onChanged }) {
     } catch (err) { toast(err.message, 'error'); }
   }
 
+  const assigneeName = ticket.assignedToUserId?.name || ticket.assignedToName;
+
   return (
-    <tr className="border-b border-rule last:border-0 align-top">
-      <td className="px-3 py-2">
-        <p className="font-medium">{ticket.subject}</p>
-        <p className="text-ink-muted text-xs mt-0.5">{ticket.description}</p>
-      </td>
-      <td className="px-3 py-2 text-ink-muted">{ticket.category}</td>
-      <td className="px-3 py-2"><span className={PRIORITY_CHIP[ticket.priority]}>{ticket.priority}</span></td>
-      <td className="px-3 py-2"><span className={STATUS_CHIP[ticket.status]}>{ticket.status}</span></td>
-      <td className="px-3 py-2">{slaLabel(ticket)}</td>
-      <td className="px-3 py-2 text-ink-muted">{formatDate(ticket.createdAt)}</td>
-      <td className="px-3 py-2 text-right">
+    <div className="grid grid-cols-[1.6fr_100px_120px_120px_130px_110px_170px] gap-3 px-5 py-3 border-b border-rule last:border-0 items-start hover:bg-surface-sunken/40 transition-colors">
+      <div>
+        <p className="font-medium text-sm">{ticket.subject}</p>
+        <p className="text-ink-muted text-xs mt-0.5 line-clamp-1">{ticket.description}</p>
+      </div>
+      <div className="text-ink-muted text-sm pt-0.5">{ticket.category}</div>
+      <div className="pt-0.5"><span className={PRIORITY_CHIP[ticket.priority]}>{ticket.priority}</span></div>
+      <div className="pt-0.5"><span className={STATUS_CHIP[ticket.status]}>{ticket.status}</span></div>
+      <div className="pt-0.5">{slaLabel(ticket)}</div>
+      <div className="text-ink-muted text-sm pt-0.5">{formatDate(ticket.createdAt)}</div>
+      <div className="text-right">
         {ticket.status === 'open' && !assigning && (
           <button className="btn-ghost !text-accent" onClick={() => setAssigning(true)}>Assign</button>
         )}
@@ -157,7 +191,15 @@ function TicketRow({ ticket, onChanged }) {
           </div>
         )}
         {ticket.status === 'assigned' && !resolving && (
-          <button className="btn-ghost !text-accent" onClick={() => setResolving(true)}>Resolve</button>
+          <div className="flex items-center justify-end gap-2">
+            {assigneeName && (
+              <span className="inline-flex items-center gap-1.5 text-xs text-ink-muted">
+                <span className="w-5 h-5 rounded-full bg-accent-soft text-accent-strong flex items-center justify-center text-[10px] font-bold">{initials(assigneeName)}</span>
+                {assigneeName}
+              </span>
+            )}
+            <button className="btn-ghost !text-accent" onClick={() => setResolving(true)}>Resolve</button>
+          </div>
         )}
         {ticket.status === 'assigned' && resolving && (
           <div className="flex gap-1 justify-end items-center">
@@ -168,8 +210,8 @@ function TicketRow({ ticket, onChanged }) {
         {ticket.status === 'resolved' && (
           <button className="btn-ghost" onClick={close}>Close</button>
         )}
-      </td>
-    </tr>
+      </div>
+    </div>
   );
 }
 

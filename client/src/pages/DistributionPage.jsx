@@ -22,32 +22,42 @@ export function DistributionPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <p className="page-title">Distribution</p>
-        <div className="flex gap-2">
+      <div className="flex items-start justify-between mb-6 gap-4">
+        <div>
+          <p className="page-title">Supply Chain &amp; Distribution</p>
+          <p className="text-sm text-ink-muted mt-1">Tiered price schedules and wholesale sales orders.</p>
+        </div>
+        <div className="flex gap-2 shrink-0">
           <button className="btn-secondary" onClick={() => setShowOrder(true)}>Create wholesale order</button>
           <button className="btn-primary" onClick={() => setShowForm(true)}>New price schedule</button>
         </div>
       </div>
 
-      {loading && <Loading />}
-      {!loading && schedules.length === 0 && <EmptyState title="No tiered price schedules yet" description="Set quantity-based pricing per product." />}
-      {!loading && schedules.length > 0 && (
-        <div className="grid grid-cols-2 gap-4">
-          {schedules.map((s) => (
-            <div key={s._id} className="card p-3">
-              <p className="text-sm font-medium">{s.productId?.name || 'Product'}</p>
-              <p className="text-xs text-ink-muted mb-2">MOQ: {s.minimumOrderQuantity}</p>
-              {s.tiers.map((t, i) => (
-                <div key={i} className="flex justify-between text-xs">
-                  <span className="text-ink-muted">{t.minQuantity}+ units</span>
-                  <span className="num">{formatMoney(t.unitPrice, company?.currency)}/unit</span>
+      <div className="card p-5">
+        <p className="eyebrow mb-3">Tiered price schedules</p>
+        {loading && <Loading />}
+        {!loading && schedules.length === 0 && <EmptyState title="No tiered price schedules yet" description="Set quantity-based pricing per product." />}
+        {!loading && schedules.length > 0 && (
+          <div className="grid grid-cols-2 gap-4">
+            {schedules.map((s) => (
+              <div key={s._id} className="rounded-lg border border-rule bg-paper p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-sm font-semibold text-ink">{s.productId?.name || 'Product'}</p>
+                  <span className="chip-neutral">MOQ {s.minimumOrderQuantity}</span>
                 </div>
-              ))}
-            </div>
-          ))}
-        </div>
-      )}
+                <div className="tear-line mt-2 pt-2 space-y-1">
+                  {s.tiers.map((t, i) => (
+                    <div key={i} className="flex justify-between text-xs">
+                      <span className="text-ink-muted">{t.minQuantity}+ units</span>
+                      <span className="num text-ink">{formatMoney(t.unitPrice, company?.currency)}/unit</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
       {showForm && <ScheduleForm onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
       {showOrder && <OrderForm onClose={() => setShowOrder(false)} />}
     </div>
@@ -88,10 +98,10 @@ function ScheduleForm({ onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
-      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">New price schedule</p>
-        <div className="space-y-3 mb-3">
+    <div className="fixed inset-0 bg-ink/20 backdrop-blur-[1px] flex items-center justify-center z-40 px-4">
+      <form onSubmit={handleSubmit} className="card p-6 w-full max-w-sm">
+        <p className="font-display text-lg font-bold text-ink mb-4">New price schedule</p>
+        <div className="space-y-3 mb-4">
           <div>
             <label className="field-label">Product</label>
             <select required className="field-input" value={productId} onChange={(e) => setProductId(e.target.value)}>
@@ -102,7 +112,7 @@ function ScheduleForm({ onClose, onSaved }) {
           <div><label className="field-label">Minimum order quantity</label><input type="number" min="1" className="field-input num" value={minimumOrderQuantity} onChange={(e) => setMinimumOrderQuantity(e.target.value)} /></div>
         </div>
 
-        <p className="field-label mb-1">Tiers (ascending quantity)</p>
+        <p className="field-label mb-2">Tiers (ascending quantity)</p>
         <div className="space-y-2 mb-2">
           {tiers.map((t, i) => (
             <div key={i} className="grid grid-cols-2 gap-2">
@@ -111,9 +121,9 @@ function ScheduleForm({ onClose, onSaved }) {
             </div>
           ))}
         </div>
-        <button type="button" className="btn-ghost !px-0 text-xs mb-4" onClick={() => setTiers([...tiers, { minQuantity: '', unitPrice: '' }])}>+ Add tier</button>
+        <button type="button" className="btn-ghost !px-0 text-xs mb-5" onClick={() => setTiers([...tiers, { minQuantity: '', unitPrice: '' }])}>+ Add tier</button>
 
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2 pt-3 border-t border-rule">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
           <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save'}</button>
         </div>
@@ -173,10 +183,10 @@ function OrderForm({ onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
-      <div className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Create wholesale order</p>
-        <div className="space-y-3 mb-3">
+    <div className="fixed inset-0 bg-ink/20 backdrop-blur-[1px] flex items-center justify-center z-40 px-4">
+      <div className="card p-6 w-full max-w-sm">
+        <p className="font-display text-lg font-bold text-ink mb-4">Create wholesale order</p>
+        <div className="space-y-3 mb-4">
           <div>
             <label className="field-label">Branch</label>
             <select className="field-input" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value })}>
@@ -209,16 +219,16 @@ function OrderForm({ onClose }) {
             <div><label className="field-label">Quantity</label><input type="number" className="field-input num" value={form.quantity} onChange={(e) => { setForm({ ...form, quantity: e.target.value }); setQuote(null); }} /></div>
           </div>
         </div>
-        <button type="button" className="btn-secondary w-full mb-3" disabled={!form.productId || !form.quantity || quoting} onClick={getQuote}>
+        <button type="button" className="btn-secondary w-full mb-4" disabled={!form.productId || !form.quantity || quoting} onClick={getQuote}>
           {quoting ? 'Quoting…' : 'Get tiered quote'}
         </button>
         {quote && (
-          <div className="tear-line pt-3 mb-3 flex justify-between text-base font-medium">
+          <div className="tear-line pt-3 mb-4 flex justify-between text-base font-medium text-ink">
             <span>{quote.unitPrice}/unit {quote.tierApplied && <span className="text-xs text-ink-muted font-normal">(tier {quote.tierApplied}+)</span>}</span>
             <span className="num text-accent-strong">{formatMoney(quote.lineTotal, company?.currency)}</span>
           </div>
         )}
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2 pt-3 border-t border-rule">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
           <button type="button" disabled={!quote || !form.branchId || !form.warehouseId || !form.customerId || saving} className="btn-primary" onClick={createOrder}>
             {saving ? 'Creating…' : 'Create sales order'}

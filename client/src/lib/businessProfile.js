@@ -40,6 +40,7 @@ const OPTIONAL_ITEMS = new Set([
   '/stock-transfers', '/stock-counts', '/ecommerce', '/loyalty',
   '/recurring-invoices',
   '/fleet', '/field-service', '/quality', '/contracts',
+  '/logistics-core', '/warehouse', '/funnels', '/ecommerce-hub',
 ]);
 
 // Explicit, per-industry list of which optional items that business
@@ -48,48 +49,48 @@ const OPTIONAL_ITEMS = new Set([
 // tag; every line reflects a deliberate decision about that one business.
 const INDUSTRY_VISIBLE_ITEMS = {
   // ---- Goods-led retail & wholesale ----
-  retail: ['products', 'units', 'purchases', 'rfqs', 'early-payment-discount', 'stock-transfers', 'stock-counts', 'ecommerce', 'loyalty'],
-  grocery: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts'],
-  pharmacy: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'appointments'],
-  jewelry: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts'],
+  retail: ['products', 'units', 'purchases', 'rfqs', 'early-payment-discount', 'stock-transfers', 'stock-counts', 'ecommerce', 'ecommerce-hub', 'loyalty', 'logistics-core', 'warehouse', 'funnels'],
+  grocery: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'logistics-core', 'warehouse'],
+  pharmacy: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'appointments', 'logistics-core', 'warehouse'],
+  jewelry: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'logistics-core'],
   // Approved warranty claims open a real core ServiceOrder repair job
   // (warrantyService.js) — confirmed via direct model reference, not
   // inferred — so Service Orders needs to be visible here too.
-  electronics: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'ecommerce', 'service-orders', 'field-service', 'quality'],
-  furniture: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'manufacturing', 'quality'],
-  fashion: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'ecommerce', 'loyalty'],
+  electronics: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'ecommerce', 'ecommerce-hub', 'service-orders', 'field-service', 'quality', 'logistics-core', 'warehouse'],
+  furniture: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'manufacturing', 'quality', 'logistics-core'],
+  fashion: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'ecommerce', 'ecommerce-hub', 'loyalty', 'logistics-core', 'funnels'],
   bakery: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'manufacturing', 'quality'],
-  footwear: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'ecommerce'],
-  textile: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'manufacturing', 'quality'],
-  hardware: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'field-service'],
-  auto_parts: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'service-orders', 'field-service', 'quality'],
-  toys_gifts: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'ecommerce'],
-  dairy: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'manufacturing', 'quality'],
-  distribution: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'fleet'],
+  footwear: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'ecommerce', 'ecommerce-hub', 'logistics-core'],
+  textile: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'manufacturing', 'quality', 'logistics-core'],
+  hardware: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'field-service', 'logistics-core'],
+  auto_parts: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'service-orders', 'field-service', 'quality', 'logistics-core'],
+  toys_gifts: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'ecommerce', 'ecommerce-hub', 'logistics-core'],
+  dairy: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'manufacturing', 'quality', 'logistics-core'],
+  distribution: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'fleet', 'logistics-core', 'warehouse'],
   // 3PL bills storage on a schedule and never buys the stock it holds —
   // no Purchases, but Recurring Invoices for contract billing. Fleet
   // covers its own delivery trucks; Contracts tracks the legal storage
   // agreement itself (separate from StorageContract's billing math — see
   // contractService.js header comment).
-  warehouse_3pl: ['products', 'units', 'stock-transfers', 'stock-counts', 'recurring-invoices', 'fleet', 'contracts'],
-  import_export: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'contracts'],
+  warehouse_3pl: ['products', 'units', 'stock-transfers', 'stock-counts', 'recurring-invoices', 'fleet', 'contracts', 'logistics-core', 'warehouse'],
+  import_export: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'contracts', 'logistics-core', 'warehouse'],
   agriculture: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'manufacturing', 'fleet', 'field-service', 'quality'],
   petrol_pump: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts'],
-  pharmaceutical: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'manufacturing', 'quality'],
+  pharmaceutical: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'manufacturing', 'quality', 'logistics-core'],
   cafe: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts'],
 
   // ---- Appointment / service-led ----
-  salon: ['appointments', 'loyalty'],
-  gym: ['appointments', 'recurring-invoices'],
+  salon: ['appointments', 'loyalty', 'funnels'],
+  gym: ['appointments', 'recurring-invoices', 'funnels'],
   professional_services: ['recurring-invoices', 'contracts'],
   hospital: ['appointments'],
   service_station: ['appointments', 'service-orders', 'field-service'],
   automobile: ['products', 'purchases', 'stock-transfers', 'stock-counts', 'service-orders', 'field-service'],
   telecom: ['recurring-invoices', 'field-service'],
-  courier: ['fleet'],
+  courier: ['fleet', 'logistics-core'],
 
   // ---- Hospitality ----
-  restaurant: ['products', 'purchases', 'stock-transfers', 'stock-counts'],
+  restaurant: ['products', 'purchases', 'stock-transfers', 'stock-counts', 'funnels'],
   hotel: ['products', 'purchases', 'stock-transfers', 'stock-counts', 'appointments'],
   banquet: ['appointments'],
 
@@ -100,16 +101,16 @@ const INDUSTRY_VISIBLE_ITEMS = {
   // (Field service), formal client/supplier contracts, and NCR/CAPA
   // quality tracking on build defects.
   construction: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'manufacturing', 'fleet', 'field-service', 'quality', 'contracts'],
-  real_estate: ['recurring-invoices', 'contracts'],
+  real_estate: ['recurring-invoices', 'contracts', 'funnels'],
   insurance: ['recurring-invoices', 'contracts'],
-  travel: [],
+  travel: ['funnels'],
   car_rental: ['appointments', 'fleet'],
-  logistics: ['fleet'],
+  logistics: ['fleet', 'logistics-core'],
   ngo: [],
-  school: ['appointments', 'recurring-invoices'],
+  school: ['appointments', 'recurring-invoices', 'funnels'],
   housing_society: ['recurring-invoices', 'contracts'],
   hajj_umrah: [],
-  media_entertainment: ['appointments'],
+  media_entertainment: ['appointments', 'funnels'],
   sports: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'appointments'],
 };
 
@@ -120,6 +121,7 @@ const PATH_TO_KEY = {
   '/stock-counts': 'stock-counts', '/ecommerce': 'ecommerce', '/loyalty': 'loyalty',
   '/recurring-invoices': 'recurring-invoices',
   '/fleet': 'fleet', '/field-service': 'field-service', '/quality': 'quality', '/contracts': 'contracts',
+  '/logistics-core': 'logistics-core', '/warehouse': 'warehouse', '/funnels': 'funnels', '/ecommerce-hub': 'ecommerce-hub',
 };
 
 /**

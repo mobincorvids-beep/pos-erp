@@ -5,6 +5,12 @@ import { Loading } from '../components/Loading';
 import { EmptyState } from '../components/EmptyState';
 import { formatDate } from '../lib/format';
 
+const STATUS_CHIP = {
+  in_transit: 'chip-warning',
+  completed: 'chip-accent',
+  cancelled: 'chip-danger',
+};
+
 export function StockTransfersPage() {
   const toast = useToast();
   const [transfers, setTransfers] = useState([]);
@@ -27,9 +33,15 @@ export function StockTransfersPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <p className="page-title">Stock transfers</p>
-        <button className="btn-primary" onClick={() => setShowNew(true)}>New transfer</button>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        <div>
+          <p className="page-title">Stock transfers</p>
+          <p className="text-sm text-ink-muted mt-1">Move stock between warehouses and track it in transit until confirmed received.</p>
+        </div>
+        <button className="btn-primary" onClick={() => setShowNew(true)}>
+          <span className="font-icon text-[18px] leading-none">add</span>
+          New transfer
+        </button>
       </div>
 
       {loading && <Loading />}
@@ -38,28 +50,30 @@ export function StockTransfersPage() {
       )}
       {!loading && transfers.length > 0 && (
         <div className="card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                <th className="px-3 py-2 font-medium">Date</th>
-                <th className="px-3 py-2 font-medium">Items</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-                <th className="px-3 py-2 font-medium"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {transfers.map((t) => (
-                <tr key={t._id} className="border-b border-rule last:border-0">
-                  <td className="px-3 py-2 text-ink-muted">{formatDate(t.createdAt)}</td>
-                  <td className="px-3 py-2 num">{t.items.reduce((s, i) => s + i.quantity, 0)} units, {t.items.length} line(s)</td>
-                  <td className="px-3 py-2"><span className="chip-neutral">{t.status.replace('_', ' ')}</span></td>
-                  <td className="px-3 py-2 text-right">
-                    {t.status === 'in_transit' && <button className="btn-ghost !text-accent" onClick={() => receive(t._id)}>Mark received</button>}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse whitespace-nowrap">
+              <thead className="bg-surface-sunken">
+                <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
+                  <th className="py-3 px-4 font-semibold">Date</th>
+                  <th className="py-3 px-4 font-semibold">Items</th>
+                  <th className="py-3 px-4 font-semibold">Status</th>
+                  <th className="py-3 px-4 font-semibold"></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-rule">
+                {transfers.map((t) => (
+                  <tr key={t._id} className="transition-colors hover:bg-accent-soft/20">
+                    <td className="py-3 px-4 text-ink-muted">{formatDate(t.createdAt)}</td>
+                    <td className="py-3 px-4 num text-ink">{t.items.reduce((s, i) => s + i.quantity, 0)} units, {t.items.length} line(s)</td>
+                    <td className="py-3 px-4"><span className={STATUS_CHIP[t.status] || 'chip-neutral'}>{t.status.replace('_', ' ')}</span></td>
+                    <td className="py-3 px-4 text-right">
+                      {t.status === 'in_transit' && <button className="btn-ghost !text-accent" onClick={() => receive(t._id)}>Mark received</button>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
       {showNew && <NewTransferModal onClose={() => setShowNew(false)} onCreated={load} />}
@@ -117,7 +131,7 @@ function NewTransferModal({ onClose, onCreated }) {
   return (
     <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50" onClick={onClose}>
       <div className="card p-5 w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
-        <p className="font-display text-lg mb-4">New stock transfer</p>
+        <p className="font-display text-lg font-semibold mb-4">New stock transfer</p>
 
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div>
@@ -152,7 +166,10 @@ function NewTransferModal({ onClose, onCreated }) {
             </div>
           ))}
         </div>
-        <button className="btn-ghost !text-accent mb-4" onClick={addLine}>+ Add another item</button>
+        <button className="btn-ghost !text-accent mb-4" onClick={addLine}>
+          <span className="font-icon text-[16px] leading-none">add</span>
+          Add another item
+        </button>
 
         <label className="flex items-center gap-2 text-sm mb-4">
           <input type="checkbox" checked={receiveImmediately} onChange={(e) => setReceiveImmediately(e.target.checked)} />

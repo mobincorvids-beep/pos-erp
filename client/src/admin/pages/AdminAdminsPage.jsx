@@ -28,6 +28,7 @@ export function AdminAdminsPage() {
   if (admin?.role !== 'admin') {
     return (
       <div>
+        <p className="eyebrow mb-1">Access</p>
         <p className="page-title mb-1">Platform admins</p>
         <p className="text-sm text-ink-muted">Only an admin-role account can create other platform admins — you're signed in as support (read-only).</p>
       </div>
@@ -36,14 +37,22 @@ export function AdminAdminsPage() {
 
   return (
     <div>
+      <p className="eyebrow mb-1">Access</p>
       <p className="page-title mb-1">Platform admins</p>
       <p className="text-sm text-ink-muted mb-6">Create another platform admin — this is the in-app path so <code className="num">npm run seed:admin</code> only has to run once, ever.</p>
 
       <div className="grid grid-cols-2 gap-6 max-w-2xl">
-        <form onSubmit={handleSubmit} className="card p-4">
+        <form onSubmit={handleSubmit} className="card p-5">
+          <p className="eyebrow mb-4">New admin</p>
           <div className="space-y-3">
-            <div><label className="field-label">Name</label><input required autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-            <div><label className="field-label">Email</label><input type="email" required className="field-input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+            <div>
+              <label className="field-label">Name</label>
+              <input required autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            </div>
+            <div>
+              <label className="field-label">Email</label>
+              <input type="email" required className="field-input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            </div>
             <div>
               <label className="field-label">Role</label>
               <select className="field-input" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
@@ -56,10 +65,16 @@ export function AdminAdminsPage() {
         </form>
 
         {result && (
-          <div className="card p-4">
-            <p className="text-sm font-medium mb-2">{result.admin.name} is ready</p>
-            <p className="text-sm mb-1"><span className="text-ink-muted">Login email:</span> {result.admin.email}</p>
-            <p className="text-sm mb-3"><span className="text-ink-muted">Temporary password:</span> <span className="num">{result.generatedPassword}</span></p>
+          <div className="card p-5">
+            <div className="flex items-center justify-between mb-3">
+              <p className="eyebrow">Ready</p>
+              <span className="chip-accent">Created</span>
+            </div>
+            <p className="text-sm font-semibold text-ink mb-3">{result.admin.name}</p>
+            <div className="space-y-1.5 mb-3">
+              <p className="text-sm"><span className="text-ink-muted">Login email:</span> {result.admin.email}</p>
+              <p className="text-sm"><span className="text-ink-muted">Temporary password:</span> <span className="num">{result.generatedPassword}</span></p>
+            </div>
             <p className="text-xs text-ink-muted">Shown once — copy it now. They should change it after first login (no self-service change yet — use reset if needed).</p>
           </div>
         )}

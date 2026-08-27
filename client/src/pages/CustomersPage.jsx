@@ -22,10 +22,14 @@ export function CustomersPage() {
   return (
     <div className="flex flex-col lg:flex-row gap-6">
       <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between mb-4">
-          <p className="page-title">Customers</p>
-          <button className="btn-primary" onClick={() => setEditing({})}>New customer</button>
+        <div className="flex items-center justify-between mb-1">
+          <div>
+            <p className="eyebrow mb-1">Directory</p>
+            <p className="page-title">Customers</p>
+          </div>
+          <button className="btn-primary" onClick={() => setEditing({})}>+ New customer</button>
         </div>
+        <p className="text-sm text-ink-muted mb-5">{customers.length} {customers.length === 1 ? 'customer' : 'customers'} on file</p>
 
         {loading && <Loading />}
         {!loading && customers.length === 0 && (
@@ -34,28 +38,54 @@ export function CustomersPage() {
 
         {!loading && customers.length > 0 && (
           <div className="card overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                  <th className="px-3 py-2 font-medium">Name</th>
-                  <th className="px-3 py-2 font-medium">Phone</th>
-                  <th className="px-3 py-2 font-medium">Tags</th>
-                  <th className="px-3 py-2 font-medium text-right">Loyalty pts</th>
-                  <th className="px-3 py-2 font-medium text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {customers.map((c) => (
-                  <tr key={c._id} className={`border-b border-rule last:border-0 hover:bg-paper ${selected?._id === c._id ? 'bg-accent-soft/40' : ''}`}>
-                    <td className="px-3 py-2 cursor-pointer" onClick={() => setSelected(c)}>{c.name}</td>
-                    <td className="px-3 py-2 num text-ink-muted cursor-pointer" onClick={() => setSelected(c)}>{c.phone || '—'}</td>
-                    <td className="px-3 py-2 cursor-pointer" onClick={() => setSelected(c)}>{c.tags?.map((t) => <span key={t} className="chip-neutral mr-1">{t}</span>)}</td>
-                    <td className="px-3 py-2 num text-right cursor-pointer" onClick={() => setSelected(c)}>{c.loyaltyPoints}</td>
-                    <td className="px-3 py-2 text-right"><button className="btn-ghost !text-ink-muted !px-2 text-xs" onClick={() => setEditing(c)}>Edit</button></td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken/60">
+                    <th className="px-4 py-3 font-semibold">Customer</th>
+                    <th className="px-4 py-3 font-semibold">Contact</th>
+                    <th className="px-4 py-3 font-semibold">Tags</th>
+                    <th className="px-4 py-3 font-semibold text-right">Loyalty pts</th>
+                    <th className="px-4 py-3 font-semibold text-right">Status</th>
+                    <th className="px-4 py-3 font-semibold text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {customers.map((c) => {
+                    const initials = (c.name || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('');
+                    const isSelected = selected?._id === c._id;
+                    return (
+                      <tr key={c._id} className={`border-b border-rule last:border-0 hover:bg-paper transition-colors ${isSelected ? 'bg-accent-soft/40' : ''}`}>
+                        <td className="px-4 py-3 cursor-pointer" onClick={() => setSelected(c)}>
+                          <div className="flex items-center gap-3">
+                            <span className="shrink-0 w-9 h-9 rounded-full bg-accent-soft text-accent-strong flex items-center justify-center text-xs font-bold">
+                              {initials || '?'}
+                            </span>
+                            <span className="font-medium text-ink">{c.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 cursor-pointer" onClick={() => setSelected(c)}>
+                          <div className="flex flex-col">
+                            <span className="num text-ink-muted">{c.phone || '—'}</span>
+                            {c.email && <span className="text-xs text-ink-muted">{c.email}</span>}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 cursor-pointer" onClick={() => setSelected(c)}>
+                          <div className="flex flex-wrap gap-1">
+                            {c.tags?.length ? c.tags.map((t) => <span key={t} className="chip-neutral">{t}</span>) : <span className="text-ink-muted text-xs">—</span>}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 num text-right cursor-pointer" onClick={() => setSelected(c)}>{c.loyaltyPoints}</td>
+                        <td className="px-4 py-3 text-right cursor-pointer" onClick={() => setSelected(c)}>
+                          <span className={c.creditLimit > 0 ? 'chip-accent' : 'chip-neutral'}>{c.creditLimit > 0 ? 'Credit customer' : 'Standard'}</span>
+                        </td>
+                        <td className="px-4 py-3 text-right"><button className="btn-ghost !text-ink-muted !px-2 text-xs" onClick={() => setEditing(c)}>Edit</button></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
@@ -96,9 +126,10 @@ function CustomerForm({ customer, onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
-      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">{isNew ? 'New customer' : 'Edit customer'}</p>
+    <div className="fixed inset-0 bg-ink/20 backdrop-blur-[2px] flex items-center justify-center z-40 px-4">
+      <form onSubmit={handleSubmit} className="card p-6 w-full max-w-sm">
+        <p className="eyebrow mb-1">{isNew ? 'Add customer' : 'Edit customer'}</p>
+        <p className="font-display text-lg font-semibold mb-4">{isNew ? 'New customer' : customer.name}</p>
         <div className="space-y-3">
           <div><label className="field-label">Name</label><input required autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
           <div><label className="field-label">Phone</label><input className="field-input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
@@ -147,10 +178,13 @@ function CustomerLedgerPanel({ customer, onClose }) {
   }
 
   return (
-    <div className="w-full lg:w-96 shrink-0 card p-4 h-fit">
+    <div className="w-full lg:w-96 shrink-0 card p-5 h-fit">
       <div className="flex items-center justify-between mb-3">
-        <p className="font-display text-lg">{customer.name}</p>
-        <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button>
+        <div>
+          <p className="eyebrow mb-0.5">Ledger</p>
+          <p className="font-display text-lg font-semibold">{customer.name}</p>
+        </div>
+        <button className="btn-ghost !px-2 text-xs" onClick={onClose}>Close</button>
       </div>
 
       <InvitePortalButton customer={customer} />
@@ -170,12 +204,14 @@ function CustomerLedgerPanel({ customer, onClose }) {
             ))}
           </div>
           <div className="tear-line my-2" />
-          <div className="flex justify-between text-base font-medium mb-4">
-            <span>Balance owed</span>
-            <span className={`num ${ledger.closingBalance > 0 ? 'text-warning' : 'text-accent-strong'}`}>{formatMoney(ledger.closingBalance, company?.currency)}</span>
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-sm font-medium">Balance owed</span>
+            <span className={ledger.closingBalance > 0 ? 'chip-warning' : 'chip-accent'}>
+              <span className="num">{formatMoney(ledger.closingBalance, company?.currency)}</span>
+            </span>
           </div>
 
-          <p className="text-sm font-medium mb-2">Record a payment</p>
+          <p className="text-sm font-semibold mb-2">Record a payment</p>
           <div className="grid grid-cols-2 gap-2 mb-2">
             <input type="number" placeholder="Amount" className="field-input num" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} />
             <select className="field-input" value={paymentAccountId} onChange={(e) => setPaymentAccountId(e.target.value)}>
@@ -255,11 +291,11 @@ function InvitePortalButton({ customer }) {
   }
 
   if (!showForm) {
-    return <button className="text-xs text-accent mb-3" onClick={() => setShowForm(true)}>Invite to customer portal</button>;
+    return <button className="text-xs font-semibold text-accent mb-3 hover:underline" onClick={() => setShowForm(true)}>Invite to customer portal</button>;
   }
 
   return (
-    <div className="mb-3 p-3 border border-ink/10 rounded">
+    <div className="mb-3 p-3 border border-rule rounded-lg bg-surface-sunken/50">
       {!inviteLink ? (
         <form onSubmit={handleInvite} className="space-y-2">
           <label className="field-label">Portal email</label>

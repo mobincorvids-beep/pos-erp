@@ -12,18 +12,27 @@ export function TeamPage() {
 
   return (
     <div>
-      <p className="page-title mb-4">Team</p>
-      <div className="flex gap-1 border-b border-rule mb-5">
-        {[['staff', 'Staff'], ['roles', 'Roles']].map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} className={`px-3 py-2 text-sm -mb-px border-b-2 ${tab === key ? 'border-accent text-accent-strong font-medium' : 'border-transparent text-ink-muted hover:text-ink'}`}>
-            {label}
-          </button>
-        ))}
+      <div className="flex justify-between items-end mb-6">
+        <div>
+          <p className="page-title mb-1.5">Team</p>
+          <p className="text-ink-muted">Staff accounts and the roles that control what they can access.</p>
+        </div>
+        <div className="flex gap-2">
+          {[['staff', 'Staff'], ['roles', 'Roles']].map(([key, label]) => (
+            <button key={key} onClick={() => setTab(key)} className={tab === key ? 'pill-active' : 'pill'}>
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
       {tab === 'staff' && <StaffTab canManage={can('users.manage')} />}
       {tab === 'roles' && <RolesTab canManage={can('roles.manage')} />}
     </div>
   );
+}
+
+function initials(name) {
+  return (name || '?').trim().split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase()).join('');
 }
 
 function StaffTab({ canManage }) {
@@ -48,50 +57,59 @@ function StaffTab({ canManage }) {
 
   return (
     <div>
-      {canManage && (
-        <div className="flex justify-end mb-3">
-          <button className="btn-primary" onClick={() => setShowForm(true)}>Add staff member</button>
+      <div className="card p-5">
+        <div className="flex justify-between items-center mb-5">
+          <h3 className="font-display text-lg font-semibold text-accent">Staff accounts</h3>
+          {canManage && <button className="btn-primary" onClick={() => setShowForm(true)}>+ Add staff member</button>}
         </div>
-      )}
 
-      {loading && <Loading />}
-      {!loading && users.length === 0 && (
-        <EmptyState title="No staff yet" description="Add cashiers, managers, and other staff who need to log into this counter." action={canManage && <button className="btn-primary" onClick={() => setShowForm(true)}>Add staff member</button>} />
-      )}
-      {!loading && users.length > 0 && (
-        <div className="card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                <th className="px-3 py-2 font-medium">Name</th>
-                <th className="px-3 py-2 font-medium">Email</th>
-                <th className="px-3 py-2 font-medium">Role</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-                <th className="px-3 py-2 font-medium">Joined</th>
-                {canManage && <th className="px-3 py-2 font-medium"></th>}
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u) => (
-                <tr key={u._id} className="border-b border-rule last:border-0">
-                  <td className="px-3 py-2">{u.name}</td>
-                  <td className="px-3 py-2 text-ink-muted">{u.email}</td>
-                  <td className="px-3 py-2">{u.roleId?.name || <span className="chip-neutral">Super-admin</span>}</td>
-                  <td className="px-3 py-2"><span className={u.isActive ? 'chip-accent' : 'chip-danger'}>{u.isActive ? 'active' : 'suspended'}</span></td>
-                  <td className="px-3 py-2 text-ink-muted">{formatDate(u.createdAt)}</td>
-                  {canManage && (
-                    <td className="px-3 py-2 text-right">
-                      <button className={u.isActive ? 'btn-ghost !text-danger' : 'btn-ghost !text-accent'} onClick={() => toggleActive(u)}>
-                        {u.isActive ? 'Suspend' : 'Reactivate'}
-                      </button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+        {loading && <Loading />}
+        {!loading && users.length === 0 && (
+          <EmptyState title="No staff yet" description="Add cashiers, managers, and other staff who need to log into this counter." action={canManage && <button className="btn-primary" onClick={() => setShowForm(true)}>Add staff member</button>} />
+        )}
+        {!loading && users.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+            {users.map((u) => (
+              <div key={u._id} className="p-5 rounded-xl border border-rule hover:border-accent/50 hover:shadow-sm transition-all bg-surface-sunken/40">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="w-10 h-10 rounded-full bg-accent-soft flex items-center justify-center text-accent-strong font-display font-bold text-sm">
+                    {initials(u.name)}
+                  </div>
+                  <span className={u.isActive ? 'chip-accent uppercase tracking-wider text-[10px]' : 'chip-danger uppercase tracking-wider text-[10px]'}>
+                    {u.isActive ? 'Active' : 'Suspended'}
+                  </span>
+                </div>
+                <h4 className="font-display text-base font-semibold text-ink mb-0.5">{u.name}</h4>
+                <p className="text-xs text-ink-muted mb-4 truncate">{u.email}</p>
+                <div className="space-y-2 border-t border-rule pt-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-ink-muted">Role</span>
+                    {u.roleId?.name ? <span className="text-sm font-medium text-ink">{u.roleId.name}</span> : <span className="chip-neutral">Super-admin</span>}
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-ink-muted">Joined</span>
+                    <span className="num text-sm font-medium text-ink">{formatDate(u.createdAt)}</span>
+                  </div>
+                </div>
+                {canManage && (
+                  <button className={`w-full mt-4 py-2 rounded-lg text-xs font-semibold transition-colors ${u.isActive ? 'bg-danger-soft text-danger hover:opacity-80' : 'bg-accent-soft text-accent-strong hover:opacity-80'}`} onClick={() => toggleActive(u)}>
+                    {u.isActive ? 'Suspend' : 'Reactivate'}
+                  </button>
+                )}
+              </div>
+            ))}
+            {canManage && (
+              <button onClick={() => setShowForm(true)} className="p-5 rounded-xl border border-dashed border-rule-strong hover:border-accent/50 hover:bg-surface-sunken transition-all flex flex-col items-center justify-center text-center min-h-[220px]">
+                <div className="w-12 h-12 rounded-full bg-surface-sunken flex items-center justify-center text-ink-muted mb-3">
+                  <span className="text-2xl leading-none">+</span>
+                </div>
+                <p className="text-sm font-semibold text-accent mb-1">Add staff member</p>
+                <p className="text-xs text-ink-muted">Bring a new cashier or manager onto this counter.</p>
+              </button>
+            )}
+          </div>
+        )}
+      </div>
 
       {showForm && <StaffForm onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
     </div>
@@ -127,7 +145,7 @@ function StaffForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Add staff member</p>
+        <p className="font-display text-lg font-semibold text-accent mb-4">Add staff member</p>
         <div className="space-y-3">
           <div><label className="field-label">Name</label><input required autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
           <div><label className="field-label">Email (their login)</label><input type="email" required className="field-input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
@@ -173,26 +191,42 @@ function RolesTab({ canManage }) {
 
   return (
     <div>
-      {canManage && (
-        <div className="flex justify-end mb-3">
-          <button className="btn-primary" onClick={() => setShowForm(true)}>New role</button>
+      <div className="card p-5">
+        <div className="flex justify-between items-center mb-5">
+          <h3 className="font-display text-lg font-semibold text-accent">Roles &amp; permissions</h3>
+          {canManage && <button className="btn-primary" onClick={() => setShowForm(true)}>+ New role</button>}
         </div>
-      )}
 
-      {loading && <Loading />}
-      {!loading && roles.length === 0 && (
-        <EmptyState title="No custom roles yet" description="Roles let you give staff exactly the access they need — a cashier who can sell but not see financial reports, for example." action={canManage && <button className="btn-primary" onClick={() => setShowForm(true)}>Create a role</button>} />
-      )}
-      {!loading && roles.length > 0 && (
-        <div className="grid grid-cols-2 gap-3">
-          {roles.map((r) => (
-            <button key={r._id} onClick={() => canManage && setEditing(r)} className="card p-3 text-left hover:border-accent transition-colors">
-              <p className="text-sm font-medium">{r.name}</p>
-              <p className="text-xs text-ink-muted mt-1">{r.permissions.length} permission{r.permissions.length === 1 ? '' : 's'} granted</p>
-            </button>
-          ))}
-        </div>
-      )}
+        {loading && <Loading />}
+        {!loading && roles.length === 0 && (
+          <EmptyState title="No custom roles yet" description="Roles let you give staff exactly the access they need — a cashier who can sell but not see financial reports, for example." action={canManage && <button className="btn-primary" onClick={() => setShowForm(true)}>Create a role</button>} />
+        )}
+        {!loading && roles.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+            {roles.map((r) => (
+              <button key={r._id} onClick={() => canManage && setEditing(r)} className="p-5 rounded-xl border border-rule hover:border-accent/50 hover:shadow-sm transition-all bg-surface-sunken/40 text-left">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="w-10 h-10 rounded-lg bg-accent-soft flex items-center justify-center text-accent-strong">
+                    <span className="text-lg">◆</span>
+                  </div>
+                  <span className="chip-info uppercase tracking-wider text-[10px]">Role</span>
+                </div>
+                <h4 className="font-display text-base font-semibold text-ink mb-1">{r.name}</h4>
+                <p className="text-xs text-ink-muted">{r.permissions.length} permission{r.permissions.length === 1 ? '' : 's'} granted</p>
+              </button>
+            ))}
+            {canManage && (
+              <button onClick={() => setShowForm(true)} className="p-5 rounded-xl border border-dashed border-rule-strong hover:border-accent/50 hover:bg-surface-sunken transition-all flex flex-col items-center justify-center text-center min-h-[160px]">
+                <div className="w-12 h-12 rounded-full bg-surface-sunken flex items-center justify-center text-ink-muted mb-3">
+                  <span className="text-2xl leading-none">+</span>
+                </div>
+                <p className="text-sm font-semibold text-accent mb-1">New role</p>
+                <p className="text-xs text-ink-muted">Define a custom set of permissions.</p>
+              </button>
+            )}
+          </div>
+        )}
+      </div>
 
       {(showForm || editing) && (
         <RoleForm
@@ -239,7 +273,7 @@ function RoleForm({ role, catalog, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-lg max-h-[85vh] overflow-y-auto">
-        <p className="font-display text-lg mb-4">{role ? 'Edit role' : 'New role'}</p>
+        <p className="font-display text-lg font-semibold text-accent mb-4">{role ? 'Edit role' : 'New role'}</p>
 
         <div className="mb-4">
           <label className="field-label">Role name</label>

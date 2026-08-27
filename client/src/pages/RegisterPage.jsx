@@ -30,9 +30,10 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-paper flex items-center justify-center px-4">
+    <div className="min-h-screen bg-paper flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-accent text-white font-display text-xl font-bold mb-3">M</div>
           <p className="font-display text-3xl text-ink">Muhasib</p>
           <p className="text-sm text-ink-muted mt-1">Set up your company — takes a minute</p>
         </div>

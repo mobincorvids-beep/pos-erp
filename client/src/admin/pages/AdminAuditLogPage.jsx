@@ -21,7 +21,10 @@ export function AdminAuditLogPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <p className="page-title">Audit log</p>
+        <div>
+          <p className="eyebrow mb-1">Activity</p>
+          <p className="page-title">Audit log</p>
+        </div>
         <select className="field-input w-56" value={entityType} onChange={(e) => setEntityType(e.target.value)}>
           <option value="">All entity types</option>
           <option value="Company">Company</option>
@@ -40,20 +43,20 @@ export function AdminAuditLogPage() {
         <div className="card overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                <th className="px-3 py-2 font-medium">When</th>
-                <th className="px-3 py-2 font-medium">Company</th>
-                <th className="px-3 py-2 font-medium">Action</th>
-                <th className="px-3 py-2 font-medium">Entity</th>
+              <tr className="bg-surface-sunken border-b border-rule text-left">
+                <th className="px-3 py-2.5 eyebrow font-semibold">When</th>
+                <th className="px-3 py-2.5 eyebrow font-semibold">Company</th>
+                <th className="px-3 py-2.5 eyebrow font-semibold">Action</th>
+                <th className="px-3 py-2.5 eyebrow font-semibold">Entity</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r._id} className="border-b border-rule last:border-0">
-                  <td className="px-3 py-2 text-ink-muted">{formatDateTime(r.createdAt)}</td>
-                  <td className="px-3 py-2">{r.companyId?.name || '—'}</td>
-                  <td className="px-3 py-2 num">{r.action}</td>
-                  <td className="px-3 py-2 text-ink-muted">{r.entityType}</td>
+                <tr key={r._id} className="border-b border-rule last:border-0 hover:bg-surface-sunken/50">
+                  <td className="px-3 py-2.5 text-ink-muted num">{formatDateTime(r.createdAt)}</td>
+                  <td className="px-3 py-2.5 text-ink">{r.companyId?.name || '—'}</td>
+                  <td className="px-3 py-2.5"><span className="chip-info num">{r.action}</span></td>
+                  <td className="px-3 py-2.5"><span className="chip-neutral">{r.entityType}</span></td>
                 </tr>
               ))}
             </tbody>

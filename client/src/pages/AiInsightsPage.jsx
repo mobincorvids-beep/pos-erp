@@ -37,28 +37,48 @@ export function AiInsightsPage() {
 
   return (
     <div>
-      <p className="page-title mb-1">Insights</p>
-      <p className="text-sm text-ink-muted mb-5">Rule-based findings from your own sales and stock data — not a trained model, just thresholds and comparisons applied consistently.</p>
+      <div className="flex items-start justify-between gap-4 mb-1">
+        <p className="page-title flex items-center gap-2">
+          <span className="material-symbols-outlined text-accent" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
+          Insights
+        </p>
+        <span className="chip-accent inline-flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+          Rule-based engine
+        </span>
+      </div>
+      <p className="text-sm text-ink-muted mb-6 max-w-2xl">Rule-based findings from your own sales and stock data — not a trained model, just thresholds and comparisons applied consistently.</p>
 
       {loading && <Loading />}
 
       {briefing && (
-        <div className="card p-4 mb-6">
-          <p className="text-sm font-medium mb-2">Briefing</p>
-          <ul className="space-y-1.5 text-sm">
-            {briefing.findings.map((f, i) => <li key={i} className="flex gap-2"><span className="text-accent">·</span>{f}</li>)}
-          </ul>
-          {briefing.salesAnomaly && !briefing.salesAnomaly.flagged && briefing.salesAnomaly.baselineDailyAvg > 0 && (
-            <p className="text-xs text-ink-muted mt-3">
-              This week's daily average: {formatMoney(briefing.salesAnomaly.recentDailyAvg, company?.currency)} vs. the prior month's {formatMoney(briefing.salesAnomaly.baselineDailyAvg, company?.currency)} — within normal range.
-            </p>
-          )}
+        <div className="card p-6 mb-6 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-accent" />
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-full bg-accent-soft flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-accent-strong" style={{ fontVariationSettings: "'FILL' 1" }}>tips_and_updates</span>
+            </div>
+            <div className="flex-1">
+              <p className="eyebrow mb-2">Briefing</p>
+              <ul className="space-y-1.5 text-sm">
+                {briefing.findings.map((f, i) => <li key={i} className="flex gap-2"><span className="text-accent">·</span>{f}</li>)}
+              </ul>
+              {briefing.salesAnomaly && !briefing.salesAnomaly.flagged && briefing.salesAnomaly.baselineDailyAvg > 0 && (
+                <p className="text-xs text-ink-muted mt-3">
+                  This week's daily average: {formatMoney(briefing.salesAnomaly.recentDailyAvg, company?.currency)} vs. the prior month's {formatMoney(briefing.salesAnomaly.baselineDailyAvg, company?.currency)} — within normal range.
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <p className="text-sm font-medium mb-2">Reorder recommendations</p>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="material-symbols-outlined text-accent text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>trending_up</span>
+            <p className="text-sm font-semibold">Reorder recommendations</p>
+          </div>
           {reorders.length === 0 ? (
             <p className="text-sm text-ink-muted">Nothing needs reordering right now.</p>
           ) : (
@@ -73,7 +93,7 @@ export function AiInsightsPage() {
                 </thead>
                 <tbody>
                   {reorders.map((r, i) => (
-                    <tr key={i} className="border-b border-rule last:border-0">
+                    <tr key={i} className="border-b border-rule last:border-0 hover:bg-surface-sunken transition-colors">
                       <td className="px-3 py-2">{r.productName}</td>
                       <td className="px-3 py-2 num text-right text-warning">{r.quantityOnHand}</td>
                       <td className="px-3 py-2 num text-right text-accent-strong">+{r.suggestedReorderQuantity}</td>
@@ -86,7 +106,10 @@ export function AiInsightsPage() {
         </div>
 
         <div>
-          <p className="text-sm font-medium mb-2">Slow-moving inventory (60+ days)</p>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="material-symbols-outlined text-ink-muted text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>hourglass_bottom</span>
+            <p className="text-sm font-semibold">Slow-moving inventory (60+ days)</p>
+          </div>
           {slowMoving.length === 0 ? (
             <p className="text-sm text-ink-muted">Nothing has gone stale.</p>
           ) : (
@@ -101,7 +124,7 @@ export function AiInsightsPage() {
                 </thead>
                 <tbody>
                   {slowMoving.map((r, i) => (
-                    <tr key={i} className="border-b border-rule last:border-0">
+                    <tr key={i} className="border-b border-rule last:border-0 hover:bg-surface-sunken transition-colors">
                       <td className="px-3 py-2">{r.productName}</td>
                       <td className="px-3 py-2 num text-right">{r.quantityOnHand}</td>
                       <td className="px-3 py-2 text-ink-muted">{r.lastSoldAt ? formatDate(r.lastSoldAt) : 'Never'}</td>

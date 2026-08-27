@@ -33,8 +33,11 @@ export function ExpensesPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <p className="page-title">Expenses</p>
+      <div className="mb-6 flex items-end justify-between">
+        <div>
+          <p className="page-title">Expenses</p>
+          <p className="text-sm text-ink-muted mt-1">Submitted expenses need approval before they hit the ledger.</p>
+        </div>
         <button className="btn-primary" onClick={() => setShowForm(true)}>Submit expense</button>
       </div>
 
@@ -44,35 +47,40 @@ export function ExpensesPage() {
       )}
       {!loading && expenses.length > 0 && (
         <div className="card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                <th className="px-3 py-2 font-medium">Date</th>
-                <th className="px-3 py-2 font-medium">Note</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-                <th className="px-3 py-2 font-medium text-right">Amount</th>
-                <th className="px-3 py-2 font-medium"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {expenses.map((exp) => (
-                <tr key={exp._id} className="border-b border-rule last:border-0">
-                  <td className="px-3 py-2 text-ink-muted">{formatDate(exp.date)}</td>
-                  <td className="px-3 py-2">{exp.note || '—'}</td>
-                  <td className="px-3 py-2"><span className={STATUS_CHIP[exp.status]}>{exp.status}</span></td>
-                  <td className="px-3 py-2 num text-right">{formatMoney(exp.amount, company?.currency)}</td>
-                  <td className="px-3 py-2 text-right">
-                    {exp.status === 'pending' && can('expenses.approve') && (
-                      <div className="flex gap-1 justify-end">
-                        <button className="btn-ghost !text-accent" onClick={() => decide(exp._id, true)}>Approve</button>
-                        <button className="btn-ghost !text-danger" onClick={() => decide(exp._id, false)}>Reject</button>
-                      </div>
-                    )}
-                  </td>
+          <div className="p-5 border-b border-rule flex items-center justify-between">
+            <p className="font-display text-lg font-bold text-ink">Expense Ledger</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr className="bg-surface-sunken border-b border-rule">
+                  <th className="py-3 px-5 eyebrow font-semibold">Date</th>
+                  <th className="py-3 px-5 eyebrow font-semibold">Note</th>
+                  <th className="py-3 px-5 eyebrow font-semibold text-center">Status</th>
+                  <th className="py-3 px-5 eyebrow font-semibold text-right">Amount</th>
+                  <th className="py-3 px-5 eyebrow font-semibold text-right">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-rule">
+                {expenses.map((exp) => (
+                  <tr key={exp._id} className="hover:bg-surface-sunken/50 transition-colors">
+                    <td className="py-3 px-5 num text-ink-muted">{formatDate(exp.date)}</td>
+                    <td className="py-3 px-5 text-ink">{exp.note || '—'}</td>
+                    <td className="py-3 px-5 text-center"><span className={STATUS_CHIP[exp.status]}>{exp.status}</span></td>
+                    <td className="py-3 px-5 num text-right text-ink">{formatMoney(exp.amount, company?.currency)}</td>
+                    <td className="py-3 px-5 text-right">
+                      {exp.status === 'pending' && can('expenses.approve') && (
+                        <div className="flex gap-1 justify-end">
+                          <button className="btn-ghost !text-accent" onClick={() => decide(exp._id, true)}>Approve</button>
+                          <button className="btn-ghost !text-danger" onClick={() => decide(exp._id, false)}>Reject</button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -110,7 +118,7 @@ function ExpenseForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Submit expense</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">Submit expense</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Category</label>

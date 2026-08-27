@@ -10,10 +10,15 @@ export function HrPage() {
   const [tab, setTab] = useState('employees');
   return (
     <div>
-      <p className="page-title mb-4">HR &amp; Payroll</p>
-      <div className="flex gap-1 border-b border-rule mb-5">
+      <div className="flex flex-wrap justify-between items-end gap-3 mb-6">
+        <div>
+          <p className="page-title mb-1">Human Resources</p>
+          <p className="text-ink-muted">Manage employee directory, attendance, and payroll processing.</p>
+        </div>
+      </div>
+      <div className="flex gap-2 mb-5">
         {[['employees', 'Employees'], ['leave', 'Leave requests'], ['payroll', 'Payroll']].map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} className={`px-3 py-2 text-sm -mb-px border-b-2 ${tab === key ? 'border-accent text-accent-strong font-medium' : 'border-transparent text-ink-muted hover:text-ink'}`}>
+          <button key={key} onClick={() => setTab(key)} className={tab === key ? 'pill-active' : 'pill'}>
             {label}
           </button>
         ))}
@@ -25,12 +30,25 @@ export function HrPage() {
   );
 }
 
+function initials(name = '') {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join('') || '?';
+}
+
+function Avatar({ name, active }) {
+  return (
+    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${active ? 'bg-accent-soft text-accent-strong' : 'bg-surface-sunken text-ink'}`}>
+      {initials(name)}
+    </div>
+  );
+}
+
 function EmployeesTab() {
   const toast = useToast();
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [attendanceFor, setAttendanceFor] = useState(null);
+  const [inviteFor, setInviteFor] = useState(null);
 
   function load() {
     setLoading(true);
@@ -58,40 +76,109 @@ function EmployeesTab() {
       )}
       {!loading && employees.length > 0 && (
         <div className="card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                <th className="px-3 py-2 font-medium">Name</th>
-                <th className="px-3 py-2 font-medium">Designation</th>
-                <th className="px-3 py-2 font-medium">Department</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-                <th className="px-3 py-2 font-medium text-right">Basic pay</th>
-                <th className="px-3 py-2 font-medium"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {employees.map((e) => (
-                <tr key={e._id} className="border-b border-rule last:border-0">
-                  <td className="px-3 py-2">{e.name}</td>
-                  <td className="px-3 py-2 text-ink-muted">{e.designation || '—'}</td>
-                  <td className="px-3 py-2 text-ink-muted">{e.departmentId?.name || '—'}</td>
-                  <td className="px-3 py-2"><span className={e.status === 'active' ? 'chip-accent' : e.status === 'on_leave' ? 'chip-warning' : 'chip-danger'}>{e.status.replace('_', ' ')}</span></td>
-                  <td className="px-3 py-2 num text-right">{formatMoney(e.salaryStructure?.basic)}</td>
-                  <td className="px-3 py-2 text-right">
-                    <div className="flex gap-1 justify-end">
-                      <button className="btn-ghost !text-accent" onClick={() => setAttendanceFor(e)}>Attendance</button>
-                      {e.status !== 'terminated' && <button className="btn-ghost !text-danger" onClick={() => terminate(e._id)}>Terminate</button>}
-                    </div>
-                  </td>
+          <div className="px-5 py-4 border-b border-rule flex items-center justify-between">
+            <p className="font-display text-lg font-semibold">Active Directory</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken/60">
+                  <th className="px-5 py-3 font-medium">Employee</th>
+                  <th className="px-5 py-3 font-medium">Role &amp; Dept</th>
+                  <th className="px-5 py-3 font-medium">Status</th>
+                  <th className="px-5 py-3 font-medium text-right">Basic pay</th>
+                  <th className="px-5 py-3 font-medium"></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {employees.map((e) => (
+                  <tr key={e._id} className="border-b border-rule last:border-0 hover:bg-accent-soft/20 transition-colors">
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-3">
+                        <Avatar name={e.name} active={e.status === 'active'} />
+                        <div>
+                          <p className="font-medium text-ink">{e.name}</p>
+                          <p className="text-xs text-ink-muted">{e.designation || '—'}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3 text-ink-muted">
+                      {e.designation || '—'}
+                      <br />
+                      <span className="text-xs text-ink-muted">{e.departmentId?.name || '—'}</span>
+                    </td>
+                    <td className="px-5 py-3"><span className={e.status === 'active' ? 'chip-accent' : e.status === 'on_leave' ? 'chip-warning' : 'chip-danger'}>{e.status.replace('_', ' ')}</span></td>
+                    <td className="px-5 py-3 num text-right">{formatMoney(e.salaryStructure?.basic)}</td>
+                    <td className="px-5 py-3 text-right">
+                      <div className="flex gap-1 justify-end">
+                        <button className="btn-ghost !text-accent" onClick={() => setAttendanceFor(e)}>Attendance</button>
+                        <button className="btn-ghost !text-accent" onClick={() => setInviteFor(e)}>Invite to portal</button>
+                        {e.status !== 'terminated' && <button className="btn-ghost !text-danger" onClick={() => terminate(e._id)}>Terminate</button>}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
       {showForm && <EmployeeForm onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
       {attendanceFor && <AttendancePanel employee={attendanceFor} onClose={() => setAttendanceFor(null)} />}
+      {inviteFor && <InviteEmployeePortalModal employee={inviteFor} onClose={() => setInviteFor(null)} />}
+    </div>
+  );
+}
+
+function InviteEmployeePortalModal({ employee, onClose }) {
+  const toast = useToast();
+  const [email, setEmail] = useState(employee.email || '');
+  const [inviteLink, setInviteLink] = useState('');
+  const [sending, setSending] = useState(false);
+
+  async function handleInvite(e) {
+    e.preventDefault();
+    setSending(true);
+    try {
+      const result = await api.post('/employee-portal/invite', { employeeId: employee._id, email });
+      // No email provider is wired up yet, so the invite link is shown
+      // directly here to copy/send manually — see employeePortalController.js.
+      setInviteLink(`${window.location.origin}/employee-portal/activate?token=${result.inviteToken}`);
+      toast('Portal invite created.', 'success');
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
+      <div className="card p-5 w-full max-w-sm">
+        <div className="flex items-center justify-between mb-4">
+          <p className="font-display text-lg">{employee.name} — portal invite</p>
+          <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button>
+        </div>
+
+        {!inviteLink ? (
+          <form onSubmit={handleInvite} className="space-y-3">
+            <div><label className="field-label">Portal email</label><input type="email" required autoFocus className="field-input" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+            <div className="flex justify-end gap-2">
+              <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
+              <button type="submit" disabled={sending} className="btn-primary">{sending ? 'Sending…' : 'Create invite'}</button>
+            </div>
+          </form>
+        ) : (
+          <div>
+            <p className="text-xs text-ink-muted mb-1">Send this activation link to the employee:</p>
+            <input readOnly className="field-input text-xs" value={inviteLink} onClick={(e) => e.target.select()} />
+            <div className="flex justify-end mt-3">
+              <button className="btn-secondary" onClick={onClose}>Done</button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -232,35 +319,43 @@ function LeaveTab() {
 
   return (
     <div className="card overflow-hidden">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-            <th className="px-3 py-2 font-medium">Employee</th>
-            <th className="px-3 py-2 font-medium">Dates</th>
-            <th className="px-3 py-2 font-medium">Type</th>
-            <th className="px-3 py-2 font-medium">Status</th>
-            <th className="px-3 py-2 font-medium"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r._id} className="border-b border-rule last:border-0">
-              <td className="px-3 py-2">{r.employeeId?.name}</td>
-              <td className="px-3 py-2 text-ink-muted">{formatDate(r.fromDate)} – {formatDate(r.toDate)}</td>
-              <td className="px-3 py-2 capitalize">{r.type}</td>
-              <td className="px-3 py-2"><span className={r.status === 'pending' ? 'chip-warning' : r.status === 'approved' ? 'chip-accent' : 'chip-danger'}>{r.status}</span></td>
-              <td className="px-3 py-2 text-right">
-                {r.status === 'pending' && can('hr.manage') && (
-                  <div className="flex gap-1 justify-end">
-                    <button className="btn-ghost !text-accent" onClick={() => decide(r._id, true)}>Approve</button>
-                    <button className="btn-ghost !text-danger" onClick={() => decide(r._id, false)}>Reject</button>
-                  </div>
-                )}
-              </td>
+      <div className="px-5 py-4 border-b border-rule">
+        <p className="font-display text-lg font-semibold">Leave requests</p>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken/60">
+              <th className="px-5 py-3 font-medium">Employee</th>
+              <th className="px-5 py-3 font-medium">Dates</th>
+              <th className="px-5 py-3 font-medium">Type</th>
+              <th className="px-5 py-3 font-medium">Status</th>
+              <th className="px-5 py-3 font-medium"></th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r._id} className="border-b border-rule last:border-0 hover:bg-accent-soft/20 transition-colors">
+                <td className="px-5 py-3 flex items-center gap-3">
+                  <Avatar name={r.employeeId?.name} />
+                  <span>{r.employeeId?.name}</span>
+                </td>
+                <td className="px-5 py-3 text-ink-muted">{formatDate(r.fromDate)} – {formatDate(r.toDate)}</td>
+                <td className="px-5 py-3 capitalize">{r.type}</td>
+                <td className="px-5 py-3"><span className={r.status === 'pending' ? 'chip-warning' : r.status === 'approved' ? 'chip-accent' : 'chip-danger'}>{r.status}</span></td>
+                <td className="px-5 py-3 text-right">
+                  {r.status === 'pending' && can('hr.manage') && (
+                    <div className="flex gap-1 justify-end">
+                      <button className="btn-ghost !text-accent" onClick={() => decide(r._id, true)}>Approve</button>
+                      <button className="btn-ghost !text-danger" onClick={() => decide(r._id, false)}>Reject</button>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -291,24 +386,29 @@ function PayrollTab() {
         {!loading && runs.length === 0 && <EmptyState title="No payroll runs yet" />}
         {!loading && runs.length > 0 && (
           <div className="card overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                  <th className="px-3 py-2 font-medium">Period</th>
-                  <th className="px-3 py-2 font-medium">Status</th>
-                  <th className="px-3 py-2 font-medium text-right">Total net pay</th>
-                </tr>
-              </thead>
-              <tbody>
-                {runs.map((r) => (
-                  <tr key={r._id} onClick={() => setSelected(r)} className={`border-b border-rule last:border-0 cursor-pointer hover:bg-paper ${selected?._id === r._id ? 'bg-accent-soft/40' : ''}`}>
-                    <td className="px-3 py-2">{r.month}/{r.year}</td>
-                    <td className="px-3 py-2"><span className={r.status === 'posted' ? 'chip-accent' : 'chip-neutral'}>{r.status}</span></td>
-                    <td className="px-3 py-2 num text-right">{formatMoney(r.totalNetPay, company?.currency)}</td>
+            <div className="px-5 py-4 border-b border-rule">
+              <p className="font-display text-lg font-semibold">Payroll runs</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken/60">
+                    <th className="px-5 py-3 font-medium">Period</th>
+                    <th className="px-5 py-3 font-medium">Status</th>
+                    <th className="px-5 py-3 font-medium text-right">Total net pay</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {runs.map((r) => (
+                    <tr key={r._id} onClick={() => setSelected(r)} className={`border-b border-rule last:border-0 cursor-pointer hover:bg-accent-soft/20 transition-colors ${selected?._id === r._id ? 'bg-accent-soft/40' : ''}`}>
+                      <td className="px-5 py-3 font-medium">{r.month}/{r.year}</td>
+                      <td className="px-5 py-3"><span className={r.status === 'posted' ? 'chip-accent' : 'chip-neutral'}>{r.status}</span></td>
+                      <td className="px-5 py-3 num text-right">{formatMoney(r.totalNetPay, company?.currency)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
@@ -358,8 +458,9 @@ function PayrollRunPanel({ run: initialRun, onClose, onChanged }) {
         ))}
       </div>
       <div className="tear-line my-2" />
-      <div className="flex justify-between text-base font-medium mb-4">
-        <span>Total net pay</span><span className="num">{formatMoney(run.totalNetPay, company?.currency)}</span>
+      <div className="flex justify-between items-center rounded-lg bg-accent-soft px-3 py-3 mb-4">
+        <span className="font-medium text-accent-strong">Total net pay</span>
+        <span className="num font-bold text-accent-strong text-base">{formatMoney(run.totalNetPay, company?.currency)}</span>
       </div>
 
       {run.status === 'draft' && can('payroll.post') && (

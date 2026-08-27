@@ -60,6 +60,13 @@ const KEYS = {
   FIELD_SERVICE_MANAGE: 'field_service.manage',
   QUALITY_MANAGE: 'quality.manage',
   CONTRACTS_MANAGE: 'contracts.manage',
+
+  LOGISTICS_MANAGE: 'logistics.manage',
+  WAREHOUSE_MANAGE: 'warehouse.manage',
+  RECRUITMENT_MANAGE: 'recruitment.manage',
+  PERFORMANCE_MANAGE: 'performance.manage',
+  FUNNELS_MANAGE: 'funnels.manage',
+  DEVELOPER_PLATFORM_MANAGE: 'developer_platform.manage',
 };
 
 // Human-readable catalog for the role-editor UI — grouped so checkboxes
@@ -140,6 +147,13 @@ const CATALOG = [
     ],
   },
   {
+    group: 'Logistics & warehouse',
+    items: [
+      { key: KEYS.LOGISTICS_MANAGE, label: 'Manage shipments and delivery tracking' },
+      { key: KEYS.WAREHOUSE_MANAGE, label: 'Manage warehouse zones, bins, and pick waves' },
+    ],
+  },
+  {
     group: 'Banking and CRM',
     items: [
       { key: KEYS.BANKING_MANAGE, label: 'Transfer funds, reverse vouchers, reconcile accounts' },
@@ -152,12 +166,21 @@ const CATALOG = [
     items: [
       { key: KEYS.HR_MANAGE, label: 'Manage employees, attendance, and leave' },
       { key: KEYS.PAYROLL_POST, label: 'Generate and post payroll' },
+      { key: KEYS.RECRUITMENT_MANAGE, label: 'Manage job openings, candidates, and hiring' },
+      { key: KEYS.PERFORMANCE_MANAGE, label: 'Manage goals and performance reviews' },
+    ],
+  },
+  {
+    group: 'Marketing',
+    items: [
+      { key: KEYS.FUNNELS_MANAGE, label: 'Create, publish, and edit lead-capture landing pages' },
     ],
   },
   {
     group: 'Integrations',
     items: [
       { key: KEYS.ECOMMERCE_MANAGE, label: 'Configure the e-commerce integration and webhook token' },
+      { key: KEYS.DEVELOPER_PLATFORM_MANAGE, label: 'Manage API keys and webhooks' },
     ],
   },
 ];

@@ -51,6 +51,16 @@ import { FleetPage } from './pages/FleetPage';
 import { FieldServicePage } from './pages/FieldServicePage';
 import { QualityPage } from './pages/QualityPage';
 import { ContractsPage } from './pages/ContractsPage';
+import { SupplierPortalApp } from './portal-supplier/SupplierPortalApp';
+import { EmployeePortalApp } from './portal-employee/EmployeePortalApp';
+import { CoreLogisticsPage } from './pages/CoreLogisticsPage';
+import { WarehouseZonesPage } from './pages/WarehouseZonesPage';
+import { RecruitmentPage } from './pages/RecruitmentPage';
+import { PerformancePage } from './pages/PerformancePage';
+import { FunnelsPage } from './pages/FunnelsPage';
+import { FunnelLandingPage } from './public/FunnelLandingPage';
+import { DeveloperPlatformPage } from './pages/DeveloperPlatformPage';
+import { EcommerceHubPage } from './pages/EcommerceHubPage';
 import { INDUSTRY_MODULES } from './industryModuleRegistry';
 import { Suspense } from 'react';
 import { useAuth } from './context/AuthContext';
@@ -157,6 +167,13 @@ export default function App() {
               <Route path="/field-service" element={<FieldServicePage />} />
               <Route path="/quality" element={<QualityPage />} />
               <Route path="/contracts" element={<ContractsPage />} />
+              <Route path="/logistics-core" element={<CoreLogisticsPage />} />
+              <Route path="/warehouse" element={<WarehouseZonesPage />} />
+              <Route path="/recruitment" element={<RecruitmentPage />} />
+              <Route path="/performance" element={<PerformancePage />} />
+              <Route path="/funnels" element={<FunnelsPage />} />
+              <Route path="/developer-platform" element={<DeveloperPlatformPage />} />
+              <Route path="/ecommerce-hub" element={<EcommerceHubPage />} />
               {INDUSTRY_MODULES.map(({ key, path, label, component: Component }) => (
                 <Route key={key} path={path} element={
                   <IndustryModuleGate industryKey={key} label={label}>
@@ -170,6 +187,9 @@ export default function App() {
           {/* Customer portal — completely separate auth context/token (see
               api/portalClient.js), never mixed with the staff app above. */}
           <Route path="/portal/*" element={<PortalApp />} />
+          <Route path="/supplier-portal/*" element={<SupplierPortalApp />} />
+          <Route path="/employee-portal/*" element={<EmployeePortalApp />} />
+          <Route path="/f/:slug" element={<FunnelLandingPage />} />
 
           {/* Platform-admin section — completely separate auth context/token
               (see admin/api.js), never mixed with the tenant app above. */}

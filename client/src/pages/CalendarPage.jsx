@@ -36,7 +36,10 @@ export function CalendarPage() {
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <p className="font-display text-lg">Calendar</p>
+        <div>
+          <p className="eyebrow mb-1">Scheduling</p>
+          <p className="page-title">Calendar</p>
+        </div>
         <button className="btn-primary" onClick={() => setShowForm(true)}>New meeting</button>
       </div>
 
@@ -44,38 +47,48 @@ export function CalendarPage() {
       {!loading && events.length === 0 && <EmptyState title="No upcoming meetings" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Schedule one</button>} />}
 
       {!loading && events.length > 0 && (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {events.map((ev) => {
             const isOrganizer = ev.organizerId?._id === user._id;
             const myResponse = ev.attendeeResponses.find((a) => a.userId?._id === user._id)?.response;
+            const start = new Date(ev.startTime);
+            const day = start.toLocaleDateString(undefined, { day: '2-digit' });
+            const month = start.toLocaleDateString(undefined, { month: 'short' }).toUpperCase();
             return (
-              <div key={ev._id} className="card p-3 flex justify-between items-start">
-                <div>
-                  <p className="text-sm font-medium">{ev.title}</p>
-                  <p className="text-xs text-ink-muted mt-0.5">
-                    {new Date(ev.startTime).toLocaleString()} → {new Date(ev.endTime).toLocaleTimeString()}
-                    {ev.location && ` · ${ev.location}`}
-                  </p>
-                  <p className="text-xs text-ink-muted mt-0.5">
-                    Organizer: {ev.organizerId?.name}{isOrganizer && ' (you)'}
-                    {ev.attendeeResponses.length > 0 && ` · ${ev.attendeeResponses.length} invited`}
-                  </p>
-                  {ev.meetingUrl && <a href={ev.meetingUrl} target="_blank" rel="noreferrer" className="text-xs text-accent">Join link</a>}
+              <div key={ev._id} className="card p-4 flex items-start gap-4">
+                <div className="shrink-0 w-14 rounded-xl bg-accent-soft text-accent-strong flex flex-col items-center justify-center py-2">
+                  <span className="text-[10px] font-semibold tracking-widest">{month}</span>
+                  <span className="font-display text-xl font-bold leading-none mt-0.5">{day}</span>
                 </div>
-                <div className="flex flex-col items-end gap-1">
-                  {!isOrganizer && myResponse === 'pending' && (
-                    <div className="flex gap-2">
-                      <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => respond(ev._id, 'accepted')}>Accept</button>
-                      <button className="btn-ghost !text-red-600 !px-0 text-xs" onClick={() => respond(ev._id, 'declined')}>Decline</button>
-                    </div>
-                  )}
-                  {!isOrganizer && myResponse !== 'pending' && <span className={`chip-${myResponse === 'accepted' ? 'accent' : 'neutral'} text-[10px]`}>{myResponse}</span>}
-                  {isOrganizer && (
-                    <div className="flex gap-2">
-                      <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => setEditing(ev)}>Edit</button>
-                      <button className="btn-ghost !text-red-600 !px-0 text-xs" onClick={() => cancelEvent(ev._id)}>Cancel</button>
-                    </div>
-                  )}
+
+                <div className="flex-1 min-w-0 flex justify-between items-start gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-ink">{ev.title}</p>
+                    <p className="text-xs text-ink-muted mt-1">
+                      {start.toLocaleString()} → {new Date(ev.endTime).toLocaleTimeString()}
+                      {ev.location && ` · ${ev.location}`}
+                    </p>
+                    <p className="text-xs text-ink-muted mt-0.5">
+                      Organizer: {ev.organizerId?.name}{isOrganizer && ' (you)'}
+                      {ev.attendeeResponses.length > 0 && ` · ${ev.attendeeResponses.length} invited`}
+                    </p>
+                    {ev.meetingUrl && <a href={ev.meetingUrl} target="_blank" rel="noreferrer" className="text-xs font-semibold text-accent hover:text-accent-strong">Join link</a>}
+                  </div>
+                  <div className="flex flex-col items-end gap-2 shrink-0">
+                    {!isOrganizer && myResponse === 'pending' && (
+                      <div className="flex gap-2">
+                        <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => respond(ev._id, 'accepted')}>Accept</button>
+                        <button className="btn-ghost !text-danger !px-0 text-xs" onClick={() => respond(ev._id, 'declined')}>Decline</button>
+                      </div>
+                    )}
+                    {!isOrganizer && myResponse !== 'pending' && <span className={myResponse === 'accepted' ? 'chip-accent' : 'chip-neutral'}>{myResponse}</span>}
+                    {isOrganizer && (
+                      <div className="flex gap-2">
+                        <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => setEditing(ev)}>Edit</button>
+                        <button className="btn-ghost !text-danger !px-0 text-xs" onClick={() => cancelEvent(ev._id)}>Cancel</button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             );
@@ -124,7 +137,7 @@ function EventForm({ event, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm max-h-[90vh] overflow-y-auto">
-        <p className="font-display text-lg mb-4">{event ? 'Edit meeting' : 'New meeting'}</p>
+        <p className="font-display font-bold text-lg text-ink mb-4">{event ? 'Edit meeting' : 'New meeting'}</p>
         <div className="space-y-3">
           <div><label className="field-label">Title</label><input required className="field-input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
           <div><label className="field-label">Description</label><textarea className="field-input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
@@ -137,9 +150,9 @@ function EventForm({ event, onClose, onSaved }) {
           {!event && (
             <div>
               <label className="field-label">Invite</label>
-              <div className="max-h-32 overflow-y-auto border border-ink/10 rounded p-2 space-y-1">
+              <div className="max-h-32 overflow-y-auto border border-rule-strong rounded-lg p-2 space-y-1">
                 {users.map((u) => (
-                  <label key={u._id} className="flex items-center gap-2 text-sm">
+                  <label key={u._id} className="flex items-center gap-2 text-sm text-ink">
                     <input type="checkbox" checked={form.attendeeUserIds.includes(u._id)} onChange={() => toggleAttendee(u._id)} /> {u.name}
                   </label>
                 ))}

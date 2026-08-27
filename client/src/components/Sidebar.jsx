@@ -6,6 +6,7 @@ import {
   Contact, Truck, UserCog, HeartHandshake, Gift, Sparkles, Store, Circle,
   Ticket, Shield, FileSearch, TrendingUp, HandCoins, Repeat, Hourglass, Lock, Layers, Ruler, Percent, X,
   LayoutDashboard, Settings, Car, MapPin, ShieldAlert, FileSignature,
+  PackageCheck, Warehouse, UserPlus, Target, Rocket, KeyRound, Radio,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { INDUSTRY_MODULES } from '../industryModuleRegistry';
@@ -27,6 +28,8 @@ const ITEM_ICONS = {
   '/crm': HeartHandshake, '/loyalty': Gift,
   '/ai-insights': Sparkles, '/ecommerce': Store, '/tickets': Ticket, '/security': Shield,
   '/fleet': Car, '/field-service': MapPin, '/quality': ShieldAlert, '/contracts': FileSignature,
+  '/logistics-core': PackageCheck, '/warehouse': Warehouse, '/recruitment': UserPlus,
+  '/performance': Target, '/funnels': Rocket, '/developer-platform': KeyRound, '/ecommerce-hub': Radio,
 };
 
 const SECTION_ICONS = { Sell: ShoppingCart, Stock: Package, Money: Wallet, People: Users, Insights: BarChart3, Industry: Building2 };
@@ -59,6 +62,8 @@ const SECTIONS = [
       { to: '/manufacturing', label: 'Manufacturing' },
       { to: '/quality', label: 'Quality' },
       { to: '/fleet', label: 'Fleet & transport' },
+      { to: '/logistics-core', label: 'Shipments' },
+      { to: '/warehouse', label: 'Warehouse locations' },
     ],
   },
   {
@@ -85,7 +90,10 @@ const SECTIONS = [
       { to: '/security', label: 'Security' },
       { to: '/hr', label: 'HR & Payroll' },
       { to: '/employee-loans', label: 'Employee loans' },
+      { to: '/recruitment', label: 'Recruitment' },
+      { to: '/performance', label: 'Performance & Goals' },
       { to: '/crm', label: 'CRM' },
+      { to: '/funnels', label: 'Funnels' },
       { to: '/loyalty', label: 'Loyalty' },
       { to: '/tickets', label: 'Helpdesk' },
       { to: '/chat', label: 'Team Chat' },
@@ -98,6 +106,8 @@ const SECTIONS = [
     items: [
       { to: '/ai-insights', label: 'Insights' },
       { to: '/ecommerce', label: 'E-commerce' },
+      { to: '/ecommerce-hub', label: 'E-commerce Hub' },
+      { to: '/developer-platform', label: 'Developer platform' },
     ],
   },
 ];
@@ -121,12 +131,28 @@ export function Sidebar({ mobileOpen, onClose }) {
     .map((section) => ({ ...section, items: section.items.filter((item) => isVisible(item.to)) }))
     .filter((section) => section.items.length > 0);
 
+  // Shared classes for every nav row — a bold, filled active state (dark
+  // accent bg + white text + a left accent-strong border stripe) rather
+  // than the old soft-tint active state, matching the SafePOS design
+  // system's nav treatment.
+  const linkClass = ({ isActive }) =>
+    `flex items-center gap-3 px-4 py-2.5 text-sm mx-2 rounded-lg font-semibold border-l-4 transition-colors ${
+      isActive
+        ? 'bg-accent text-white border-accent-strong shadow-sm'
+        : 'text-ink border-transparent hover:bg-surface-sunken'
+    }`;
+
   const content = (
     <>
-      <div className="px-4 py-4 border-b border-rule flex items-center justify-between">
-        <div className="min-w-0">
-          <p className="font-display text-lg leading-none text-ink">Muhasib</p>
-          <p className="text-xs text-ink-muted mt-1 truncate">{company?.name || '—'}</p>
+      <div className="px-5 pt-5 pb-6 flex items-center justify-between">
+        <div className="min-w-0 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-accent text-white flex items-center justify-center font-display font-bold text-base shrink-0">
+            {(company?.name || 'M').charAt(0).toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <p className="font-display text-lg leading-none text-ink font-bold">Muhasib</p>
+            <p className="eyebrow mt-1 truncate">{company?.name || 'Enterprise Ledger'}</p>
+          </div>
         </div>
         {/* Close button only rendered/visible in the mobile drawer — the static desktop sidebar has no need for it. */}
         <button onClick={onClose} className="md:hidden text-ink-muted hover:text-ink px-1" aria-label="Close menu">
@@ -134,19 +160,10 @@ export function Sidebar({ mobileOpen, onClose }) {
         </button>
       </div>
 
-      <nav className="flex-1 overflow-y-auto py-3">
+      <nav className="flex-1 overflow-y-auto py-1">
         <div className="mb-4">
-          <NavLink
-            to="/dashboard"
-            end
-            onClick={onClose}
-            className={({ isActive }) =>
-              `flex items-center gap-2.5 px-4 py-1.5 text-sm mx-2 rounded ${
-                isActive ? 'bg-accent-soft text-accent-strong font-medium' : 'text-ink hover:bg-paper'
-              }`
-            }
-          >
-            <LayoutDashboard size={15} strokeWidth={2} className="shrink-0 opacity-70" />
+          <NavLink to="/dashboard" end onClick={onClose} className={linkClass}>
+            <LayoutDashboard size={17} strokeWidth={2} className="shrink-0" />
             Home
           </NavLink>
         </div>
@@ -154,24 +171,15 @@ export function Sidebar({ mobileOpen, onClose }) {
           const SectionIcon = SECTION_ICONS[section.label] || Circle;
           return (
             <div key={section.label} className="mb-4">
-              <p className="px-4 mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-muted/70">
+              <p className="px-5 mb-1.5 flex items-center gap-1.5 eyebrow">
                 <SectionIcon size={12} strokeWidth={2.5} />
                 {section.label}
               </p>
               {section.items.map((item) => {
                 const ItemIcon = ITEM_ICONS[item.to] || Circle;
                 return (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    onClick={onClose}
-                    className={({ isActive }) =>
-                      `flex items-center gap-2.5 px-4 py-1.5 text-sm mx-2 rounded ${
-                        isActive ? 'bg-accent-soft text-accent-strong font-medium' : 'text-ink hover:bg-paper'
-                      }`
-                    }
-                  >
-                    <ItemIcon size={15} strokeWidth={2} className="shrink-0 opacity-70" />
+                  <NavLink key={item.to} to={item.to} onClick={onClose} className={linkClass}>
+                    <ItemIcon size={17} strokeWidth={2} className="shrink-0" />
                     {item.label}
                   </NavLink>
                 );
@@ -181,22 +189,13 @@ export function Sidebar({ mobileOpen, onClose }) {
         })}
         {enabledIndustryModules.length > 0 && (
           <div className="mb-4">
-            <p className="px-4 mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-muted/70">
+            <p className="px-5 mb-1.5 flex items-center gap-1.5 eyebrow">
               <Building2 size={12} strokeWidth={2.5} />
               Industry
             </p>
             {enabledIndustryModules.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                onClick={onClose}
-                className={({ isActive }) =>
-                  `flex items-center gap-2.5 px-4 py-1.5 text-sm mx-2 rounded ${
-                    isActive ? 'bg-accent-soft text-accent-strong font-medium' : 'text-ink hover:bg-paper'
-                  }`
-                }
-              >
-                <Circle size={15} strokeWidth={2} className="shrink-0 opacity-70" />
+              <NavLink key={item.path} to={item.path} onClick={onClose} className={linkClass}>
+                <Circle size={17} strokeWidth={2} className="shrink-0" />
                 {item.label}
               </NavLink>
             ))}
@@ -208,23 +207,15 @@ export function Sidebar({ mobileOpen, onClose }) {
           business, whatever its industry, needs a place to manage its own
           profile and branches, so this is never hidden per business type. */}
       <div className="mb-1">
-        <NavLink
-          to="/settings"
-          onClick={onClose}
-          className={({ isActive }) =>
-            `flex items-center gap-2.5 px-4 py-1.5 text-sm mx-2 rounded ${
-              isActive ? 'bg-accent-soft text-accent-strong font-medium' : 'text-ink hover:bg-paper'
-            }`
-          }
-        >
-          <Settings size={15} strokeWidth={2} className="shrink-0 opacity-70" />
+        <NavLink to="/settings" onClick={onClose} className={linkClass}>
+          <Settings size={17} strokeWidth={2} className="shrink-0" />
           Settings
         </NavLink>
       </div>
 
-      <div className="border-t border-rule px-4 py-3">
-        <p className="text-sm text-ink truncate">{user?.name}</p>
-        <button onClick={logout} className="flex items-center gap-1.5 text-xs text-ink-muted hover:text-danger mt-0.5">
+      <div className="border-t border-rule px-5 py-4 mt-1">
+        <p className="text-sm font-semibold text-ink truncate">{user?.name}</p>
+        <button onClick={logout} className="flex items-center gap-1.5 text-xs text-ink-muted hover:text-danger mt-1">
           <LogOut size={13} />
           Sign out
         </button>
@@ -235,7 +226,7 @@ export function Sidebar({ mobileOpen, onClose }) {
   return (
     <>
       {/* Static sidebar — desktop/tablet only. Always in the layout flow, never overlays content. */}
-      <aside className="hidden md:flex w-56 shrink-0 h-screen sticky top-0 bg-surface border-r border-rule flex-col">
+      <aside className="hidden md:flex w-[264px] shrink-0 h-screen sticky top-0 bg-surface-sunken border-r border-rule flex-col">
         {content}
       </aside>
 
@@ -248,7 +239,7 @@ export function Sidebar({ mobileOpen, onClose }) {
           aria-hidden="true"
         />
         <aside
-          className={`absolute inset-y-0 left-0 w-64 bg-surface border-r border-rule flex flex-col transition-transform duration-200 ${
+          className={`absolute inset-y-0 left-0 w-72 bg-surface-sunken border-r border-rule flex flex-col transition-transform duration-200 ${
             mobileOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >

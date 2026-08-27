@@ -295,6 +295,18 @@ async function receiveGoods(input) {
       // Payable" account per company to get the ledger posting too.
     });
 
+    // Developer Platform outbound webhook — fire-and-forget, outside the
+    // transaction (same rule as posSaleService's sale.created hook: an
+    // external HTTP call must never hold a DB transaction open or affect
+    // a GRN that already committed successfully).
+    try {
+      await require('./webhookSubscriptionService').triggerWebhook(String(grn.companyId), 'purchase_order.received', {
+        grnId: grn._id, grnNumber: grn.grnNumber, purchaseOrderId: grn.purchaseOrderId, warehouseId: grn.warehouseId,
+      });
+    } catch (err) {
+      console.error('Developer Platform webhook delivery for purchase_order.received failed (GRN itself still succeeded):', err.message);
+    }
+
     return grn;
   } finally {
     session.endSession();

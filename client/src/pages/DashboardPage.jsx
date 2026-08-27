@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { Loading } from '../components/Loading';
+import { MetricCard } from '../components/MetricCard';
 import { formatMoney } from '../lib/format';
 
 // Role-aware — the sections rendered come straight from the Dashboard
@@ -31,10 +32,10 @@ export function DashboardPage() {
       {data && (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-            <StatCard label="Unread notifications" value={String(data.unreadNotifications)} plain tone={data.unreadNotifications > 0 ? 'warning' : undefined} />
-            <StatCard label="Pending approvals" value={String(data.pendingApprovals)} plain tone={data.pendingApprovals > 0 ? 'warning' : undefined} />
-            <StatCard label="Pending expenses" value={String(data.pendingExpenses)} plain />
-            <StatCard label="Open stock counts" value={String(data.openStockCounts)} plain />
+            <MetricCard label="Unread notifications" value={String(data.unreadNotifications)} plain tone={data.unreadNotifications > 0 ? 'warning' : undefined} />
+            <MetricCard label="Pending approvals" value={String(data.pendingApprovals)} plain tone={data.pendingApprovals > 0 ? 'warning' : undefined} />
+            <MetricCard label="Pending expenses" value={String(data.pendingExpenses)} plain />
+            <MetricCard label="Open stock counts" value={String(data.openStockCounts)} plain />
           </div>
 
           {data.sections.owner && <OwnerSection s={data.sections.owner} currency={company?.currency} />}
@@ -61,16 +62,16 @@ export function DashboardPage() {
 function OwnerSection({ s, currency }) {
   return (
     <section className="mb-8">
-      <p className="text-xs text-ink-muted uppercase tracking-wide mb-2">Business overview (last 30 days)</p>
+      <p className="eyebrow mb-2">Business overview (last 30 days)</p>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label="Revenue" value={formatMoney(s.revenue, currency)} />
-        <StatCard label="Net profit" value={formatMoney(s.netProfit, currency)} tone={s.netProfit < 0 ? 'warning' : undefined} />
-        <StatCard label="Receivables" value={formatMoney(s.receivables, currency)} />
-        <StatCard label="Payables" value={formatMoney(s.payables, currency)} />
-        <StatCard label="Cash & bank" value={formatMoney(s.cashAndBank, currency)} />
-        <StatCard label="Inventory value" value={formatMoney(s.inventoryValue, currency)} />
-        <StatCard label="Sales (30d)" value={formatMoney(s.salesTotal30d, currency)} />
-        <StatCard label="Invoices (30d)" value={String(s.salesCount30d)} plain />
+        <MetricCard label="Revenue" value={formatMoney(s.revenue, currency)} />
+        <MetricCard label="Net profit" value={formatMoney(s.netProfit, currency)} tone={s.netProfit < 0 ? 'warning' : undefined} />
+        <MetricCard label="Receivables" value={formatMoney(s.receivables, currency)} />
+        <MetricCard label="Payables" value={formatMoney(s.payables, currency)} />
+        <MetricCard label="Cash & bank" value={formatMoney(s.cashAndBank, currency)} />
+        <MetricCard label="Inventory value" value={formatMoney(s.inventoryValue, currency)} />
+        <MetricCard label="Sales (30d)" value={formatMoney(s.salesTotal30d, currency)} />
+        <MetricCard label="Invoices (30d)" value={String(s.salesCount30d)} plain />
       </div>
     </section>
   );
@@ -79,7 +80,7 @@ function OwnerSection({ s, currency }) {
 function SalesManagerSection({ s, currency }) {
   return (
     <section className="mb-8">
-      <p className="text-xs text-ink-muted uppercase tracking-wide mb-2">Sales (last 30 days)</p>
+      <p className="eyebrow mb-2">Sales (last 30 days)</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="card p-4">
           <p className="text-sm font-medium mb-3">Top products</p>
@@ -109,10 +110,10 @@ function SalesManagerSection({ s, currency }) {
 function WarehouseManagerSection({ s, currency }) {
   return (
     <section className="mb-8">
-      <p className="text-xs text-ink-muted uppercase tracking-wide mb-2">Inventory</p>
+      <p className="eyebrow mb-2">Inventory</p>
       <div className="grid grid-cols-2 gap-3 mb-3">
-        <StatCard label="Low stock items" value={String(s.lowStockCount)} plain tone={s.lowStockCount > 0 ? 'warning' : undefined} />
-        <StatCard label="Inventory value" value={formatMoney(s.inventoryValue, currency)} />
+        <MetricCard label="Low stock items" value={String(s.lowStockCount)} plain tone={s.lowStockCount > 0 ? 'warning' : undefined} />
+        <MetricCard label="Inventory value" value={formatMoney(s.inventoryValue, currency)} />
       </div>
       {s.lowStockItems.length > 0 && (
         <div className="card p-4">
@@ -132,8 +133,8 @@ function WarehouseManagerSection({ s, currency }) {
 function HrManagerSection({ s }) {
   return (
     <section className="mb-8">
-      <p className="text-xs text-ink-muted uppercase tracking-wide mb-2">HR</p>
-      <StatCard label="Pending leave requests" value={String(s.pendingLeaveRequests)} plain tone={s.pendingLeaveRequests > 0 ? 'warning' : undefined} />
+      <p className="eyebrow mb-2">HR</p>
+      <MetricCard label="Pending leave requests" value={String(s.pendingLeaveRequests)} plain tone={s.pendingLeaveRequests > 0 ? 'warning' : undefined} />
     </section>
   );
 }
@@ -141,22 +142,11 @@ function HrManagerSection({ s }) {
 function CashierSection({ s, currency }) {
   return (
     <section className="mb-8">
-      <p className="text-xs text-ink-muted uppercase tracking-wide mb-2">Today</p>
+      <p className="eyebrow mb-2">Today</p>
       <div className="grid grid-cols-2 gap-3">
-        <StatCard label="Sales today" value={formatMoney(s.salesTotalToday, currency)} />
-        <StatCard label="Transactions today" value={String(s.saleCountToday)} plain />
+        <MetricCard label="Sales today" value={formatMoney(s.salesTotalToday, currency)} />
+        <MetricCard label="Transactions today" value={String(s.saleCountToday)} plain />
       </div>
     </section>
-  );
-}
-
-function StatCard({ label, value, tone, plain }) {
-  return (
-    <div className="card p-4">
-      <p className="text-xs text-ink-muted mb-1">{label}</p>
-      <p className={`text-xl ${plain ? 'font-display' : 'num'} ${tone === 'warning' ? 'text-warning' : 'text-ink'}`}>
-        {value}
-      </p>
-    </div>
   );
 }

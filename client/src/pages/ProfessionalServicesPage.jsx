@@ -28,15 +28,24 @@ export function ProfessionalServicesPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <p className="page-title">Time &amp; billing</p>
-        <button className="btn-primary" onClick={() => setShowLogForm(true)}>Log time</button>
+      <div className="flex items-center justify-between mb-1">
+        <div>
+          <p className="page-title">Time &amp; billing</p>
+          <p className="text-sm text-ink-muted mt-1">Track unbilled hours per client and turn them into an invoice.</p>
+        </div>
+        <button className="btn-primary" onClick={() => setShowLogForm(true)}>
+          <span className="font-icon text-base leading-none">add</span>
+          Log time
+        </button>
       </div>
 
-      <select className="field-input max-w-xs mb-5" value={clientCustomerId} onChange={(e) => setClientCustomerId(e.target.value)}>
-        <option value="">Select a client to view unbilled time…</option>
-        {customers.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
-      </select>
+      <div className="card p-4 mt-5 mb-5 max-w-md">
+        <label className="field-label">Client</label>
+        <select className="field-input" value={clientCustomerId} onChange={(e) => setClientCustomerId(e.target.value)}>
+          <option value="">Select a client to view unbilled time…</option>
+          {customers.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
+        </select>
+      </div>
 
       {!clientCustomerId && <EmptyState title="Select a client" description="Unbilled time entries are viewed per client." />}
       {clientCustomerId && !entries && <Loading />}
@@ -44,36 +53,41 @@ export function ProfessionalServicesPage() {
       {clientCustomerId && entries?.length > 0 && (
         <>
           <div className="card overflow-hidden mb-4">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                  <th className="px-3 py-2 font-medium">Employee</th>
-                  <th className="px-3 py-2 font-medium">Description</th>
-                  <th className="px-3 py-2 font-medium">Date</th>
-                  <th className="px-3 py-2 font-medium text-right">Hours</th>
-                  <th className="px-3 py-2 font-medium text-right">Rate</th>
-                  <th className="px-3 py-2 font-medium text-right">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {entries.map((e) => (
-                  <tr key={e._id} className="border-b border-rule last:border-0">
-                    <td className="px-3 py-2">{e.employeeId?.name || '—'}</td>
-                    <td className="px-3 py-2 text-ink-muted">{e.description}</td>
-                    <td className="px-3 py-2 text-ink-muted">{formatDate(e.date)}</td>
-                    <td className="px-3 py-2 num text-right">{e.hours}</td>
-                    <td className="px-3 py-2 num text-right">{formatMoney(e.hourlyRate, company?.currency)}</td>
-                    <td className="px-3 py-2 num text-right">{formatMoney(e.hours * e.hourlyRate, company?.currency)}</td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken">
+                    <th className="px-4 py-2.5 font-semibold">Employee</th>
+                    <th className="px-4 py-2.5 font-semibold">Description</th>
+                    <th className="px-4 py-2.5 font-semibold">Date</th>
+                    <th className="px-4 py-2.5 font-semibold text-right">Hours</th>
+                    <th className="px-4 py-2.5 font-semibold text-right">Rate</th>
+                    <th className="px-4 py-2.5 font-semibold text-right">Amount</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {entries.map((e) => (
+                    <tr key={e._id} className="border-b border-rule last:border-0 hover:bg-surface-sunken/60">
+                      <td className="px-4 py-2.5 font-medium text-ink">{e.employeeId?.name || '—'}</td>
+                      <td className="px-4 py-2.5 text-ink-muted">{e.description}</td>
+                      <td className="px-4 py-2.5 text-ink-muted">{formatDate(e.date)}</td>
+                      <td className="px-4 py-2.5 num text-right">{e.hours}</td>
+                      <td className="px-4 py-2.5 num text-right">{formatMoney(e.hourlyRate, company?.currency)}</td>
+                      <td className="px-4 py-2.5 num text-right font-semibold text-ink">{formatMoney(e.hours * e.hourlyRate, company?.currency)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-          <div className="flex items-center justify-between max-w-md">
-            <p className="text-sm text-ink-muted">{totalHours} hours total — each entry billed at its own rate, never an averaged one</p>
-            <p className="font-display text-lg num">{formatMoney(totalAmount, company?.currency)}</p>
+          <div className="card p-4 flex items-center justify-between max-w-md mb-4">
+            <div>
+              <p className="eyebrow">Total</p>
+              <p className="text-sm text-ink-muted mt-0.5">{totalHours} hours — each entry billed at its own rate, never an averaged one</p>
+            </div>
+            <p className="font-display text-xl num font-bold text-ink">{formatMoney(totalAmount, company?.currency)}</p>
           </div>
-          <button className="btn-primary mt-3" onClick={() => setShowInvoiceForm(true)}>Generate invoice for this client</button>
+          <button className="btn-primary" onClick={() => setShowInvoiceForm(true)}>Generate invoice for this client</button>
         </>
       )}
 
@@ -114,7 +128,7 @@ function LogTimeForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Log time</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">Log time</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Branch</label>
@@ -187,7 +201,7 @@ function InvoiceForm({ clientCustomerId, entryCount, totalAmount, onClose, onSav
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-1">Generate invoice</p>
+        <p className="font-display text-lg font-bold text-ink mb-1">Generate invoice</p>
         <p className="text-sm text-ink-muted mb-4">{entryCount} unbilled entries — {formatMoney(totalAmount, company?.currency)}</p>
         <div className="space-y-3">
           <div>

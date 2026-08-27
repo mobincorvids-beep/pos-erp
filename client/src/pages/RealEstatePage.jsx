@@ -13,10 +13,11 @@ export function RealEstatePage() {
   const [tab, setTab] = useState('leases');
   return (
     <div>
-      <p className="page-title mb-4">Real Estate</p>
+      <p className="page-title mb-1">Real Estate</p>
+      <p className="text-sm text-ink-muted mb-5">Portfolio leases and property inventory.</p>
       <div className="flex gap-1 border-b border-rule mb-5">
         {[['leases', 'Leases'], ['properties', 'Properties']].map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} className={`px-3 py-2 text-sm -mb-px border-b-2 ${tab === key ? 'border-accent text-accent-strong font-medium' : 'border-transparent text-ink-muted hover:text-ink'}`}>
+          <button key={key} onClick={() => setTab(key)} className={`px-3 py-2 text-sm -mb-px border-b-2 transition-colors ${tab === key ? 'border-accent text-accent-strong font-semibold' : 'border-transparent text-ink-muted hover:text-ink'}`}>
             {label}
           </button>
         ))}
@@ -44,7 +45,9 @@ function LeasesTab() {
     <div className="flex flex-col lg:flex-row gap-6">
       <div className="flex-1 min-w-0">
         <div className="flex justify-end mb-3">
-          <button className="btn-primary" onClick={() => setShowForm(true)}>Start a lease</button>
+          <button className="btn-primary" onClick={() => setShowForm(true)}>
+            <span className="material-symbols-outlined text-base leading-none">add</span> Start a lease
+          </button>
         </div>
         {loading && <Loading />}
         {!loading && leases.length === 0 && <EmptyState title="No leases yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Start one</button>} />}
@@ -52,20 +55,20 @@ function LeasesTab() {
           <div className="card overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                  <th className="px-3 py-2 font-medium">Property</th>
-                  <th className="px-3 py-2 font-medium">Tenant</th>
-                  <th className="px-3 py-2 font-medium text-right">Rent</th>
-                  <th className="px-3 py-2 font-medium">Status</th>
+                <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken">
+                  <th className="px-3 py-2.5 font-semibold">Property</th>
+                  <th className="px-3 py-2.5 font-semibold">Tenant</th>
+                  <th className="px-3 py-2.5 font-semibold text-right">Rent</th>
+                  <th className="px-3 py-2.5 font-semibold">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {leases.map((l) => (
-                  <tr key={l._id} onClick={() => setSelected(l)} className={`border-b border-rule last:border-0 cursor-pointer hover:bg-paper ${selected?._id === l._id ? 'bg-accent-soft/40' : ''}`}>
-                    <td className="px-3 py-2">{l.propertyId?.unitNumber || '—'}</td>
-                    <td className="px-3 py-2">{l.tenantCustomerId?.name || '—'}</td>
-                    <td className="px-3 py-2 num text-right">{formatMoney(l.monthlyRent, company?.currency)}</td>
-                    <td className="px-3 py-2"><span className={LEASE_CHIP[l.status]}>{l.status}</span></td>
+                  <tr key={l._id} onClick={() => setSelected(l)} className={`border-b border-rule last:border-0 cursor-pointer hover:bg-paper transition-colors ${selected?._id === l._id ? 'bg-accent-soft/50' : ''}`}>
+                    <td className="px-3 py-2.5 font-medium text-ink">{l.propertyId?.unitNumber || '—'}</td>
+                    <td className="px-3 py-2.5">{l.tenantCustomerId?.name || '—'}</td>
+                    <td className="px-3 py-2.5 num text-right">{formatMoney(l.monthlyRent, company?.currency)}</td>
+                    <td className="px-3 py-2.5"><span className={LEASE_CHIP[l.status]}>{l.status}</span></td>
                   </tr>
                 ))}
               </tbody>
@@ -121,7 +124,7 @@ function LeaseForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm max-h-[85vh] overflow-y-auto">
-        <p className="font-display text-lg mb-4">Start a lease</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">Start a lease</p>
         <div className="space-y-3">
           <select required className="field-input" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value })}>
             <option value="">Branch…</option>
@@ -214,15 +217,17 @@ function LeasePanel({ lease, onClose, onChanged }) {
   return (
     <div className="w-full lg:w-96 shrink-0 card p-4 h-fit">
       <div className="flex items-center justify-between mb-3">
-        <p className="font-display text-lg">{lease.propertyId?.unitNumber}</p>
+        <p className="font-display text-lg font-bold text-ink">{lease.propertyId?.unitNumber}</p>
         <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button>
       </div>
-      <p className="text-sm text-ink-muted mb-4">{lease.tenantCustomerId?.name} — {formatMoney(lease.monthlyRent, company?.currency)}/month</p>
-      {lease.securityDeposit > 0 && <p className="text-sm mb-4">Security deposit held: {formatMoney(lease.securityDeposit, company?.currency)}</p>}
+      <p className="text-sm text-ink-muted mb-4">{lease.tenantCustomerId?.name} — <span className="num">{formatMoney(lease.monthlyRent, company?.currency)}</span>/month</p>
+      {lease.securityDeposit > 0 && (
+        <div className="chip-info mb-4 !inline-flex">Security deposit held: <span className="num ml-1">{formatMoney(lease.securityDeposit, company?.currency)}</span></div>
+      )}
 
       {lease.status === 'active' && !showEndForm && (
         <>
-          <p className="text-sm font-medium mb-2">Generate rent invoice</p>
+          <p className="eyebrow mb-2">Generate rent invoice</p>
           <div className="space-y-2 mb-2">
             <select className="field-input" value={billingProductId} onChange={(e) => setBillingProductId(e.target.value)}>
               <option value="">Billing product…</option>
@@ -265,7 +270,7 @@ function LeasePanel({ lease, onClose, onChanged }) {
           )}
           <div className="flex gap-2 pt-1">
             <button type="button" className="btn-secondary flex-1" onClick={() => setShowEndForm(false)}>Back</button>
-            <button type="submit" disabled={busy} className="btn-primary flex-1 !bg-danger">{busy ? 'Ending…' : 'Confirm end'}</button>
+            <button type="submit" disabled={busy} className="btn-danger flex-1">{busy ? 'Ending…' : 'Confirm end'}</button>
           </div>
         </form>
       )}
@@ -290,7 +295,9 @@ function PropertiesTab() {
   return (
     <div>
       <div className="flex justify-end mb-3">
-        <button className="btn-primary" onClick={() => setShowForm(true)}>Add property</button>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>
+          <span className="material-symbols-outlined text-base leading-none">add</span> Add property
+        </button>
       </div>
       {loading && <Loading />}
       {!loading && properties.length === 0 && <EmptyState title="No properties yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Add one</button>} />}
@@ -299,7 +306,7 @@ function PropertiesTab() {
           {properties.map((p) => (
             <div key={p._id} className="card p-3">
               <div className="flex items-center justify-between mb-1">
-                <p className="text-sm font-medium">{p.unitNumber}</p>
+                <p className="text-sm font-semibold text-ink">{p.unitNumber}</p>
                 <span className={PROPERTY_CHIP[p.status]}>{p.status}</span>
               </div>
               <p className="text-xs text-ink-muted">{p.propertyType}</p>
@@ -337,7 +344,7 @@ function PropertyForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Add property</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">Add property</p>
         <div className="space-y-3">
           <select required className="field-input" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value })}>
             <option value="">Branch…</option>

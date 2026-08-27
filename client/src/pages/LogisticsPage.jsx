@@ -12,10 +12,13 @@ export function LogisticsPage() {
   const [tab, setTab] = useState('trips');
   return (
     <div>
-      <p className="page-title mb-4">Logistics</p>
-      <div className="flex gap-1 border-b border-rule mb-5">
+      <div className="mb-6">
+        <p className="page-title">Logistics</p>
+        <p className="text-sm text-ink-muted mt-1">Trips, deliveries, and fleet on the road.</p>
+      </div>
+      <div className="flex gap-2 mb-6">
         {[['trips', 'Trips'], ['fleet', 'Fleet']].map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} className={`px-3 py-2 text-sm -mb-px border-b-2 ${tab === key ? 'border-accent text-accent-strong font-medium' : 'border-transparent text-ink-muted hover:text-ink'}`}>
+          <button key={key} onClick={() => setTab(key)} className={tab === key ? 'pill-active' : 'pill'}>
             {label}
           </button>
         ))}
@@ -43,28 +46,35 @@ function TripsTab() {
     <div className="flex flex-col lg:flex-row gap-6">
       <div className="flex-1 min-w-0">
         <div className="flex justify-end mb-3">
-          <button className="btn-primary" onClick={() => setShowForm(true)}>Start a trip</button>
+          <button className="btn-primary" onClick={() => setShowForm(true)}>
+            <span className="font-icon text-base leading-none">add</span>
+            Start a trip
+          </button>
         </div>
         {loading && <Loading />}
         {!loading && trips.length === 0 && <EmptyState title="No trips yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Start one</button>} />}
         {!loading && trips.length > 0 && (
           <div className="card overflow-hidden">
             <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                  <th className="px-3 py-2 font-medium">Vehicle</th>
-                  <th className="px-3 py-2 font-medium">Driver</th>
-                  <th className="px-3 py-2 font-medium">Deliveries</th>
-                  <th className="px-3 py-2 font-medium">Status</th>
+              <thead className="bg-surface-sunken">
+                <tr className="text-left text-xs text-ink-muted uppercase tracking-wide">
+                  <th className="px-4 py-3 font-semibold">Vehicle</th>
+                  <th className="px-4 py-3 font-semibold">Driver</th>
+                  <th className="px-4 py-3 font-semibold">Deliveries</th>
+                  <th className="px-4 py-3 font-semibold">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {trips.map((t) => (
-                  <tr key={t._id} onClick={() => setSelected(t)} className={`border-b border-rule last:border-0 cursor-pointer hover:bg-paper ${selected?._id === t._id ? 'bg-accent-soft/40' : ''}`}>
-                    <td className="px-3 py-2">{t.vehicleId?.registrationNumber || '—'}</td>
-                    <td className="px-3 py-2">{t.driverId?.name || '—'}</td>
-                    <td className="px-3 py-2 text-ink-muted">{t.deliveries.length}</td>
-                    <td className="px-3 py-2"><span className={STATUS_CHIP[t.status]}>{t.status}</span></td>
+                  <tr
+                    key={t._id}
+                    onClick={() => setSelected(t)}
+                    className={`border-t border-rule cursor-pointer hover:bg-paper transition-colors ${selected?._id === t._id ? 'bg-accent-soft' : ''}`}
+                  >
+                    <td className="px-4 py-3 font-medium text-ink">{t.vehicleId?.registrationNumber || '—'}</td>
+                    <td className="px-4 py-3">{t.driverId?.name || '—'}</td>
+                    <td className="px-4 py-3 num text-ink-muted">{t.deliveries.length}</td>
+                    <td className="px-4 py-3"><span className={STATUS_CHIP[t.status]}>{t.status}</span></td>
                   </tr>
                 ))}
               </tbody>
@@ -108,8 +118,8 @@ function TripForm({ onClose, onSaved }) {
 
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
-      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Start a trip</p>
+      <form onSubmit={handleSubmit} className="card p-6 w-full max-w-sm">
+        <p className="font-display text-lg font-bold text-ink mb-4">Start a trip</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Branch</label>
@@ -132,7 +142,10 @@ function TripForm({ onClose, onSaved }) {
               {drivers.map((d) => <option key={d._id} value={d._id}>{d.name}</option>)}
             </select>
           </div>
-          <div><label className="field-label">Start odometer</label><input type="number" required className="field-input num" value={form.startOdometer} onChange={(e) => setForm({ ...form, startOdometer: e.target.value })} /></div>
+          <div>
+            <label className="field-label">Start odometer</label>
+            <input type="number" required className="field-input num" value={form.startOdometer} onChange={(e) => setForm({ ...form, startOdometer: e.target.value })} />
+          </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
@@ -175,12 +188,12 @@ function TripPanel({ trip, onClose, onChanged }) {
   }
 
   return (
-    <div className="w-full lg:w-96 shrink-0 card p-4 h-fit">
-      <div className="flex items-center justify-between mb-3">
-        <p className="font-display text-lg">{trip.vehicleId?.registrationNumber}</p>
-        <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button>
+    <div className="w-full lg:w-96 shrink-0 card p-5 h-fit">
+      <div className="flex items-center justify-between mb-1">
+        <p className="font-display text-lg font-bold text-ink">{trip.vehicleId?.registrationNumber}</p>
+        <button className="btn-ghost !px-2 !py-1 text-xs" onClick={onClose}>Close</button>
       </div>
-      <p className="text-sm text-ink-muted mb-4">{trip.driverId?.name} — started at {trip.startOdometer}</p>
+      <p className="text-sm text-ink-muted mb-4">{trip.driverId?.name} — started at <span className="num">{trip.startOdometer}</span></p>
 
       {trip.status === 'planned' && (
         <>
@@ -189,9 +202,9 @@ function TripPanel({ trip, onClose, onChanged }) {
             <button type="submit" disabled={!revenue || busy} className="btn-secondary shrink-0">Add</button>
           </form>
 
-          <div className="tear-line my-3" />
-          <p className="text-sm font-medium mb-2">Complete trip</p>
-          <div className="space-y-2 mb-2">
+          <div className="tear-line my-4" />
+          <p className="eyebrow mb-3">Complete trip</p>
+          <div className="space-y-2 mb-3">
             <input type="number" required placeholder="End odometer" className="field-input num" value={endOdometer} onChange={(e) => setEndOdometer(e.target.value)} />
             <div className="grid grid-cols-2 gap-2">
               <input type="number" placeholder="Fuel cost" className="field-input num" value={fuelCost} onChange={(e) => setFuelCost(e.target.value)} />
@@ -201,7 +214,9 @@ function TripPanel({ trip, onClose, onChanged }) {
           <button className="btn-primary w-full" disabled={!endOdometer || busy} onClick={complete}>{busy ? 'Completing…' : 'Complete trip'}</button>
         </>
       )}
-      {trip.status === 'completed' && <p className="text-sm text-accent-strong">Trip completed.</p>}
+      {trip.status === 'completed' && (
+        <div className="chip-accent inline-flex">Trip completed</div>
+      )}
     </div>
   );
 }
@@ -226,22 +241,42 @@ function FleetTab() {
   if (loading) return <Loading />;
 
   return (
-    <div className="grid grid-cols-2 gap-6">
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <p className="font-medium text-sm">Vehicles</p>
-          <button className="btn-ghost !text-accent text-xs" onClick={() => setShowVehicleForm(true)}>+ Add</button>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="card p-4">
+        <div className="flex items-center justify-between mb-3">
+          <p className="eyebrow">Vehicles</p>
+          <button className="btn-ghost !text-accent !px-2 !py-1 text-xs" onClick={() => setShowVehicleForm(true)}>
+            <span className="font-icon text-sm leading-none">add</span>
+            Add
+          </button>
         </div>
         {vehicles.length === 0 && <EmptyState title="No vehicles yet" />}
-        {vehicles.map((v) => <div key={v._id} className="card p-2 mb-2 text-sm">{v.registrationNumber}</div>)}
+        <div className="space-y-2">
+          {vehicles.map((v) => (
+            <div key={v._id} className="flex items-center gap-3 rounded-lg border border-rule bg-paper px-3 py-2 text-sm">
+              <span className="font-icon text-ink-muted text-base leading-none">local_shipping</span>
+              <span className="num text-ink font-medium">{v.registrationNumber}</span>
+            </div>
+          ))}
+        </div>
       </div>
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <p className="font-medium text-sm">Drivers</p>
-          <button className="btn-ghost !text-accent text-xs" onClick={() => setShowDriverForm(true)}>+ Add</button>
+      <div className="card p-4">
+        <div className="flex items-center justify-between mb-3">
+          <p className="eyebrow">Drivers</p>
+          <button className="btn-ghost !text-accent !px-2 !py-1 text-xs" onClick={() => setShowDriverForm(true)}>
+            <span className="font-icon text-sm leading-none">add</span>
+            Add
+          </button>
         </div>
         {drivers.length === 0 && <EmptyState title="No drivers yet" />}
-        {drivers.map((d) => <div key={d._id} className="card p-2 mb-2 text-sm">{d.name}</div>)}
+        <div className="space-y-2">
+          {drivers.map((d) => (
+            <div key={d._id} className="flex items-center gap-3 rounded-lg border border-rule bg-paper px-3 py-2 text-sm">
+              <span className="font-icon text-ink-muted text-base leading-none">person</span>
+              <span className="text-ink font-medium">{d.name}</span>
+            </div>
+          ))}
+        </div>
       </div>
       {showVehicleForm && <VehicleForm onClose={() => setShowVehicleForm(false)} onSaved={() => { setShowVehicleForm(false); load(); }} />}
       {showDriverForm && <DriverForm onClose={() => setShowDriverForm(false)} onSaved={() => { setShowDriverForm(false); load(); }} />}
@@ -274,8 +309,8 @@ function VehicleForm({ onClose, onSaved }) {
 
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
-      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Add vehicle</p>
+      <form onSubmit={handleSubmit} className="card p-6 w-full max-w-sm">
+        <p className="font-display text-lg font-bold text-ink mb-4">Add vehicle</p>
         <div className="space-y-3">
           <select required className="field-input" value={branchId} onChange={(e) => setBranchId(e.target.value)}>
             <option value="">Branch…</option>
@@ -313,8 +348,8 @@ function DriverForm({ onClose, onSaved }) {
 
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
-      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Add driver</p>
+      <form onSubmit={handleSubmit} className="card p-6 w-full max-w-sm">
+        <p className="font-display text-lg font-bold text-ink mb-4">Add driver</p>
         <input required className="field-input" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
         <div className="flex justify-end gap-2 mt-5">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>

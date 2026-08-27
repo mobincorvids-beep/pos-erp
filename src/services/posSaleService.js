@@ -225,6 +225,19 @@ async function checkout(input) {
       console.error('Webhook delivery for sale.completed failed (sale itself still succeeded):', err.message);
     }
 
+    // Developer Platform's outbound webhook (separate subscription system
+    // from the one above — see DeveloperWebhookSubscription's header
+    // comment for why they're kept distinct). Same fire-and-forget rule:
+    // a third party's endpoint being slow or down must never affect a
+    // sale that already completed successfully.
+    try {
+      await require('./webhookSubscriptionService').triggerWebhook(String(input.companyId), 'sale.created', {
+        saleId: sale._id, invoiceNumber: sale.invoiceNumber, totalAmount: sale.totalAmount, branchId: sale.branchId,
+      });
+    } catch (err) {
+      console.error('Developer Platform webhook delivery for sale.created failed (sale itself still succeeded):', err.message);
+    }
+
     return sale;
   } finally {
     session.endSession();

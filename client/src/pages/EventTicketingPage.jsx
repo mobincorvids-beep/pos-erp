@@ -21,9 +21,10 @@ export function EventTicketingPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <p className="eyebrow mb-1">Media & entertainment</p>
+      <div className="flex items-center justify-between mb-1">
         <p className="page-title">Shows</p>
-        <button className="btn-primary" onClick={() => setShowForm(true)}>New show</button>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>+ New show</button>
       </div>
       <p className="text-sm text-ink-muted mb-5 max-w-2xl">Each tier — VIP, Standard, Balcony — has its own independent capacity and its own waitlist. A sold-out VIP tier never offers a Standard seat instead; they're genuinely different products.</p>
 
@@ -35,21 +36,21 @@ export function EventTicketingPage() {
         <div className="card overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                <th className="px-3 py-2 font-medium">Event</th>
-                <th className="px-3 py-2 font-medium">Date</th>
-                <th className="px-3 py-2 font-medium">Tiers</th>
-                <th className="px-3 py-2 font-medium"></th>
+              <tr className="border-b border-rule text-left bg-surface-sunken">
+                <th className="px-4 py-2.5 eyebrow font-medium">Event</th>
+                <th className="px-4 py-2.5 eyebrow font-medium">Date</th>
+                <th className="px-4 py-2.5 eyebrow font-medium">Tiers</th>
+                <th className="px-4 py-2.5 eyebrow font-medium"></th>
               </tr>
             </thead>
             <tbody>
               {shows.map((s) => (
-                <tr key={s._id} className="border-b border-rule last:border-0">
-                  <td className="px-3 py-2">{s.eventName}</td>
-                  <td className="px-3 py-2 text-ink-muted">{new Date(s.showDateTime).toLocaleString()}</td>
-                  <td className="px-3 py-2 text-ink-muted">{s.tiers.length}</td>
-                  <td className="px-3 py-2 text-right">
-                    <button className="btn-ghost !text-accent" onClick={() => setSelected(s)}>Manage</button>
+                <tr key={s._id} className="border-b border-rule last:border-0 hover:bg-surface-sunken/60">
+                  <td className="px-4 py-2.5 font-medium text-ink">{s.eventName}</td>
+                  <td className="px-4 py-2.5 num text-ink-muted">{new Date(s.showDateTime).toLocaleString()}</td>
+                  <td className="px-4 py-2.5 num text-ink-muted">{s.tiers.length}</td>
+                  <td className="px-4 py-2.5 text-right">
+                    <button className="btn-ghost" onClick={() => setSelected(s)}>Manage</button>
                   </td>
                 </tr>
               ))}
@@ -97,20 +98,30 @@ function ShowForm({ onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
+    <div className="fixed inset-0 bg-ink/20 backdrop-blur-[1px] flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-lg max-h-[85vh] overflow-y-auto">
-        <p className="font-display text-lg mb-4">New show</p>
-        <div className="space-y-3 mb-3">
-          <select required className="field-input" value={branchId} onChange={(e) => setBranchId(e.target.value)}>
-            <option value="">Branch…</option>
-            {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
-          </select>
-          <input required className="field-input" placeholder="Event name" value={eventName} onChange={(e) => setEventName(e.target.value)} />
-          <input required type="datetime-local" className="field-input" value={showDateTime} onChange={(e) => setShowDateTime(e.target.value)} />
+        <p className="eyebrow mb-1">Media & entertainment</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">New show</p>
+        <div className="space-y-3">
+          <div>
+            <label className="field-label">Branch</label>
+            <select required className="field-input" value={branchId} onChange={(e) => setBranchId(e.target.value)}>
+              <option value="">Select…</option>
+              {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="field-label">Event name</label>
+            <input required className="field-input" value={eventName} onChange={(e) => setEventName(e.target.value)} />
+          </div>
+          <div>
+            <label className="field-label">Date & time</label>
+            <input required type="datetime-local" className="field-input" value={showDateTime} onChange={(e) => setShowDateTime(e.target.value)} />
+          </div>
         </div>
 
-        <p className="field-label mb-1">Seating tiers</p>
-        <div className="space-y-2 mb-2">
+        <p className="field-label mt-4 mb-1.5">Seating tiers</p>
+        <div className="space-y-2">
           {tiers.map((t, i) => (
             <div key={i} className="grid grid-cols-3 gap-2">
               <input required className="field-input" placeholder="Tier name" value={t.name} onChange={(e) => updateTier(i, { name: e.target.value })} />
@@ -119,11 +130,11 @@ function ShowForm({ onClose, onSaved }) {
             </div>
           ))}
         </div>
-        <button type="button" className="btn-ghost !px-0 text-xs mb-4" onClick={() => setTiers([...tiers, { name: '', capacity: '', price: '' }])}>
+        <button type="button" className="btn-ghost !px-0 text-xs mt-2 mb-1" onClick={() => setTiers([...tiers, { name: '', capacity: '', price: '' }])}>
           + Add tier
         </button>
 
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2 mt-5">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
           <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Scheduling…' : 'Schedule show'}</button>
         </div>
@@ -146,21 +157,22 @@ function ShowManager({ show, onClose, onChanged }) {
   if (!roster) return null;
 
   return (
-    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
+    <div className="fixed inset-0 bg-ink/20 backdrop-blur-[1px] flex items-center justify-center z-40 px-4">
       <div className="card p-5 w-full max-w-2xl max-h-[85vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-4">
-          <p className="font-display text-lg">{roster.eventName}</p>
-          <button className="btn-ghost" onClick={onClose}>Close</button>
+        <div className="flex items-center justify-between mb-1">
+          <p className="font-display text-lg font-bold text-ink">{roster.eventName}</p>
+          <button className="btn-ghost !px-2 !py-1 text-xs" onClick={onClose}>Close</button>
         </div>
+        <p className="eyebrow mb-4">Seating tiers</p>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {roster.tiers.map((tier) => {
             const sold = tier.soldCustomerIds.length;
             const remaining = tier.capacity - sold;
             return (
-              <div key={tier._id} className="card p-3">
+              <div key={tier._id} className="card p-4 bg-surface-sunken/40">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="font-medium">{tier.name} — {formatMoney(tier.price, company?.currency)}</p>
+                  <p className="text-sm font-semibold text-ink">{tier.name} · <span className="num text-ink-muted font-normal">{formatMoney(tier.price, company?.currency)}</span></p>
                   <span className={remaining > 0 ? 'chip-accent' : 'chip-danger'}>{remaining > 0 ? `${remaining} of ${tier.capacity} left` : 'Sold out'}</span>
                 </div>
                 {tier.waitlistCustomerIds.length > 0 && (
@@ -215,9 +227,10 @@ function TicketForm({ show, tierId, onClose, onBooked }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-ink/30 flex items-center justify-center z-50 px-4">
+    <div className="fixed inset-0 bg-ink/30 backdrop-blur-[1px] flex items-center justify-center z-50 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Sell a ticket</p>
+        <p className="eyebrow mb-1">{show.eventName}</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">Sell a ticket</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Customer</label>

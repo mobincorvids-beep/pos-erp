@@ -56,6 +56,21 @@ router.use('/fleet', require('./fleetRoutes'));
 router.use('/field-service', require('./fieldServiceRoutes'));
 router.use('/quality', require('./qualityRoutes'));
 router.use('/contracts', require('./contractRoutes'));
+router.use('/supplier-portal', require('./supplierPortalRoutes'));
+router.use('/supplier-portal-session', require('./supplierPortalSessionRoutes'));
+router.use('/employee-portal', require('./employeePortalRoutes'));
+router.use('/employee-portal-session', require('./employeePortalSessionRoutes'));
+router.use('/logistics', require('./logisticsRoutes'));
+router.use('/warehouse', require('./warehouseZoneRoutes'));
+router.use('/pick-waves', require('./pickWaveRoutes'));
+router.use('/recruitment', require('./recruitmentRoutes'));
+router.use('/performance', require('./performanceRoutes'));
+router.use('/funnels', require('./funnelRoutes'));
+router.use('/public/funnels', require('./publicFunnelRoutes')); // public, no JWT — mirrors ecommerceWebhookRoutes.js
+router.use('/developer/api-keys', require('./apiKeyRoutes'));
+router.use('/developer/webhooks', require('./webhookSubscriptionRoutes'));
+router.use('/public-api/v1', require('./publicApiRoutes')); // public, apiKeyAuth only — no JWT
+router.use('/sales-channels', require('./salesChannelRoutes')); // includes public /webhook/:token receiver
 router.use('/admin', require('./admin')); // platform-admin layer — separate JWT namespace, see middleware/platformAuth.js
 
 // Industry modules auto-mount themselves here — every folder under

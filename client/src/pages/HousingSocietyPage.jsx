@@ -9,14 +9,21 @@ import { formatMoney } from '../lib/format';
 const INVOICE_CHIP = { pending: 'chip-warning', paid: 'chip-accent', overdue: 'chip-danger', cancelled: 'chip-neutral' };
 const COMPLAINT_CHIP = { open: 'chip-warning', assigned: 'chip-accent', resolved: 'chip-neutral' };
 
+function initials(name) {
+  if (!name) return '—';
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || name[0].toUpperCase();
+}
+
 export function HousingSocietyPage() {
   const [tab, setTab] = useState('invoices');
   return (
     <div>
-      <p className="page-title mb-4">Housing Society</p>
-      <div className="flex gap-1 border-b border-rule mb-5">
+      <p className="eyebrow mb-1">Housing Society</p>
+      <p className="page-title mb-5">Management Hub</p>
+      <div className="flex gap-2 mb-5">
         {[['invoices', 'Invoices'], ['complaints', 'Complaints'], ['members', 'Members']].map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} className={`px-3 py-2 text-sm -mb-px border-b-2 ${tab === key ? 'border-accent text-accent-strong font-medium' : 'border-transparent text-ink-muted hover:text-ink'}`}>
+          <button key={key} onClick={() => setTab(key)} className={tab === key ? 'pill-active' : 'pill'}>
             {label}
           </button>
         ))}
@@ -45,38 +52,50 @@ function InvoicesTab() {
   return (
     <div>
       <div className="flex justify-end mb-3">
-        <button className="btn-primary" onClick={() => setShowGenerate(true)}>Generate invoices</button>
+        <button className="btn-primary" onClick={() => setShowGenerate(true)}>
+          <span className="font-icon text-base leading-none">add</span>
+          Generate invoices
+        </button>
       </div>
       {loading && <Loading />}
       {!loading && invoices.length === 0 && <EmptyState title="No invoices yet" action={<button className="btn-primary" onClick={() => setShowGenerate(true)}>Generate a billing period</button>} />}
       {!loading && invoices.length > 0 && (
         <div className="card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                <th className="px-3 py-2 font-medium">Property</th>
-                <th className="px-3 py-2 font-medium">Resident</th>
-                <th className="px-3 py-2 font-medium">Period</th>
-                <th className="px-3 py-2 font-medium text-right">Amount</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-                <th className="px-3 py-2 font-medium"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {invoices.map((i) => (
-                <tr key={i._id} className="border-b border-rule last:border-0">
-                  <td className="px-3 py-2">{i.propertyId?.unitNumber || '—'}</td>
-                  <td className="px-3 py-2">{i.residentCustomerId?.name || '—'}</td>
-                  <td className="px-3 py-2 text-ink-muted">{i.period}</td>
-                  <td className="px-3 py-2 num text-right">{formatMoney(i.amount, company?.currency)}</td>
-                  <td className="px-3 py-2"><span className={INVOICE_CHIP[i.status]}>{i.status}</span></td>
-                  <td className="px-3 py-2 text-right">
-                    {(i.status === 'pending' || i.status === 'overdue') && <button className="btn-ghost !text-accent" onClick={() => setPaying(i)}>Pay</button>}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-rule text-left bg-surface-sunken/50">
+                  <th className="px-4 py-3 eyebrow font-medium">Property</th>
+                  <th className="px-4 py-3 eyebrow font-medium">Resident</th>
+                  <th className="px-4 py-3 eyebrow font-medium">Period</th>
+                  <th className="px-4 py-3 eyebrow font-medium text-right">Amount</th>
+                  <th className="px-4 py-3 eyebrow font-medium">Status</th>
+                  <th className="px-4 py-3 eyebrow font-medium"></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {invoices.map((i) => (
+                  <tr key={i._id} className="border-b border-rule last:border-0 hover:bg-surface-sunken/40 transition-colors">
+                    <td className="px-4 py-3 num text-ink">{i.propertyId?.unitNumber || '—'}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-7 h-7 rounded-full bg-accent-soft text-accent-strong flex items-center justify-center text-xs font-semibold shrink-0">
+                          {initials(i.residentCustomerId?.name)}
+                        </span>
+                        <span className="text-ink">{i.residentCustomerId?.name || '—'}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-ink-muted">{i.period}</td>
+                    <td className="px-4 py-3 num text-right">{formatMoney(i.amount, company?.currency)}</td>
+                    <td className="px-4 py-3"><span className={INVOICE_CHIP[i.status]}>{i.status}</span></td>
+                    <td className="px-4 py-3 text-right">
+                      {(i.status === 'pending' || i.status === 'overdue') && <button className="btn-ghost !text-accent !px-2 !py-1" onClick={() => setPaying(i)}>Pay</button>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
       {showGenerate && <GenerateForm onClose={() => setShowGenerate(false)} onSaved={() => { setShowGenerate(false); load(); }} />}
@@ -112,15 +131,24 @@ function GenerateForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Generate invoices</p>
-        <p className="text-xs text-ink-muted mb-3">Bills every active member — anyone already billed for this exact period is skipped, never double-charged.</p>
+        <p className="font-display text-lg font-semibold text-ink mb-1">Generate invoices</p>
+        <p className="text-xs text-ink-muted mb-4">Bills every active member — anyone already billed for this exact period is skipped, never double-charged.</p>
         <div className="space-y-3">
-          <select required className="field-input" value={chargeId} onChange={(e) => setChargeId(e.target.value)}>
-            <option value="">Charge…</option>
-            {charges.map((c) => <option key={c._id} value={c._id}>{c.name} — {formatMoney(c.amount)}</option>)}
-          </select>
-          <input required className="field-input" placeholder="Period, e.g. 2026-08" value={period} onChange={(e) => setPeriod(e.target.value)} />
-          <input type="date" required className="field-input" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          <div>
+            <label className="field-label">Charge</label>
+            <select required className="field-input" value={chargeId} onChange={(e) => setChargeId(e.target.value)}>
+              <option value="">Charge…</option>
+              {charges.map((c) => <option key={c._id} value={c._id}>{c.name} — {formatMoney(c.amount)}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="field-label">Period</label>
+            <input required className="field-input" placeholder="e.g. 2026-08" value={period} onChange={(e) => setPeriod(e.target.value)} />
+          </div>
+          <div>
+            <label className="field-label">Due date</label>
+            <input type="date" required className="field-input" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
@@ -165,21 +193,30 @@ function PayForm({ invoice, onClose, onPaid }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-1">Pay invoice</p>
-        <p className="text-sm text-ink-muted mb-4">{invoice.propertyId?.unitNumber} — {formatMoney(invoice.amount, company?.currency)}</p>
+        <p className="font-display text-lg font-semibold text-ink mb-1">Pay invoice</p>
+        <p className="text-sm text-ink-muted mb-4">{invoice.propertyId?.unitNumber} — <span className="num">{formatMoney(invoice.amount, company?.currency)}</span></p>
         <div className="space-y-3">
-          <select required className="field-input" value={branchId} onChange={(e) => setBranchId(e.target.value)}>
-            <option value="">Branch…</option>
-            {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
-          </select>
-          <select required className="field-input" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} disabled={!branchId}>
-            <option value="">Warehouse…</option>
-            {warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
-          </select>
-          <select required className="field-input" value={paymentAccountId} onChange={(e) => setPaymentAccountId(e.target.value)}>
-            <option value="">Payment account…</option>
-            {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
-          </select>
+          <div>
+            <label className="field-label">Branch</label>
+            <select required className="field-input" value={branchId} onChange={(e) => setBranchId(e.target.value)}>
+              <option value="">Branch…</option>
+              {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="field-label">Warehouse</label>
+            <select required className="field-input" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} disabled={!branchId}>
+              <option value="">Warehouse…</option>
+              {warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="field-label">Payment account</label>
+            <select required className="field-input" value={paymentAccountId} onChange={(e) => setPaymentAccountId(e.target.value)}>
+              <option value="">Payment account…</option>
+              {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
+            </select>
+          </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
@@ -229,44 +266,46 @@ function ComplaintsTab() {
 
   return (
     <div className="card overflow-hidden">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-            <th className="px-3 py-2 font-medium">Category</th>
-            <th className="px-3 py-2 font-medium">Description</th>
-            <th className="px-3 py-2 font-medium">Status</th>
-            <th className="px-3 py-2 font-medium"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {complaints.map((c) => (
-            <tr key={c._id} className="border-b border-rule last:border-0">
-              <td className="px-3 py-2">{c.category}</td>
-              <td className="px-3 py-2 text-ink-muted">{c.description}</td>
-              <td className="px-3 py-2"><span className={COMPLAINT_CHIP[c.status]}>{c.status}</span></td>
-              <td className="px-3 py-2 text-right">
-                {c.status === 'open' && assigning !== c._id && <button className="btn-ghost !text-accent" onClick={() => setAssigning(c._id)}>Assign</button>}
-                {assigning === c._id && (
-                  <div className="flex gap-1 justify-end items-center">
-                    <select className="field-input !py-1 !text-xs" value={assignee} onChange={(e) => setAssignee(e.target.value)}>
-                      <option value="">To…</option>
-                      {users.map((u) => <option key={u._id} value={u._id}>{u.name}</option>)}
-                    </select>
-                    <button className="btn-ghost !text-accent" disabled={!assignee} onClick={assign}>Save</button>
-                  </div>
-                )}
-                {c.status === 'assigned' && resolving !== c._id && <button className="btn-ghost !text-accent" onClick={() => setResolving(c._id)}>Resolve</button>}
-                {resolving === c._id && (
-                  <div className="flex gap-1 justify-end items-center">
-                    <input className="field-input !py-1 !text-xs" placeholder="Resolution note" value={resolutionNote} onChange={(e) => setResolutionNote(e.target.value)} />
-                    <button className="btn-ghost !text-accent" disabled={!resolutionNote.trim()} onClick={resolve}>Save</button>
-                  </div>
-                )}
-              </td>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-rule text-left bg-surface-sunken/50">
+              <th className="px-4 py-3 eyebrow font-medium">Category</th>
+              <th className="px-4 py-3 eyebrow font-medium">Description</th>
+              <th className="px-4 py-3 eyebrow font-medium">Status</th>
+              <th className="px-4 py-3 eyebrow font-medium"></th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {complaints.map((c) => (
+              <tr key={c._id} className="border-b border-rule last:border-0 hover:bg-surface-sunken/40 transition-colors">
+                <td className="px-4 py-3 text-ink">{c.category}</td>
+                <td className="px-4 py-3 text-ink-muted">{c.description}</td>
+                <td className="px-4 py-3"><span className={COMPLAINT_CHIP[c.status]}>{c.status}</span></td>
+                <td className="px-4 py-3 text-right">
+                  {c.status === 'open' && assigning !== c._id && <button className="btn-ghost !text-accent !px-2 !py-1" onClick={() => setAssigning(c._id)}>Assign</button>}
+                  {assigning === c._id && (
+                    <div className="flex gap-1.5 justify-end items-center">
+                      <select className="field-input !py-1.5 !text-xs !w-auto" value={assignee} onChange={(e) => setAssignee(e.target.value)}>
+                        <option value="">To…</option>
+                        {users.map((u) => <option key={u._id} value={u._id}>{u.name}</option>)}
+                      </select>
+                      <button className="btn-ghost !text-accent !px-2 !py-1" disabled={!assignee} onClick={assign}>Save</button>
+                    </div>
+                  )}
+                  {c.status === 'assigned' && resolving !== c._id && <button className="btn-ghost !text-accent !px-2 !py-1" onClick={() => setResolving(c._id)}>Resolve</button>}
+                  {resolving === c._id && (
+                    <div className="flex gap-1.5 justify-end items-center">
+                      <input className="field-input !py-1.5 !text-xs" placeholder="Resolution note" value={resolutionNote} onChange={(e) => setResolutionNote(e.target.value)} />
+                      <button className="btn-ghost !text-accent !px-2 !py-1" disabled={!resolutionNote.trim()} onClick={resolve}>Save</button>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -285,22 +324,31 @@ function MembersTab() {
 
   return (
     <div className="card overflow-hidden">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-            <th className="px-3 py-2 font-medium">Property</th>
-            <th className="px-3 py-2 font-medium">Resident</th>
-          </tr>
-        </thead>
-        <tbody>
-          {members.map((m) => (
-            <tr key={m._id} className="border-b border-rule last:border-0">
-              <td className="px-3 py-2">{m.propertyId?.unitNumber || '—'}</td>
-              <td className="px-3 py-2">{m.residentCustomerId?.name || '—'}</td>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-rule text-left bg-surface-sunken/50">
+              <th className="px-4 py-3 eyebrow font-medium">Property</th>
+              <th className="px-4 py-3 eyebrow font-medium">Resident</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {members.map((m) => (
+              <tr key={m._id} className="border-b border-rule last:border-0 hover:bg-surface-sunken/40 transition-colors">
+                <td className="px-4 py-3 num text-ink">{m.propertyId?.unitNumber || '—'}</td>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-7 h-7 rounded-full bg-accent-soft text-accent-strong flex items-center justify-center text-xs font-semibold shrink-0">
+                      {initials(m.residentCustomerId?.name)}
+                    </span>
+                    <span className="text-ink">{m.residentCustomerId?.name || '—'}</span>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

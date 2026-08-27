@@ -5,22 +5,63 @@ import { Loading } from '../components/Loading';
 import { EmptyState } from '../components/EmptyState';
 import { formatMoney, formatDate, formatDateTime } from '../lib/format';
 
-const TABS = ['Vehicles', 'Fuel Logs', 'Trips'];
+const TABS = [
+  { key: 'Vehicles', icon: 'local_shipping' },
+  { key: 'Fuel Logs', icon: 'local_gas_station' },
+  { key: 'Trips', icon: 'route' },
+];
 
 export function FleetPage() {
   const [tab, setTab] = useState('Vehicles');
   return (
     <div>
-      <div className="flex gap-1 mb-4 border-b border-ink/10">
-        {TABS.map((t) => (
-          <button key={t} onClick={() => setTab(t)} className={`px-3 py-2 text-sm ${tab === t ? 'border-b-2 border-accent text-accent-strong' : 'text-ink-muted'}`}>{t}</button>
-        ))}
+      <div className="flex justify-between items-end flex-wrap gap-4 mb-6">
+        <div>
+          <p className="page-title">Assets &amp; Fleet Management</p>
+          <p className="text-sm text-ink-muted mt-1">Monitor and manage your enterprise vehicle inventory.</p>
+        </div>
+        <div className="flex gap-2">
+          {TABS.map((t) => (
+            <button key={t.key} onClick={() => setTab(t.key)} className={tab === t.key ? 'pill-active' : 'pill'}>
+              <span className="material-symbols-outlined text-sm mr-1 align-middle">{t.icon}</span>
+              {t.key}
+            </button>
+          ))}
+        </div>
       </div>
       {tab === 'Vehicles' && <VehiclesTab />}
       {tab === 'Fuel Logs' && <FuelLogsTab />}
       {tab === 'Trips' && <TripsTab />}
     </div>
   );
+}
+
+const STATUS_CHIP = {
+  active: 'chip-accent',
+  maintenance: 'chip-warning',
+  retired: 'chip-neutral',
+  scheduled: 'chip-info',
+  in_progress: 'chip-warning',
+  completed: 'chip-accent',
+  cancelled: 'chip-neutral',
+};
+
+function StatusChip({ status }) {
+  const cls = STATUS_CHIP[status] || 'chip-neutral';
+  return (
+    <span className={`${cls} gap-1.5 capitalize`}>
+      <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
+      {status?.replace('_', ' ')}
+    </span>
+  );
+}
+
+function Avatar({ name }) {
+  if (!name) {
+    return <div className="w-8 h-8 rounded-full bg-surface-sunken border border-rule flex items-center justify-center text-[11px] font-semibold text-ink-muted">UN</div>;
+  }
+  const initials = name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
+  return <div className="w-8 h-8 rounded-full bg-accent-soft border border-rule flex items-center justify-center text-[11px] font-semibold text-accent-strong">{initials}</div>;
 }
 
 function VehiclesTab() {
@@ -44,25 +85,68 @@ function VehiclesTab() {
 
   return (
     <div>
-      <div className="flex justify-end mb-3"><button className="btn-primary" onClick={() => setShowForm(true)}>New vehicle</button></div>
+      <div className="flex justify-end mb-3">
+        <button className="btn-primary" onClick={() => setShowForm(true)}>
+          <span className="material-symbols-outlined text-sm">add</span>
+          New vehicle
+        </button>
+      </div>
       {loading && <Loading />}
       {!loading && vehicles.length === 0 && <EmptyState title="No vehicles registered" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Register one</button>} />}
       {!loading && vehicles.length > 0 && (
-        <div className="space-y-2">
-          {vehicles.map((v) => (
-            <div key={v._id} className="card p-3 flex justify-between items-start">
-              <div>
-                <p className="text-sm font-medium">{v.registrationNumber} — {v.make} {v.model} {v.year ? `(${v.year})` : ''}</p>
-                <p className="text-xs text-ink-muted mt-0.5 capitalize">{v.type} · {v.status} · {v.odometerReading} km{v.assignedDriverId && ` · Driver: ${v.assignedDriverId.name}`}</p>
-              </div>
-              {v.status !== 'retired' && (
-                <div className="flex gap-2">
-                  <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => setEditing(v)}>Edit</button>
-                  <button className="btn-ghost !text-red-600 !px-0 text-xs" onClick={() => retire(v._id)}>Retire</button>
-                </div>
-              )}
-            </div>
-          ))}
+        <div className="card overflow-hidden">
+          <div className="px-5 py-4 border-b border-rule flex justify-between items-center bg-surface-sunken/40">
+            <p className="font-display text-lg font-semibold text-ink">Fleet Status</p>
+            <span className="eyebrow">{vehicles.length} vehicles</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[720px]">
+              <thead>
+                <tr className="border-b border-rule bg-surface-sunken/60">
+                  <th className="py-3 px-5 eyebrow font-medium">Unit</th>
+                  <th className="py-3 px-5 eyebrow font-medium">Type / Fuel</th>
+                  <th className="py-3 px-5 eyebrow font-medium">Odometer</th>
+                  <th className="py-3 px-5 eyebrow font-medium">Status</th>
+                  <th className="py-3 px-5 eyebrow font-medium">Assigned Driver</th>
+                  <th className="py-3 px-5 eyebrow font-medium text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-rule">
+                {vehicles.map((v) => (
+                  <tr key={v._id} className="hover:bg-accent-soft/30 transition-colors">
+                    <td className="py-3 px-5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-surface-sunken flex items-center justify-center text-ink-muted shrink-0">
+                          <span className="material-symbols-outlined">local_shipping</span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-ink num">{v.registrationNumber}</p>
+                          <p className="text-xs text-ink-muted">{v.make} {v.model} {v.year ? `(${v.year})` : ''}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-5 text-sm text-ink capitalize">{v.type} · {v.fuelType}</td>
+                    <td className="py-3 px-5 text-sm text-ink-muted num">{v.odometerReading} km</td>
+                    <td className="py-3 px-5"><StatusChip status={v.status} /></td>
+                    <td className="py-3 px-5">
+                      <div className="flex items-center gap-2">
+                        <Avatar name={v.assignedDriverId?.name} />
+                        <span className={`text-sm ${v.assignedDriverId ? 'text-ink' : 'text-ink-muted italic'}`}>{v.assignedDriverId?.name || 'Unassigned'}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-5 text-right">
+                      {v.status !== 'retired' ? (
+                        <div className="flex gap-3 justify-end">
+                          <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => setEditing(v)}>Edit</button>
+                          <button className="btn-ghost !text-danger !px-0 text-xs" onClick={() => retire(v._id)}>Retire</button>
+                        </div>
+                      ) : <span className="text-xs text-ink-muted">—</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
       {showForm && <VehicleForm onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
@@ -150,17 +234,51 @@ function FuelLogsTab() {
 
   return (
     <div>
-      <div className="flex justify-end mb-3"><button className="btn-primary" onClick={() => setShowForm(true)}>Log fuel</button></div>
+      <div className="flex justify-end mb-3">
+        <button className="btn-primary" onClick={() => setShowForm(true)}>
+          <span className="material-symbols-outlined text-sm">add</span>
+          Log fuel
+        </button>
+      </div>
       {loading && <Loading />}
       {!loading && logs.length === 0 && <EmptyState title="No fuel logs" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Log one</button>} />}
       {!loading && logs.length > 0 && (
-        <div className="space-y-2">
-          {logs.map((f) => (
-            <div key={f._id} className="card p-3">
-              <p className="text-sm font-medium">{f.vehicleId?.registrationNumber} — {formatMoney(f.cost)}</p>
-              <p className="text-xs text-ink-muted mt-0.5">{formatDate(f.date)} · {f.quantity} · odometer {f.odometerReading}</p>
-            </div>
-          ))}
+        <div className="card overflow-hidden">
+          <div className="px-5 py-4 border-b border-rule flex justify-between items-center bg-surface-sunken/40">
+            <p className="font-display text-lg font-semibold text-ink">Fuel Logs</p>
+            <span className="eyebrow">{logs.length} entries</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[640px]">
+              <thead>
+                <tr className="border-b border-rule bg-surface-sunken/60">
+                  <th className="py-3 px-5 eyebrow font-medium">Vehicle</th>
+                  <th className="py-3 px-5 eyebrow font-medium">Date</th>
+                  <th className="py-3 px-5 eyebrow font-medium">Quantity</th>
+                  <th className="py-3 px-5 eyebrow font-medium">Odometer</th>
+                  <th className="py-3 px-5 eyebrow font-medium text-right">Cost</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-rule">
+                {logs.map((f) => (
+                  <tr key={f._id} className="hover:bg-accent-soft/30 transition-colors">
+                    <td className="py-3 px-5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-surface-sunken flex items-center justify-center text-ink-muted shrink-0">
+                          <span className="material-symbols-outlined">local_gas_station</span>
+                        </div>
+                        <p className="text-sm font-semibold text-ink num">{f.vehicleId?.registrationNumber}</p>
+                      </div>
+                    </td>
+                    <td className="py-3 px-5 text-sm text-ink-muted">{formatDate(f.date)}</td>
+                    <td className="py-3 px-5 text-sm text-ink num">{f.quantity}</td>
+                    <td className="py-3 px-5 text-sm text-ink-muted num">{f.odometerReading}</td>
+                    <td className="py-3 px-5 text-sm text-ink font-semibold text-right num">{formatMoney(f.cost)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
       {showForm && <FuelLogForm onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
@@ -253,25 +371,68 @@ function TripsTab() {
 
   return (
     <div>
-      <div className="flex justify-end mb-3"><button className="btn-primary" onClick={() => setShowForm(true)}>Start trip</button></div>
+      <div className="flex justify-end mb-3">
+        <button className="btn-primary" onClick={() => setShowForm(true)}>
+          <span className="material-symbols-outlined text-sm">add</span>
+          Start trip
+        </button>
+      </div>
       {loading && <Loading />}
       {!loading && trips.length === 0 && <EmptyState title="No trips" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Start one</button>} />}
       {!loading && trips.length > 0 && (
-        <div className="space-y-2">
-          {trips.map((t) => (
-            <div key={t._id} className="card p-3 flex justify-between items-start">
-              <div>
-                <p className="text-sm font-medium">{t.vehicleId?.registrationNumber} — {t.destination || t.purpose || 'Trip'}</p>
-                <p className="text-xs text-ink-muted mt-0.5 capitalize">{t.status} · started {formatDateTime(t.startTime)}{t.driverId && ` · ${t.driverId.name}`}{t.endOdometer != null && ` · ${t.endOdometer - t.startOdometer} km`}</p>
-              </div>
-              {(t.status === 'scheduled' || t.status === 'in_progress') && (
-                <div className="flex gap-2">
-                  <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => setCompleting(t)}>Complete</button>
-                  <button className="btn-ghost !text-red-600 !px-0 text-xs" onClick={() => cancel(t._id)}>Cancel</button>
-                </div>
-              )}
-            </div>
-          ))}
+        <div className="card overflow-hidden">
+          <div className="px-5 py-4 border-b border-rule flex justify-between items-center bg-surface-sunken/40">
+            <p className="font-display text-lg font-semibold text-ink">Trips</p>
+            <span className="eyebrow">{trips.length} trips</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[760px]">
+              <thead>
+                <tr className="border-b border-rule bg-surface-sunken/60">
+                  <th className="py-3 px-5 eyebrow font-medium">Vehicle / Destination</th>
+                  <th className="py-3 px-5 eyebrow font-medium">Driver</th>
+                  <th className="py-3 px-5 eyebrow font-medium">Started</th>
+                  <th className="py-3 px-5 eyebrow font-medium">Distance</th>
+                  <th className="py-3 px-5 eyebrow font-medium">Status</th>
+                  <th className="py-3 px-5 eyebrow font-medium text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-rule">
+                {trips.map((t) => (
+                  <tr key={t._id} className="hover:bg-accent-soft/30 transition-colors">
+                    <td className="py-3 px-5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-surface-sunken flex items-center justify-center text-ink-muted shrink-0">
+                          <span className="material-symbols-outlined">route</span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-ink num">{t.vehicleId?.registrationNumber}</p>
+                          <p className="text-xs text-ink-muted">{t.destination || t.purpose || 'Trip'}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-5">
+                      <div className="flex items-center gap-2">
+                        <Avatar name={t.driverId?.name} />
+                        <span className={`text-sm ${t.driverId ? 'text-ink' : 'text-ink-muted italic'}`}>{t.driverId?.name || 'Unassigned'}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-5 text-sm text-ink-muted">{formatDateTime(t.startTime)}</td>
+                    <td className="py-3 px-5 text-sm text-ink-muted num">{t.endOdometer != null ? `${t.endOdometer - t.startOdometer} km` : '—'}</td>
+                    <td className="py-3 px-5"><StatusChip status={t.status} /></td>
+                    <td className="py-3 px-5 text-right">
+                      {(t.status === 'scheduled' || t.status === 'in_progress') ? (
+                        <div className="flex gap-3 justify-end">
+                          <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => setCompleting(t)}>Complete</button>
+                          <button className="btn-ghost !text-danger !px-0 text-xs" onClick={() => cancel(t._id)}>Cancel</button>
+                        </div>
+                      ) : <span className="text-xs text-ink-muted">—</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
       {showForm && <TripForm onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}

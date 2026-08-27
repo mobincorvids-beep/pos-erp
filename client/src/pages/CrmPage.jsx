@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Star } from 'lucide-react';
+import { Star, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
@@ -24,7 +24,11 @@ export function CrmPage() {
   const [tab, setTab] = useState('pipeline');
   return (
     <div>
-      <p className="page-title mb-4">CRM</p>
+      <div className="mb-4">
+        <p className="eyebrow mb-1">Sales &amp; CRM Hub</p>
+        <p className="page-title">CRM</p>
+        <p className="text-sm text-ink-muted mt-1">Overview of pipeline and performance</p>
+      </div>
       <div className="flex gap-1 border-b border-rule mb-5">
         {[['pipeline', 'Pipeline'], ['leads', 'Leads'], ['campaigns', 'Campaigns'], ['feedback', 'Feedback'], ['follow-ups', 'Follow-ups'], ['tags', 'Customer tags']].map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)} className={`px-3 py-2 text-sm -mb-px border-b-2 ${tab === key ? 'border-accent text-accent-strong font-medium' : 'border-transparent text-ink-muted hover:text-ink'}`}>
@@ -74,9 +78,12 @@ function CampaignsTab() {
       {!loading && campaigns.length === 0 && <EmptyState title="No campaigns yet" description="Target customers by tag with an SMS or email message." />}
       {!loading && campaigns.length > 0 && (
         <div className="card overflow-hidden">
+          <div className="px-4 py-3 border-b border-rule">
+            <p className="font-display font-bold text-ink">Campaigns ledger</p>
+          </div>
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
+              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken/50">
                 <th className="px-3 py-2 font-medium">Name</th>
                 <th className="px-3 py-2 font-medium">Channel</th>
                 <th className="px-3 py-2 font-medium">Target tags</th>
@@ -86,7 +93,7 @@ function CampaignsTab() {
             </thead>
             <tbody>
               {campaigns.map((c) => (
-                <tr key={c._id} className="border-b border-rule last:border-0">
+                <tr key={c._id} className="border-b border-rule last:border-0 hover:bg-accent-soft/30 transition-colors">
                   <td className="px-3 py-2">{c.name}</td>
                   <td className="px-3 py-2 uppercase text-xs text-ink-muted">{c.channel}</td>
                   <td className="px-3 py-2">{c.targetTags?.map((t) => <span key={t} className="chip-neutral mr-1">{t}</span>) || 'All'}</td>
@@ -177,9 +184,12 @@ function FeedbackTab() {
 
   return (
     <div className="card overflow-hidden">
+      <div className="px-4 py-3 border-b border-rule">
+        <p className="font-display font-bold text-ink">Feedback ledger</p>
+      </div>
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
+          <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken/50">
             <th className="px-3 py-2 font-medium">Date</th>
             <th className="px-3 py-2 font-medium">Rating</th>
             <th className="px-3 py-2 font-medium">Comment</th>
@@ -189,7 +199,7 @@ function FeedbackTab() {
         </thead>
         <tbody>
           {rows.map((f) => (
-            <tr key={f._id} className="border-b border-rule last:border-0">
+            <tr key={f._id} className="border-b border-rule last:border-0 hover:bg-accent-soft/30 transition-colors">
               <td className="px-3 py-2 text-ink-muted">{formatDate(f.createdAt)}</td>
               <td className="px-3 py-2"><RatingStars rating={f.rating} /></td>
               <td className="px-3 py-2">{f.comment || '—'}</td>
@@ -227,9 +237,12 @@ function FollowUpsTab() {
 
   return (
     <div className="card overflow-hidden">
+      <div className="px-4 py-3 border-b border-rule">
+        <p className="font-display font-bold text-ink">Follow-ups ledger</p>
+      </div>
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
+          <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken/50">
             <th className="px-3 py-2 font-medium">Due</th>
             <th className="px-3 py-2 font-medium">Note</th>
             <th className="px-3 py-2 font-medium"></th>
@@ -237,7 +250,7 @@ function FollowUpsTab() {
         </thead>
         <tbody>
           {rows.map((f) => (
-            <tr key={f._id} className="border-b border-rule last:border-0">
+            <tr key={f._id} className="border-b border-rule last:border-0 hover:bg-accent-soft/30 transition-colors">
               <td className="px-3 py-2 text-ink-muted">{formatDate(f.dueDate)}</td>
               <td className="px-3 py-2">{f.note}</td>
               <td className="px-3 py-2 text-right"><button className="btn-ghost !text-accent" onClick={() => complete(f._id)}>Mark done</button></td>
@@ -275,9 +288,12 @@ function TagsTab() {
 
   return (
     <div className="card overflow-hidden">
+      <div className="px-4 py-3 border-b border-rule">
+        <p className="font-display font-bold text-ink">Customer tags ledger</p>
+      </div>
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
+          <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken/50">
             <th className="px-3 py-2 font-medium">Customer</th>
             <th className="px-3 py-2 font-medium">Tags</th>
             <th className="px-3 py-2 font-medium">Add tag</th>
@@ -285,7 +301,7 @@ function TagsTab() {
         </thead>
         <tbody>
           {customers.map((c) => (
-            <tr key={c._id} className="border-b border-rule last:border-0">
+            <tr key={c._id} className="border-b border-rule last:border-0 hover:bg-accent-soft/30 transition-colors">
               <td className="px-3 py-2">{c.name}</td>
               <td className="px-3 py-2">{c.tags?.map((t) => <span key={t} className="chip-neutral mr-1">{t}</span>)}</td>
               <td className="px-3 py-2">
@@ -340,9 +356,12 @@ function LeadsTab() {
       {!loading && leads.length === 0 && <EmptyState title="No leads yet" description="Track prospects here before they become opportunities and customers." />}
       {!loading && leads.length > 0 && (
         <div className="card overflow-hidden">
+          <div className="px-4 py-3 border-b border-rule">
+            <p className="font-display font-bold text-ink">Leads ledger</p>
+          </div>
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
+              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken/50">
                 <th className="px-3 py-2 font-medium">Name</th>
                 <th className="px-3 py-2 font-medium">Contact</th>
                 <th className="px-3 py-2 font-medium">Source</th>
@@ -352,7 +371,7 @@ function LeadsTab() {
             </thead>
             <tbody>
               {leads.map((l) => (
-                <tr key={l._id} className="border-b border-rule last:border-0">
+                <tr key={l._id} className="border-b border-rule last:border-0 hover:bg-accent-soft/30 transition-colors">
                   <td className="px-3 py-2">{l.name}</td>
                   <td className="px-3 py-2 text-ink-muted">{l.phone || l.email || '—'}</td>
                   <td className="px-3 py-2 uppercase text-xs text-ink-muted">{l.source}</td>
@@ -460,6 +479,27 @@ function ConvertLeadModal({ lead, onClose, onConverted }) {
   );
 }
 
+function PipelineStat({ label, value, icon, trend, trendLabel }) {
+  const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
+  const trendColor = trend === 'up' ? 'text-accent' : trend === 'down' ? 'text-danger' : 'text-ink-muted';
+  return (
+    <div className="card p-4 flex flex-col justify-between">
+      <div className="flex justify-between items-start mb-3">
+        <span className="eyebrow">{label}</span>
+        <span className="w-7 h-7 flex items-center justify-center rounded-lg bg-accent-soft text-sm shrink-0" aria-hidden="true">{icon}</span>
+      </div>
+      <div>
+        <p className="text-2xl font-display font-bold num text-ink leading-none">{value}</p>
+        {trendLabel && (
+          <p className={`text-xs flex items-center gap-1 mt-2 ${trendColor}`}>
+            <TrendIcon size={13} strokeWidth={2.5} /> {trendLabel}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // --- Pipeline -----------------------------------------------------------------
 
 function PipelineTab() {
@@ -496,23 +536,11 @@ function PipelineTab() {
 
   return (
     <div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-        <div className="card p-4">
-          <p className="text-xs text-ink-muted mb-1">Open pipeline value</p>
-          <p className="text-xl num text-ink">{formatMoney(summary?.openPipelineValue, company?.currency)}</p>
-        </div>
-        <div className="card p-4">
-          <p className="text-xs text-ink-muted mb-1">Win rate ({summary?.periodDays}d)</p>
-          <p className="text-xl num text-ink">{summary ? `${(summary.winRate * 100).toFixed(0)}%` : '—'}</p>
-        </div>
-        <div className="card p-4">
-          <p className="text-xs text-ink-muted mb-1">Won deals ({summary?.periodDays}d)</p>
-          <p className="text-xl num text-ink">{summary?.wonCount ?? 0}</p>
-        </div>
-        <div className="card p-4">
-          <p className="text-xs text-ink-muted mb-1">Average won deal size</p>
-          <p className="text-xl num text-ink">{formatMoney(summary?.averageWonDealSize, company?.currency)}</p>
-        </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
+        <PipelineStat label="Open pipeline value" value={formatMoney(summary?.openPipelineValue, company?.currency)} icon="💰" trend="neutral" trendLabel={summary ? `${summary.periodDays}d window` : ''} />
+        <PipelineStat label={`Win rate (${summary?.periodDays ?? ''}d)`} value={summary ? `${(summary.winRate * 100).toFixed(0)}%` : '—'} icon="🎯" trend={summary?.winRate >= 0.5 ? 'up' : 'down'} trendLabel={summary ? `${summary.wonCount} won this period` : ''} />
+        <PipelineStat label={`Won deals (${summary?.periodDays ?? ''}d)`} value={summary?.wonCount ?? 0} icon="🤝" trend="up" trendLabel="closed-won" />
+        <PipelineStat label="Average won deal size" value={formatMoney(summary?.averageWonDealSize, company?.currency)} icon="📈" trend="neutral" trendLabel="per closed deal" />
       </div>
 
       {can('crm.manage') && (
@@ -522,18 +550,18 @@ function PipelineTab() {
       )}
 
       <div className="overflow-x-auto">
-        <div className="flex gap-3 min-w-max pb-2">
+        <div className="flex gap-4 min-w-max pb-2">
           {STAGES.map((stage) => (
-            <div key={stage} className="w-64 shrink-0">
-              <p className="text-xs text-ink-muted uppercase tracking-wide mb-2 px-1">
-                {STAGE_LABELS[stage]} <span className="text-ink-muted">({board[stage]?.length || 0})</span>
+            <div key={stage} className="w-64 shrink-0 bg-surface-sunken rounded-xl p-2.5">
+              <p className="eyebrow mb-2 px-1 flex items-baseline gap-1.5">
+                {STAGE_LABELS[stage]} <span className="text-ink-muted normal-case tracking-normal font-medium">({board[stage]?.length || 0})</span>
               </p>
               <div className="space-y-2">
                 {(board[stage] || []).map((opp) => (
                   <div key={opp._id} className="card p-3">
                     <p className="text-sm font-medium mb-1">{opp.title}</p>
                     <p className="text-xs text-ink-muted mb-1">{opp.customerId?.name || opp.leadId?.name || 'Unassigned'}</p>
-                    <p className="text-sm num mb-2">{formatMoney(opp.estimatedValue, company?.currency)}</p>
+                    <p className="text-sm num mb-2 text-accent-strong font-semibold">{formatMoney(opp.estimatedValue, company?.currency)}</p>
                     {stage !== 'won' && stage !== 'lost' && can('crm.manage') && (
                       <select
                         className="field-input !py-1 !text-xs"
@@ -547,7 +575,7 @@ function PipelineTab() {
                     {stage === 'lost' && opp.lostReason && <p className="text-xs text-danger mt-1">{opp.lostReason}</p>}
                   </div>
                 ))}
-                {(board[stage] || []).length === 0 && <p className="text-xs text-ink-muted px-1">No deals here.</p>}
+                {(board[stage] || []).length === 0 && <p className="text-xs text-ink-muted px-1 py-2">No deals here.</p>}
               </div>
             </div>
           ))}

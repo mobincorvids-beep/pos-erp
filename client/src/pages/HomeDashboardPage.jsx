@@ -1,5 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  Building2,
+  ChevronDown,
+  ShoppingCart,
+  PlusCircle,
+  Banknote,
+  CalendarClock,
+  TrendingUp,
+} from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { Loading } from '../components/Loading';
@@ -34,14 +43,65 @@ export function HomeDashboardPage() {
 
       {data && (
         <>
+          {/* Company / branch selector, styled like the reference's bordered selector row */}
+          <div className="w-full flex items-center gap-3 bg-surface border border-rule-strong rounded-xl px-4 py-3 mb-6">
+            <Building2 size={20} className="text-accent shrink-0" />
+            <span className="flex-1 font-medium text-ink truncate">{data.companyName || company?.name}</span>
+            <ChevronDown size={18} className="text-ink-muted shrink-0" />
+          </div>
+
+          {/* Quick actions: primary "New Sale" tile + secondary action tiles */}
+          <div className="grid grid-cols-2 gap-3 mb-8">
+            <Link
+              to="/pos"
+              className="flex flex-col items-center justify-center gap-2 rounded-xl bg-accent text-white p-6 shadow-sm hover:bg-accent-strong transition-colors"
+            >
+              <ShoppingCart size={28} />
+              <span className="font-display font-semibold">New Sale</span>
+            </Link>
+            <Link
+              to="/products"
+              className="flex flex-col items-center justify-center gap-2 rounded-xl bg-surface border border-rule-strong text-accent p-6 hover:bg-surface-sunken transition-colors"
+            >
+              <PlusCircle size={28} />
+              <span className="font-display font-semibold text-ink">Add Product</span>
+            </Link>
+            <Link
+              to="/customers"
+              className="flex flex-col items-center justify-center gap-2 rounded-xl bg-surface border border-rule-strong text-accent p-6 hover:bg-surface-sunken transition-colors"
+            >
+              <Banknote size={28} />
+              <span className="font-display font-semibold text-ink">Bulk Payment</span>
+            </Link>
+            <Link
+              to="/reports"
+              className="flex flex-col items-center justify-center gap-2 rounded-xl bg-surface border border-rule-strong text-accent p-6 hover:bg-surface-sunken transition-colors"
+            >
+              <CalendarClock size={28} />
+              <span className="font-display font-semibold text-ink">Appointment</span>
+            </Link>
+          </div>
+
+          {/* CORE metrics — full-width bento cards like the reference's "Total Sales (Today)" */}
           <section className="mb-8">
-            <p className="text-xs text-ink-muted uppercase tracking-wide mb-2">Today</p>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-              <MetricCard label="Sales today" value={formatMoney(data.core.salesToday, company?.currency)} />
-              <MetricCard label="Transactions today" value={String(data.core.transactionsToday)} plain />
-              <MetricCard label="Low stock items" value={String(data.core.lowStockCount)} plain tone={data.core.lowStockCount > 0 ? 'warning' : undefined} />
-              <MetricCard label="Cash & bank" value={formatMoney(data.core.cashAndBank, company?.currency)} />
-              <MetricCard label="Receivables due" value={formatMoney(data.core.receivablesDue, company?.currency)} />
+            <p className="eyebrow mb-2">Today</p>
+            <div className="flex flex-col gap-3">
+              <BigMetricCard
+                icon={<TrendingUp size={20} />}
+                label="Sales today"
+                value={formatMoney(data.core.salesToday, company?.currency)}
+              />
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <MetricCard label="Transactions today" value={String(data.core.transactionsToday)} plain />
+                <MetricCard
+                  label="Low stock items"
+                  value={String(data.core.lowStockCount)}
+                  plain
+                  tone={data.core.lowStockCount > 0 ? 'warning' : undefined}
+                />
+                <MetricCard label="Cash & bank" value={formatMoney(data.core.cashAndBank, company?.currency)} />
+                <MetricCard label="Receivables due" value={formatMoney(data.core.receivablesDue, company?.currency)} />
+              </div>
             </div>
           </section>
 
@@ -69,6 +129,21 @@ export function HomeDashboardPage() {
   );
 }
 
+// Full-width metric card matching the reference's "Total Sales (Today)"
+// bento tile: label + icon badge on top, big bold number below.
+function BigMetricCard({ icon, label, value, sub, tone }) {
+  return (
+    <div className="card p-5 flex flex-col">
+      <div className="flex items-start justify-between mb-4">
+        <span className="text-sm font-semibold text-ink-muted">{label}</span>
+        <span className="p-2 rounded-lg bg-accent-soft text-accent">{icon}</span>
+      </div>
+      <p className={`font-display text-3xl sm:text-4xl font-bold ${tone === 'warning' ? 'text-warning' : 'text-ink'}`}>{value}</p>
+      {sub && <p className="text-sm text-ink-muted mt-1">{sub}</p>}
+    </div>
+  );
+}
+
 function IndustrySection({ industry, currency }) {
   switch (industry.industry) {
     case 'pharmacy': return <PharmacySection s={industry} />;
@@ -84,7 +159,7 @@ function IndustrySection({ industry, currency }) {
 }
 
 function SectionTitle({ children }) {
-  return <p className="text-xs text-ink-muted uppercase tracking-wide mb-2">{children}</p>;
+  return <p className="eyebrow mb-2">{children}</p>;
 }
 
 function EmptyRow({ children }) {

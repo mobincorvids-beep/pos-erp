@@ -16,14 +16,14 @@ export function AppLayout() {
         {/* Mobile-only topbar — the static sidebar (md and up) already shows
             this info, so this whole bar is hidden at md+ rather than
             duplicating it alongside the always-visible desktop sidebar. */}
-        <div className="md:hidden flex items-center gap-3 px-4 h-12 border-b border-rule bg-surface sticky top-0 z-30">
+        <div className="md:hidden flex items-center gap-3 px-4 h-14 border-b border-rule bg-surface sticky top-0 z-30">
           <button onClick={() => setMobileOpen(true)} className="text-ink px-1" aria-label="Open menu">
             <Menu size={20} strokeWidth={2} />
           </button>
-          <p className="font-display text-base text-ink truncate">{company?.name || 'Muhasib'}</p>
+          <p className="font-display font-bold text-base text-ink truncate">{company?.name || 'Muhasib'}</p>
         </div>
 
-        <main className="flex-1 min-w-0 p-4 md:p-6">
+        <main className="flex-1 min-w-0 p-4 md:p-8">
           <Outlet />
         </main>
       </div>

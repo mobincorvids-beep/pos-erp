@@ -5,6 +5,10 @@ import { useToast } from '../components/Toast';
 import { Loading } from '../components/Loading';
 import { EmptyState } from '../components/EmptyState';
 
+function initialsOf(name) {
+  return (name || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('') || '?';
+}
+
 export function ChatPage() {
   const { user } = useAuth();
   const toast = useToast();
@@ -31,35 +35,56 @@ export function ChatPage() {
     return other ? other.name : '(direct message)';
   }
 
+  function channelInitials(c) {
+    if (c.type === 'channel') return '#';
+    const other = c.memberIds.find((m) => m._id !== user._id);
+    return initialsOf(other?.name);
+  }
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-4 h-[calc(100vh-140px)]">
-      <div className="card p-3 overflow-y-auto">
-        <div className="flex justify-between items-center mb-2">
-          <p className="font-display text-sm">Channels</p>
-          <div className="flex gap-2">
-            <button className="text-xs text-accent" onClick={() => setShowNewChannel(true)}>+ Channel</button>
-            <button className="text-xs text-accent" onClick={() => setShowNewDM(true)}>+ DM</button>
-          </div>
-        </div>
-        {loadingChannels && <Loading />}
-        {!loadingChannels && channels.length === 0 && <p className="text-xs text-ink-muted">No channels yet — create one to get started.</p>}
-        <div className="space-y-1">
-          {channels.map((c) => (
-            <button
-              key={c._id}
-              onClick={() => setActiveChannelId(c._id)}
-              className={`w-full text-left px-2 py-1.5 rounded text-sm flex justify-between items-center ${c._id === activeChannelId ? 'bg-accent/10 text-accent-strong' : 'hover:bg-ink/5'}`}
-            >
-              <span className="truncate">{channelLabel(c)}</span>
-              {c.unreadCount > 0 && <span className="chip-accent text-[10px] px-1.5">{c.unreadCount}</span>}
-            </button>
-          ))}
-        </div>
+    <div>
+      <div className="mb-4">
+        <p className="eyebrow mb-1">Team messaging</p>
+        <p className="page-title">Chat</p>
       </div>
 
-      <div className="card p-0 flex flex-col overflow-hidden">
-        {!activeChannel && <EmptyState title="No channel selected" />}
-        {activeChannel && <ChannelView channel={activeChannel} label={channelLabel(activeChannel)} onChannelsChanged={loadChannels} />}
+      <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-4 h-[calc(100vh-200px)]">
+        <div className="card p-3 flex flex-col overflow-hidden">
+          <div className="flex justify-between items-center mb-3 px-1">
+            <p className="font-display font-bold text-sm text-ink">Channels</p>
+            <div className="flex gap-3">
+              <button className="text-xs font-semibold text-accent hover:text-accent-strong" onClick={() => setShowNewChannel(true)}>+ Channel</button>
+              <button className="text-xs font-semibold text-accent hover:text-accent-strong" onClick={() => setShowNewDM(true)}>+ DM</button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto -mx-1 px-1">
+            {loadingChannels && <Loading />}
+            {!loadingChannels && channels.length === 0 && <p className="text-xs text-ink-muted px-2">No channels yet — create one to get started.</p>}
+            <div className="space-y-1">
+              {channels.map((c) => {
+                const isActive = c._id === activeChannelId;
+                return (
+                  <button
+                    key={c._id}
+                    onClick={() => setActiveChannelId(c._id)}
+                    className={`w-full text-left px-2 py-2 rounded-lg text-sm flex items-center gap-2.5 transition-colors ${isActive ? 'bg-accent-soft text-accent-strong' : 'hover:bg-surface-sunken text-ink'}`}
+                  >
+                    <span className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${isActive ? 'bg-accent text-white' : 'bg-accent-soft text-accent-strong'}`}>
+                      {channelInitials(c)}
+                    </span>
+                    <span className="truncate flex-1 font-medium">{channelLabel(c)}</span>
+                    {c.unreadCount > 0 && <span className="chip-accent text-[10px] px-1.5 shrink-0">{c.unreadCount}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <div className="card p-0 flex flex-col overflow-hidden">
+          {!activeChannel && <EmptyState title="No channel selected" />}
+          {activeChannel && <ChannelView channel={activeChannel} label={channelLabel(activeChannel)} onChannelsChanged={loadChannels} />}
+        </div>
       </div>
 
       {showNewChannel && <NewChannelForm onClose={() => setShowNewChannel(false)} onSaved={(c) => { setShowNewChannel(false); loadChannels(); setActiveChannelId(c._id); }} />}
@@ -122,35 +147,50 @@ function ChannelView({ channel, label, onChannelsChanged }) {
 
   return (
     <>
-      <div className="px-4 py-3 border-b border-ink/10">
-        <p className="font-display text-sm">{label}</p>
-        {channel.purpose && <p className="text-xs text-ink-muted mt-0.5">{channel.purpose}</p>}
+      <div className="px-4 py-3 border-b border-rule flex items-center gap-3">
+        <span className="shrink-0 w-9 h-9 rounded-full bg-accent-soft text-accent-strong flex items-center justify-center text-xs font-bold">
+          {label.startsWith('#') ? '#' : initialsOf(label)}
+        </span>
+        <div>
+          <p className="font-display font-bold text-sm text-ink">{label}</p>
+          {channel.purpose && <p className="text-xs text-ink-muted mt-0.5">{channel.purpose}</p>}
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
         {loading && <Loading />}
         {!loading && messages.length === 0 && <p className="text-xs text-ink-muted">No messages yet — say hello.</p>}
-        {messages.map((m) => (
-          <div key={m._id} className="group">
-            <div className="flex items-baseline gap-2">
-              <span className="text-sm font-medium">{m.senderId?.name || 'Unknown'}</span>
-              <span className="text-[10px] text-ink-muted">{new Date(m.createdAt).toLocaleString()}</span>
-              {m.editedAt && <span className="text-[10px] text-ink-muted">(edited)</span>}
-              {m.pinned && <span className="text-[10px] text-accent">📌 pinned</span>}
+        {messages.map((m) => {
+          const isMine = m.senderId?._id === user._id;
+          return (
+            <div key={m._id} className="group flex gap-2.5">
+              <span className="shrink-0 w-8 h-8 rounded-full bg-accent-soft text-accent-strong flex items-center justify-center text-[11px] font-bold">
+                {initialsOf(m.senderId?.name)}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-sm font-semibold text-ink">{m.senderId?.name || 'Unknown'}</span>
+                  <span className="text-[10px] text-ink-muted">{new Date(m.createdAt).toLocaleString()}</span>
+                  {m.editedAt && <span className="text-[10px] text-ink-muted">(edited)</span>}
+                  {m.pinned && <span className="chip-accent text-[10px] px-1.5">Pinned</span>}
+                </div>
+                <div className="inline-block mt-1 max-w-full rounded-2xl rounded-tl-sm bg-surface-sunken px-3.5 py-2">
+                  <p className="text-sm text-ink whitespace-pre-wrap break-words">{m.text}</p>
+                </div>
+                <div className="flex gap-3 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button className="text-[11px] font-semibold text-accent hover:text-accent-strong" onClick={() => setOpenThreadId(openThreadId === m._id ? null : m._id)}>Reply</button>
+                  <button className="text-[11px] font-semibold text-accent hover:text-accent-strong" onClick={() => togglePin(m)}>{m.pinned ? 'Unpin' : 'Pin'}</button>
+                  {isMine && <button className="text-[11px] font-semibold text-danger hover:opacity-80" onClick={() => handleDelete(m)}>Delete</button>}
+                </div>
+                {openThreadId === m._id && <ThreadPanel rootMessage={m} channelId={channel._id} onSent={load} />}
+              </div>
             </div>
-            <p className="text-sm mt-0.5">{m.text}</p>
-            <div className="flex gap-3 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button className="text-[11px] text-accent" onClick={() => setOpenThreadId(openThreadId === m._id ? null : m._id)}>Reply</button>
-              <button className="text-[11px] text-accent" onClick={() => togglePin(m)}>{m.pinned ? 'Unpin' : 'Pin'}</button>
-              {m.senderId?._id === user._id && <button className="text-[11px] text-red-600" onClick={() => handleDelete(m)}>Delete</button>}
-            </div>
-            {openThreadId === m._id && <ThreadPanel rootMessage={m} channelId={channel._id} onSent={load} />}
-          </div>
-        ))}
+          );
+        })}
         <div ref={bottomRef} />
       </div>
 
-      <form onSubmit={handleSend} className="p-3 border-t border-ink/10 flex gap-2">
+      <form onSubmit={handleSend} className="p-3 border-t border-rule flex gap-2">
         <input
           className="field-input flex-1"
           placeholder="Message… (use @Name to mention someone)"
@@ -191,14 +231,19 @@ function ThreadPanel({ rootMessage, channelId, onSent }) {
   }
 
   return (
-    <div className="ml-4 mt-2 pl-3 border-l-2 border-ink/10 space-y-2">
+    <div className="ml-2 mt-2 pl-3 border-l-2 border-rule-strong space-y-2">
       {replies.map((r) => (
-        <div key={r._id}>
-          <div className="flex items-baseline gap-2">
-            <span className="text-xs font-medium">{r.senderId?.name}</span>
-            <span className="text-[10px] text-ink-muted">{new Date(r.createdAt).toLocaleString()}</span>
+        <div key={r._id} className="flex gap-2">
+          <span className="shrink-0 w-6 h-6 rounded-full bg-accent-soft text-accent-strong flex items-center justify-center text-[9px] font-bold">
+            {initialsOf(r.senderId?.name)}
+          </span>
+          <div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-xs font-semibold text-ink">{r.senderId?.name}</span>
+              <span className="text-[10px] text-ink-muted">{new Date(r.createdAt).toLocaleString()}</span>
+            </div>
+            <p className="text-xs text-ink">{r.text}</p>
           </div>
-          <p className="text-xs">{r.text}</p>
         </div>
       ))}
       <form onSubmit={handleReply} className="flex gap-2">
@@ -241,16 +286,16 @@ function NewChannelForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">New channel</p>
+        <p className="font-display font-bold text-lg text-ink mb-4">New channel</p>
         <div className="space-y-3">
           <div><label className="field-label">Name</label><input required className="field-input" value={name} onChange={(e) => setName(e.target.value)} /></div>
           <div><label className="field-label">Purpose (optional)</label><input className="field-input" value={purpose} onChange={(e) => setPurpose(e.target.value)} /></div>
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={isPrivate} onChange={(e) => setIsPrivate(e.target.checked)} /> Private channel</label>
+          <label className="flex items-center gap-2 text-sm text-ink"><input type="checkbox" checked={isPrivate} onChange={(e) => setIsPrivate(e.target.checked)} /> Private channel</label>
           <div>
             <label className="field-label">Members</label>
-            <div className="max-h-32 overflow-y-auto border border-ink/10 rounded p-2 space-y-1">
+            <div className="max-h-32 overflow-y-auto border border-rule-strong rounded-lg p-2 space-y-1">
               {users.map((u) => (
-                <label key={u._id} className="flex items-center gap-2 text-sm">
+                <label key={u._id} className="flex items-center gap-2 text-sm text-ink">
                   <input type="checkbox" checked={memberIds.includes(u._id)} onChange={() => toggleMember(u._id)} /> {u.name}
                 </label>
               ))}
@@ -291,7 +336,7 @@ function NewDMForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-xs">
-        <p className="font-display text-lg mb-4">New direct message</p>
+        <p className="font-display font-bold text-lg text-ink mb-4">New direct message</p>
         <select required className="field-input" value={otherUserId} onChange={(e) => setOtherUserId(e.target.value)}>
           <option value="">Select a person…</option>
           {users.map((u) => <option key={u._id} value={u._id}>{u.name}</option>)}
