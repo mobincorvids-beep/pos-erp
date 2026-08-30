@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Building2,
+  Check,
   ChevronDown,
   ShoppingCart,
   PlusCircle,
@@ -15,6 +16,8 @@ import { Loading } from '../components/Loading';
 import { MetricCard } from '../components/MetricCard';
 import { formatMoney, formatDate, formatDateTime, formatQty } from '../lib/format';
 
+const ACTIVE_BRANCH_KEY = 'pos_erp_active_branch';
+
 // The industry-tailored home screen: a CORE row every business owner
 // wants regardless of trade, plus a section chosen server-side off the
 // company's real industryType (dashboardService.getHomeDashboard). Every
@@ -27,9 +30,53 @@ export function HomeDashboardPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
+  const [branches, setBranches] = useState([]);
+  const [activeBranchId, setActiveBranchId] = useState(() => {
+    try {
+      return localStorage.getItem(ACTIVE_BRANCH_KEY) || '';
+    } catch {
+      return '';
+    }
+  });
+  const [branchMenuOpen, setBranchMenuOpen] = useState(false);
+  const branchMenuRef = useRef(null);
+
   useEffect(() => {
     api.get('/dashboard/home').then(setData).catch((err) => setError(err.message)).finally(() => setLoading(false));
+    api.get('/org/branches').then((rows) => {
+      setBranches(rows || []);
+      // No stored choice yet, or the stored branch no longer exists — default
+      // to the first (usually only) branch so the row never shows a blank state.
+      setActiveBranchId((current) => {
+        if (current && rows?.some((b) => b._id === current)) return current;
+        return rows?.[0]?._id || '';
+      });
+    }).catch(() => {});
   }, []);
+
+  // Close the branch menu on an outside click.
+  useEffect(() => {
+    if (!branchMenuOpen) return undefined;
+    function handleClick(e) {
+      if (branchMenuRef.current && !branchMenuRef.current.contains(e.target)) setBranchMenuOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [branchMenuOpen]);
+
+  function selectBranch(branchId) {
+    setActiveBranchId(branchId);
+    try {
+      localStorage.setItem(ACTIVE_BRANCH_KEY, branchId);
+    } catch {
+      // localStorage unavailable (private browsing etc.) — selection still
+      // works for this render, it just won't persist across reloads.
+    }
+    setBranchMenuOpen(false);
+  }
+
+  const activeBranch = branches.find((b) => b._id === activeBranchId);
+  const hasMultipleBranches = branches.length > 1;
 
   return (
     <div>
@@ -43,11 +90,51 @@ export function HomeDashboardPage() {
 
       {data && (
         <>
-          {/* Company / branch selector, styled like the reference's bordered selector row */}
-          <div className="w-full flex items-center gap-3 bg-surface border border-rule-strong rounded-xl px-4 py-3 mb-6">
-            <Building2 size={20} className="text-accent shrink-0" />
-            <span className="flex-1 font-medium text-ink truncate">{data.companyName || company?.name}</span>
-            <ChevronDown size={18} className="text-ink-muted shrink-0" />
+          {/* Company / branch selector, styled like the reference's bordered selector row.
+              A single-branch company (the common case for a small vendor) gets a plain,
+              non-interactive label — a chevron with no menu behind it would just be a
+              trap. Multi-branch companies get a real dropdown to switch branch context. */}
+          <div className="relative mb-6" ref={branchMenuRef}>
+            <button
+              type="button"
+              onClick={() => hasMultipleBranches && setBranchMenuOpen((open) => !open)}
+              className={`w-full flex items-center gap-3 bg-surface border border-rule-strong rounded-xl px-4 py-3 text-left ${
+                hasMultipleBranches ? 'cursor-pointer hover:bg-surface-sunken' : 'cursor-default'
+              }`}
+              aria-haspopup={hasMultipleBranches ? 'menu' : undefined}
+              aria-expanded={hasMultipleBranches ? branchMenuOpen : undefined}
+            >
+              <Building2 size={20} className="text-accent shrink-0" />
+              <span className="flex-1 min-w-0 truncate">
+                <span className="font-medium text-ink truncate">{data.companyName || company?.name}</span>
+                {activeBranch && (
+                  <span className="text-ink-muted"> &middot; {activeBranch.name}</span>
+                )}
+              </span>
+              {hasMultipleBranches && <ChevronDown size={18} className="text-ink-muted shrink-0" />}
+            </button>
+
+            {hasMultipleBranches && branchMenuOpen && (
+              <div
+                role="menu"
+                className="card absolute left-0 right-0 sm:right-auto sm:w-72 mt-1 z-20 py-1 max-h-72 overflow-y-auto"
+              >
+                {branches.map((branch) => (
+                  <button
+                    key={branch._id}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => selectBranch(branch._id)}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-ink hover:bg-surface-sunken"
+                  >
+                    <span className="w-4 shrink-0">
+                      {branch._id === activeBranchId && <Check size={15} className="text-accent" />}
+                    </span>
+                    <span className="flex-1 truncate">{branch.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Quick actions: primary "New Sale" tile + secondary action tiles */}

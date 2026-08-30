@@ -3,7 +3,7 @@ const { Schema, model } = require('mongoose');
 const companySchema = new Schema({
   name: { type: String, required: true },
   slug: { type: String, required: true, unique: true },
-  industryType: { type: String, default: 'retail' }, // retail, restaurant, pharmacy, salon...
+  industryType: { type: String, default: 'retail' }, // retail, restaurant, pharmacy, salon, wholesaler, manufacturer, distributor...
   ntn: String,        // National Tax Number
   strn: String,       // Sales Tax Registration Number
   fbrPosId: String,   // FBR POS registration ID

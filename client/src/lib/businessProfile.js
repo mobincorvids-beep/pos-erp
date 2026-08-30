@@ -41,6 +41,14 @@ const OPTIONAL_ITEMS = new Set([
   '/recurring-invoices',
   '/fleet', '/field-service', '/quality', '/contracts',
   '/logistics-core', '/warehouse', '/funnels', '/ecommerce-hub',
+  // 'enterprise-hr' tag — sub-modules of HR/asset management that make
+  // sense for larger or formally-staffed organizations, but are noise for
+  // a single-location shop/restaurant/salon. HR & Payroll itself stays
+  // core (every business has employees) — only these sub-modules hide.
+  '/recruitment', '/performance', '/employee-loans', '/timesheets', '/fixed-assets', '/maintenance',
+  // 'dev' tag — a technical/admin surface, not a day-to-day business
+  // module for anyone by default; only shown behind "Show all modules".
+  '/developer-platform',
 ]);
 
 // Explicit, per-industry list of which optional items that business
@@ -112,6 +120,16 @@ const INDUSTRY_VISIBLE_ITEMS = {
   hajj_umrah: [],
   media_entertainment: ['appointments', 'funnels'],
   sports: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'appointments'],
+
+  // ---- New (bulk buy-and-resell / production) verticals ----
+  // All three are bulk-buying/reselling-or-producing B2B operations: Purchase
+  // orders, RFQs, Early payment discount, Transfers, Stocktakes, and
+  // Warehouse locations are core to every one of them.
+  wholesaler: ['products', 'units', 'purchases', 'rfqs', 'early-payment-discount', 'stock-transfers', 'stock-counts', 'warehouse'],
+  // Production-specific: Manufacturing, Quality, Fleet (own delivery/logistics
+  // fleet) and Logistics/Shipments, on top of the shared bulk-buying set.
+  manufacturer: ['products', 'units', 'purchases', 'rfqs', 'early-payment-discount', 'stock-transfers', 'stock-counts', 'warehouse', 'manufacturing', 'quality', 'fleet', 'logistics-core'],
+  distributor: ['products', 'units', 'purchases', 'rfqs', 'early-payment-discount', 'stock-transfers', 'stock-counts', 'warehouse'],
 };
 
 const PATH_TO_KEY = {
@@ -122,20 +140,49 @@ const PATH_TO_KEY = {
   '/recurring-invoices': 'recurring-invoices',
   '/fleet': 'fleet', '/field-service': 'field-service', '/quality': 'quality', '/contracts': 'contracts',
   '/logistics-core': 'logistics-core', '/warehouse': 'warehouse', '/funnels': 'funnels', '/ecommerce-hub': 'ecommerce-hub',
+  '/recruitment': 'recruitment', '/performance': 'performance', '/employee-loans': 'employee-loans',
+  '/timesheets': 'timesheets', '/fixed-assets': 'fixed-assets', '/maintenance': 'maintenance',
+  '/developer-platform': 'developer-platform',
 };
+
+// 'enterprise-hr' tag: which industries see the fuller HR/asset-management
+// sub-modules (Recruitment, Performance & Goals, Employee loans, Timesheets,
+// Fixed Assets, Maintenance) by default. Aimed at larger or formally-staffed
+// organizations and asset-heavy operators — not the common small single-
+// location vendor (restaurant, cafe, salon, small retail counter, etc.).
+const ENTERPRISE_HR_INDUSTRIES = new Set([
+  'hospital', 'school', 'professional_services', 'logistics', 'construction', 'hotel',
+  'retail', 'distribution', 'warehouse_3pl', 'import_export', 'courier', 'automobile',
+  'textile', 'furniture', 'electronics', 'pharmaceutical', 'agriculture', 'dairy',
+  'service_station', 'petrol_pump', 'media_entertainment', 'real_estate', 'insurance',
+  'car_rental', 'housing_society', 'banquet', 'travel', 'hajj_umrah',
+  // Wholesaler/distributor are larger, more established B2B operations —
+  // matches the same enterprise-HR allow-list pattern as retail/distribution.
+  'wholesaler', 'distributor',
+]);
+const ENTERPRISE_HR_KEYS = ['recruitment', 'performance', 'employee-loans', 'timesheets', 'fixed-assets', 'maintenance'];
 
 /**
  * @param {string} industryType
+ * @param {boolean} [showAll] — the per-company "Show all modules" override;
+ *   when true, every item is shown regardless of industry (never lossy —
+ *   this is purely a default-view declutter, not a hard restriction).
  * @returns {(path: string) => boolean} true if that nav item should show
  */
-export function getNavVisibility(industryType) {
+export function getNavVisibility(industryType, showAll = false) {
+  if (showAll) return () => true;
+
   const list = INDUSTRY_VISIBLE_ITEMS[industryType];
   // Unknown/uncatalogued industry types fall back to "show everything"
   // rather than hiding something a business might genuinely need.
   const unknownIndustry = list === undefined;
   const visibleSet = new Set(list || []);
+  if (ENTERPRISE_HR_INDUSTRIES.has(industryType)) {
+    for (const key of ENTERPRISE_HR_KEYS) visibleSet.add(key);
+  }
   return (path) => {
-    if (!OPTIONAL_ITEMS.has(path)) return true; // universal item
+    if (!OPTIONAL_ITEMS.has(path)) return true; // universal/core item
+    if (path === '/developer-platform') return false; // dev tooling: only via "Show all modules"
     if (unknownIndustry) return true;
     const key = PATH_TO_KEY[path];
     return visibleSet.has(key);

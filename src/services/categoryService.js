@@ -491,6 +491,53 @@ const DEFAULT_CATEGORY_TREES = {
     { name: 'Amenity Fees', children: ['Club House', 'Parking'] },
     { name: 'Administrative Services', children: [] },
   ],
+
+  // ---- New (bulk buy-and-resell / production) verticals ----
+  // A general wholesaler buying in bulk across many product lines and
+  // reselling in bulk (carton/pallet quantities) to retailers — distinct
+  // from 'distribution' (3PL/freight-forwarding-flavored) and from
+  // 'distributor' below (bulk resale with a distribution/logistics lean).
+  wholesaler: [
+    { name: 'FMCG Bulk', children: ['Carton Packs', 'Case Lots', 'Multi-Pack Bundles'] },
+    { name: 'Grocery & Staples (Bulk)', children: ['Rice & Grains (Sacks)', 'Pulses & Lentils (Sacks)', 'Cooking Oil (Drums/Tins)', 'Sugar & Salt (Bulk Bags)', 'Flour & Atta (Bulk Bags)'] },
+    { name: 'Beverages (Bulk/Carton)', children: ['Soft Drinks (Cartons)', 'Juices (Cartons)', 'Water (Bulk Packs)', 'Tea & Coffee (Bulk)'] },
+    { name: 'Household & Cleaning (Bulk)', children: ['Detergents (Cartons)', 'Cleaning Supplies (Cartons)', 'Paper & Disposables (Bulk)'] },
+    { name: 'Personal Care (Bulk)', children: ['Soaps & Shampoos (Cartons)', 'Oral Care (Cartons)', 'Bath & Body (Bulk Packs)'] },
+    { name: 'Stationery & Office Supplies', children: ['Paper & Notebooks (Bulk)', 'Pens & Writing (Bulk)', 'Office Consumables'] },
+    { name: 'Electronics & Accessories', children: ['Mobile Accessories (Bulk)', 'Cables & Chargers (Bulk)', 'Batteries (Bulk Packs)'] },
+    { name: 'Hardware & Tools', children: ['Fasteners (Bulk)', 'Hand Tools (Case Lots)', 'Electrical Supplies (Bulk)'] },
+    { name: 'Textiles & Apparel (Bulk)', children: ['Fabric Rolls', 'Apparel (Case Packs)', 'Home Textiles (Bulk)'] },
+    { name: 'Confectionery & Snacks', children: ['Chocolates (Cartons)', 'Biscuits (Cartons)', 'Chips & Namkeen (Cartons)'] },
+    { name: 'General/Miscellaneous', children: [] },
+  ],
+
+  // Production/factory business — inventory here is about stages of the
+  // manufacturing process (raw material -> WIP -> finished goods), not
+  // retail-style merchandise categories.
+  manufacturer: [
+    { name: 'Raw Materials', children: ['Metals & Alloys', 'Plastics & Polymers', 'Chemicals', 'Textile Raw Materials', 'Wood & Timber'] },
+    { name: 'Work-in-Progress', children: ['Partially Assembled Units', 'In-Process Batches'] },
+    { name: 'Semi-Finished Goods', children: ['Components Awaiting Final Assembly', 'Sub-Assemblies'] },
+    { name: 'Finished Goods', children: ['Ready for Dispatch', 'Warehouse Stock', 'Export Ready'] },
+    { name: 'Packaging Materials', children: ['Cartons & Boxes', 'Labels & Stickers', 'Shrink Wrap & Pallet Wrap'] },
+    { name: 'Consumables & Spare Parts', children: ['Machine Spare Parts', 'Lubricants & Coolants', 'Welding Consumables'] },
+    { name: 'Tools & Dies', children: ['Molds & Dies', 'Jigs & Fixtures', 'Cutting Tools'] },
+    { name: 'Scrap & By-Products', children: ['Metal Scrap', 'Off-Cuts & Rejects', 'Recyclable Waste'] },
+    { name: 'General/Miscellaneous', children: [] },
+  ],
+
+  // Generic bulk-resale distributor with a distribution/logistics lean —
+  // broad, not tied to one product vertical (unlike 'distribution', the
+  // existing 3PL/freight-forwarding-flavored industryType).
+  distributor: [
+    { name: 'FMCG Distribution', children: ['Packaged Foods (Bulk)', 'Beverages (Bulk)', 'Household Items (Bulk)'] },
+    { name: 'Pharma Distribution', children: ['OTC Medicines (Bulk)', 'Medical Supplies (Bulk)'] },
+    { name: 'Electronics Distribution', children: ['Mobile Accessories (Bulk)', 'Small Appliances (Bulk)', 'Cables & Chargers (Bulk)'] },
+    { name: 'Automotive Parts Distribution', children: ['Filters & Fluids (Bulk)', 'Spare Parts (Bulk)'] },
+    { name: 'Building Materials Distribution', children: ['Cement & Aggregate (Bulk)', 'Steel & Rebar (Bulk)', 'Pipes & Fittings (Bulk)'] },
+    { name: 'Packaging & Logistics Supplies', children: ['Cartons & Pallets', 'Stretch Wrap & Labels'] },
+    { name: 'General/Miscellaneous', children: [] },
+  ],
 };
 
 /**

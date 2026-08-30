@@ -62,6 +62,9 @@ export function RegisterPage() {
               <option value="restaurant">Restaurant</option>
               <option value="pharmacy">Pharmacy</option>
               <option value="salon">Salon</option>
+              <option value="wholesaler">Wholesaler</option>
+              <option value="manufacturer">Manufacturer</option>
+              <option value="distributor">Distributor</option>
             </select>
           </div>
           <div>

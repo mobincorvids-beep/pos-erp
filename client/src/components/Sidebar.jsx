@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -7,7 +8,7 @@ import {
   Contact, Truck, UserCog, HeartHandshake, Gift, Sparkles, Store, Circle,
   Ticket, Shield, FileSearch, TrendingUp, HandCoins, Repeat, Hourglass, Lock, Layers, Ruler, Percent, X,
   LayoutDashboard, Settings, Car, MapPin, ShieldAlert, FileSignature,
-  PackageCheck, Warehouse, UserPlus, Target, Rocket, KeyRound, Radio, Timer,
+  PackageCheck, Warehouse, UserPlus, Target, Rocket, KeyRound, Radio, Timer, SlidersHorizontal, Pin, PinOff,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { INDUSTRY_MODULES } from '../industryModuleRegistry';
@@ -133,25 +134,79 @@ export function Sidebar({ mobileOpen, onClose }) {
   // blocks direct URL access as a second layer).
   const enabledIndustryModules = INDUSTRY_MODULES.filter((m) => m.key === company?.industryType);
 
-  // Narrow the generic Sell/Stock/Money/People/Insights items to what
-  // THIS business actually does — see lib/businessProfile.js. A section
-  // that ends up with zero visible items (e.g. "Stock" for a pure
-  // services business) is dropped entirely rather than shown empty.
-  const isVisible = getNavVisibility(company?.industryType);
-  const visibleSections = SECTIONS
-    .map((section) => ({ ...section, items: section.items.filter((item) => isVisible(item.to)) }))
-    .filter((section) => section.items.length > 0);
+  // v3: nothing is hidden any more. Every nav item always renders, for every
+  // business — but items outside the business's default relevance render
+  // visually de-emphasized (a "not typical for your business" grouping,
+  // purely visual), so the sidebar still reads as tailored at a glance
+  // without ever removing something a vendor might actually need.
+  //
+  // What counts as "in scope" is itself customizable, per-company, and
+  // client-only (localStorage, keyed by company id) — a vendor whose
+  // business spans verticals can promote an out-of-scope item to full
+  // prominence, or demote an in-scope one, via "Customize" mode below. The
+  // override map takes precedence over the industry-default relevance from
+  // lib/businessProfile.js. This replaces the old binary "Show all modules"
+  // toggle, which no longer makes sense once nothing is actually hidden.
+  const overridesKey = company?.id ? `pos_erp_sidebar_overrides_${company.id}` : null;
+  const [overrides, setOverrides] = useState({});
+  const [customizeMode, setCustomizeMode] = useState(false);
+
+  useEffect(() => {
+    if (!overridesKey) return;
+    try {
+      const raw = localStorage.getItem(overridesKey);
+      setOverrides(raw ? JSON.parse(raw) : {});
+    } catch {
+      // localStorage unavailable, or corrupt JSON — fall back to no overrides.
+      setOverrides({});
+    }
+  }, [overridesKey]);
+
+  function setOverride(path, value) {
+    setOverrides((current) => {
+      const next = { ...current };
+      if (value === null) {
+        delete next[path];
+      } else {
+        next[path] = value;
+      }
+      if (overridesKey) {
+        try {
+          localStorage.setItem(overridesKey, JSON.stringify(next));
+        } catch {
+          // best-effort persistence only
+        }
+      }
+      return next;
+    });
+  }
+
+  // Industry-default relevance (the same per-business logic as before), now
+  // used only to decide styling — never to filter items out of the list.
+  const isDefaultRelevant = getNavVisibility(company?.industryType, false);
+  function isInScope(path) {
+    const override = overrides[path];
+    if (override === 'in') return true;
+    if (override === 'out') return false;
+    return isDefaultRelevant(path);
+  }
+
+  // Every item renders in every section, always — sections are no longer
+  // dropped even when everything in them is out-of-scope for this business.
+  const visibleSections = SECTIONS;
 
   // Shared classes for every nav row — a bold, filled active state (dark
   // accent bg + white text + a left accent-strong border stripe) rather
   // than the old soft-tint active state, matching the SafePOS design
   // system's nav treatment. rtl:border-l-0 rtl:border-r-4 flips the
   // accent stripe to the visual "leading" edge under dir="rtl".
-  const linkClass = ({ isActive }) =>
+  const linkClass = (deemphasized) => ({ isActive }) =>
     `flex items-center gap-3 px-4 py-2.5 text-sm mx-2 rounded-lg font-semibold border-l-4 rtl:border-l-0 rtl:border-r-4 transition-colors ${
       isActive
         ? 'bg-accent text-white border-accent-strong shadow-sm'
-        : 'text-ink border-transparent hover:bg-surface-sunken'
+        : deemphasized
+          ? 'text-ink-muted border-transparent hover:bg-surface-sunken'
+          : 'text-ink border-transparent hover:bg-surface-sunken'
     }`;
 
   const content = (
@@ -174,7 +229,7 @@ export function Sidebar({ mobileOpen, onClose }) {
 
       <nav className="flex-1 overflow-y-auto py-1">
         <div className="mb-4">
-          <NavLink to="/dashboard" end onClick={onClose} className={linkClass}>
+          <NavLink to="/dashboard" end onClick={onClose} className={linkClass(false)}>
             <LayoutDashboard size={17} strokeWidth={2} className="shrink-0" />
             {t('nav.home')}
           </NavLink>
@@ -189,11 +244,40 @@ export function Sidebar({ mobileOpen, onClose }) {
               </p>
               {section.items.map((item) => {
                 const ItemIcon = ITEM_ICONS[item.to] || Circle;
+                const inScope = isInScope(item.to);
+                const override = overrides[item.to];
                 return (
-                  <NavLink key={item.to} to={item.to} onClick={onClose} className={linkClass}>
-                    <ItemIcon size={17} strokeWidth={2} className="shrink-0" />
-                    {t(item.labelKey)}
-                  </NavLink>
+                  <div key={item.to} className="group relative">
+                    <NavLink to={item.to} onClick={onClose} className={linkClass(!inScope)}>
+                      <ItemIcon size={17} strokeWidth={2} className="shrink-0" />
+                      <span className="flex-1 truncate">{t(item.labelKey)}</span>
+                      {!inScope && !customizeMode && (
+                        <span className="chip-neutral !inline-block !rounded px-1.5 py-0.5 text-[10px] font-medium shrink-0">extra</span>
+                      )}
+                    </NavLink>
+                    {customizeMode && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setOverride(item.to, override ? null : (inScope ? 'out' : 'in'));
+                        }}
+                        title={
+                          override
+                            ? 'Remove custom override — use default relevance for this item'
+                            : inScope
+                              ? 'Mark this item irrelevant for your business'
+                              : 'Keep this item visible without graying it out'
+                        }
+                        className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md ${
+                          override ? 'text-accent' : 'text-ink-muted hover:text-ink'
+                        }`}
+                      >
+                        {inScope ? <PinOff size={14} strokeWidth={2} /> : <Pin size={14} strokeWidth={2} />}
+                      </button>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -206,7 +290,7 @@ export function Sidebar({ mobileOpen, onClose }) {
               {t('nav.sections.industry')}
             </p>
             {enabledIndustryModules.map((item) => (
-              <NavLink key={item.path} to={item.path} onClick={onClose} className={linkClass}>
+              <NavLink key={item.path} to={item.path} onClick={onClose} className={linkClass(false)}>
                 <Circle size={17} strokeWidth={2} className="shrink-0" />
                 {item.label}
               </NavLink>
@@ -219,10 +303,38 @@ export function Sidebar({ mobileOpen, onClose }) {
           business, whatever its industry, needs a place to manage its own
           profile and branches, so this is never hidden per business type. */}
       <div className="mb-1">
-        <NavLink to="/settings" onClick={onClose} className={linkClass}>
+        <NavLink to="/settings" onClick={onClose} className={linkClass(false)}>
           <Settings size={17} strokeWidth={2} className="shrink-0" />
           {t('nav.settings')}
         </NavLink>
+      </div>
+
+      {/* Nothing is ever hidden any more — every item above always renders.
+          "Customize" reveals a per-item pin/unpin control so a vendor whose
+          business genuinely spans verticals can promote an out-of-scope item
+          to full prominence, or demote an in-scope one, instead of a single
+          all-or-nothing "Show all modules" switch. */}
+      <div className="px-5 pt-1 pb-2">
+        <button
+          type="button"
+          onClick={() => setCustomizeMode((v) => !v)}
+          className="w-full flex items-center gap-2 text-xs text-ink-muted hover:text-ink"
+          aria-pressed={customizeMode}
+        >
+          <SlidersHorizontal size={13} strokeWidth={2} className="shrink-0" />
+          <span className="flex-1 text-left">{customizeMode ? 'Done customizing' : 'Customize sidebar'}</span>
+          <span
+            className={`relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors ${
+              customizeMode ? 'bg-accent' : 'bg-rule-strong'
+            }`}
+          >
+            <span
+              className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                customizeMode ? 'translate-x-3.5' : 'translate-x-0.5'
+              }`}
+            />
+          </span>
+        </button>
       </div>
 
       <div className="border-t border-rule px-5 py-4 mt-1">
