@@ -5,6 +5,7 @@ import { useToast } from '../components/Toast';
 import { Loading } from '../components/Loading';
 import { EmptyState } from '../components/EmptyState';
 import { formatMoney } from '../lib/format';
+import { ImportCsvModal } from '../components/ImportCsvModal';
 
 const TRACKING_LABELS = {
   simple: 'Simple',
@@ -23,6 +24,7 @@ export function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null); // null closed, {} new, {...} edit
   const [query, setQuery] = useState('');
+  const [importOpen, setImportOpen] = useState(false);
 
   function load() {
     setLoading(true);
@@ -55,10 +57,16 @@ export function ProductsPage() {
           <p className="page-title">Products</p>
           <p className="text-sm text-ink-muted mt-1">{products.length} product{products.length === 1 ? '' : 's'} in your catalog</p>
         </div>
-        <button className="btn-primary" onClick={() => setEditing({})}>
-          <span className="font-icon text-[18px] leading-none">add</span>
-          New product
-        </button>
+        <div className="flex gap-2">
+          <button className="btn-secondary" onClick={() => setImportOpen(true)}>
+            <span className="font-icon text-[18px] leading-none">upload_file</span>
+            Import CSV
+          </button>
+          <button className="btn-primary" onClick={() => setEditing({})}>
+            <span className="font-icon text-[18px] leading-none">add</span>
+            New product
+          </button>
+        </div>
       </div>
 
       {loading && <Loading />}
@@ -175,6 +183,17 @@ export function ProductsPage() {
       )}
 
       {editing !== null && <ProductForm product={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
+
+      {importOpen && (
+        <ImportCsvModal
+          endpoint="/products/import-csv"
+          title="Import products from CSV"
+          templateHeaders={['name', 'sku', 'barcode', 'category', 'subcategory', 'unit', 'costPrice', 'sellingPrice', 'openingStock', 'minStock', 'reorderLevel']}
+          templateFilename="product_import_template.csv"
+          onClose={() => setImportOpen(false)}
+          onImported={() => { setImportOpen(false); load(); }}
+        />
+      )}
     </div>
   );
 }
@@ -188,17 +207,45 @@ function ProductForm({ product, onClose, onSaved }) {
     minStock: product.minStock ?? '', reorderLevel: product.reorderLevel ?? '',
     trackingMode: product.trackingMode || 'simple',
   });
+  const [categoryTree, setCategoryTree] = useState([]);
+  // Existing products may have a categoryId that's itself a subcategory — resolve
+  // which top-level row to preselect from the tree once it's loaded.
+  const [topCategoryId, setTopCategoryId] = useState('');
+  const [subCategoryId, setSubCategoryId] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    api.get('/categories/tree').then((tree) => {
+      setCategoryTree(tree);
+      const currentId = product.categoryId?._id || product.categoryId;
+      if (!currentId) return;
+      const asTop = tree.find((c) => c._id === currentId);
+      if (asTop) { setTopCategoryId(asTop._id); return; }
+      for (const top of tree) {
+        const asSub = top.children.find((c) => c._id === currentId);
+        if (asSub) { setTopCategoryId(top._id); setSubCategoryId(asSub._id); return; }
+      }
+    }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const selectedTop = categoryTree.find((c) => c._id === topCategoryId);
+  const effectiveCategoryId = subCategoryId || topCategoryId;
+
   async function handleSubmit(e) {
     e.preventDefault();
+    if (!effectiveCategoryId) {
+      setError('Choose a category before saving.');
+      return;
+    }
     setSaving(true);
     setError('');
     try {
       if (isNew) {
         await api.post('/products', {
           name: form.name, sku: form.sku || undefined, barcode: form.barcode || undefined,
+          categoryId: effectiveCategoryId,
           trackingMode: form.trackingMode,
           costPrice: Number(form.costPrice) || 0, sellingPrice: Number(form.sellingPrice) || 0,
           variants: [{ sku: form.sku || undefined, barcode: form.barcode || undefined, sellingPrice: Number(form.sellingPrice) || 0 }],
@@ -207,6 +254,7 @@ function ProductForm({ product, onClose, onSaved }) {
       } else {
         await api.put(`/products/${product._id}`, {
           name: form.name, sku: form.sku || undefined, barcode: form.barcode || undefined,
+          categoryId: effectiveCategoryId,
           costPrice: Number(form.costPrice) || 0, sellingPrice: Number(form.sellingPrice) || 0,
           minStock: Number(form.minStock) || 0, reorderLevel: Number(form.reorderLevel) || 0,
         });
@@ -230,6 +278,31 @@ function ProductForm({ product, onClose, onSaved }) {
           <div>
             <label className="field-label">Name</label>
             <input required autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="field-label">Category</label>
+              <select
+                required className="field-input"
+                value={topCategoryId}
+                onChange={(e) => { setTopCategoryId(e.target.value); setSubCategoryId(''); }}
+              >
+                <option value="">Select…</option>
+                {categoryTree.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="field-label">Subcategory {selectedTop?.children.length ? '' : '(none for this category)'}</label>
+              <select
+                className="field-input"
+                value={subCategoryId}
+                onChange={(e) => setSubCategoryId(e.target.value)}
+                disabled={!selectedTop?.children.length}
+              >
+                <option value="">None</option>
+                {selectedTop?.children.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
+              </select>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

@@ -22,6 +22,11 @@ const KEYS = {
   INVENTORY_ADJUST: 'inventory.adjust',
   INVENTORY_TRANSFER: 'inventory.transfer',
 
+  CATEGORIES_VIEW: 'categories.view',
+  CATEGORIES_CREATE: 'categories.create',
+  CATEGORIES_EDIT: 'categories.edit',
+  CATEGORIES_DELETE: 'categories.delete',
+
   EXPENSE_SUBMIT: 'expenses.submit',
   EXPENSE_APPROVE: 'expenses.approve',
 
@@ -75,6 +80,10 @@ const KEYS = {
   DEVELOPER_PLATFORM_MANAGE: 'developer_platform.manage',
 
   PROJECT_TASKS_MANAGE: 'project_tasks.manage',
+
+  TAX_PAYMENTS_VIEW: 'tax_payments.view',
+  TAX_PAYMENTS_CREATE: 'tax_payments.create',
+  TAX_PAYMENTS_PAY: 'tax_payments.pay',
 };
 
 // Human-readable catalog for the role-editor UI — grouped so checkboxes
@@ -102,6 +111,10 @@ const CATALOG = [
     items: [
       { key: KEYS.INVENTORY_ADJUST, label: 'Adjust stock / run stocktakes' },
       { key: KEYS.INVENTORY_TRANSFER, label: 'Transfer stock between warehouses' },
+      { key: KEYS.CATEGORIES_VIEW, label: 'View categories' },
+      { key: KEYS.CATEGORIES_CREATE, label: 'Create categories & subcategories' },
+      { key: KEYS.CATEGORIES_EDIT, label: 'Edit categories & subcategories' },
+      { key: KEYS.CATEGORIES_DELETE, label: 'Delete categories & subcategories' },
     ],
   },
   {
@@ -182,6 +195,14 @@ const CATALOG = [
       { key: KEYS.PERFORMANCE_MANAGE, label: 'Manage goals and performance reviews' },
       { key: KEYS.TIMESHEETS_LOG, label: 'Log and submit own timesheets' },
       { key: KEYS.TIMESHEETS_APPROVE, label: 'Approve or reject submitted timesheets' },
+    ],
+  },
+  {
+    group: 'Tax payments',
+    items: [
+      { key: KEYS.TAX_PAYMENTS_VIEW, label: 'View tax payment records' },
+      { key: KEYS.TAX_PAYMENTS_CREATE, label: 'Record a tax liability to pay' },
+      { key: KEYS.TAX_PAYMENTS_PAY, label: 'Pay tax liability online via JazzCash' },
     ],
   },
   {

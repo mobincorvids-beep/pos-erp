@@ -20,6 +20,14 @@ async function updateCompany(req, res) {
   for (const field of EDITABLE_COMPANY_FIELDS) {
     if (req.body[field] !== undefined) updates[field] = req.body[field];
   }
+  // jazzCashTaxPay is a per-tenant credential block for paying the
+  // company's own FBR tax liability (see taxPaymentService) — merged
+  // shallowly onto whatever's already there so a caller can update just
+  // one field (e.g. flipping `enabled`) without re-sending the rest.
+  if (req.body.jazzCashTaxPay && typeof req.body.jazzCashTaxPay === 'object') {
+    const existing = await Company.findById(req.companyId).select('jazzCashTaxPay');
+    updates.jazzCashTaxPay = { ...(existing?.jazzCashTaxPay?.toObject?.() || existing?.jazzCashTaxPay || {}), ...req.body.jazzCashTaxPay };
+  }
   const company = await Company.findByIdAndUpdate(req.companyId, updates, { new: true, runValidators: true });
   if (!company) return res.status(404).json({ error: 'Company not found.' });
   res.json(company);

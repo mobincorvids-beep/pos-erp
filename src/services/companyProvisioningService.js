@@ -17,6 +17,7 @@ const PosTerminal = require('../models/PosTerminal');
 const Account = require('../models/Account');
 const User = require('../models/User');
 const { nanoid } = require('nanoid');
+const categoryService = require('./categoryService');
 
 // `key` maps each starter account to its Company.defaultAccounts slot, so
 // onboarding can wire that mapping automatically instead of leaving every
@@ -108,6 +109,17 @@ async function onboardCompany(input) {
 
       result = { company, branch, warehouse, posTerminal: terminal, admin, generatedPassword };
     });
+
+    // Outside the transaction, same as the reasoning elsewhere in this app for
+    // best-effort side effects: seeding the default category tree is not part
+    // of what makes a company "provisioned" — a failure here shouldn't roll
+    // back the company/branch/accounts/admin that just succeeded.
+    try {
+      await categoryService.seedDefaultCategories(result.company._id);
+    } catch (err) {
+      console.error(`Default category seeding failed for company ${result.company._id} (onboarding still succeeded):`, err.message);
+    }
+
     return result;
   } finally {
     session.endSession();

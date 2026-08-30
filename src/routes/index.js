@@ -2,6 +2,7 @@ const router = require('express').Router();
 
 router.use('/auth', require('./authRoutes'));
 router.use('/products', require('./productRoutes'));
+router.use('/categories', require('./categoryRoutes'));
 router.use('/sales', require('./saleRoutes'));
 router.use('/sales-workflow', require('./salesOrderRoutes')); // quotations & sales orders
 router.use('/purchase-orders', require('./purchaseRoutes'));
@@ -52,6 +53,7 @@ router.use('/portal-session', require('./portalSessionRoutes'));
 router.use('/workflows', require('./workflowRoutes'));
 router.use('/webhooks', require('./webhookRoutes'));
 router.use('/payment-gateway', require('./paymentGatewayRoutes')); // JazzCash/Easypaisa — callback/:provider is public, see that file
+router.use('/tax-payments', require('./taxPaymentRoutes')); // vendor pays own FBR tax liability via JazzCash — jazzcash-callback is public, see that file
 router.use('/projects', require('./projectRoutes'));
 router.use('/tasks', require('./taskRoutes'));
 router.use('/ecommerce-config', require('./ecommerceConfigRoutes')); // tenant-side setup

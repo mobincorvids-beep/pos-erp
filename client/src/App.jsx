@@ -10,6 +10,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { HomeDashboardPage } from './pages/HomeDashboardPage';
 import { PosPage } from './pages/PosPage';
 import { ProductsPage } from './pages/ProductsPage';
+import { CategoriesPage } from './pages/CategoriesPage';
 import { SalesHistoryPage } from './pages/SalesHistoryPage';
 import { SalesWorkflowPage } from './pages/SalesWorkflowPage';
 import { PurchasesPage } from './pages/PurchasesPage';
@@ -130,6 +131,7 @@ export default function App() {
               <Route path="/sales" element={<SalesHistoryPage />} />
               <Route path="/sales-workflow" element={<SalesWorkflowPage />} />
               <Route path="/products" element={<ProductsPage />} />
+              <Route path="/categories" element={<CategoriesPage />} />
               <Route path="/purchases" element={<PurchasesPage />} />
               <Route path="/stock-transfers" element={<StockTransfersPage />} />
               <Route path="/stock-counts" element={<StockCountsPage />} />

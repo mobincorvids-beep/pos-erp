@@ -5,6 +5,7 @@ import { useToast } from '../components/Toast';
 import { Loading } from '../components/Loading';
 import { EmptyState } from '../components/EmptyState';
 import { formatMoney, formatDate } from '../lib/format';
+import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
 
 const STATUS_CHIP = { draft: 'chip-neutral', ordered: 'chip-info', partially_received: 'chip-warning', received: 'chip-accent', cancelled: 'chip-danger' };
 
@@ -212,6 +213,8 @@ function ReceiveGoodsForm({ po, onClose, onReceived }) {
     serialNumbersText: '',
   })));
 
+  const [scannerOpen, setScannerOpen] = useState(false);
+
   useEffect(() => { api.get('/products').then(setProducts).catch(() => {}); }, []);
 
   function productFor(productId) {
@@ -219,6 +222,21 @@ function ReceiveGoodsForm({ po, onClose, onReceived }) {
   }
   function updateLine(i, patch) {
     setLines((prev) => prev.map((l, idx) => idx === i ? { ...l, ...patch } : l));
+  }
+
+  /** Camera scan for goods receiving — matches the scanned barcode to a product already on this PO's outstanding lines and sets that line's received quantity to its full remaining amount (the common "scan it, it's all here" receiving flow). A code that doesn't match any outstanding line just gets reported, nothing else changes. */
+  function handleBarcodeDetected(code) {
+    setScannerOpen(false);
+    const line = lines.find((l) => {
+      const product = productFor(l.productId);
+      return product?.barcode === code || product?.variants?.some((v) => v.barcode === code || v._id === l.variantId && v.barcode === code);
+    });
+    if (!line) {
+      toast(`No outstanding line on this PO matches barcode ${code}.`, 'error');
+      return;
+    }
+    updateLine(lines.indexOf(line), { quantity: line.remaining });
+    toast(`${productFor(line.productId)?.name || 'Item'} set to fully received (${line.remaining}).`, 'success');
   }
 
   async function handleSubmit(e) {
@@ -262,8 +280,15 @@ function ReceiveGoodsForm({ po, onClose, onReceived }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-50 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-lg max-h-[85vh] overflow-y-auto">
-        <p className="font-display text-lg font-semibold text-ink mb-1">Receive goods</p>
-        <p className="text-xs text-ink-muted mb-4">Against <span className="num">{po.poNumber}</span>. Leave a line at 0 to skip it — partial receiving is fine, you can receive the rest later.</p>
+        <div className="flex items-start justify-between gap-3 mb-1">
+          <p className="font-display text-lg font-semibold text-ink">Receive goods</p>
+          <button type="button" className="btn-secondary !text-xs shrink-0" onClick={() => setScannerOpen(true)}>
+            <span className="font-icon text-[16px] leading-none">photo_camera</span>
+            Scan barcode
+          </button>
+        </div>
+        <p className="text-xs text-ink-muted mb-4">Against <span className="num">{po.poNumber}</span>. Leave a line at 0 to skip it — partial receiving is fine, you can receive the rest later. Scanning a barcode marks that line fully received.</p>
+        {scannerOpen && <BarcodeScannerModal onDetected={handleBarcodeDetected} onClose={() => setScannerOpen(false)} />}
 
         <div className="space-y-3">
           {lines.map((line, i) => {

@@ -1,10 +1,12 @@
 import { useEffect, useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { formatMoney, formatQty } from '../lib/format';
 
 export function PosPage() {
+  const { t } = useTranslation();
   const { company } = useAuth();
   const toast = useToast();
 
@@ -57,7 +59,7 @@ export function PosPage() {
   function addToCart(product) {
     const variant = product.variants?.[0];
     if (!variant) {
-      toast('This product has no sellable variant configured.', 'error');
+      toast(t('pos.noSellableVariant'), 'error');
       return;
     }
     setCart((prev) => {
@@ -144,7 +146,7 @@ export function PosPage() {
       await api.post(`/gift-cards/${giftCardNumber.toUpperCase().trim()}/redeem`, { amount: total, saleId: sale._id });
     }
 
-    toast(`Sale ${sale.invoiceNumber} completed — ${formatMoney(sale.totalAmount, company?.currency)}`, 'success');
+    toast(t('pos.saleCompleted', { invoiceNumber: sale.invoiceNumber, amount: formatMoney(sale.totalAmount, company?.currency) }), 'success');
     setCart([]);
     setGatewayStatus(null);
     setGatewayPhone('');
@@ -161,7 +163,7 @@ export function PosPage() {
     try {
       const result = await api.get(`/gift-cards/${giftCardNumber.toUpperCase().trim()}/lookup`);
       setGiftCardLookup(result);
-      if (!result.usable) toast(result.reason || 'This gift card cannot be used.', 'error');
+      if (!result.usable) toast(result.reason || t('pos.giftCardCannotBeUsed'), 'error');
     } catch (err) {
       setGiftCardLookup({ usable: false, reason: err.message, balance: 0 });
       toast(err.message, 'error');
@@ -188,31 +190,31 @@ export function PosPage() {
       }
       if (status.status === 'failed') {
         setGatewayStatus('failed');
-        toast(status.responseMessage || 'Payment was not completed by the customer.', 'error');
+        toast(status.responseMessage || t('pos.gatewayNotCompleted'), 'error');
         return;
       }
     }
     setGatewayStatus('failed');
-    toast('Timed out waiting for payment confirmation — ask the customer to check their phone and try again.', 'error');
+    toast(t('pos.gatewayTimeout'), 'error');
   }
 
   async function handleCheckout() {
     if (cart.length === 0) return;
     if (!context?.warehouseId || !context?.cashAccountId) {
-      toast('Set warehouse and payment account in Setup before checking out (see below).', 'error');
+      toast(t('pos.setupBeforeCheckout'), 'error');
       return;
     }
     if (isGatewayMethod && !/^03\d{9}$/.test(gatewayPhone)) {
-      toast('Enter a valid mobile number (03XXXXXXXXX) to charge via ' + (paymentMethod === 'jazzcash' ? 'JazzCash' : 'Easypaisa') + '.', 'error');
+      toast(t('pos.enterValidMobile', { provider: paymentMethod === 'jazzcash' ? 'JazzCash' : 'Easypaisa' }), 'error');
       return;
     }
     if (isGiftCardMethod) {
       if (!giftCardNumber.trim() || !giftCardLookup?.usable) {
-        toast('Look up a valid, usable gift card before checking out.', 'error');
+        toast(t('pos.lookUpGiftCardFirst'), 'error');
         return;
       }
       if (giftCardLookup.balance + 0.01 < total) {
-        toast(`This gift card only has ${formatMoney(giftCardLookup.balance, company?.currency)} remaining — not enough to cover ${formatMoney(total, company?.currency)}.`, 'error');
+        toast(t('pos.giftCardNotEnough', { balance: formatMoney(giftCardLookup.balance, company?.currency), total: formatMoney(total, company?.currency) }), 'error');
         return;
       }
     }
@@ -225,12 +227,12 @@ export function PosPage() {
         });
         if (init.status === 'failed') {
           setGatewayStatus('failed');
-          toast(init.responseMessage || 'Payment request was declined.', 'error');
+          toast(init.responseMessage || t('pos.gatewayDeclined'), 'error');
         } else if (init.status === 'completed') {
           await finalizeSale();
         } else {
           setGatewayStatus('waiting');
-          toast('Payment request sent — ask the customer to approve it on their phone.', 'success');
+          toast(t('pos.gatewayRequestSent'), 'success');
           await waitForGatewayPayment(init.transactionId);
         }
       } else {
@@ -248,14 +250,14 @@ export function PosPage() {
     <div className="flex flex-col lg:flex-row gap-6 lg:h-[calc(100vh-6rem)]">
       {/* Left pane — product search & grid */}
       <div className="flex-1 min-w-0 flex flex-col">
-        <p className="page-title mb-4">Checkout</p>
+        <p className="page-title mb-4">{t('pos.checkout')}</p>
 
         <div className="flex flex-col gap-3 mb-4 shrink-0">
           <div className="relative">
-            <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
+            <svg className="absolute left-4 rtl:left-auto rtl:right-4 top-1/2 -translate-y-1/2 text-ink-muted" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
             <input
-              type="text" placeholder="Search products by name, SKU, or scan barcode…" autoFocus
-              className="field-input !pl-11 !py-3"
+              type="text" placeholder={t('pos.searchPlaceholder')} autoFocus
+              className="field-input !pl-11 rtl:!pl-3 rtl:!pr-11 !py-3"
               value={search} onChange={(e) => setSearch(e.target.value)}
             />
           </div>
@@ -264,23 +266,23 @@ export function PosPage() {
         <SetupBar context={context} setContext={setContext} />
 
         {loadingProducts ? (
-          <p className="text-sm text-ink-muted mt-6">Loading products…</p>
+          <p className="text-sm text-ink-muted mt-6">{t('pos.loadingProducts')}</p>
         ) : filtered.length === 0 ? (
-          <p className="text-sm text-ink-muted mt-6">No products match "{search}".</p>
+          <p className="text-sm text-ink-muted mt-6">{t('pos.noProductsMatch', { query: search })}</p>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 lg:overflow-y-auto pr-1 mt-4 pb-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 lg:overflow-y-auto pr-1 rtl:pr-0 rtl:pl-1 mt-4 pb-4">
             {filtered.map((product) => (
               <button
                 key={product._id}
                 onClick={() => addToCart(product)}
-                className="card overflow-hidden text-left hover:border-accent/50 hover:shadow-md transition-all group flex flex-col"
+                className="card overflow-hidden text-left rtl:text-right hover:border-accent/50 hover:shadow-md transition-all group flex flex-col"
               >
                 <div className="h-24 bg-surface-sunken flex items-center justify-center shrink-0">
-                  <span className="text-ink-muted/40 font-display text-xs uppercase tracking-widest">{product.sku || 'Item'}</span>
+                  <span className="text-ink-muted/40 font-display text-xs uppercase tracking-widest">{product.sku || t('pos.item')}</span>
                 </div>
                 <div className="p-3 flex flex-col flex-1">
                   <p className="text-sm font-semibold text-ink line-clamp-2 leading-tight">{product.name}</p>
-                  <p className="text-xs text-ink-muted mt-1 mb-2">{product.sku ? `SKU: ${product.sku}` : '—'}</p>
+                  <p className="text-xs text-ink-muted mt-1 mb-2">{product.sku ? t('pos.sku', { sku: product.sku }) : '—'}</p>
                   <div className="mt-auto flex items-end justify-between">
                     <span className="num text-sm font-bold text-accent">{formatMoney(product.sellingPrice, company?.currency)}</span>
                     <span className="w-7 h-7 rounded-full bg-accent-soft text-accent-strong flex items-center justify-center group-hover:bg-accent group-hover:text-white transition-colors shrink-0">
@@ -299,12 +301,12 @@ export function PosPage() {
         {/* Ticket header */}
         <div className="p-4 border-b border-rule bg-surface-sunken flex justify-between items-center shrink-0">
           <div>
-            <h2 className="font-display text-lg font-semibold text-ink">Current ticket</h2>
-            <p className="text-xs text-ink-muted">{itemCount} item{itemCount === 1 ? '' : 's'}</p>
+            <h2 className="font-display text-lg font-semibold text-ink">{t('pos.currentTicket')}</h2>
+            <p className="text-xs text-ink-muted">{t('pos.itemCount', { count: itemCount })}</p>
           </div>
           <button
             className="btn-ghost !p-2 !text-danger disabled:opacity-30"
-            title="Clear ticket" disabled={cart.length === 0}
+            title={t('pos.clearTicket')} disabled={cart.length === 0}
             onClick={clearCart}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /></svg>
@@ -314,18 +316,18 @@ export function PosPage() {
         {/* Line items */}
         {cart.length === 0 ? (
           <p className="text-sm text-ink-muted flex-1 flex items-center justify-center text-center px-4 py-10">
-            Tap a product to add it to the ticket.
+            {t('pos.tapToAdd')}
           </p>
         ) : (
           <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2.5">
             {cart.map((line) => (
               <div key={line.variantId} className="card !shadow-none p-3 hover:border-accent/40 transition-colors">
                 <div className="flex justify-between items-start gap-2 mb-1.5">
-                  <p className="text-sm font-semibold text-ink leading-tight pr-2">{line.name}</p>
+                  <p className="text-sm font-semibold text-ink leading-tight pr-2 rtl:pr-0 rtl:pl-2">{line.name}</p>
                   <span className="num text-sm font-bold text-ink shrink-0">{formatMoney(line.unitPrice * line.quantity, company?.currency)}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-ink-muted">{formatMoney(line.unitPrice, company?.currency)} each</span>
+                  <span className="text-xs text-ink-muted">{formatMoney(line.unitPrice, company?.currency)} {t('pos.each')}</span>
                   <div className="flex items-center gap-2">
                     <div className="flex items-center bg-surface-sunken rounded-md border border-rule">
                       <button
@@ -338,7 +340,7 @@ export function PosPage() {
                         onClick={() => updateQty(line.variantId, line.quantity + 1)}
                       >+</button>
                     </div>
-                    <button className="text-xs font-semibold text-danger hover:underline" onClick={() => removeLine(line.variantId)}>Remove</button>
+                    <button className="text-xs font-semibold text-danger hover:underline" onClick={() => removeLine(line.variantId)}>{t('pos.remove')}</button>
                   </div>
                 </div>
               </div>
@@ -349,16 +351,16 @@ export function PosPage() {
         {/* Totals & checkout */}
         <div className="border-t border-rule p-4 shrink-0 bg-surface">
           <div className="mb-3">
-            <label className="field-label">Coupon code</label>
+            <label className="field-label">{t('pos.couponCode')}</label>
             {couponResult ? (
               <div className="flex items-center justify-between bg-accent-soft border border-transparent rounded-lg px-3 py-2">
-                <span className="text-sm font-semibold text-accent-strong">{couponCode.toUpperCase()} applied — −{formatMoney(couponResult.discountAmount, company?.currency)}</span>
-                <button type="button" className="text-xs font-semibold text-ink-muted hover:text-danger" onClick={removeCoupon}>Remove</button>
+                <span className="text-sm font-semibold text-accent-strong">{t('pos.couponApplied', { code: couponCode.toUpperCase(), amount: formatMoney(couponResult.discountAmount, company?.currency) })}</span>
+                <button type="button" className="text-xs font-semibold text-ink-muted hover:text-danger" onClick={removeCoupon}>{t('pos.remove')}</button>
               </div>
             ) : (
               <div className="flex gap-2">
                 <input
-                  type="text" placeholder="e.g. SAVE10" className="field-input flex-1"
+                  type="text" placeholder={t('pos.couponPlaceholder')} className="field-input flex-1"
                   value={couponCode} onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                   disabled={checkingOut}
                 />
@@ -366,22 +368,22 @@ export function PosPage() {
                   type="button" className="btn-secondary shrink-0"
                   onClick={applyCoupon} disabled={!couponCode.trim() || couponChecking || checkingOut || cart.length === 0}
                 >
-                  {couponChecking ? 'Checking…' : 'Apply'}
+                  {couponChecking ? t('pos.checking') : t('pos.apply')}
                 </button>
               </div>
             )}
           </div>
 
           <div className="flex flex-col gap-1.5 text-sm text-ink-muted mb-3">
-            <div className="flex justify-between"><span>Subtotal ({itemCount} item{itemCount === 1 ? '' : 's'})</span><span className="num">{formatMoney(subtotal, company?.currency)}</span></div>
-            <div className="flex justify-between"><span>Tax</span><span className="num">{formatMoney(taxTotal, company?.currency)}</span></div>
+            <div className="flex justify-between"><span>{t('pos.subtotal', { count: itemCount })}</span><span className="num">{formatMoney(subtotal, company?.currency)}</span></div>
+            <div className="flex justify-between"><span>{t('pos.tax')}</span><span className="num">{formatMoney(taxTotal, company?.currency)}</span></div>
             {couponDiscount > 0 && (
-              <div className="flex justify-between text-accent-strong"><span>Coupon discount</span><span className="num">−{formatMoney(couponDiscount, company?.currency)}</span></div>
+              <div className="flex justify-between text-accent-strong"><span>{t('pos.couponDiscount')}</span><span className="num">−{formatMoney(couponDiscount, company?.currency)}</span></div>
             )}
           </div>
           <div className="tear-line mb-3" />
           <div className="flex justify-between items-end mb-4">
-            <span className="font-display text-base font-bold text-ink">Total</span>
+            <span className="font-display text-base font-bold text-ink">{t('pos.total')}</span>
             <span className="num text-2xl font-bold text-accent leading-none">{formatMoney(total, company?.currency)}</span>
           </div>
 
@@ -393,32 +395,32 @@ export function PosPage() {
                 </span>
               ))}
               <span className="py-2 text-center bg-accent-soft border border-transparent rounded-lg text-sm font-semibold text-accent-strong">
-                Exact
+                {t('pos.exact')}
               </span>
             </div>
           )}
 
           <div className="mb-2">
-            <label className="field-label">Payment method</label>
+            <label className="field-label">{t('pos.paymentMethod')}</label>
             <select
               className="field-input"
               value={paymentMethod}
               onChange={(e) => { setPaymentMethod(e.target.value); setGatewayStatus(null); setGiftCardLookup(null); }}
             >
-              <option value="cash">Cash</option>
-              <option value="card">Card</option>
-              <option value="bank_transfer">Bank transfer</option>
-              <option value="jazzcash">JazzCash</option>
-              <option value="easypaisa">Easypaisa</option>
-              <option value="gift_card">Gift card</option>
+              <option value="cash">{t('pos.cash')}</option>
+              <option value="card">{t('pos.card')}</option>
+              <option value="bank_transfer">{t('pos.bankTransfer')}</option>
+              <option value="jazzcash">{t('pos.jazzcash')}</option>
+              <option value="easypaisa">{t('pos.easypaisa')}</option>
+              <option value="gift_card">{t('pos.giftCard')}</option>
             </select>
           </div>
 
           {isGatewayMethod && (
             <div className="mb-2">
-              <label className="field-label">Customer mobile number</label>
+              <label className="field-label">{t('pos.customerMobileNumber')}</label>
               <input
-                type="tel" placeholder="03XXXXXXXXX" className="field-input"
+                type="tel" placeholder={t('pos.gatewayPhonePlaceholder')} className="field-input"
                 value={gatewayPhone} onChange={(e) => setGatewayPhone(e.target.value.trim())}
                 disabled={checkingOut}
               />
@@ -427,10 +429,10 @@ export function PosPage() {
 
           {isGiftCardMethod && (
             <div className="mb-2">
-              <label className="field-label">Gift card number</label>
+              <label className="field-label">{t('pos.giftCardNumber')}</label>
               <div className="flex gap-2">
                 <input
-                  type="text" placeholder="Scan or enter card number" className="field-input flex-1"
+                  type="text" placeholder={t('pos.giftCardPlaceholder')} className="field-input flex-1"
                   value={giftCardNumber}
                   onChange={(e) => { setGiftCardNumber(e.target.value.toUpperCase()); setGiftCardLookup(null); }}
                   disabled={checkingOut}
@@ -439,13 +441,13 @@ export function PosPage() {
                   type="button" className="btn-secondary shrink-0"
                   onClick={checkGiftCard} disabled={!giftCardNumber.trim() || giftCardChecking || checkingOut}
                 >
-                  {giftCardChecking ? 'Checking…' : 'Check'}
+                  {giftCardChecking ? t('pos.checking') : t('pos.check')}
                 </button>
               </div>
               {giftCardLookup && giftCardLookup.usable && (
                 <p className="text-sm text-accent-strong mt-1.5">
-                  Balance: {formatMoney(giftCardLookup.balance, company?.currency)}
-                  {giftCardLookup.balance + 0.01 < total && ' — not enough to cover this sale.'}
+                  {t('pos.balance', { amount: formatMoney(giftCardLookup.balance, company?.currency) })}
+                  {giftCardLookup.balance + 0.01 < total && t('pos.notEnoughForSale')}
                 </p>
               )}
               {giftCardLookup && !giftCardLookup.usable && (
@@ -456,12 +458,12 @@ export function PosPage() {
 
           {gatewayStatus === 'waiting' && (
             <p className="text-sm text-accent-strong mb-2">
-              Waiting for the customer to approve the payment on their phone…
+              {t('pos.waitingForApproval')}
             </p>
           )}
           {gatewayStatus === 'failed' && (
             <p className="text-sm text-danger mb-2">
-              Payment was not confirmed. Try again once the customer is ready.
+              {t('pos.paymentNotConfirmed')}
             </p>
           )}
 
@@ -474,10 +476,10 @@ export function PosPage() {
           >
             <span>
               {checkingOut
-                ? (gatewayStatus === 'waiting' ? 'Waiting for confirmation…' : 'Processing…')
-                : `Charge ${formatMoney(total, company?.currency)}`}
+                ? (gatewayStatus === 'waiting' ? t('pos.waitingConfirmation') : t('pos.processing'))
+                : t('pos.charge', { amount: formatMoney(total, company?.currency) })}
             </span>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M13 5l7 7-7 7" /></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="rtl:rotate-180"><path d="M5 12h14M13 5l7 7-7 7" /></svg>
           </button>
         </div>
       </div>
@@ -487,6 +489,7 @@ export function PosPage() {
 
 /** One-time checkout setup — branch/warehouse/terminal/cash-account, picked from real data via dropdowns (not pasted IDs), persisted to localStorage so it's set once per browser. */
 function SetupBar({ context, setContext }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(!context);
   const [branches, setBranches] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
@@ -511,7 +514,7 @@ function SetupBar({ context, setContext }) {
   if (!open) {
     return (
       <button className="text-xs font-semibold text-ink-muted hover:text-accent mb-2 self-start" onClick={() => setOpen(true)}>
-        Change checkout setup
+        {t('pos.changeCheckoutSetup')}
       </button>
     );
   }
@@ -526,36 +529,36 @@ function SetupBar({ context, setContext }) {
   return (
     <div className="card p-3 mb-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs shrink-0">
       <div>
-        <label className="field-label">Branch</label>
+        <label className="field-label">{t('pos.branch')}</label>
         <select className="field-input !text-xs" value={branchId} onChange={(e) => { setBranchId(e.target.value); setWarehouseId(''); setPosTerminalId(''); }}>
-          <option value="">Select…</option>
+          <option value="">{t('common.select')}</option>
           {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
         </select>
       </div>
       <div>
-        <label className="field-label">Warehouse</label>
+        <label className="field-label">{t('pos.warehouse')}</label>
         <select className="field-input !text-xs" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} disabled={!branchId}>
-          <option value="">Select…</option>
+          <option value="">{t('common.select')}</option>
           {warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
         </select>
       </div>
       <div>
-        <label className="field-label">Terminal (optional)</label>
+        <label className="field-label">{t('pos.terminalOptional')}</label>
         <select className="field-input !text-xs" value={posTerminalId} onChange={(e) => setPosTerminalId(e.target.value)} disabled={!branchId}>
-          <option value="">None</option>
-          {terminals.map((t) => <option key={t._id} value={t._id}>{t.name}</option>)}
+          <option value="">{t('common.none')}</option>
+          {terminals.map((term) => <option key={term._id} value={term._id}>{term.name}</option>)}
         </select>
       </div>
       <div>
-        <label className="field-label">Cash/payment account</label>
+        <label className="field-label">{t('pos.cashPaymentAccount')}</label>
         <select className="field-input !text-xs" value={cashAccountId} onChange={(e) => setCashAccountId(e.target.value)}>
-          <option value="">Select…</option>
+          <option value="">{t('common.select')}</option>
           {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
         </select>
       </div>
       <div className="col-span-4">
         <button className="btn-secondary !text-xs" onClick={save} disabled={!branchId || !warehouseId || !cashAccountId}>
-          Save
+          {t('pos.save')}
         </button>
       </div>
     </div>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import { Sidebar } from './Sidebar';
+import { LanguageSwitcher } from './LanguageSwitcher';
 import { useAuth } from '../context/AuthContext';
 
 export function AppLayout() {
@@ -20,10 +21,18 @@ export function AppLayout() {
           <button onClick={() => setMobileOpen(true)} className="text-ink px-1" aria-label="Open menu">
             <Menu size={20} strokeWidth={2} />
           </button>
-          <p className="font-display font-bold text-base text-ink truncate">{company?.name || 'Muhasib'}</p>
+          <p className="font-display font-bold text-base text-ink truncate flex-1">{company?.name || 'Muhasib'}</p>
+          <LanguageSwitcher />
         </div>
 
-        <main className="flex-1 min-w-0 p-4 md:p-8">
+        {/* Desktop-only slim header — just enough to host the language
+            switcher without duplicating the mobile topbar's branding
+            (the static sidebar already carries that at md+). */}
+        <div className="hidden md:flex items-center justify-end px-8 pt-4">
+          <LanguageSwitcher />
+        </div>
+
+        <main className="flex-1 min-w-0 p-4 md:p-8 md:pt-2">
           <Outlet />
         </main>
       </div>

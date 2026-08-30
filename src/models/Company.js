@@ -52,6 +52,24 @@ const companySchema = new Schema({
   // companyProvisioningService.onboardCompany() from the accounts it just
   // created — see defaultAccountsService for how a lookup here falls back
   // to a name-based guess only when a company was set up some other way.
+  // Per-tenant JazzCash credentials used ONLY for paying this company's OWN
+  // tax liability to FBR (Bill Payment / Tax Payment API family) — kept
+  // entirely separate from the platform-wide JAZZCASH_* env vars that
+  // jazzCashService.js uses for customer-facing POS checkout, since each
+  // vendor connects their own JazzCash merchant account for this flow.
+  // NOTE: password/integritySalt are sensitive credentials stored as-is
+  // below — no encrypted-field pattern exists elsewhere in this codebase
+  // (grepped for "encrypt", found none) to reuse, so production deployments
+  // should add field-level encryption-at-rest for these two before go-live.
+  jazzCashTaxPay: {
+    enabled: { type: Boolean, default: false },
+    merchantId: { type: String, default: null },
+    password: { type: String, default: null }, // TODO(security): encrypt at rest in production — stored plain for now, no existing encryption helper in this codebase to reuse.
+    integritySalt: { type: String, default: null }, // TODO(security): encrypt at rest in production, see note above.
+    fbrAccountNumber: { type: String, default: null },
+    fbrAccountTitle: { type: String, default: null },
+  },
+
   defaultAccounts: {
     inventoryAssetId: { type: Schema.Types.ObjectId, ref: 'Account', default: null },
     costOfGoodsSoldId: { type: Schema.Types.ObjectId, ref: 'Account', default: null },

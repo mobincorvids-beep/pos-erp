@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   ShoppingCart, Package, Wallet, Users, BarChart3, Building2, LogOut,
   CreditCard, Receipt, FileText, CalendarClock, Wrench, Boxes, ArrowLeftRight,
@@ -35,85 +36,93 @@ const ITEM_ICONS = {
 const SECTION_ICONS = { Sell: ShoppingCart, Stock: Package, Money: Wallet, People: Users, Insights: BarChart3, Industry: Building2 };
 
 // Grouped by workflow proximity, not by backend module name — a cashier
-// thinks "Sell", not "PosSaleService".
+// thinks "Sell", not "PosSaleService". Labels are i18n keys (resolved via
+// t() at render time) rather than literal English strings — see
+// client/src/i18n/README.md for how this maps to translation.json.
 const SECTIONS = [
   {
     label: 'Sell',
+    sectionKey: 'nav.sections.sell',
     items: [
-      { to: '/pos', label: 'Checkout' },
-      { to: '/sales', label: 'Sales history' },
-      { to: '/recurring-invoices', label: 'Recurring invoices' },
-      { to: '/sales-workflow', label: 'Quotations & orders' },
-      { to: '/appointments', label: 'Appointments' },
-      { to: '/service-orders', label: 'Service orders' },
-      { to: '/field-service', label: 'Field service' },
+      { to: '/pos', labelKey: 'nav.items.checkout' },
+      { to: '/sales', labelKey: 'nav.items.salesHistory' },
+      { to: '/recurring-invoices', labelKey: 'nav.items.recurringInvoices' },
+      { to: '/sales-workflow', labelKey: 'nav.items.quotationsOrders' },
+      { to: '/appointments', labelKey: 'nav.items.appointments' },
+      { to: '/service-orders', labelKey: 'nav.items.serviceOrders' },
+      { to: '/field-service', labelKey: 'nav.items.fieldService' },
     ],
   },
   {
     label: 'Stock',
+    sectionKey: 'nav.sections.stock',
     items: [
-      { to: '/products', label: 'Products' },
-      { to: '/units', label: 'Units' },
-      { to: '/purchases', label: 'Purchase orders' },
-      { to: '/rfqs', label: 'RFQs' },
-      { to: '/early-payment-discount', label: 'Early payment discount' },
-      { to: '/stock-transfers', label: 'Transfers' },
-      { to: '/stock-counts', label: 'Stocktakes' },
-      { to: '/manufacturing', label: 'Manufacturing' },
-      { to: '/quality', label: 'Quality' },
-      { to: '/fleet', label: 'Fleet & transport' },
-      { to: '/logistics-core', label: 'Shipments' },
-      { to: '/warehouse', label: 'Warehouse locations' },
+      { to: '/products', labelKey: 'nav.items.products' },
+      { to: '/units', labelKey: 'nav.items.units' },
+      { to: '/purchases', labelKey: 'nav.items.purchaseOrders' },
+      { to: '/rfqs', labelKey: 'nav.items.rfqs' },
+      { to: '/early-payment-discount', labelKey: 'nav.items.earlyPaymentDiscount' },
+      { to: '/stock-transfers', labelKey: 'nav.items.transfers' },
+      { to: '/stock-counts', labelKey: 'nav.items.stocktakes' },
+      { to: '/manufacturing', labelKey: 'nav.items.manufacturing' },
+      { to: '/quality', labelKey: 'nav.items.quality' },
+      { to: '/fleet', labelKey: 'nav.items.fleetTransport' },
+      { to: '/logistics-core', labelKey: 'nav.items.shipments' },
+      { to: '/warehouse', labelKey: 'nav.items.warehouseLocations' },
     ],
   },
   {
     label: 'Money',
+    sectionKey: 'nav.sections.money',
     items: [
-      { to: '/expenses', label: 'Expenses' },
-      { to: '/banking', label: 'Banking' },
-      { to: '/projects', label: 'Projects' },
-      { to: '/reports', label: 'Reports' },
-      { to: '/budgets', label: 'Budgets' },
-      { to: '/aging', label: 'AR / AP Aging' },
-      { to: '/cost-centers', label: 'Cost centers' },
-      { to: '/periods', label: 'Fiscal years & periods' },
-      { to: '/fixed-assets', label: 'Fixed Assets' },
-      { to: '/contracts', label: 'Contracts & legal' },
+      { to: '/expenses', labelKey: 'nav.items.expenses' },
+      { to: '/banking', labelKey: 'nav.items.banking' },
+      { to: '/projects', labelKey: 'nav.items.projects' },
+      { to: '/reports', labelKey: 'nav.items.reports' },
+      { to: '/budgets', labelKey: 'nav.items.budgets' },
+      { to: '/aging', labelKey: 'nav.items.agingArAp' },
+      { to: '/cost-centers', labelKey: 'nav.items.costCenters' },
+      { to: '/periods', labelKey: 'nav.items.fiscalYearsPeriods' },
+      { to: '/fixed-assets', labelKey: 'nav.items.fixedAssets' },
+      { to: '/contracts', labelKey: 'nav.items.contractsLegal' },
     ],
   },
   {
     label: 'People',
+    sectionKey: 'nav.sections.people',
     items: [
-      { to: '/customers', label: 'Customers' },
-      { to: '/suppliers', label: 'Suppliers' },
-      { to: '/team', label: 'Team' },
-      { to: '/security', label: 'Security' },
-      { to: '/hr', label: 'HR & Payroll' },
-      { to: '/employee-loans', label: 'Employee loans' },
-      { to: '/timesheets', label: 'Timesheets' },
-      { to: '/recruitment', label: 'Recruitment' },
-      { to: '/performance', label: 'Performance & Goals' },
-      { to: '/crm', label: 'CRM' },
-      { to: '/funnels', label: 'Funnels' },
-      { to: '/loyalty', label: 'Loyalty' },
-      { to: '/tickets', label: 'Helpdesk' },
-      { to: '/chat', label: 'Team Chat' },
-      { to: '/calendar', label: 'Calendar' },
-      { to: '/maintenance', label: 'Maintenance' },
+      { to: '/customers', labelKey: 'nav.items.customers' },
+      { to: '/suppliers', labelKey: 'nav.items.suppliers' },
+      { to: '/team', labelKey: 'nav.items.team' },
+      { to: '/security', labelKey: 'nav.items.security' },
+      { to: '/hr', labelKey: 'nav.items.hrPayroll' },
+      { to: '/employee-loans', labelKey: 'nav.items.employeeLoans' },
+      { to: '/timesheets', labelKey: 'nav.items.timesheets' },
+      { to: '/recruitment', labelKey: 'nav.items.recruitment' },
+      { to: '/performance', labelKey: 'nav.items.performanceGoals' },
+      { to: '/crm', labelKey: 'nav.items.crm' },
+      { to: '/funnels', labelKey: 'nav.items.funnels' },
+      { to: '/loyalty', labelKey: 'nav.items.loyalty' },
+      { to: '/tickets', labelKey: 'nav.items.helpdesk' },
+      { to: '/chat', labelKey: 'nav.items.teamChat' },
+      { to: '/calendar', labelKey: 'nav.items.calendar' },
+      { to: '/maintenance', labelKey: 'nav.items.maintenance' },
     ],
   },
   {
     label: 'Insights',
+    sectionKey: 'nav.sections.insights',
     items: [
-      { to: '/ai-insights', label: 'Insights' },
-      { to: '/ecommerce', label: 'E-commerce' },
-      { to: '/ecommerce-hub', label: 'E-commerce Hub' },
-      { to: '/developer-platform', label: 'Developer platform' },
+      { to: '/ai-insights', labelKey: 'nav.items.insights' },
+      { to: '/ecommerce', labelKey: 'nav.items.ecommerce' },
+      { to: '/ecommerce-hub', labelKey: 'nav.items.ecommerceHub' },
+      { to: '/developer-platform', labelKey: 'nav.items.developerPlatform' },
     ],
   },
 ];
 
 export function Sidebar({ mobileOpen, onClose }) {
+  const { t } = useTranslation();
   const { company, logout, user } = useAuth();
   // Only surface the ONE industry module this tenant actually has (if
   // any) — previously every tenant's sidebar listed all ~30 industry
@@ -135,9 +144,10 @@ export function Sidebar({ mobileOpen, onClose }) {
   // Shared classes for every nav row — a bold, filled active state (dark
   // accent bg + white text + a left accent-strong border stripe) rather
   // than the old soft-tint active state, matching the SafePOS design
-  // system's nav treatment.
+  // system's nav treatment. rtl:border-l-0 rtl:border-r-4 flips the
+  // accent stripe to the visual "leading" edge under dir="rtl".
   const linkClass = ({ isActive }) =>
-    `flex items-center gap-3 px-4 py-2.5 text-sm mx-2 rounded-lg font-semibold border-l-4 transition-colors ${
+    `flex items-center gap-3 px-4 py-2.5 text-sm mx-2 rounded-lg font-semibold border-l-4 rtl:border-l-0 rtl:border-r-4 transition-colors ${
       isActive
         ? 'bg-accent text-white border-accent-strong shadow-sm'
         : 'text-ink border-transparent hover:bg-surface-sunken'
@@ -165,7 +175,7 @@ export function Sidebar({ mobileOpen, onClose }) {
         <div className="mb-4">
           <NavLink to="/dashboard" end onClick={onClose} className={linkClass}>
             <LayoutDashboard size={17} strokeWidth={2} className="shrink-0" />
-            Home
+            {t('nav.home')}
           </NavLink>
         </div>
         {visibleSections.map((section) => {
@@ -174,14 +184,14 @@ export function Sidebar({ mobileOpen, onClose }) {
             <div key={section.label} className="mb-4">
               <p className="px-5 mb-1.5 flex items-center gap-1.5 eyebrow">
                 <SectionIcon size={12} strokeWidth={2.5} />
-                {section.label}
+                {t(section.sectionKey)}
               </p>
               {section.items.map((item) => {
                 const ItemIcon = ITEM_ICONS[item.to] || Circle;
                 return (
                   <NavLink key={item.to} to={item.to} onClick={onClose} className={linkClass}>
                     <ItemIcon size={17} strokeWidth={2} className="shrink-0" />
-                    {item.label}
+                    {t(item.labelKey)}
                   </NavLink>
                 );
               })}
@@ -192,7 +202,7 @@ export function Sidebar({ mobileOpen, onClose }) {
           <div className="mb-4">
             <p className="px-5 mb-1.5 flex items-center gap-1.5 eyebrow">
               <Building2 size={12} strokeWidth={2.5} />
-              Industry
+              {t('nav.sections.industry')}
             </p>
             {enabledIndustryModules.map((item) => (
               <NavLink key={item.path} to={item.path} onClick={onClose} className={linkClass}>
@@ -210,7 +220,7 @@ export function Sidebar({ mobileOpen, onClose }) {
       <div className="mb-1">
         <NavLink to="/settings" onClick={onClose} className={linkClass}>
           <Settings size={17} strokeWidth={2} className="shrink-0" />
-          Settings
+          {t('nav.settings')}
         </NavLink>
       </div>
 
@@ -218,7 +228,7 @@ export function Sidebar({ mobileOpen, onClose }) {
         <p className="text-sm font-semibold text-ink truncate">{user?.name}</p>
         <button onClick={logout} className="flex items-center gap-1.5 text-xs text-ink-muted hover:text-danger mt-1">
           <LogOut size={13} />
-          Sign out
+          {t('nav.signOut')}
         </button>
       </div>
     </>
@@ -232,7 +242,9 @@ export function Sidebar({ mobileOpen, onClose }) {
       </aside>
 
       {/* Mobile drawer — an overlay + slide-in panel, only mounted below the md breakpoint.
-          Backdrop click and the × button both close it; navigating also closes it (onClose above). */}
+          Backdrop click and the × button both close it; navigating also closes it (onClose above).
+          rtl:left-auto rtl:right-0 + rtl:translate-x-full flip the drawer to slide in from the
+          visual "start" edge (the right, in RTL) instead of always sliding from the left. */}
       <div className={`md:hidden fixed inset-0 z-40 ${mobileOpen ? '' : 'pointer-events-none'}`}>
         <div
           className={`absolute inset-0 bg-ink/30 transition-opacity ${mobileOpen ? 'opacity-100' : 'opacity-0'}`}
@@ -240,8 +252,8 @@ export function Sidebar({ mobileOpen, onClose }) {
           aria-hidden="true"
         />
         <aside
-          className={`absolute inset-y-0 left-0 w-72 bg-surface-sunken border-r border-rule flex flex-col transition-transform duration-200 ${
-            mobileOpen ? 'translate-x-0' : '-translate-x-full'
+          className={`absolute inset-y-0 left-0 rtl:left-auto rtl:right-0 w-72 bg-surface-sunken border-r border-rule rtl:border-r-0 rtl:border-l flex flex-col transition-transform duration-200 ${
+            mobileOpen ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full'
           }`}
         >
           {content}

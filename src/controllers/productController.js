@@ -1,14 +1,26 @@
 const Product = require('../models/Product');
 const inventoryService = require('../services/inventoryService');
+const productImportService = require('../services/productImportService');
 
 async function list(req, res) {
   const products = await Product.find({ companyId: req.companyId, isActive: true }).limit(200);
   res.json(products);
 }
 
+/** categoryId is required going forward — every NEW product must be filed under a
+ * category (and optionally a subcategory). Products created before this requirement
+ * existed keep whatever they have (including none) — see categoryService's
+ * "Uncategorized" fallback, used by the CSV importer and available for manual cleanup. */
 async function create(req, res) {
-  const product = await Product.create({ ...req.body, companyId: req.companyId });
-  res.status(201).json(product);
+  try {
+    if (!req.body.categoryId) {
+      return res.status(400).json({ error: 'categoryId is required — choose a category (and optionally a subcategory) for this product.' });
+    }
+    const product = await Product.create({ ...req.body, companyId: req.companyId });
+    res.status(201).json(product);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 }
 
 /** Was missing entirely — the most-used entity in the whole app had no way to correct a
@@ -88,4 +100,15 @@ async function listBatches(req, res) {
   res.json(await inventoryService.listProductBatches(req.companyId, req.query));
 }
 
-module.exports = { list, create, update, deactivate, addVariant, updateVariant, deactivateVariant, findByBarcode, listBatches };
+/** POST /products/import-csv — bulk create/update products (and post opening stock) from an uploaded CSV. Never fails the whole batch on one bad row; see productImportService for the row-by-row contract. */
+async function importCsv(req, res) {
+  if (!req.file) return res.status(400).json({ error: 'No CSV file was uploaded (expected multipart field "file").' });
+  try {
+    const summary = await productImportService.importProductsCsv(req.companyId, req.auth?.userId, req.file.buffer);
+    res.json(summary);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+module.exports = { list, create, update, deactivate, addVariant, updateVariant, deactivateVariant, findByBarcode, listBatches, importCsv };

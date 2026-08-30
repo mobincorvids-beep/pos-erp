@@ -89,12 +89,45 @@ async function request(method, path, body) {
   return data;
 }
 
+/** Multipart upload (e.g. CSV import) — same auth/refresh handling as request(), but skips the JSON Content-Type/body so the browser sets its own multipart boundary. */
+async function uploadRequest(path, formData) {
+  const token = getToken();
+  const doUpload = async (t) => {
+    const headers = {};
+    if (t) headers.Authorization = `Bearer ${t}`;
+    const response = await fetch(`${BASE_URL}${path}`, { method: 'POST', headers, body: formData });
+    const isJson = response.headers.get('content-type')?.includes('application/json');
+    const data = isJson ? await response.json().catch(() => null) : null;
+    return { response, data };
+  };
+
+  let { response, data } = await doUpload(token);
+  if (response.status === 401) {
+    try {
+      const newToken = await refreshAccessToken();
+      ({ response, data } = await doUpload(newToken));
+    } catch {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(REFRESH_KEY);
+      onAuthFailure?.();
+    }
+  }
+  if (!response.ok) {
+    const message = data?.error || `Request failed (${response.status})`;
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
+  }
+  return data;
+}
+
 export const api = {
   get: (path) => request('GET', path),
   post: (path, body) => request('POST', path, body),
   put: (path, body) => request('PUT', path, body),
   patch: (path, body) => request('PATCH', path, body),
   del: (path) => request('DELETE', path),
+  upload: (path, formData) => uploadRequest(path, formData),
 };
 
 export function setToken(token, refreshToken) {

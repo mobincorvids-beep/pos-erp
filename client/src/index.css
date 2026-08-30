@@ -93,3 +93,15 @@
     @apply text-xs font-semibold uppercase tracking-widest text-ink-muted;
   }
 }
+
+/* RTL layout adjustments — scoped to the surfaces that have actually been
+   migrated to react-i18next (Sidebar, AppLayout, LoginPage, DashboardPage,
+   PosPage) rather than a blanket app-wide flip. Most spacing already uses
+   Tailwind's logical/flow-relative utilities (gap-*, justify-*, flex) that
+   mirror correctly on their own; the rule below covers the one
+   physical-direction case that doesn't: numeric/money columns, which must
+   stay digit-order-correct even inside an RTL document. */
+[dir="rtl"] .num {
+  direction: ltr;
+  unicode-bidi: plaintext;
+}
