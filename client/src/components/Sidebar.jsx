@@ -58,6 +58,7 @@ const SECTIONS = [
     sectionKey: 'nav.sections.stock',
     items: [
       { to: '/products', labelKey: 'nav.items.products' },
+      { to: '/categories', labelKey: 'nav.items.categories' },
       { to: '/units', labelKey: 'nav.items.units' },
       { to: '/purchases', labelKey: 'nav.items.purchaseOrders' },
       { to: '/rfqs', labelKey: 'nav.items.rfqs' },

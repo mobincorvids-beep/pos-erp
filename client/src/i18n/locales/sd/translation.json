@@ -106,7 +106,8 @@
       "insights": "بصيرت",
       "ecommerce": "اي ڪامرس",
       "ecommerceHub": "اي ڪامرس مرڪز",
-      "developerPlatform": "ڊويلپر پليٽ فارم"
+      "developerPlatform": "ڊويلپر پليٽ فارم",
+      "categories": "اقسام"
     },
     "settings": "ترتيبون",
     "signOut": "سائن آئوٽ"
@@ -222,6 +223,7 @@
     "gatewayNotCompleted": "گراهڪ ادائيگي مڪمل ناهي ڪئي.",
     "gatewayTimeout": "ادائيگي جي تصديق جو انتظار ختم ٿي ويو — گراهڪ کي فون چيڪ ڪرڻ لاءِ چئو ۽ ٻيهر ڪوشش ڪريو.",
     "giftCardCannotBeUsed": "هي گفٽ ڪارڊ استعمال نه ٿو ٿي سگهي.",
-    "saleCompleted": "وڪرو {{invoiceNumber}} مڪمل ٿيو — {{amount}}"
+    "saleCompleted": "وڪرو {{invoiceNumber}} مڪمل ٿيو — {{amount}}",
+    "scanBarcode": "بار ڪوڊ اسڪين ڪريو"
   }
 }

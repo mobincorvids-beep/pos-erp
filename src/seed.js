@@ -17,6 +17,7 @@ const Product = require('./models/Product');
 const Customer = require('./models/Customer');
 const Supplier = require('./models/Supplier');
 const inventoryService = require('./services/inventoryService');
+const categoryService = require('./services/categoryService');
 
 async function seed() {
   await connectDB();
@@ -27,6 +28,12 @@ async function seed() {
     industryType: 'retail',
     activeModules: [], // set to ['restaurant'] or ['pharmacy'] to try those modules
   });
+
+  // Same default supermarket-style category/subcategory tree
+  // companyProvisioningService seeds for every real tenant — the demo
+  // company needs it too, or the Products page's required Category field
+  // has nothing to select from.
+  await categoryService.seedDefaultCategories(company._id);
 
   const branch = await Branch.create({ companyId: company._id, name: 'Main Branch', code: 'MAIN' });
   const warehouse = await Warehouse.create({ companyId: company._id, branchId: branch._id, name: 'Main Warehouse', isDefault: true });

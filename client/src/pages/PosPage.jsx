@@ -4,6 +4,7 @@ import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { formatMoney, formatQty } from '../lib/format';
+import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
 
 export function PosPage() {
   const { t } = useTranslation();
@@ -12,6 +13,7 @@ export function PosPage() {
 
   const [products, setProducts] = useState([]);
   const [search, setSearch] = useState('');
+  const [scannerOpen, setScannerOpen] = useState(false);
   const [cart, setCart] = useState([]); // [{ productId, variantId, name, unitPrice, quantity, taxRate }]
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [checkingOut, setCheckingOut] = useState(false);
@@ -72,6 +74,23 @@ export function PosPage() {
         unitPrice: variant.sellingPrice ?? product.sellingPrice, quantity: 1, taxRate: 0,
       }];
     });
+  }
+
+  // Reuses the exact same lookup a typed/keyboard-wedge barcode already
+  // goes through (products loaded once into local state, matched by
+  // product.barcode or a variant's own barcode) — the camera scanner is
+  // just another way to produce the code string, never a second lookup path.
+  function handleScannedBarcode(code) {
+    setScannerOpen(false);
+    const match = products.find(
+      (p) => p.barcode === code || p.variants?.some((v) => v.barcode === code)
+    );
+    if (!match) {
+      toast(t('pos.noProductsMatch', { query: code }), 'error');
+      return;
+    }
+    addToCart(match);
+    toast(match.name, 'success');
   }
 
   function updateQty(variantId, quantity) {
@@ -253,15 +272,30 @@ export function PosPage() {
         <p className="page-title mb-4">{t('pos.checkout')}</p>
 
         <div className="flex flex-col gap-3 mb-4 shrink-0">
-          <div className="relative">
-            <svg className="absolute left-4 rtl:left-auto rtl:right-4 top-1/2 -translate-y-1/2 text-ink-muted" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
-            <input
-              type="text" placeholder={t('pos.searchPlaceholder')} autoFocus
-              className="field-input !pl-11 rtl:!pl-3 rtl:!pr-11 !py-3"
-              value={search} onChange={(e) => setSearch(e.target.value)}
-            />
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <svg className="absolute left-4 rtl:left-auto rtl:right-4 top-1/2 -translate-y-1/2 text-ink-muted" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
+              <input
+                type="text" placeholder={t('pos.searchPlaceholder')} autoFocus
+                className="field-input !pl-11 rtl:!pl-3 rtl:!pr-11 !py-3"
+                value={search} onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <button
+              type="button" onClick={() => setScannerOpen(true)}
+              className="btn-secondary !py-3 !px-4 shrink-0 flex items-center gap-2"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10" />
+              </svg>
+              <span className="hidden sm:inline">{t('pos.scanBarcode', 'Scan barcode')}</span>
+            </button>
           </div>
         </div>
+
+        {scannerOpen && (
+          <BarcodeScannerModal onDetected={handleScannedBarcode} onClose={() => setScannerOpen(false)} />
+        )}
 
         <SetupBar context={context} setContext={setContext} />
 

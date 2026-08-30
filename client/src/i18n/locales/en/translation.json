@@ -106,7 +106,8 @@
       "insights": "Insights",
       "ecommerce": "E-commerce",
       "ecommerceHub": "E-commerce Hub",
-      "developerPlatform": "Developer platform"
+      "developerPlatform": "Developer platform",
+      "categories": "Categories"
     },
     "settings": "Settings",
     "signOut": "Sign out"
@@ -222,6 +223,7 @@
     "gatewayNotCompleted": "Payment was not completed by the customer.",
     "gatewayTimeout": "Timed out waiting for payment confirmation — ask the customer to check their phone and try again.",
     "giftCardCannotBeUsed": "This gift card cannot be used.",
-    "saleCompleted": "Sale {{invoiceNumber}} completed — {{amount}}"
+    "saleCompleted": "Sale {{invoiceNumber}} completed — {{amount}}",
+    "scanBarcode": "Scan barcode"
   }
 }

@@ -106,7 +106,8 @@
       "insights": "بصیرت",
       "ecommerce": "برقی سوداگری",
       "ecommerceHub": "برقی سوداگری ئے مرکز",
-      "developerPlatform": "دراست کنوکی پلیٹ فارم"
+      "developerPlatform": "دراست کنوکی پلیٹ فارم",
+      "categories": "اقسام"
     },
     "settings": "تنظیمات",
     "signOut": "درکپتگ"
@@ -222,6 +223,7 @@
     "gatewayNotCompleted": "گیشترین ادائیگی تمام نہ کرت۔",
     "gatewayTimeout": "ادائیگی ئے تاییدا چودگ تمام بوت — گیشترین ءَ ٹگرد کہ موبایل وانگت و دوبارہ کوشش کنت۔",
     "giftCardCannotBeUsed": "ایش تحفہ کارت کارمرزی نہ بیت۔",
-    "saleCompleted": "روچی {{invoiceNumber}} تمام بوت — {{amount}}"
+    "saleCompleted": "روچی {{invoiceNumber}} تمام بوت — {{amount}}",
+    "scanBarcode": "بارکوڈ اسکین کن"
   }
 }

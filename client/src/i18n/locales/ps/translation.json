@@ -106,7 +106,8 @@
       "insights": "لیدلوری",
       "ecommerce": "برېښنایی سوداګري",
       "ecommerceHub": "برېښنایی سوداګرۍ مرکز",
-      "developerPlatform": "پرمختیا پلیټ فارم"
+      "developerPlatform": "پرمختیا پلیټ فارم",
+      "categories": "وېشنيزې"
     },
     "settings": "تنظیمات",
     "signOut": "وتل"
@@ -222,6 +223,7 @@
     "gatewayNotCompleted": "پیرودونکي تادیه بشپړه نه کړه.",
     "gatewayTimeout": "د تادیې تایید ته انتظار پای ته ورسید — پیرودونکي ته ووایاست چې خپل تلیفون وګوري او بیا هڅه وکړي.",
     "giftCardCannotBeUsed": "دا ډالۍ کارت نشي کارېدلی.",
-    "saleCompleted": "پلور {{invoiceNumber}} بشپړ شو — {{amount}}"
+    "saleCompleted": "پلور {{invoiceNumber}} بشپړ شو — {{amount}}",
+    "scanBarcode": "بارکوډ سکن کړئ"
   }
 }

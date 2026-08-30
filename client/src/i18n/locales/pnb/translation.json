@@ -106,7 +106,8 @@
       "insights": "بصیرت",
       "ecommerce": "ای کامرس",
       "ecommerceHub": "ای کامرس مرکز",
-      "developerPlatform": "ڈویلپر پلیٹ فارم"
+      "developerPlatform": "ڈویلپر پلیٹ فارم",
+      "categories": "اقسام"
     },
     "settings": "ترتیباں",
     "signOut": "سائن آؤٹ"
@@ -222,6 +223,7 @@
     "gatewayNotCompleted": "گاہک ادائیگی مکمل نئیں کیتی۔",
     "gatewayTimeout": "ادائیگی دی تصدیق دا انتظار ختم ہو گیا — گاہک نوں فون چیک کرن نوں کہو تے دوبارہ کوشش کرو۔",
     "giftCardCannotBeUsed": "ایہہ گفٹ کارڈ استعمال نئیں ہو سکدا۔",
-    "saleCompleted": "ودھ {{invoiceNumber}} مکمل ہوئی — {{amount}}"
+    "saleCompleted": "ودھ {{invoiceNumber}} مکمل ہوئی — {{amount}}",
+    "scanBarcode": "بار کوڈ سکین کرو"
   }
 }
