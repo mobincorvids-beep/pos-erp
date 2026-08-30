@@ -35,12 +35,29 @@ const DEFAULT_CATEGORY_TREE = [
   { name: 'General/Miscellaneous', children: [] },
 ];
 
-function list(companyId) {
+/**
+ * Auto-heals any company that has zero categories — covers every company
+ * created before this feature existed (onboardCompany seeds new ones at
+ * creation time, but nothing ever backfilled companies that already
+ * existed), so every business gets a working category tree the first time
+ * anyone loads Products/POS/Categories, with no manual "reseed" click
+ * required. Safe to call on every read: seedDefaultCategories itself is
+ * idempotent (find-or-create by name), and this only even calls it when
+ * the company truly has nothing yet.
+ */
+async function ensureSeeded(companyId) {
+  const count = await Category.countDocuments({ companyId });
+  if (count === 0) await seedDefaultCategories(companyId);
+}
+
+async function list(companyId) {
+  await ensureSeeded(companyId);
   return Category.find({ companyId }).sort({ name: 1 });
 }
 
 /** Nests the flat Category collection by parentId — top-level categories with a `children` array of their subcategories. Only two levels deep, matching the data model. */
 async function getTree(companyId) {
+  await ensureSeeded(companyId);
   const categories = await Category.find({ companyId }).sort({ name: 1 }).lean();
   const byParent = new Map();
   for (const c of categories) {

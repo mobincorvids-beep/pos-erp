@@ -140,6 +140,7 @@ export function CategoriesPage() {
 function CategoryForm({ parentId, category, topLevelOptions, onClose, onSaved }) {
   const toast = useToast();
   const isNew = !category;
+  const isSubcategory = !!parentId;
   const [name, setName] = useState(category?.name || '');
   const [selectedParentId, setSelectedParentId] = useState(parentId || '');
   const [saving, setSaving] = useState(false);
