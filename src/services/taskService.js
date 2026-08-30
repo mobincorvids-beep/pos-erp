@@ -8,8 +8,12 @@ const Task = require('../models/Task');
 const VALID_STATUSES = ['todo', 'in_progress', 'done'];
 const VALID_PRIORITIES = ['low', 'medium', 'high'];
 
-function createTask(input) {
+async function createTask(input) {
   const { companyId, projectId, title, description, assigneeId, dueDate, priority, createdBy } = input;
+  // Thrown as rejections (async function), not synchronously — callers
+  // (controllers, and the test suite's `.rejects.toThrow(...)` assertions)
+  // uniformly `await`/promise-chain these services, so a validation error
+  // must surface the same way a DB error would: as a rejected promise.
   if (!projectId) throw new Error('projectId is required.');
   if (!title) throw new Error('title is required.');
   if (priority && !VALID_PRIORITIES.includes(priority)) throw new Error(`Invalid priority "${priority}".`);
@@ -19,7 +23,7 @@ function createTask(input) {
   });
 }
 
-function listTasks(companyId, projectId) {
+async function listTasks(companyId, projectId) {
   if (!projectId) throw new Error('projectId is required.');
   return Task.find({ companyId, projectId }).populate('assigneeId', 'name').sort({ createdAt: -1 });
 }
