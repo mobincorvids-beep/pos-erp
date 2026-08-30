@@ -44,7 +44,7 @@ function buildInvoicePayload(sale, company) {
  */
 async function submitInvoice(saleId) {
   if (!FBR_TOKEN) {
-    throw new Error('FBR_API_TOKEN is not configured — set it in .env before submitting invoices.');
+    throw new Error('FBR_API_TOKEN is not configured, set it in .env before submitting invoices.');
   }
 
   const sale = await Sale.findById(saleId);
@@ -83,7 +83,7 @@ async function submitInvoice(saleId) {
   return { fbrInvoiceNumber, fbrQrCode };
 }
 
-/** Finds completed sales never submitted to FBR — feed this to a retry cron. */
+/** Finds completed sales never submitted to FBR, feed this to a retry cron. */
 async function findUnsubmittedSales(companyId, limit = 50) {
   return Sale.find({
     companyId,

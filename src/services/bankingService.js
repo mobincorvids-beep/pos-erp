@@ -114,7 +114,7 @@ async function completeReconciliation(reconciliationId) {
   return reconciliation;
 }
 
-/** Vouchers touching this account, in the reconciliation's date range, flagged cleared/uncleared — the actual working list a bookkeeper checks off against the paper statement. */
+/** Vouchers touching this account, in the reconciliation's date range, flagged cleared/uncleared: the actual working list a bookkeeper checks off against the paper statement. */
 async function reconciliationDetail(reconciliationId) {
   const reconciliation = await BankReconciliation.findById(reconciliationId);
   if (!reconciliation) throw new Error('Reconciliation not found.');

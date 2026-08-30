@@ -30,7 +30,7 @@ export function UnitsPage() {
       <div className="flex justify-between items-end flex-wrap gap-4 mb-6">
         <div>
           <p className="page-title">Units</p>
-          <p className="text-sm text-ink-muted mt-1 max-w-2xl">A base unit stands alone (Piece, Kilogram). An alternate unit converts to a base unit — a Carton of 288 Pieces — so you can buy in cartons while everything is tracked and costed in pieces underneath.</p>
+          <p className="text-sm text-ink-muted mt-1 max-w-2xl">A base unit stands alone (Piece, Kilogram). An alternate unit converts to a base unit (a Carton of 288 Pieces) so you can buy in cartons while everything is tracked and costed in pieces underneath.</p>
         </div>
         <button className="btn-primary" onClick={() => setShowForm(true)}>
           <span className="material-symbols-outlined text-[18px]">add</span>
@@ -119,7 +119,7 @@ function UnitForm({ units, onClose, onSaved }) {
             </div>
           </div>
           <div>
-            <label className="field-label">Converts to (optional — leave blank for a base unit)</label>
+            <label className="field-label">Converts to (optional: leave blank for a base unit)</label>
             <select className="field-input" value={form.baseUnitId} onChange={(e) => setForm({ ...form, baseUnitId: e.target.value })}>
               <option value="">This is a base unit</option>
               {units.filter((u) => !u.baseUnitId).map((u) => <option key={u._id} value={u._id}>{u.name}</option>)}

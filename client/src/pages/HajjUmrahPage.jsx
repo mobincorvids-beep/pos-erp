@@ -141,7 +141,7 @@ function GroupEditForm({ group, onClose, onSaved }) {
           </div>
           {Number(form.capacity) < group.enrolledCustomerIds.length && <p className="text-xs text-danger">Cannot go below {group.enrolledCustomerIds.length} already enrolled.</p>}
           <div><label className="field-label">Package price</label><input type="number" required className="field-input num" value={form.packagePrice} onChange={(e) => setForm({ ...form, packagePrice: e.target.value })} /></div>
-          <p className="text-xs text-ink-muted">Changing the price only affects pilgrims who enroll from now on — those already enrolled keep the price they signed up at.</p>
+          <p className="text-xs text-ink-muted">Changing the price only affects pilgrims who enroll from now on, those already enrolled keep the price they signed up at.</p>
         </div>
         <div className="flex justify-end gap-2 mt-5">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
@@ -220,7 +220,7 @@ function EnrollForm({ group, onClose, onSaved }) {
     setSaving(true);
     try {
       const result = await api.post(`/hajj-umrah/groups/${group._id}/enroll`, { customerId, depositLiabilityAccountId });
-      toast(result.waitlisted ? `Group is full — added to the waitlist at position ${result.waitlistPosition}.` : 'Enrolled.', 'success');
+      toast(result.waitlisted ? `Group is full, added to the waitlist at position ${result.waitlistPosition}.` : 'Enrolled.', 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -232,7 +232,7 @@ function EnrollForm({ group, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-6 w-full max-w-sm">
-        <p className="font-display text-lg font-bold text-ink mb-1">Enroll — {group.packageName}</p>
+        <p className="font-display text-lg font-bold text-ink mb-1">Enroll: {group.packageName}</p>
         <p className="text-sm text-ink-muted mb-4 num">{group.enrolledCustomerIds.length}/{group.capacity} enrolled</p>
         <div className="space-y-3">
           <div>

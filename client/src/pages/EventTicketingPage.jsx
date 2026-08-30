@@ -26,7 +26,7 @@ export function EventTicketingPage() {
         <p className="page-title">Shows</p>
         <button className="btn-primary" onClick={() => setShowForm(true)}>+ New show</button>
       </div>
-      <p className="text-sm text-ink-muted mb-5 max-w-2xl">Each tier — VIP, Standard, Balcony — has its own independent capacity and its own waitlist. A sold-out VIP tier never offers a Standard seat instead; they're genuinely different products.</p>
+      <p className="text-sm text-ink-muted mb-5 max-w-2xl">Each tier (VIP, Standard, Balcony) has its own independent capacity and its own waitlist. A sold-out VIP tier never offers a Standard seat instead; they're genuinely different products.</p>
 
       {loading && <Loading />}
       {!loading && shows.length === 0 && (
@@ -215,9 +215,9 @@ function TicketForm({ show, tierId, onClose, onBooked }) {
     setSaving(true);
     try {
       const product = products.find((p) => p._id === form.ticketBillingProductId);
-      if (!product) throw new Error('Select a billing product — it must have trackingMode "service".');
+      if (!product) throw new Error('Select a billing product: it must have trackingMode "service".');
       const result = await api.post(`/media-entertainment/shows/${show._id}/tiers/${tierId}/book`, { ...form, ticketBillingVariantId: product.variants[0]?._id });
-      toast(result.waitlisted ? `Tier is full — added to the waitlist at position ${result.waitlistPosition}.` : 'Ticket sold.', 'success');
+      toast(result.waitlisted ? `Tier is full, added to the waitlist at position ${result.waitlistPosition}.` : 'Ticket sold.', 'success');
       onBooked();
     } catch (err) {
       toast(err.message, 'error');

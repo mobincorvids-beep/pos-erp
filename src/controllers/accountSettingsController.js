@@ -2,7 +2,7 @@ const Company = require('../models/Company');
 const Account = require('../models/Account');
 const { FALLBACKS } = require('../services/defaultAccountsService');
 
-/** Shows both the explicit mapping and what each slot would currently resolve to (explicit, or the name-based fallback) — so a company can tell at a glance which slots are configured vs guessed. */
+/** Shows both the explicit mapping and what each slot would currently resolve to (explicit, or the name-based fallback), so a company can tell at a glance which slots are configured vs guessed. */
 async function get(req, res) {
   const company = await Company.findById(req.companyId);
   const accounts = await Account.find({ companyId: req.companyId, isActive: true }).select('name type');

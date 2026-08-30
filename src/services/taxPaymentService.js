@@ -38,7 +38,7 @@ async function notifyRoles(taxPayment, { type, title, message }) {
 function notifyReturnDue(taxPayment) {
   return notifyRoles(taxPayment, {
     type: 'tax_return_due',
-    title: `${taxPayment.taxAuthority.toUpperCase()} return due — ${taxPayment.periodLabel}`,
+    title: `${taxPayment.taxAuthority.toUpperCase()} return due: ${taxPayment.periodLabel}`,
     message: `A tax liability of ${taxPayment.amountDue} for ${taxPayment.periodLabel} is ready to pay. Go to Settings → Tax Payments to pay it directly to FBR via JazzCash.`,
   });
 }
@@ -48,11 +48,11 @@ function notifyPaymentOutcome(taxPayment) {
   return notifyRoles(taxPayment, {
     type: paid ? 'tax_payment_succeeded' : 'tax_payment_failed',
     title: paid
-      ? `${taxPayment.taxAuthority.toUpperCase()} return paid — ${taxPayment.periodLabel}`
-      : `${taxPayment.taxAuthority.toUpperCase()} payment failed — ${taxPayment.periodLabel}`,
+      ? `${taxPayment.taxAuthority.toUpperCase()} return paid: ${taxPayment.periodLabel}`
+      : `${taxPayment.taxAuthority.toUpperCase()} payment failed: ${taxPayment.periodLabel}`,
     message: paid
       ? `${taxPayment.amountPaid} was sent directly to FBR account ${taxPayment.fbrAccountNumber || ''} via JazzCash.`
-      : (taxPayment.failureReason || 'The JazzCash tax payment did not go through — please retry.'),
+      : (taxPayment.failureReason || 'The JazzCash tax payment did not go through, please retry.'),
   });
 }
 
@@ -81,7 +81,7 @@ async function initiatePayment(taxPaymentId, companyId) {
   const company = await Company.findById(companyId);
   const config = company?.jazzCashTaxPay;
   if (!config?.enabled) {
-    throw new Error('JazzCash tax-pay is not enabled for this company — configure it under Settings.');
+    throw new Error('JazzCash tax-pay is not enabled for this company, configure it under Settings.');
   }
   if (!config.fbrAccountNumber && !taxPayment.fbrAccountNumber) {
     throw new Error('No FBR account number configured to pay into.');

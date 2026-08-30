@@ -21,7 +21,7 @@ export function HardwarePage() {
   useEffect(load, []);
 
   async function handleVoid(r) {
-    if (!window.confirm(`Void this rental for ${r.customerId?.name}? Restocks the item and reverses the deposit — use this for a mistaken checkout, not a real return.`)) return;
+    if (!window.confirm(`Void this rental for ${r.customerId?.name}? Restocks the item and reverses the deposit, use this for a mistaken checkout, not a real return.`)) return;
     try {
       await api.post(`/hardware/rentals/${r._id}/void`);
       toast('Rental voided.', 'success');
@@ -192,9 +192,9 @@ function ReturnForm({ rental, onClose, onReturned }) {
           <div>
             <label className="field-label">Condition</label>
             <select className="field-input" value={condition} onChange={(e) => setCondition(e.target.value)}>
-              <option value="good">Good — full refund</option>
-              <option value="minor_damage">Minor damage — partial forfeit</option>
-              <option value="lost_or_major_damage">Lost / major damage — full forfeit</option>
+              <option value="good">Good: full refund</option>
+              <option value="minor_damage">Minor damage: partial forfeit</option>
+              <option value="lost_or_major_damage">Lost / major damage: full forfeit</option>
             </select>
           </div>
           {condition === 'minor_damage' && (

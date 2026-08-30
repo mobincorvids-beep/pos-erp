@@ -65,8 +65,8 @@ function LeasesTab() {
               <tbody>
                 {leases.map((l) => (
                   <tr key={l._id} onClick={() => setSelected(l)} className={`border-b border-rule last:border-0 cursor-pointer hover:bg-paper transition-colors ${selected?._id === l._id ? 'bg-accent-soft/50' : ''}`}>
-                    <td className="px-3 py-2.5 font-medium text-ink">{l.propertyId?.unitNumber || '—'}</td>
-                    <td className="px-3 py-2.5">{l.tenantCustomerId?.name || '—'}</td>
+                    <td className="px-3 py-2.5 font-medium text-ink">{l.propertyId?.unitNumber || '-'}</td>
+                    <td className="px-3 py-2.5">{l.tenantCustomerId?.name || '-'}</td>
                     <td className="px-3 py-2.5 num text-right">{formatMoney(l.monthlyRent, company?.currency)}</td>
                     <td className="px-3 py-2.5"><span className={LEASE_CHIP[l.status]}>{l.status}</span></td>
                   </tr>
@@ -132,7 +132,7 @@ function LeaseForm({ onClose, onSaved }) {
           </select>
           <select required className="field-input" value={form.propertyId} onChange={(e) => setForm({ ...form, propertyId: e.target.value })}>
             <option value="">Available property…</option>
-            {properties.map((p) => <option key={p._id} value={p._id}>{p.unitNumber} — {p.propertyType}</option>)}
+            {properties.map((p) => <option key={p._id} value={p._id}>{p.unitNumber}: {p.propertyType}</option>)}
           </select>
           <select required className="field-input" value={form.tenantCustomerId} onChange={(e) => setForm({ ...form, tenantCustomerId: e.target.value })}>
             <option value="">Tenant…</option>
@@ -148,7 +148,7 @@ function LeaseForm({ onClose, onSaved }) {
           </div>
 
           <div className="tear-line" />
-          <p className="text-xs text-ink-muted">Optional security deposit — posts as a liability until the lease ends.</p>
+          <p className="text-xs text-ink-muted">Optional security deposit: posts as a liability until the lease ends.</p>
           <input type="number" className="field-input num" placeholder="Security deposit (leave blank for none)" value={form.securityDeposit} onChange={(e) => setForm({ ...form, securityDeposit: e.target.value })} />
           {form.securityDeposit && (
             <div className="grid grid-cols-2 gap-2">
@@ -209,7 +209,7 @@ function LeasePanel({ lease, onClose, onChanged }) {
     try {
       const body = lease.securityDeposit > 0 ? { deductionAmount: deductionAmount ? Number(deductionAmount) : 0, refundAccountId: refundAccountId || undefined, forfeitRevenueAccountId: forfeitRevenueAccountId || undefined } : {};
       const result = await api.post(`/real-estate/leases/${lease._id}/end`, body);
-      toast(result.refund > 0 ? `Lease ended — ${formatMoney(result.refund, company?.currency)} deposit refunded.` : 'Lease ended.', 'success');
+      toast(result.refund > 0 ? `Lease ended: ${formatMoney(result.refund, company?.currency)} deposit refunded.` : 'Lease ended.', 'success');
       onChanged(); onClose();
     } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }
   }
@@ -220,7 +220,7 @@ function LeasePanel({ lease, onClose, onChanged }) {
         <p className="font-display text-lg font-bold text-ink">{lease.propertyId?.unitNumber}</p>
         <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button>
       </div>
-      <p className="text-sm text-ink-muted mb-4">{lease.tenantCustomerId?.name} — <span className="num">{formatMoney(lease.monthlyRent, company?.currency)}</span>/month</p>
+      <p className="text-sm text-ink-muted mb-4">{lease.tenantCustomerId?.name}: <span className="num">{formatMoney(lease.monthlyRent, company?.currency)}</span>/month</p>
       {lease.securityDeposit > 0 && (
         <div className="chip-info mb-4 !inline-flex">Security deposit held: <span className="num ml-1">{formatMoney(lease.securityDeposit, company?.currency)}</span></div>
       )}
@@ -247,7 +247,7 @@ function LeasePanel({ lease, onClose, onChanged }) {
 
       {lease.status === 'active' && showEndForm && (
         <form onSubmit={endLease} className="space-y-2">
-          <p className="text-sm text-ink-muted">A security deposit is on file — decide how much to refund versus keep for damage.</p>
+          <p className="text-sm text-ink-muted">A security deposit is on file, decide how much to refund versus keep for damage.</p>
           <div>
             <label className="field-label">Deduction for damage (0 = full refund)</label>
             <input type="number" min="0" max={lease.securityDeposit} className="field-input num" value={deductionAmount} onChange={(e) => setDeductionAmount(e.target.value)} placeholder="0" />

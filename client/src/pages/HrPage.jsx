@@ -102,14 +102,14 @@ function EmployeesTab() {
                         <Avatar name={e.name} active={e.status === 'active'} />
                         <div>
                           <p className="font-medium text-ink">{e.name}</p>
-                          <p className="text-xs text-ink-muted">{e.designation || '—'}</p>
+                          <p className="text-xs text-ink-muted">{e.designation || '-'}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-5 py-3 text-ink-muted">
-                      {e.designation || '—'}
+                      {e.designation || '-'}
                       <br />
-                      <span className="text-xs text-ink-muted">{e.departmentId?.name || '—'}{e.shiftId?.name ? ` · ${e.shiftId.name} shift` : ''}</span>
+                      <span className="text-xs text-ink-muted">{e.departmentId?.name || '-'}{e.shiftId?.name ? ` · ${e.shiftId.name} shift` : ''}</span>
                     </td>
                     <td className="px-5 py-3"><span className={e.status === 'active' ? 'chip-accent' : e.status === 'on_leave' ? 'chip-warning' : 'chip-danger'}>{e.status.replace('_', ' ')}</span></td>
                     <td className="px-5 py-3 num text-right">{formatMoney(e.salaryStructure?.basic)}</td>
@@ -160,7 +160,7 @@ function AssignShiftModal({ employee, onClose, onSaved }) {
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <div className="card p-5 w-full max-w-sm">
         <div className="flex items-center justify-between mb-4">
-          <p className="font-display text-lg">{employee.name} — shift</p>
+          <p className="font-display text-lg">{employee.name}: shift</p>
           <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button>
         </div>
         <label className="field-label">Shift</label>
@@ -189,11 +189,11 @@ function LeaveBalancesModal({ employee, onClose }) {
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <div className="card p-5 w-full max-w-sm">
         <div className="flex items-center justify-between mb-4">
-          <p className="font-display text-lg">{employee.name} — leave balance</p>
+          <p className="font-display text-lg">{employee.name}: leave balance</p>
           <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button>
         </div>
         {rows === null && <Loading />}
-        {rows && rows.length === 0 && <p className="text-sm text-ink-muted">No leave balance records yet — one is created automatically the first time a leave request against a policy is approved.</p>}
+        {rows && rows.length === 0 && <p className="text-sm text-ink-muted">No leave balance records yet: one is created automatically the first time a leave request against a policy is approved.</p>}
         {rows && rows.length > 0 && (
           <div className="space-y-2">
             {rows.map((b) => (
@@ -235,7 +235,7 @@ function InviteEmployeePortalModal({ employee, onClose }) {
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <div className="card p-5 w-full max-w-sm">
         <div className="flex items-center justify-between mb-4">
-          <p className="font-display text-lg">{employee.name} — portal invite</p>
+          <p className="font-display text-lg">{employee.name}: portal invite</p>
           <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button>
         </div>
 
@@ -343,7 +343,7 @@ function AttendancePanel({ employee, onClose }) {
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <div className="card p-5 w-full max-w-md">
         <div className="flex items-center justify-between mb-4">
-          <p className="font-display text-lg">{employee.name} — attendance</p>
+          <p className="font-display text-lg">{employee.name}: attendance</p>
           <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button>
         </div>
 

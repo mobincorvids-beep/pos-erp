@@ -47,7 +47,7 @@ export function AiInsightsPage() {
           Rule-based engine
         </span>
       </div>
-      <p className="text-sm text-ink-muted mb-6 max-w-2xl">Rule-based findings from your own sales and stock data — not a trained model, just thresholds and comparisons applied consistently.</p>
+      <p className="text-sm text-ink-muted mb-6 max-w-2xl">Rule-based findings from your own sales and stock data, not a trained model, just thresholds and comparisons applied consistently.</p>
 
       {loading && <Loading />}
 
@@ -65,7 +65,7 @@ export function AiInsightsPage() {
               </ul>
               {briefing.salesAnomaly && !briefing.salesAnomaly.flagged && briefing.salesAnomaly.baselineDailyAvg > 0 && (
                 <p className="text-xs text-ink-muted mt-3">
-                  This week's daily average: {formatMoney(briefing.salesAnomaly.recentDailyAvg, company?.currency)} vs. the prior month's {formatMoney(briefing.salesAnomaly.baselineDailyAvg, company?.currency)} — within normal range.
+                  This week's daily average: {formatMoney(briefing.salesAnomaly.recentDailyAvg, company?.currency)} vs. the prior month's {formatMoney(briefing.salesAnomaly.baselineDailyAvg, company?.currency)}: within normal range.
                 </p>
               )}
             </div>

@@ -101,7 +101,7 @@ async function salesAnomalies(companyId, thresholdPercent = 25) {
     deviationPercent,
     flagged: Math.abs(deviationPercent) >= thresholdPercent,
     direction: deviationPercent >= 0 ? 'up' : 'down',
-    caveat: 'Compares raw daily averages only — does not account for day-of-week or seasonal patterns.',
+    caveat: 'Compares raw daily averages only, does not account for day-of-week or seasonal patterns.',
   };
 }
 
@@ -121,12 +121,12 @@ async function briefing(companyId) {
   const findings = [];
 
   if (reorders.length > 0) {
-    findings.push(`${reorders.length} product${reorders.length === 1 ? ' is' : 's are'} at or below reorder level — the most urgent is "${reorders[0].productName}" with ${reorders[0].quantityOnHand} left.`);
+    findings.push(`${reorders.length} product${reorders.length === 1 ? ' is' : 's are'} at or below reorder level, the most urgent is "${reorders[0].productName}" with ${reorders[0].quantityOnHand} left.`);
   }
 
   if (slowMoving.length > 0) {
     const worst = slowMoving[0];
-    findings.push(`${slowMoving.length} product${slowMoving.length === 1 ? ' has' : 's have'} no sales in 60+ days — "${worst.productName}" hasn't sold in ${worst.daysSinceLastSale ?? 'over 60'} days.`);
+    findings.push(`${slowMoving.length} product${slowMoving.length === 1 ? ' has' : 's have'} no sales in 60+ days, "${worst.productName}" hasn't sold in ${worst.daysSinceLastSale ?? 'over 60'} days.`);
   }
 
   if (anomaly.flagged) {
@@ -134,7 +134,7 @@ async function briefing(companyId) {
   }
 
   if (findings.length === 0) {
-    findings.push('Nothing unusual to flag right now — stock levels and sales are within normal ranges.');
+    findings.push('Nothing unusual to flag right now, stock levels and sales are within normal ranges.');
   }
 
   return { generatedAt: new Date(), findings, reorderCount: reorders.length, slowMovingCount: slowMoving.length, salesAnomaly: anomaly };

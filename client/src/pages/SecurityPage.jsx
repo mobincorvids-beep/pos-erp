@@ -114,7 +114,7 @@ function TwoFactorSection({ user, refreshUser }) {
 
       {backupCodes && (
         <div className="mt-4 border-t border-rule pt-4">
-          <p className="text-sm font-medium text-danger">Save these backup codes now — they won't be shown again.</p>
+          <p className="text-sm font-medium text-danger">Save these backup codes now: they won't be shown again.</p>
           <p className="text-xs text-ink-muted mt-1 mb-3">Each one can be used once to sign in if you lose access to your authenticator app.</p>
           <div className="grid grid-cols-2 gap-2 font-mono text-sm bg-surface-sunken rounded-lg p-3">
             {backupCodes.map((c) => <span key={c}>{c}</span>)}

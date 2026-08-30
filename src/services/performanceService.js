@@ -93,7 +93,7 @@ async function acknowledgeReview(reviewId, employeeId) {
   if (employeeId && String(review.employeeId) !== String(employeeId)) {
     throw new Error('This review does not belong to this employee.');
   }
-  if (review.status !== 'submitted') throw new Error(`Cannot acknowledge a review with status "${review.status}" — it must be submitted first.`);
+  if (review.status !== 'submitted') throw new Error(`Cannot acknowledge a review with status "${review.status}": it must be submitted first.`);
   review.status = 'acknowledged';
   review.acknowledgedAt = new Date();
   await review.save();

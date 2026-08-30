@@ -88,7 +88,7 @@ async function checkout(input) {
       for (const item of items) {
         if (item.serialNumbers && item.serialNumbers.length > 0) {
           if (item.serialNumbers.length !== item.quantity) {
-            throw new Error(`Product ${item.productId}: ${item.serialNumbers.length} serial number(s) provided but quantity is ${item.quantity} — exactly one serial per unit is required.`);
+            throw new Error(`Product ${item.productId}: ${item.serialNumbers.length} serial number(s) provided but quantity is ${item.quantity}, exactly one serial per unit is required.`);
           }
           await serialInventoryService.assertAvailable(item.variantId, warehouseId, item.serialNumbers, session);
         }

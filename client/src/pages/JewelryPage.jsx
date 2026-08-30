@@ -187,7 +187,7 @@ function ItemsTab() {
             <div className="flex justify-between"><span className="text-ink-muted">Stone charge</span><span className="num">{formatMoney(quote.stoneCharge, company?.currency)}</span></div>
             <div className="tear-line my-3" />
             <div className="flex justify-between text-base font-semibold"><span>Total</span><span className="num text-accent-strong">{formatMoney(quote.totalPrice, company?.currency)}</span></div>
-            <p className="text-xs text-ink-muted mt-2">Use this total as the unit price at checkout — it's computed live, never stored on the product.</p>
+            <p className="text-xs text-ink-muted mt-2">Use this total as the unit price at checkout, it's computed live, never stored on the product.</p>
           </div>
         )}
       </div>
@@ -265,7 +265,7 @@ function BuybacksTab() {
             </div>
           ))}
         </div>
-        <p className="text-xs text-ink-muted mt-3">Apply a credit as a per-line discount at checkout, same as loyalty redemption — this page only quotes and tracks it.</p>
+        <p className="text-xs text-ink-muted mt-3">Apply a credit as a per-line discount at checkout, same as loyalty redemption, this page only quotes and tracks it.</p>
       </div>
     </div>
   );

@@ -146,7 +146,7 @@ function WorkOrdersTab() {
                           <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => setCompleting(o)}>Complete</button>
                           <button className="btn-ghost !text-danger !px-0 text-xs" onClick={() => cancel(o._id)}>Cancel</button>
                         </div>
-                      ) : <span className="text-xs text-ink-muted">—</span>}
+                      ) : <span className="text-xs text-ink-muted">-</span>}
                     </td>
                   </tr>
                 ))}
@@ -257,7 +257,7 @@ function CompleteForm({ workOrder, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Complete — {workOrder.issue}</p>
+        <p className="font-display text-lg mb-4">Complete: {workOrder.issue}</p>
         <div className="space-y-3">
           <div><label className="field-label">Labor cost</label><input type="number" min="0" className="field-input num" value={laborCost} onChange={(e) => setLaborCost(e.target.value)} /></div>
           {Number(laborCost) > 0 && (

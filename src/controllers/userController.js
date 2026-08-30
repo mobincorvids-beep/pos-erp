@@ -3,7 +3,7 @@ const Role = require('../models/Role');
 const refreshTokenService = require('../services/refreshTokenService');
 const { nanoid } = require('nanoid');
 
-/** Tenant-scoped staff management — a company owner adding/managing their own users, distinct from PlatformAdmin's cross-company moderation. */
+/** Tenant-scoped staff management: a company owner adding/managing their own users, distinct from PlatformAdmin's cross-company moderation. */
 async function list(req, res) {
   const users = await User.find({ companyId: req.companyId }).select('-passwordHash').populate('roleId', 'name');
   res.json(users);
@@ -58,7 +58,7 @@ async function assignRole(req, res) {
   res.json(user);
 }
 
-/** A staff member locked out gets a new password from an owner/manager, in-app — no email-based reset flow, this is the equivalent. Also revokes their refresh tokens, forcing re-login on every device. */
+/** A staff member locked out gets a new password from an owner/manager, in-app, no email-based reset flow, this is the equivalent. Also revokes their refresh tokens, forcing re-login on every device. */
 async function resetPassword(req, res) {
   const user = await User.findOne({ _id: req.params.id, companyId: req.companyId });
   if (!user) return res.status(404).json({ error: 'User not found.' });

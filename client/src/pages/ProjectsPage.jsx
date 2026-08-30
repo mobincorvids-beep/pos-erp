@@ -213,7 +213,7 @@ function ProjectDetailPanel({ project, onClose, onChanged }) {
       )}
 
       <p className="text-sm font-semibold text-ink mb-1 mt-2">Log a manual cost</p>
-      <p className="text-xs text-ink-muted mb-3">Most costs arrive automatically when a tagged expense is approved or a tagged purchase order is received — this is only for costs with no other document (e.g. internal labor).</p>
+      <p className="text-xs text-ink-muted mb-3">Most costs arrive automatically when a tagged expense is approved or a tagged purchase order is received, this is only for costs with no other document (e.g. internal labor).</p>
       <div className="grid grid-cols-2 gap-2 mb-2">
         <input type="number" placeholder="Amount" className="field-input num" value={manualAmount} onChange={(e) => setManualAmount(e.target.value)} />
         <input placeholder="Note" className="field-input" value={manualNote} onChange={(e) => setManualNote(e.target.value)} />
@@ -227,7 +227,7 @@ function ProjectDetailPanel({ project, onClose, onChanged }) {
         {costs.length === 0 && <p className="text-ink-muted">No costs logged yet.</p>}
         {costs.map((c) => (
           <div key={c._id} className="flex justify-between">
-            <span className="text-ink-muted">{formatDate(c.date)} — {c.type}{c.note ? `: ${c.note}` : ''}</span>
+            <span className="text-ink-muted">{formatDate(c.date)}: {c.type}{c.note ? `: ${c.note}` : ''}</span>
             <span className="num">{formatMoney(c.amount, company?.currency)}</span>
           </div>
         ))}
@@ -272,7 +272,7 @@ function TaskBoard({ project }) {
       <div className="flex items-center justify-between mb-4">
         <div>
           <p className="eyebrow mb-1">Tasks</p>
-          <p className="font-display text-lg font-semibold text-ink">{project.name} — Task Board</p>
+          <p className="font-display text-lg font-semibold text-ink">{project.name}: Task Board</p>
         </div>
         <button className="btn-primary" onClick={() => { setEditingTask(null); setShowForm(true); }}>+ New task</button>
       </div>
@@ -333,7 +333,7 @@ function TaskCard({ task, onMove, onEdit, onDelete }) {
       </div>
       {task.description && <p className="text-xs text-ink-muted mb-2 line-clamp-2">{task.description}</p>}
       <div className="text-xs text-ink-muted space-y-0.5 mb-2">
-        {task.assigneeId && <p>Assignee: {task.assigneeId.name || '—'}</p>}
+        {task.assigneeId && <p>Assignee: {task.assigneeId.name || '-'}</p>}
         {task.dueDate && <p>Due: {formatDate(task.dueDate)}</p>}
       </div>
       <div className="flex items-center justify-between gap-1 mt-2">

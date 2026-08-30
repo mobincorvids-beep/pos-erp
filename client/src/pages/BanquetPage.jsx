@@ -65,7 +65,7 @@ function BookingsTab() {
                 {bookings.map((b) => (
                   <tr key={b._id} onClick={() => setSelected(b)} className={`border-b border-rule last:border-0 cursor-pointer hover:bg-paper ${selected?._id === b._id ? 'bg-accent-soft/40' : ''}`}>
                     <td className="px-4 py-2.5 font-medium">{b.venueId?.name}</td>
-                    <td className="px-4 py-2.5">{b.customerId?.name || '—'}</td>
+                    <td className="px-4 py-2.5">{b.customerId?.name || '-'}</td>
                     <td className="px-4 py-2.5 text-ink-muted">{formatDate(b.eventDate)}</td>
                     <td className="px-4 py-2.5 num text-right">{b.guestCount}</td>
                     <td className="px-4 py-2.5"><span className={STATUS_CHIP[b.status]}>{b.status}</span></td>

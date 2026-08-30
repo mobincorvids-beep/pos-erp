@@ -62,7 +62,7 @@ async function issueDebitNote(input) {
       // the supplier and reverses the original cost, without touching stock.
       await accountingService.postVoucher({
         companyId, branchId: resolvedBranchId, type: 'journal',
-        narration: `Debit note ${debitNote.noteNumber}${reason ? ` — ${reason}` : ''}`,
+        narration: `Debit note ${debitNote.noteNumber}${reason ? `: ${reason}` : ''}`,
         entries: [
           { accountId: apAccountId, debit: amount, credit: 0 },
           { accountId: expenseAccountId, debit: 0, credit: amount },
@@ -108,7 +108,7 @@ async function voidDebitNote(id, { userId, companyId, reason }) {
       // Reverse the original posting: Dr Inventory/Expense, Cr Accounts Payable.
       await accountingService.postVoucher({
         companyId, branchId: note.branchId, type: 'journal',
-        narration: `Void debit note ${note.noteNumber}${reason ? ` — ${reason}` : ''}`,
+        narration: `Void debit note ${note.noteNumber}${reason ? `: ${reason}` : ''}`,
         entries: [
           { accountId: note.expenseAccountId, debit: note.amount, credit: 0 },
           { accountId: note.apAccountId, debit: 0, credit: note.amount },

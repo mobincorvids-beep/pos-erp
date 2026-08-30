@@ -102,7 +102,7 @@ async function createOpportunity(input) {
 
   const resolvedStage = stage && STAGES.includes(stage) ? stage : 'new';
   if (resolvedStage === 'won' || resolvedStage === 'lost') {
-    throw new Error('An opportunity cannot be created directly in the "won" or "lost" stage — use the stage-change action.');
+    throw new Error('An opportunity cannot be created directly in the "won" or "lost" stage: use the stage-change action.');
   }
 
   return Opportunity.create({
@@ -191,7 +191,7 @@ async function updateOpportunityStage(opportunityId, stage, extra = {}) {
   return opportunity;
 }
 
-/** Opportunities grouped by stage — the shape a kanban board needs directly. */
+/** Opportunities grouped by stage: the shape a kanban board needs directly. */
 async function listPipeline(companyId, filters = {}) {
   const filter = { companyId };
   if (filters.assignedToUserId) filter.assignedToUserId = filters.assignedToUserId;

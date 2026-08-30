@@ -143,9 +143,9 @@ export function TimesheetsPage() {
                 {entries.map((e) => (
                   <tr key={e._id} className="align-top">
                     <td className="px-5 py-4 text-ink-muted">{formatDate(e.date)}</td>
-                    <td className="px-5 py-4 text-ink">{e.employeeId?.name || '—'}</td>
+                    <td className="px-5 py-4 text-ink">{e.employeeId?.name || '-'}</td>
                     <td className="px-5 py-4">
-                      <p className="text-ink">{e.projectId?.name || '—'}</p>
+                      <p className="text-ink">{e.projectId?.name || '-'}</p>
                       {e.description && <p className="text-ink-muted text-xs mt-0.5">{e.description}</p>}
                     </td>
                     <td className="px-5 py-4 num">{e.hours}</td>

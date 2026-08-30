@@ -24,7 +24,7 @@ export function CostCentersPage() {
       <div className="flex justify-between items-end flex-wrap gap-4 mb-6">
         <div>
           <p className="page-title">Cost Centers</p>
-          <p className="text-sm text-ink-muted mt-1 max-w-2xl">Tag any voucher entry with a cost center — a department, a project, an arbitrary internal grouping — to see a real profit &amp; loss scoped to just that entry, even when it shares a voucher with untagged or differently-tagged money.</p>
+          <p className="text-sm text-ink-muted mt-1 max-w-2xl">Tag any voucher entry with a cost center (a department, a project, an arbitrary internal grouping) to see a real profit &amp; loss scoped to just that entry, even when it shares a voucher with untagged or differently-tagged money.</p>
         </div>
         <button className="btn-primary" onClick={() => setShowForm(true)}>
           <span className="material-symbols-outlined text-sm">add</span>
@@ -62,7 +62,7 @@ export function CostCentersPage() {
                         <p className="text-sm font-semibold text-ink">{c.name}</p>
                       </div>
                     </td>
-                    <td className="py-3 px-5 text-sm text-ink-muted num">{c.code || '—'}</td>
+                    <td className="py-3 px-5 text-sm text-ink-muted num">{c.code || '-'}</td>
                     <td className="py-3 px-5 text-right">
                       <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => setViewing(c)}>View P&amp;L</button>
                     </td>
@@ -140,7 +140,7 @@ function CostCenterPnl({ costCenter, onClose }) {
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <div className="card p-5 w-full max-w-lg max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
-          <p className="font-display text-lg font-semibold text-accent">{costCenter.name} — P&amp;L</p>
+          <p className="font-display text-lg font-semibold text-accent">{costCenter.name}: P&amp;L</p>
           <button className="btn-ghost" onClick={onClose}>Close</button>
         </div>
         <div className="flex gap-2 mb-4">

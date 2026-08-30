@@ -5,6 +5,8 @@ import { useToast } from '../components/Toast';
 import { Loading } from '../components/Loading';
 import { EmptyState } from '../components/EmptyState';
 import { formatMoney, formatDate } from '../lib/format';
+import { FieldError, errorInputClass } from '../components/FieldError';
+import { validate, validateRequired, validateEmail, validatePkPhone, hasErrors, isBlank } from '../lib/validation';
 
 export function SuppliersPage() {
   const toast = useToast();
@@ -59,7 +61,7 @@ export function SuppliersPage() {
                       className={`border-b border-rule last:border-0 hover:bg-paper transition-colors group ${selected?._id === s._id ? 'bg-accent-soft/40' : ''}`}
                     >
                       <td className="py-3.5 px-5 cursor-pointer font-medium text-ink group-hover:text-accent-strong transition-colors" onClick={() => setSelected(s)}>{s.name}</td>
-                      <td className="py-3.5 px-5 num text-ink-muted cursor-pointer" onClick={() => setSelected(s)}>{s.phone || '—'}</td>
+                      <td className="py-3.5 px-5 num text-ink-muted cursor-pointer" onClick={() => setSelected(s)}>{s.phone || '-'}</td>
                       <td className="py-3.5 px-5 text-right"><button className="btn-ghost !px-2 text-xs" onClick={() => setEditing(s)}>Edit</button></td>
                     </tr>
                   ))}
@@ -81,9 +83,23 @@ function SupplierForm({ supplier, onClose, onSaved }) {
   const isNew = !supplier._id;
   const [form, setForm] = useState({ name: supplier.name || '', phone: supplier.phone || '', email: supplier.email || '', address: supplier.address || '' });
   const [saving, setSaving] = useState(false);
+  const [touched, setTouched] = useState({});
+
+  const rules = {
+    name: (v) => validateRequired(v, 'Name'),
+    phone: (v) => (isBlank(v) ? null : validatePkPhone(v, { required: false })),
+    email: (v) => (isBlank(v) ? null : validateEmail(v, { required: false })),
+  };
+  const errors = validate(form, rules);
+
+  function markTouched(field) {
+    setTouched((t) => ({ ...t, [field]: true }));
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setTouched({ name: true, phone: true, email: true });
+    if (hasErrors(errors)) return;
     setSaving(true);
     try {
       if (isNew) {
@@ -106,14 +122,44 @@ function SupplierForm({ supplier, onClose, onSaved }) {
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
         <p className="font-display text-lg mb-4">{isNew ? 'New supplier' : 'Edit supplier'}</p>
         <div className="space-y-3">
-          <div><label className="field-label">Name</label><input required autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-          <div><label className="field-label">Phone</label><input className="field-input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
-          <div><label className="field-label">Email</label><input type="email" className="field-input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+          <div>
+            <label className="field-label">Name</label>
+            <input
+              required autoFocus maxLength={150}
+              className={`field-input ${errorInputClass(touched.name && errors.name)}`}
+              value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
+              onBlur={() => markTouched('name')}
+              aria-invalid={Boolean(touched.name && errors.name)}
+            />
+            <FieldError message={touched.name ? errors.name : null} />
+          </div>
+          <div>
+            <label className="field-label">Phone</label>
+            <input
+              type="tel" inputMode="numeric" placeholder="03XXXXXXXXX" maxLength={11}
+              className={`field-input ${errorInputClass(touched.phone && errors.phone)}`}
+              value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              onBlur={() => markTouched('phone')}
+              aria-invalid={Boolean(touched.phone && errors.phone)}
+            />
+            <FieldError message={touched.phone ? errors.phone : null} />
+          </div>
+          <div>
+            <label className="field-label">Email</label>
+            <input
+              type="email" maxLength={254}
+              className={`field-input ${errorInputClass(touched.email && errors.email)}`}
+              value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
+              onBlur={() => markTouched('email')}
+              aria-invalid={Boolean(touched.email && errors.email)}
+            />
+            <FieldError message={touched.email ? errors.email : null} />
+          </div>
           <div><label className="field-label">Address</label><input className="field-input" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save'}</button>
+          <button type="submit" disabled={saving || hasErrors(errors)} className="btn-primary">{saving ? 'Saving…' : 'Save'}</button>
         </div>
       </form>
     </div>
@@ -175,7 +221,7 @@ function SupplierLedgerPanel({ supplier, onClose }) {
                 {ledger.entries.length === 0 && <p className="text-ink-muted">No transactions yet.</p>}
                 {ledger.entries.map((e, i) => (
                   <div key={i} className="flex justify-between gap-3">
-                    <span className="text-ink-muted">{formatDate(e.date)} — {e.type === 'purchase' ? `PO ${e.reference}` : e.type === 'purchase_payment' ? `Paid at receiving ${e.reference}` : 'Payment'}</span>
+                    <span className="text-ink-muted">{formatDate(e.date)}: {e.type === 'purchase' ? `PO ${e.reference}` : e.type === 'purchase_payment' ? `Paid at receiving ${e.reference}` : 'Payment'}</span>
                     <span className={`num shrink-0 ${e.type === 'purchase' ? 'text-ink' : 'text-accent-strong'}`}>
                       {e.type === 'purchase' ? '+' : '−'}{formatMoney(e.type === 'purchase' ? e.credit : e.debit, company?.currency)}
                     </span>

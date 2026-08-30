@@ -154,7 +154,7 @@ function OpenShiftForm({ dispenser, onClose }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg font-semibold mb-1">Open shift — {dispenser.name}</p>
+        <p className="font-display text-lg font-semibold mb-1">Open shift: {dispenser.name}</p>
         <p className="text-sm text-ink-muted mb-4 num">Opening reading: {dispenser.currentMeterReading}</p>
         <div><label className="field-label">Price per litre</label><input type="number" step="0.01" required autoFocus className="field-input num" value={pricePerLitre} onChange={(e) => setPricePerLitre(e.target.value)} /></div>
         <div className="flex justify-end gap-2 mt-5">
@@ -201,10 +201,10 @@ function ShiftsTab() {
             <tbody>
               {shifts.map((s) => (
                 <tr key={s._id} className="border-b border-rule last:border-0 hover:bg-surface-sunken/50">
-                  <td className="px-3 py-2.5 font-medium text-ink">{s.dispenserId?.name || '—'}</td>
+                  <td className="px-3 py-2.5 font-medium text-ink">{s.dispenserId?.name || '-'}</td>
                   <td className="px-3 py-2.5 num">{s.openingReading}</td>
-                  <td className="px-3 py-2.5 num">{s.closingReading ?? '—'}</td>
-                  <td className="px-3 py-2.5 num">{s.litresSold ?? '—'}</td>
+                  <td className="px-3 py-2.5 num">{s.closingReading ?? '-'}</td>
+                  <td className="px-3 py-2.5 num">{s.litresSold ?? '-'}</td>
                   <td className="px-3 py-2.5 num">{formatMoney(s.pricePerLitre, company?.currency)}</td>
                   <td className="px-3 py-2.5"><span className={s.status === 'open' ? 'chip-warning' : 'chip-accent'}>{s.status}</span></td>
                   <td className="px-3 py-2.5">
@@ -242,7 +242,7 @@ function CloseShiftForm({ shift, onClose, onSaved }) {
     try {
       if (!form.billingVariantId) throw new Error('Select a billing product with a variant.');
       const result = await api.post(`/petrol-pump/shifts/${shift._id}/close`, { ...form, closingReading: Number(form.closingReading) });
-      toast(`Shift closed — ${result.litresSold} L sold for ${formatMoney(result.totalAmount, company?.currency)}.`, 'success');
+      toast(`Shift closed: ${result.litresSold} L sold for ${formatMoney(result.totalAmount, company?.currency)}.`, 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -254,7 +254,7 @@ function CloseShiftForm({ shift, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg font-semibold mb-1">Close shift — {shift.dispenserId?.name || ''}</p>
+        <p className="font-display text-lg font-semibold mb-1">Close shift: {shift.dispenserId?.name || ''}</p>
         <p className="text-sm text-ink-muted mb-4 num">Opening reading: {shift.openingReading}</p>
         <div className="space-y-3">
           <div><label className="field-label">Closing reading</label><input type="number" step="0.001" required autoFocus className="field-input num" value={form.closingReading} onChange={(e) => setForm({ ...form, closingReading: e.target.value })} /></div>

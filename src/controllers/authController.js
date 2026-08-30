@@ -104,7 +104,7 @@ async function register(req, res) {
   }
 }
 
-/** The second step of a 2FA login — exchanges a valid preAuthToken + a real TOTP/backup code for the actual session tokens. */
+/** The second step of a 2FA login, exchanges a valid preAuthToken + a real TOTP/backup code for the actual session tokens. */
 async function verifyTwoFactor(req, res) {
   try {
     const { preAuthToken, token } = req.body;
@@ -115,7 +115,7 @@ async function verifyTwoFactor(req, res) {
     try {
       decoded = jwt.verify(preAuthToken, process.env.JWT_SECRET);
     } catch {
-      return res.status(401).json({ error: 'This 2FA session has expired — please log in again.' });
+      return res.status(401).json({ error: 'This 2FA session has expired, please log in again.' });
     }
     if (!decoded.pending2FA) return res.status(401).json({ error: 'Invalid pre-authentication token.' });
 
@@ -167,7 +167,7 @@ async function logout(req, res) {
   res.json({ ok: true });
 }
 
-/** Restores session on page reload — req.auth is already populated by requireAuth. */
+/** Restores session on page reload, req.auth is already populated by requireAuth. */
 async function me(req, res) {
   const user = await User.findById(req.auth.userId);
   if (!user) return res.status(404).json({ error: 'User not found.' });
@@ -196,11 +196,11 @@ async function disableTwoFactor(req, res) {
   catch (err) { res.status(400).json({ error: err.message }); }
 }
 
-/** A real "which devices am I logged in on" list — the actual live RefreshToken records for this user, with device/IP context, never the token hash itself. */
+/** A real "which devices am I logged in on" list: the actual live RefreshToken records for this user, with device/IP context, never the token hash itself. */
 async function listSessions(req, res) {
   res.json(await refreshTokenService.listActiveSessions('user', req.auth.userId));
 }
-/** Signs out ONE specific device remotely — checked to genuinely belong to the requesting user first. */
+/** Signs out ONE specific device remotely, checked to genuinely belong to the requesting user first. */
 async function revokeSession(req, res) {
   try { res.json(await refreshTokenService.revokeById(req.params.id, 'user', req.auth.userId)); }
   catch (err) { res.status(400).json({ error: err.message }); }

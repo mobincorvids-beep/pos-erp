@@ -46,7 +46,7 @@ export function RecurringInvoicesPage() {
 
       {loading && <Loading />}
       {!loading && templates.length === 0 && (
-        <EmptyState title="No recurring invoices" description="A monthly retainer, a subscription, anything billed to the same customer on a schedule — set it up once, and generate exactly what's due whenever you're ready." action={<button className="btn-primary" onClick={() => setShowForm(true)}>New template</button>} />
+        <EmptyState title="No recurring invoices" description="A monthly retainer, a subscription, anything billed to the same customer on a schedule, set it up once, and generate exactly what's due whenever you're ready." action={<button className="btn-primary" onClick={() => setShowForm(true)}>New template</button>} />
       )}
       {!loading && templates.length > 0 && (
         <div className="card p-5">
@@ -60,7 +60,7 @@ export function RecurringInvoicesPage() {
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-semibold text-ink truncate">{t.customerId?.name || '—'}</p>
+                      <p className="font-semibold text-ink truncate">{t.customerId?.name || '-'}</p>
                       <span className={STATUS_CHIP[t.status]}>{t.status}</span>
                     </div>
                     <p className="text-sm text-ink-muted mt-0.5">{FREQUENCY_LABEL[t.frequency]} · {t.items.length} item{t.items.length !== 1 ? 's' : ''}</p>
@@ -101,7 +101,7 @@ function GenerateDueSection({ generating, setGenerating, onGenerated }) {
     setGenerating(true);
     try {
       const result = await api.post('/recurring-invoices/generate-due', { warehouseId });
-      toast(result.generatedCount > 0 ? `Billed ${result.generatedCount} due invoice${result.generatedCount !== 1 ? 's' : ''}.` : 'Nothing due yet — every active template\'s next run date is still in the future.', 'success');
+      toast(result.generatedCount > 0 ? `Billed ${result.generatedCount} due invoice${result.generatedCount !== 1 ? 's' : ''}.` : 'Nothing due yet: every active template\'s next run date is still in the future.', 'success');
       onGenerated();
     } catch (err) {
       toast(err.message, 'error');

@@ -87,7 +87,7 @@ function ApiKeysSection() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast('Could not copy — select and copy the key manually.', 'error');
+      toast('Could not copy: select and copy the key manually.', 'error');
     }
   }
 
@@ -97,7 +97,7 @@ function ApiKeysSection() {
         <div className="card p-5 border-2 border-danger">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-danger">warning</span>
-            <p className="text-sm font-semibold text-danger">Copy this key now — you won't be able to see it again.</p>
+            <p className="text-sm font-semibold text-danger">Copy this key now: you won't be able to see it again.</p>
           </div>
           <p className="text-xs text-ink-muted mt-1 mb-3">"{createdKey.name}" was created. Store it in your integration's configuration; this page will only ever show its prefix from now on.</p>
           <div className="flex items-center gap-2 bg-surface-sunken border border-rule-strong rounded-lg p-3 num text-sm break-all">

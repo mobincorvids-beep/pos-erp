@@ -53,7 +53,7 @@ export function ImportCsvModal({ endpoint, title, templateHeaders, templateFilen
       if (result.failed === 0) {
         toast(`Imported: ${result.created} created, ${result.updated} updated.`, 'success');
       } else {
-        toast(`Imported with ${result.failed} row error(s) — see details below.`, 'error');
+        toast(`Imported with ${result.failed} row error(s): see details below.`, 'error');
       }
       onImported?.();
     } catch (err) {
@@ -68,7 +68,7 @@ export function ImportCsvModal({ endpoint, title, templateHeaders, templateFilen
       <div className="card p-5 w-full max-w-lg max-h-[85vh] overflow-y-auto">
         <p className="font-display text-lg font-semibold text-ink mb-1">{title}</p>
         <p className="text-xs text-ink-muted mb-4">
-          Columns: {templateHeaders.join(', ')}. Rows with problems are reported below — the rest still import.
+          Columns: {templateHeaders.join(', ')}. Rows with problems are reported below, the rest still import.
         </p>
 
         <button type="button" className="btn-ghost !text-xs mb-3" onClick={downloadTemplate}>

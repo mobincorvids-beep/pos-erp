@@ -12,7 +12,7 @@ const Product = require('../models/Product');
 
 const UNCATEGORIZED_NAME = 'Uncategorized';
 
-/** Comprehensive, professional-supermarket-style default tree — correct for the
+/** Comprehensive, professional-supermarket-style default tree: correct for the
  * generic 'retail' and 'grocery' industry types. Used as the fallback for any
  * industryType not explicitly covered below, since a broad product mix is the
  * safest default when we don't know the business better. */
@@ -566,7 +566,7 @@ async function list(companyId) {
   return Category.find({ companyId }).sort({ name: 1 });
 }
 
-/** Nests the flat Category collection by parentId — top-level categories with a `children` array of their subcategories. Only two levels deep, matching the data model. */
+/** Nests the flat Category collection by parentId, top-level categories with a `children` array of their subcategories. Only two levels deep, matching the data model. */
 async function getTree(companyId) {
   await ensureSeeded(companyId);
   const categories = await Category.find({ companyId }).sort({ name: 1 }).lean();
@@ -585,7 +585,7 @@ async function create(companyId, { name, parentId = null }) {
   if (parentId) {
     const parent = await Category.findOne({ _id: parentId, companyId });
     if (!parent) throw new Error('Parent category not found.');
-    if (parent.parentId) throw new Error('Subcategories cannot themselves have subcategories — only two levels are supported.');
+    if (parent.parentId) throw new Error('Subcategories cannot themselves have subcategories, only two levels are supported.');
   }
   return Category.create({ companyId, name: name.trim(), parentId: parentId || null });
 }
@@ -599,7 +599,7 @@ async function update(companyId, id, { name, parentId }) {
       if (String(parentId) === String(id)) throw new Error('A category cannot be its own parent.');
       const parent = await Category.findOne({ _id: parentId, companyId });
       if (!parent) throw new Error('Parent category not found.');
-      if (parent.parentId) throw new Error('Subcategories cannot themselves have subcategories — only two levels are supported.');
+      if (parent.parentId) throw new Error('Subcategories cannot themselves have subcategories, only two levels are supported.');
       const hasChildren = await Category.exists({ companyId, parentId: id });
       if (hasChildren) throw new Error('This category has subcategories of its own and cannot be turned into a subcategory.');
     }
@@ -609,7 +609,7 @@ async function update(companyId, id, { name, parentId }) {
   return category;
 }
 
-/** Refuses to delete a category with subcategories (clean up those first) or one still referenced by a product — the same "past records keep resolving" rule other reference data (Unit, ExpenseCategory) follows elsewhere in this app. */
+/** Refuses to delete a category with subcategories (clean up those first) or one still referenced by a product, the same "past records keep resolving" rule other reference data (Unit, ExpenseCategory) follows elsewhere in this app. */
 async function remove(companyId, id) {
   const hasChildren = await Category.exists({ companyId, parentId: id });
   if (hasChildren) throw new Error('Remove or reassign its subcategories first.');
@@ -620,7 +620,7 @@ async function remove(companyId, id) {
   return category;
 }
 
-/** Finds-or-creates the per-company "Uncategorized" fallback — used both for legacy
+/** Finds-or-creates the per-company "Uncategorized" fallback: used both for legacy
  * products created before categoryId was required, and as a migration-safe default. */
 async function getOrCreateUncategorized(companyId) {
   let category = await Category.findOne({ companyId, name: UNCATEGORIZED_NAME, parentId: null });
@@ -628,7 +628,7 @@ async function getOrCreateUncategorized(companyId) {
   return category;
 }
 
-/** Seeds the industry-appropriate default tree for a company. Idempotent — matches
+/** Seeds the industry-appropriate default tree for a company. Idempotent, matches
  * existing categories by name (case-insensitive) at each level and only creates
  * what's missing, so calling it again (e.g. "Reseed defaults") never duplicates.
  *
@@ -672,7 +672,7 @@ function escapeRegex(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-/** Case-insensitive find-or-create by name, scoped to a company and optional parent — used by the CSV importer to resolve "category"/"subcategory" text columns into real Category docs. */
+/** Case-insensitive find-or-create by name, scoped to a company and optional parent, used by the CSV importer to resolve "category"/"subcategory" text columns into real Category docs. */
 async function findOrCreateByName(companyId, name, parentId = null) {
   const trimmed = (name || '').trim();
   if (!trimmed) return null;

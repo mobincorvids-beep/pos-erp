@@ -61,7 +61,7 @@ function DocumentList({ kind, showForm, onCloseForm }) {
   async function accept(id) {
     try {
       await api.post(`/sales-workflow/quotations/${id}/accept`);
-      toast('Quotation accepted — now a sales order.', 'success');
+      toast('Quotation accepted: now a sales order.', 'success');
       load();
     } catch (err) { toast(err.message, 'error'); }
   }
@@ -122,7 +122,7 @@ function DocumentList({ kind, showForm, onCloseForm }) {
               </table>
             </div>
             <p className="text-xs text-ink-muted px-6 py-3 border-t border-rule mt-auto">
-              Converting a sales order to an invoice (checkout) isn't yet wired into this UI — use <code className="num">POST /sales-workflow/:id/convert-to-invoice</code> directly for now.
+              Converting a sales order to an invoice (checkout) isn't yet wired into this UI, use <code className="num">POST /sales-workflow/:id/convert-to-invoice</code> directly for now.
             </p>
           </div>
 
@@ -176,7 +176,7 @@ function DocumentList({ kind, showForm, onCloseForm }) {
                   />
                   <LifecycleStep
                     label="Cancelled"
-                    detail={selected.status === 'cancelled' ? 'Cancelled' : '—'}
+                    detail={selected.status === 'cancelled' ? 'Cancelled' : '-'}
                     done={selected.status === 'cancelled'}
                     muted={selected.status !== 'cancelled'}
                   />

@@ -59,7 +59,7 @@ export function ContractsPage() {
 
       {loading && <Loading />}
       {!loading && contracts.length === 0 && (
-        <EmptyState title="No contracts" description="Supplier agreements, customer contracts, leases, NDAs, service agreements — track every formal agreement's term, renewal, and status in one place." action={<button className="btn-primary" onClick={() => setShowForm(true)}>New contract</button>} />
+        <EmptyState title="No contracts" description="Supplier agreements, customer contracts, leases, NDAs, service agreements, track every formal agreement's term, renewal, and status in one place." action={<button className="btn-primary" onClick={() => setShowForm(true)}>New contract</button>} />
       )}
       {!loading && contracts.length > 0 && (
         <div className="card overflow-hidden">
@@ -247,7 +247,7 @@ function ContractDetail({ contractId, onClose, onChanged }) {
                 </div>
                 <div className="rounded-lg bg-surface-sunken p-3">
                   <p className="field-label mb-1">Value</p>
-                  <p className="num text-ink font-semibold">{contract.value != null ? formatMoney(contract.value, contract.currency) : '—'}</p>
+                  <p className="num text-ink font-semibold">{contract.value != null ? formatMoney(contract.value, contract.currency) : '-'}</p>
                 </div>
               </div>
 
@@ -261,7 +261,7 @@ function ContractDetail({ contractId, onClose, onChanged }) {
                   <span className={`num ${contract.status === 'expiring_soon' ? 'text-warning font-semibold' : 'text-ink'}`}>{formatDate(contract.endDate)}</span>
                 </div>
                 <div className="flex justify-between"><span className="text-ink-muted">Auto-renew</span><span className="text-ink">{contract.autoRenew ? 'Yes' : 'No'}</span></div>
-                <div className="flex justify-between"><span className="text-ink-muted">Owner</span><span className="text-ink">{contract.ownerUserId?.name || '—'}</span></div>
+                <div className="flex justify-between"><span className="text-ink-muted">Owner</span><span className="text-ink">{contract.ownerUserId?.name || '-'}</span></div>
                 {contract.renewedFromContractId && (
                   <div className="flex justify-between"><span className="text-ink-muted">Renewed from</span><span className="num text-ink">{contract.renewedFromContractId.contractNumber}</span></div>
                 )}

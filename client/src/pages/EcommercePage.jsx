@@ -58,7 +58,7 @@ export function EcommercePage() {
       <div className="flex justify-between items-end mb-6 gap-4 flex-wrap">
         <div>
           <p className="page-title mb-1">E-commerce integration</p>
-          <p className="text-sm text-ink-muted max-w-2xl">Lets an external store post orders and pull your live catalog — orders go through the exact same checkout as the counter, just tagged as an online sale.</p>
+          <p className="text-sm text-ink-muted max-w-2xl">Lets an external store post orders and pull your live catalog, orders go through the exact same checkout as the counter, just tagged as an online sale.</p>
         </div>
         <span className={config.enabled ? 'chip-accent' : 'chip-neutral'}>{config.enabled ? 'Enabled' : 'Not enabled'}</span>
       </div>
@@ -108,7 +108,7 @@ export function EcommercePage() {
           {result && (
             <div className="space-y-4 flex-1">
               <div className="p-3 rounded-lg bg-danger-soft border border-danger/20">
-                <p className="text-xs font-semibold text-danger mb-1">Webhook token — shown once, copy it now</p>
+                <p className="text-xs font-semibold text-danger mb-1">Webhook token: shown once, copy it now</p>
                 <p className="num text-xs bg-surface border border-rule rounded p-2 break-all">{result.webhookToken}</p>
               </div>
               <div>
@@ -122,7 +122,7 @@ export function EcommercePage() {
             </div>
           )}
           {!result && config.enabled && (
-            <p className="text-xs text-ink-muted">Rotate the token above to see it again — it's never shown after the first time for security.</p>
+            <p className="text-xs text-ink-muted">Rotate the token above to see it again, it's never shown after the first time for security.</p>
           )}
           {!result && !config.enabled && (
             <p className="text-xs text-ink-muted">Fill in the configuration and enable the integration to generate a webhook token and feed URLs.</p>

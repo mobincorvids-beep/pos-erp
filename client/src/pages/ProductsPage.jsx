@@ -6,6 +6,8 @@ import { Loading } from '../components/Loading';
 import { EmptyState } from '../components/EmptyState';
 import { formatMoney } from '../lib/format';
 import { ImportCsvModal } from '../components/ImportCsvModal';
+import { FieldError, errorInputClass } from '../components/FieldError';
+import { validate, validateRequired, validateNonNegativeNumber, hasErrors } from '../lib/validation';
 
 const TRACKING_LABELS = {
   simple: 'Simple',
@@ -143,7 +145,7 @@ export function ProductsPage() {
                       className={`border-b border-rule last:border-0 hover:bg-paper cursor-pointer group ${lowStock ? 'bg-danger-soft/30' : ''}`}
                       onClick={() => setEditing(p)}
                     >
-                      <td className="px-6 py-3 num text-ink-muted">{p.sku || '—'}</td>
+                      <td className="px-6 py-3 num text-ink-muted">{p.sku || '-'}</td>
                       <td className="px-6 py-3 font-medium text-ink">
                         <span className="inline-flex items-center gap-2">
                           {p.name}
@@ -214,6 +216,24 @@ function ProductForm({ product, onClose, onSaved }) {
   const [subCategoryId, setSubCategoryId] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [touched, setTouched] = useState({});
+
+  const rules = {
+    name: (v) => validateRequired(v, 'Name'),
+    costPrice: (v) => validateNonNegativeNumber(v, 'Cost price', { required: false }),
+    sellingPrice: (v) => validateNonNegativeNumber(v, 'Selling price'),
+    minStock: (v) => (isNew ? null : validateNonNegativeNumber(v, 'Min stock', { required: false })),
+    reorderLevel: (v) => (isNew ? null : validateNonNegativeNumber(v, 'Reorder level', { required: false })),
+  };
+  const errors = validate(form, rules);
+  // Business-rule warning (not a hard error): selling below cost is unusual but not invalid
+  // (e.g. clearance stock), so it never blocks submit — just flags it for a second look.
+  const sellingBelowCost = form.costPrice !== '' && form.sellingPrice !== ''
+    && Number(form.sellingPrice) < Number(form.costPrice);
+
+  function markTouched(field) {
+    setTouched((t) => ({ ...t, [field]: true }));
+  }
 
   useEffect(() => {
     api.get('/categories/tree').then((tree) => {
@@ -235,8 +255,13 @@ function ProductForm({ product, onClose, onSaved }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setTouched({ name: true, costPrice: true, sellingPrice: true, minStock: true, reorderLevel: true });
     if (!effectiveCategoryId) {
       setError('Choose a category before saving.');
+      return;
+    }
+    if (hasErrors(errors)) {
+      setError('Fix the highlighted fields before saving.');
       return;
     }
     setSaving(true);
@@ -277,7 +302,14 @@ function ProductForm({ product, onClose, onSaved }) {
         <div className="space-y-3">
           <div>
             <label className="field-label">Name</label>
-            <input required autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <input
+              required autoFocus maxLength={200}
+              className={`field-input ${errorInputClass(touched.name && errors.name)}`}
+              value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
+              onBlur={() => markTouched('name')}
+              aria-invalid={Boolean(touched.name && errors.name)}
+            />
+            <FieldError message={touched.name ? errors.name : null} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -317,22 +349,53 @@ function ProductForm({ product, onClose, onSaved }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="field-label">Cost price</label>
-              <input type="number" step="0.01" className="field-input num" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: e.target.value })} />
+              <input
+                type="number" step="0.01" min="0"
+                className={`field-input num ${errorInputClass(touched.costPrice && errors.costPrice)}`}
+                value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: e.target.value })}
+                onBlur={() => markTouched('costPrice')}
+                aria-invalid={Boolean(touched.costPrice && errors.costPrice)}
+              />
+              <FieldError message={touched.costPrice ? errors.costPrice : null} />
             </div>
             <div>
               <label className="field-label">Selling price</label>
-              <input type="number" step="0.01" required className="field-input num" value={form.sellingPrice} onChange={(e) => setForm({ ...form, sellingPrice: e.target.value })} />
+              <input
+                type="number" step="0.01" min="0" required
+                className={`field-input num ${errorInputClass(touched.sellingPrice && errors.sellingPrice)}`}
+                value={form.sellingPrice} onChange={(e) => setForm({ ...form, sellingPrice: e.target.value })}
+                onBlur={() => markTouched('sellingPrice')}
+                aria-invalid={Boolean(touched.sellingPrice && errors.sellingPrice)}
+              />
+              <FieldError message={touched.sellingPrice ? errors.sellingPrice : null} />
+              {!errors.sellingPrice && sellingBelowCost && (
+                <p className="mt-1 text-xs font-medium text-warning">Selling price is below cost price. Double-check before saving.</p>
+              )}
             </div>
           </div>
           {!isNew && (
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="field-label">Min stock</label>
-                <input type="number" className="field-input num" value={form.minStock} onChange={(e) => setForm({ ...form, minStock: e.target.value })} />
+                <input
+                  type="number" min="0"
+                  className={`field-input num ${errorInputClass(touched.minStock && errors.minStock)}`}
+                  value={form.minStock} onChange={(e) => setForm({ ...form, minStock: e.target.value })}
+                  onBlur={() => markTouched('minStock')}
+                  aria-invalid={Boolean(touched.minStock && errors.minStock)}
+                />
+                <FieldError message={touched.minStock ? errors.minStock : null} />
               </div>
               <div>
                 <label className="field-label">Reorder level</label>
-                <input type="number" className="field-input num" value={form.reorderLevel} onChange={(e) => setForm({ ...form, reorderLevel: e.target.value })} />
+                <input
+                  type="number" min="0"
+                  className={`field-input num ${errorInputClass(touched.reorderLevel && errors.reorderLevel)}`}
+                  value={form.reorderLevel} onChange={(e) => setForm({ ...form, reorderLevel: e.target.value })}
+                  onBlur={() => markTouched('reorderLevel')}
+                  aria-invalid={Boolean(touched.reorderLevel && errors.reorderLevel)}
+                />
+                <FieldError message={touched.reorderLevel ? errors.reorderLevel : null} />
               </div>
             </div>
           )}
@@ -346,17 +409,17 @@ function ProductForm({ product, onClose, onSaved }) {
                 <option value="serial">Serial/IMEI</option>
                 <option value="weight">Weight-based</option>
                 <option value="bundle">Bundle</option>
-                <option value="service">Service (no stock — a haircut, a room-night, a fee...)</option>
+                <option value="service">Service (no stock, a haircut, a room-night, a fee...)</option>
               </select>
             ) : (
-              <p className="text-sm text-ink-muted">{form.trackingMode} <span className="text-xs">(can't be changed after creation — how stock is already tracked depends on it)</span></p>
+              <p className="text-sm text-ink-muted">{form.trackingMode} <span className="text-xs">(can't be changed after creation: how stock is already tracked depends on it)</span></p>
             )}
           </div>
         </div>
 
         <div className="flex justify-end gap-2 mt-5">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save product'}</button>
+          <button type="submit" disabled={saving || hasErrors(errors)} className="btn-primary">{saving ? 'Saving…' : 'Save product'}</button>
         </div>
       </form>
     </div>

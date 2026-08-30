@@ -26,7 +26,7 @@ function listRFQs(companyId, { status } = {}) {
   return RFQ.find(filter).sort({ createdAt: -1 });
 }
 
-/** A supplier's real response — validated to only quote items that are actually on this RFQ, so the comparison stays a genuine apples-to-apples one. */
+/** A supplier's real response: validated to only quote items that are actually on this RFQ, so the comparison stays a genuine apples-to-apples one. */
 async function submitQuotation(rfqId, { supplierId, items }) {
   const rfq = await RFQ.findById(rfqId);
   if (!rfq) throw new Error('RFQ not found.');
@@ -48,7 +48,7 @@ function listQuotations(rfqId) {
   return SupplierQuotation.find({ rfqId }).populate('supplierId', 'name').sort({ totalAmount: 1 });
 }
 
-/** The real comparison — cheapest price PER ITEM, across every quotation received for this RFQ, not one overall winner. */
+/** The real comparison: cheapest price PER ITEM, across every quotation received for this RFQ, not one overall winner. */
 async function compareQuotations(rfqId) {
   const quotations = await SupplierQuotation.find({ rfqId }).populate('supplierId', 'name');
   const bestByItem = {};

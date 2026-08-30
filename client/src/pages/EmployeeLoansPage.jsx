@@ -55,8 +55,8 @@ export function EmployeeLoansPage() {
             </div>
             <div className="card p-5 flex flex-col justify-between">
               <span className="eyebrow">Next installment due</span>
-              <p className="font-display num text-2xl font-bold text-ink mt-2">{nextDue ? formatMoney(nextDue.monthlyInstallment, company?.currency) : '—'}</p>
-              <p className="text-xs text-ink-muted mt-1">{nextDue ? (nextDue.employeeId?.name || '—') : 'No active loans'}</p>
+              <p className="font-display num text-2xl font-bold text-ink mt-2">{nextDue ? formatMoney(nextDue.monthlyInstallment, company?.currency) : '-'}</p>
+              <p className="text-xs text-ink-muted mt-1">{nextDue ? (nextDue.employeeId?.name || '-') : 'No active loans'}</p>
               {nextDue && <button className="btn-secondary mt-4 self-start" onClick={() => setRepaying(nextDue)}>Record repayment</button>}
             </div>
             <div className="card p-5 flex flex-col justify-between">
@@ -85,7 +85,7 @@ export function EmployeeLoansPage() {
                         <span className="material-symbols-outlined font-icon">person</span>
                       </div>
                       <div>
-                        <p className="font-display text-lg font-semibold text-ink">{l.employeeId?.name || '—'}</p>
+                        <p className="font-display text-lg font-semibold text-ink">{l.employeeId?.name || '-'}</p>
                         <p className="text-ink-muted text-sm">Disbursed {formatDate(l.disbursedAt)}</p>
                       </div>
                     </div>
@@ -203,7 +203,7 @@ function LoanForm({ onClose, onSaved }) {
             </select>
           </div>
         </div>
-        <p className="text-xs text-ink-muted mt-3">An employee can only have one active loan at a time — settle the existing one before issuing another.</p>
+        <p className="text-xs text-ink-muted mt-3">An employee can only have one active loan at a time, settle the existing one before issuing another.</p>
         <div className="flex justify-end gap-2 mt-5">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
           <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Disbursing…' : 'Disburse'}</button>
@@ -245,7 +245,7 @@ function RepaymentForm({ loan, onClose, onSaved }) {
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-6 w-full max-w-sm">
         <p className="font-display text-lg font-semibold text-ink mb-1">Record repayment</p>
-        <p className="text-sm text-ink-muted mb-4">{loan.employeeId?.name} — <span className="num">{loan.remainingBalance}</span> remaining</p>
+        <p className="text-sm text-ink-muted mb-4">{loan.employeeId?.name}: <span className="num">{loan.remainingBalance}</span> remaining</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Amount</label>

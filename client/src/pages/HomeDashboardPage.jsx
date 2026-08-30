@@ -92,7 +92,7 @@ export function HomeDashboardPage() {
         <>
           {/* Company / branch selector, styled like the reference's bordered selector row.
               A single-branch company (the common case for a small vendor) gets a plain,
-              non-interactive label — a chevron with no menu behind it would just be a
+              non-interactive label: a chevron with no menu behind it would just be a
               trap. Multi-branch companies get a real dropdown to switch branch context. */}
           <div className="relative mb-6" ref={branchMenuRef}>
             <button
@@ -169,7 +169,7 @@ export function HomeDashboardPage() {
             </Link>
           </div>
 
-          {/* CORE metrics — full-width bento cards like the reference's "Total Sales (Today)" */}
+          {/* CORE metrics: full-width bento cards like the reference's "Total Sales (Today)" */}
           <section className="mb-8">
             <p className="eyebrow mb-2">Today</p>
             <div className="flex flex-col gap-3">
@@ -196,7 +196,7 @@ export function HomeDashboardPage() {
             <IndustrySection industry={data.industry} currency={company?.currency} />
           ) : (
             <p className="text-sm text-ink-muted mb-8">
-              There's no dedicated snapshot for this business type yet — the numbers above cover the essentials.
+              There's no dedicated snapshot for this business type yet, the numbers above cover the essentials.
               Browse full detail under <Link to="/reports" className="underline">Reports</Link>.
             </p>
           )}
@@ -306,12 +306,12 @@ function HotelSection({ s }) {
         <div>
           <p className="text-sm font-medium mb-2">Check-ins today</p>
           <SimpleTable columns={['Room', 'Guest']} empty="No check-ins today."
-            rows={s.checkInsToday.map((r) => [r.roomId?.roomNumber, r.guestName || r.customerId?.name || '—'])} />
+            rows={s.checkInsToday.map((r) => [r.roomId?.roomNumber, r.guestName || r.customerId?.name || '-'])} />
         </div>
         <div>
           <p className="text-sm font-medium mb-2">Check-outs today</p>
           <SimpleTable columns={['Room', 'Guest']} empty="No check-outs today."
-            rows={s.checkOutsToday.map((r) => [r.roomId?.roomNumber, r.guestName || r.customerId?.name || '—'])} />
+            rows={s.checkOutsToday.map((r) => [r.roomId?.roomNumber, r.guestName || r.customerId?.name || '-'])} />
         </div>
       </div>
     </section>
@@ -342,7 +342,7 @@ function SalonSection({ s }) {
       <SimpleTable
         columns={['Time', 'Customer', 'Service', 'Status']}
         empty="No appointments scheduled today."
-        rows={s.appointmentsToday.map((a) => [formatDateTime(a.startTime), a.customerId?.name || '—', a.serviceName, a.status])}
+        rows={s.appointmentsToday.map((a) => [formatDateTime(a.startTime), a.customerId?.name || '-', a.serviceName, a.status])}
       />
     </section>
   );
@@ -378,7 +378,7 @@ function RealEstateSection({ s, currency }) {
       <SimpleTable
         columns={['Unit', 'Tenant', 'Due date', 'Days late', 'Amount due']}
         empty="No overdue rent."
-        rows={s.overdueLeases.map((l) => [l.unitNumber, l.tenantName || '—', formatDate(l.dueDate), l.daysLate, formatMoney(l.amountDue, currency)])}
+        rows={s.overdueLeases.map((l) => [l.unitNumber, l.tenantName || '-', formatDate(l.dueDate), l.daysLate, formatMoney(l.amountDue, currency)])}
       />
     </section>
   );

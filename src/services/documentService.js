@@ -29,7 +29,7 @@ function createDocument({ companyId, entityType, entityId, category, fileUrl, fi
   });
 }
 
-/** Appends a NEW version — never overwrites an existing one, so the full history stays intact. */
+/** Appends a NEW version: never overwrites an existing one, so the full history stays intact. */
 async function uploadVersion(documentId, { fileUrl, fileName, userId, note }) {
   if (!fileUrl || !fileName) throw new Error('fileUrl and fileName are required.');
   const doc = await Document.findById(documentId);
@@ -53,7 +53,7 @@ function currentVersion(doc) {
   return doc.versions[doc.versions.length - 1]; // always the LAST pushed entry — versions are append-only, so this is always genuinely the newest
 }
 
-/** Requests approval for a document — a real ApprovalRequest, through the real Workflow Engine, not a second approval system. */
+/** Requests approval for a document, a real ApprovalRequest, through the real Workflow Engine, not a second approval system. */
 async function requestApproval(documentId, { requestedBy, amount, note }) {
   const doc = await Document.findById(documentId);
   if (!doc) throw new Error('Document not found.');

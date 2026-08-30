@@ -23,7 +23,7 @@ export function EarlyPaymentDiscountPage() {
     <div>
       <div className="mb-6">
         <p className="page-title">Early payment discount</p>
-        <p className="text-sm text-ink-muted mt-1 max-w-lg">Set a real "2/10 net 30"-style term on any purchase order with a balance due, then pay early to take the discount — no third-party financier, just your own cash paid ahead of schedule.</p>
+        <p className="text-sm text-ink-muted mt-1 max-w-lg">Set a real "2/10 net 30"-style term on any purchase order with a balance due, then pay early to take the discount, no third-party financier, just your own cash paid ahead of schedule.</p>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
@@ -134,7 +134,7 @@ function PoDiscountPanel({ po, onChanged, onClose }) {
             <p className="text-sm text-ink mb-3">{po.earlyPaymentDiscountPercent}% off if paid within {po.earlyPaymentDiscountDays} days.</p>
             {check.eligible ? (
               <>
-                <div className="chip-accent mb-4">Eligible today — {formatMoney(check.discountAmount, company?.currency)} discount</div>
+                <div className="chip-accent mb-4">Eligible today: {formatMoney(check.discountAmount, company?.currency)} discount</div>
                 <PayForm po={po} onPaid={onChanged} />
               </>
             ) : (

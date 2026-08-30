@@ -64,11 +64,11 @@ async function fetchLiveRate(fromCurrency, toCurrency) {
   if (!response.ok) throw new Error(`Frankfurter API returned HTTP ${response.status} for ${from}->${to}.`);
   const data = await response.json();
   const rate = data.rates?.[to];
-  if (!rate) throw new Error(`Frankfurter API returned no rate for ${from}->${to} — response: ${JSON.stringify(data)}`);
+  if (!rate) throw new Error(`Frankfurter API returned no rate for ${from}->${to}: response: ${JSON.stringify(data)}`);
   return { rate, date: data.date };
 }
 
-/** A person enters a rate directly — the ONLY way to get a rate for any currency Frankfurter doesn't cover, PKR included. */
+/** A person enters a rate directly, the ONLY way to get a rate for any currency Frankfurter doesn't cover, PKR included. */
 function setManualRate({ companyId, fromCurrency, toCurrency, rate, date, userId }) {
   if (!rate || rate <= 0) throw new Error('rate must be greater than zero.');
   return ExchangeRate.findOneAndUpdate(
@@ -107,7 +107,7 @@ async function getRate(companyId, fromCurrency, toCurrency, date) {
   }
 
   throw new Error(
-    `No exchange rate available for ${from} -> ${to} on ${targetDate}, and at least one of these currencies isn't covered by the live rate source — enter a manual rate first.`
+    `No exchange rate available for ${from} -> ${to} on ${targetDate}, and at least one of these currencies isn't covered by the live rate source, enter a manual rate first.`
   );
 }
 

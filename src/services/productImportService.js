@@ -21,7 +21,7 @@ const KNOWN_COLUMNS = [
   'costprice', 'sellingprice', 'openingstock', 'minstock', 'reorderlevel',
 ];
 
-/** Minimal RFC4180-ish CSV parser — handles quoted fields, escaped quotes ("") and commas/newlines inside quotes. Good enough for a spreadsheet export without pulling in a dependency. */
+/** Minimal RFC4180-ish CSV parser: handles quoted fields, escaped quotes ("") and commas/newlines inside quotes. Good enough for a spreadsheet export without pulling in a dependency. */
 function parseCsv(text) {
   const rows = [];
   let row = [];
@@ -170,7 +170,7 @@ async function importProductsCsv(companyId, userId, fileContent) {
       // stocktake adjustments), so the ledger/StockLevel cache stay consistent.
       if (openingStock > 0) {
         if (!warehouse) {
-          throw new Error('openingStock given but no warehouse is configured for this company — set up a warehouse first.');
+          throw new Error('openingStock given but no warehouse is configured for this company, set up a warehouse first.');
         }
         const variant = product.variants?.[0];
         await inventoryService.recordMovement({

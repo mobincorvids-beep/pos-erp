@@ -109,7 +109,7 @@ function VehicleEditForm({ vehicle, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/30 backdrop-blur-sm flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm shadow-lg">
-        <p className="page-title text-lg mb-4">Edit vehicle — {vehicle.registrationNumber}</p>
+        <p className="page-title text-lg mb-4">Edit vehicle: {vehicle.registrationNumber}</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Vehicle class</label>
@@ -274,7 +274,7 @@ function CancelBookingForm({ booking, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/30 backdrop-blur-sm flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm shadow-lg">
-        <p className="page-title text-lg mb-4">Cancel booking — {booking.vehicleClass}</p>
+        <p className="page-title text-lg mb-4">Cancel booking: {booking.vehicleClass}</p>
         {hasDeposit ? (
           <div className="space-y-3">
             <p className="text-xs text-ink-muted">A deposit of {booking.depositAmount} was taken for this booking. Set how much of it is refunded vs. kept.</p>
@@ -302,7 +302,7 @@ function CancelBookingForm({ booking, onClose, onSaved }) {
             )}
           </div>
         ) : (
-          <p className="text-sm text-ink-muted">No deposit was taken — this booking will simply be marked cancelled.</p>
+          <p className="text-sm text-ink-muted">No deposit was taken, this booking will simply be marked cancelled.</p>
         )}
         <div className="flex justify-end gap-2 mt-5">
           <button type="button" className="btn-secondary" onClick={onClose}>Back</button>
@@ -440,7 +440,7 @@ function ReturnForm({ booking, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/30 backdrop-blur-sm flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm shadow-lg">
-        <p className="page-title text-lg mb-4">Return vehicle — {booking.vehicleClass}</p>
+        <p className="page-title text-lg mb-4">Return vehicle: {booking.vehicleClass}</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Branch</label>

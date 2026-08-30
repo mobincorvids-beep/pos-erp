@@ -72,7 +72,7 @@ export function TicketsPage() {
                 <span className="material-symbols-outlined text-base leading-none">timer</span>
               </div>
             </div>
-            <p className="font-display text-3xl font-bold num">{compliance.overall.complianceRate ?? '—'}%</p>
+            <p className="font-display text-3xl font-bold num">{compliance.overall.complianceRate ?? '-'}%</p>
           </div>
         </div>
       )}
@@ -264,10 +264,10 @@ function TicketForm({ onClose, onSaved }) {
           <div>
             <label className="field-label">Priority</label>
             <select className="field-input" value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })}>
-              <option value="low">Low — 72h response target</option>
-              <option value="medium">Medium — 24h response target</option>
-              <option value="high">High — 4h response target</option>
-              <option value="emergency">Emergency — 1h response target</option>
+              <option value="low">Low: 72h response target</option>
+              <option value="medium">Medium: 24h response target</option>
+              <option value="high">High: 4h response target</option>
+              <option value="emergency">Emergency: 1h response target</option>
             </select>
           </div>
         </div>

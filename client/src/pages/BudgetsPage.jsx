@@ -43,7 +43,7 @@ export function BudgetsPage() {
 
       {loading && <Loading />}
       {!loading && report?.rows.length === 0 && (
-        <EmptyState title={`No budgets set for ${MONTH_NAMES[month - 1]} ${year}`} description="Set a budget per account, per month — actual figures are read from real posted vouchers, never a second tracked number." action={can('reports.financial') && <button className="btn-primary" onClick={() => setShowForm(true)}>Set a budget</button>} />
+        <EmptyState title={`No budgets set for ${MONTH_NAMES[month - 1]} ${year}`} description="Set a budget per account, per month, actual figures are read from real posted vouchers, never a second tracked number." action={can('reports.financial') && <button className="btn-primary" onClick={() => setShowForm(true)}>Set a budget</button>} />
       )}
       {!loading && report?.rows.length > 0 && (
         <>
@@ -99,7 +99,7 @@ export function BudgetsPage() {
                         <td className="px-3 py-3 text-right">
                           {r.variancePercent !== null ? (
                             <span className={overBudget ? 'chip-danger' : 'chip-accent'}>{overBudget ? '+' : ''}{r.variancePercent}%</span>
-                          ) : <span className="text-ink-muted">—</span>}
+                          ) : <span className="text-ink-muted">-</span>}
                         </td>
                       </tr>
                     );
@@ -167,7 +167,7 @@ function BudgetForm({ defaultMonth, defaultYear, onClose, onSaved }) {
             <input type="number" step="0.01" min="0.01" required className="field-input num" value={form.budgetedAmount} onChange={(e) => setForm({ ...form, budgetedAmount: e.target.value })} />
           </div>
         </div>
-        <p className="text-xs text-ink-muted mt-3">Setting a budget for an account/month that already has one updates it — it's never duplicated.</p>
+        <p className="text-xs text-ink-muted mt-3">Setting a budget for an account/month that already has one updates it, it's never duplicated.</p>
         <div className="flex justify-end gap-2 mt-5">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
           <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save budget'}</button>

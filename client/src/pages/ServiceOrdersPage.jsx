@@ -35,7 +35,7 @@ export function ServiceOrdersPage() {
 
         {loading && <Loading />}
         {!loading && orders.length === 0 && (
-          <EmptyState title="No job cards yet" description="Track repairs and service jobs — parts, labor, and billing." action={<button className="btn-primary" onClick={() => setShowForm(true)}>Open a job card</button>} />
+          <EmptyState title="No job cards yet" description="Track repairs and service jobs: parts, labor, and billing." action={<button className="btn-primary" onClick={() => setShowForm(true)}>Open a job card</button>} />
         )}
         {!loading && orders.length > 0 && (
           <div className="card flex flex-col overflow-hidden">
@@ -108,7 +108,7 @@ function ServiceOrderForm({ onClose, onSaved }) {
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
         <p className="font-display text-lg font-semibold text-ink mb-4">New job card</p>
         <div className="space-y-3">
-          <div><label className="field-label">Item / description</label><input required autoFocus className="field-input" value={form.itemDescription} onChange={(e) => setForm({ ...form, itemDescription: e.target.value })} placeholder="e.g. iPhone 12 — screen repair" /></div>
+          <div><label className="field-label">Item / description</label><input required autoFocus className="field-input" value={form.itemDescription} onChange={(e) => setForm({ ...form, itemDescription: e.target.value })} placeholder="e.g. iPhone 12: screen repair" /></div>
           <div><label className="field-label">Reported issue</label><input className="field-input" value={form.reportedIssue} onChange={(e) => setForm({ ...form, reportedIssue: e.target.value })} /></div>
           <div>
             <label className="field-label">Branch</label>
@@ -232,7 +232,7 @@ function ServiceOrderPanel({ order, onClose, onChanged }) {
           </div>
 
           {order.status === 'completed' && (
-            <p className="text-xs text-ink-muted pt-2 border-t border-rule">Billing (parts + labor as a single invoice) requires a company "Labor" service product and payment account — use the API's <code className="num">POST /service-orders/:id/bill</code> for now.</p>
+            <p className="text-xs text-ink-muted pt-2 border-t border-rule">Billing (parts + labor as a single invoice) requires a company "Labor" service product and payment account: use the API's <code className="num">POST /service-orders/:id/bill</code> for now.</p>
           )}
         </div>
       </div>

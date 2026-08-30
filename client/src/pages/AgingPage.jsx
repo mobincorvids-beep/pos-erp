@@ -117,7 +117,7 @@ function WriteOffForm({ row, onClose, onSaved }) {
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
         <p className="font-display text-lg mb-1">Write off {row.invoiceNumber}</p>
-        <p className="text-sm text-ink-muted mb-4">{row.customerName} — {formatMoney(row.dueAmount, company?.currency)}. This is permanent and cannot be undone.</p>
+        <p className="text-sm text-ink-muted mb-4">{row.customerName}: {formatMoney(row.dueAmount, company?.currency)}. This is permanent and cannot be undone.</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Bad debt expense account</label>

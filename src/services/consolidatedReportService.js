@@ -69,7 +69,7 @@ async function consolidatedSalesSummary(requestingCompanyId, from, to) {
   };
 }
 
-/** Combined trial balance across the group — each company's accounts stay separate (a group doesn't share a chart of accounts), just listed together with a grand total debit/credit for a sanity check across the whole group. */
+/** Combined trial balance across the group, each company's accounts stay separate (a group doesn't share a chart of accounts), just listed together with a grand total debit/credit for a sanity check across the whole group. */
 async function consolidatedTrialBalance(requestingCompanyId, asOfDate) {
   const group = await getCompanyGroup(requestingCompanyId);
 

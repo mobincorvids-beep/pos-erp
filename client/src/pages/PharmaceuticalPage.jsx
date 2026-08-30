@@ -27,7 +27,7 @@ export function PharmaceuticalPage() {
       <div className="flex items-end justify-between mb-1">
         <div>
           <p className="page-title">Batch recalls</p>
-          <p className="text-sm text-ink-muted mt-1 max-w-2xl">Every customer who received this batch is traced directly from real sales history the moment a recall starts — not a manual list someone has to compile.</p>
+          <p className="text-sm text-ink-muted mt-1 max-w-2xl">Every customer who received this batch is traced directly from real sales history the moment a recall starts, not a manual list someone has to compile.</p>
         </div>
         <button className="btn-primary shrink-0" onClick={() => setShowForm(true)}>
           <span className="icon text-base leading-none">add</span>
@@ -63,7 +63,7 @@ export function PharmaceuticalPage() {
             <tbody className="divide-y divide-rule">
               {recalls.map((r) => (
                 <tr key={r._id} className="hover:bg-accent-soft/30 transition-colors">
-                  <td className="px-4 py-3 font-medium text-ink">{r.productId?.name || '—'}</td>
+                  <td className="px-4 py-3 font-medium text-ink">{r.productId?.name || '-'}</td>
                   <td className="px-4 py-3 text-ink-muted max-w-xs truncate">{r.reason}</td>
                   <td className="px-4 py-3 num text-ink-muted">{formatDate(r.initiatedDate)}</td>
                   <td className="px-4 py-3"><span className={STATUS_CHIP[r.status]}>{r.status}</span></td>
@@ -100,7 +100,7 @@ function RecallForm({ onClose, onSaved }) {
     setSaving(true);
     try {
       const result = await api.post('/pharmaceutical/recalls', { productId, batchId, reason });
-      toast(`Recall initiated — ${result.affectedCustomers.length} customer(s) traced from real sales history.`, 'success');
+      toast(`Recall initiated: ${result.affectedCustomers.length} customer(s) traced from real sales history.`, 'success');
       onSaved(result._id);
     } catch (err) {
       toast(err.message, 'error');
@@ -210,7 +210,7 @@ function RecallDetail({ recallId, onClose, onChanged }) {
                 const remaining = c.quantitySold - c.quantityReturned;
                 return (
                   <tr key={c.customerId?._id || c.customerId} className="hover:bg-accent-soft/30 transition-colors">
-                    <td className="px-4 py-2.5 text-ink">{c.customerId?.name || '—'}</td>
+                    <td className="px-4 py-2.5 text-ink">{c.customerId?.name || '-'}</td>
                     <td className="px-4 py-2.5 num text-right">{c.quantitySold}</td>
                     <td className="px-4 py-2.5 num text-right">{c.quantityReturned}</td>
                     <td className="px-4 py-2.5 text-right">

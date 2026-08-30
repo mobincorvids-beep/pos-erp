@@ -103,7 +103,7 @@ function CropCycleForm({ onClose, onSaved }) {
     setSaving(true);
     try {
       await api.post('/agriculture/crop-cycles', { ...form, expectedYield: Number(form.expectedYield) });
-      toast('Crop cycle started — raw materials consumed against the BOM.', 'success');
+      toast('Crop cycle started: raw materials consumed against the BOM.', 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -128,12 +128,12 @@ function CropCycleForm({ onClose, onSaved }) {
             <label className="field-label">Field</label>
             <select required className="field-input" value={form.fieldId} onChange={(e) => setForm({ ...form, fieldId: e.target.value })}>
               <option value="">Select…</option>
-              {fields.map((f) => <option key={f._id} value={f._id}>{f.name} — {f.areaAcres} acres</option>)}
+              {fields.map((f) => <option key={f._id} value={f._id}>{f.name}: {f.areaAcres} acres</option>)}
             </select>
           </div>
           <div><label className="field-label">Crop name</label><input required className="field-input" value={form.cropName} onChange={(e) => setForm({ ...form, cropName: e.target.value })} /></div>
           <div>
-            <label className="field-label">BOM (seeds, fertilizer — consumed immediately)</label>
+            <label className="field-label">BOM (seeds, fertilizer: consumed immediately)</label>
             <select required className="field-input" value={form.bomId} onChange={(e) => setForm({ ...form, bomId: e.target.value })}>
               <option value="">Select…</option>
               {boms.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
@@ -188,7 +188,7 @@ function HarvestForm({ cycle, onClose, onSaved }) {
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
         <p className="font-display text-lg font-bold text-ink mb-1">Complete harvest</p>
-        <p className="text-sm text-ink-muted mb-4">{cycle.cropName} — expected {cycle.expectedYield}</p>
+        <p className="text-sm text-ink-muted mb-4">{cycle.cropName}: expected {cycle.expectedYield}</p>
         <div className="space-y-3">
           <div><label className="field-label">Actual yield</label><input type="number" required className="field-input num" value={form.actualYield} onChange={(e) => setForm({ ...form, actualYield: e.target.value })} /></div>
           <div className="grid grid-cols-2 gap-2">
@@ -309,7 +309,7 @@ function YieldHistoryPanel({ field, onClose }) {
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <div className="card p-5 w-full max-w-lg max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
-          <p className="font-display text-lg font-bold text-ink">{field.name} — yield history</p>
+          <p className="font-display text-lg font-bold text-ink">{field.name}: yield history</p>
           <button className="btn-ghost" onClick={onClose}>Close</button>
         </div>
         {!data && <Loading />}

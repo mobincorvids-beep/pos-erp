@@ -185,11 +185,11 @@ function CollectionsTab({ schedules }) {
             <tbody>
               {collections.map((c) => (
                 <tr key={c._id} className="border-b border-rule last:border-0 hover:bg-surface-sunken/50 transition-colors">
-                  <td className="px-3 py-2 text-ink">{c.supplierId?.name || '—'}</td>
+                  <td className="px-3 py-2 text-ink">{c.supplierId?.name || '-'}</td>
                   <td className="px-3 py-2 num">{c.litres}</td>
                   <td className="px-3 py-2 num">{c.fatPercent}%</td>
-                  <td className="px-3 py-2 num">{c.pricePerLitre != null ? formatMoney(c.pricePerLitre, company?.currency) : '—'}</td>
-                  <td className="px-3 py-2 num">{c.totalPayable != null ? formatMoney(c.totalPayable, company?.currency) : '—'}</td>
+                  <td className="px-3 py-2 num">{c.pricePerLitre != null ? formatMoney(c.pricePerLitre, company?.currency) : '-'}</td>
+                  <td className="px-3 py-2 num">{c.totalPayable != null ? formatMoney(c.totalPayable, company?.currency) : '-'}</td>
                   <td className="px-3 py-2"><span className={c.paid ? 'chip-accent' : 'chip-warning'}>{c.paid ? 'paid' : 'unpaid'}</span></td>
                 </tr>
               ))}

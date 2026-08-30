@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
+import { FieldError, errorInputClass } from '../components/FieldError';
+import { validate, validateEmail, validateRequired, hasErrors } from '../lib/validation';
 
 export function LoginPage() {
   const { t } = useTranslation();
@@ -12,9 +14,22 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [touched, setTouched] = useState({});
+
+  const rules = {
+    email: (v) => validateEmail(v),
+    password: (v) => validateRequired(v, 'Password'),
+  };
+  const errors = validate({ email, password }, rules);
+
+  function markTouched(field) {
+    setTouched((t) => ({ ...t, [field]: true }));
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setTouched({ email: true, password: true });
+    if (hasErrors(errors)) return;
     setError('');
     setLoading(true);
     try {
@@ -52,22 +67,28 @@ export function LoginPage() {
             <div>
               <label className="field-label" htmlFor="email">{t('auth.email')}</label>
               <input
-                id="email" type="email" required autoFocus
-                className="field-input"
+                id="email" type="email" required autoFocus maxLength={254}
+                className={`field-input ${errorInputClass(touched.email && errors.email)}`}
                 value={email} onChange={(e) => setEmail(e.target.value)}
+                onBlur={() => markTouched('email')}
                 placeholder={t('auth.emailPlaceholder')}
+                aria-invalid={Boolean(touched.email && errors.email)}
               />
+              <FieldError message={touched.email ? errors.email : null} />
             </div>
             <div>
               <label className="field-label" htmlFor="password">{t('auth.password')}</label>
               <input
                 id="password" type="password" required
-                className="field-input"
+                className={`field-input ${errorInputClass(touched.password && errors.password)}`}
                 value={password} onChange={(e) => setPassword(e.target.value)}
+                onBlur={() => markTouched('password')}
                 placeholder="••••••••"
+                aria-invalid={Boolean(touched.password && errors.password)}
               />
+              <FieldError message={touched.password ? errors.password : null} />
             </div>
-            <button type="submit" disabled={loading} className="btn-primary w-full">
+            <button type="submit" disabled={loading || hasErrors(errors)} className="btn-primary w-full">
               {loading ? t('auth.signingIn') : t('auth.signIn')}
             </button>
           </form>

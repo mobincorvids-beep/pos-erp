@@ -74,7 +74,7 @@ export function SignupPage() {
                   ))}
                 </select>
                 <p className="text-xs text-ink-muted mt-1">
-                  This decides what your dashboard and sidebar show — pick the closest match.
+                  This decides what your dashboard and sidebar show, pick the closest match.
                 </p>
               </div>
             </div>
@@ -109,7 +109,7 @@ export function SignupPage() {
           Already have an account? <Link to="/login" className="underline">Sign in</Link>
         </p>
         <p className="text-xs text-ink-muted text-center mt-4">
-          Your business's data is completely private — no other business on this platform can see it, and you won't see theirs.
+          Your business's data is completely private, no other business on this platform can see it, and you won't see theirs.
         </p>
       </div>
     </div>

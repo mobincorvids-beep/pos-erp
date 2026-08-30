@@ -14,7 +14,7 @@ async function create(req, res) {
   }
 }
 
-/** Was missing — a renamed category or corrected default account had no way in. */
+/** Was missing, a renamed category or corrected default account had no way in. */
 async function update(req, res) {
   try {
     const category = await ExpenseCategory.findOneAndUpdate(
@@ -27,7 +27,7 @@ async function update(req, res) {
   }
 }
 
-/** Was missing — no way to remove a category created by mistake. Past Expense records keep
+/** Was missing, no way to remove a category created by mistake. Past Expense records keep
  * whatever categoryId they already have; nothing cascades. */
 async function remove(req, res) {
   const category = await ExpenseCategory.findOneAndDelete({ _id: req.params.id, companyId: req.companyId });

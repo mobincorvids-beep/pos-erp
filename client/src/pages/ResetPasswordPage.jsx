@@ -20,7 +20,7 @@ export function ResetPasswordPage() {
       return;
     }
     if (!token) {
-      setError('This reset link is missing its token — please request a new one.');
+      setError('This reset link is missing its token, please request a new one.');
       return;
     }
 

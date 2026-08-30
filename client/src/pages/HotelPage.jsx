@@ -134,7 +134,7 @@ function BookingForm({ onClose, onSaved }) {
             <label className="field-label">Room</label>
             <select required className="field-input" value={form.roomId} onChange={(e) => setForm({ ...form, roomId: e.target.value })}>
               <option value="">Select…</option>
-              {rooms.map((r) => <option key={r._id} value={r._id}>{r.roomNumber} — {r.roomType} ({r.status})</option>)}
+              {rooms.map((r) => <option key={r._id} value={r._id}>{r.roomNumber}: {r.roomType} ({r.status})</option>)}
             </select>
           </div>
           <div>
@@ -151,7 +151,7 @@ function BookingForm({ onClose, onSaved }) {
           <div><label className="field-label">Guests</label><input type="number" min="1" className="field-input num" value={form.guests} onChange={(e) => setForm({ ...form, guests: e.target.value })} /></div>
 
           <div className="tear-line" />
-          <p className="text-xs text-ink-muted">Optional advance deposit — posts as a liability until check-out.</p>
+          <p className="text-xs text-ink-muted">Optional advance deposit: posts as a liability until check-out.</p>
           <div><label className="field-label">Deposit amount</label><input type="number" className="field-input num" value={form.depositAmount} onChange={(e) => setForm({ ...form, depositAmount: e.target.value })} placeholder="Leave blank for none" /></div>
           {form.depositAmount && (
             <div className="grid grid-cols-2 gap-2">
@@ -203,7 +203,7 @@ function ReservationPanel({ reservation, onClose, onChanged }) {
     setBusy(true);
     try {
       await api.post(`/hotel/reservations/${reservation._id}/check-in`);
-      toast('Checked in — room marked occupied.', 'success');
+      toast('Checked in: room marked occupied.', 'success');
       onChanged(); onClose();
     } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }
   }
@@ -228,7 +228,7 @@ function ReservationPanel({ reservation, onClose, onChanged }) {
       const result = await api.post(`/hotel/reservations/${reservation._id}/check-out`, {
         warehouseId, finalPaymentAccountId: finalPaymentAccountId || undefined,
       });
-      toast(`Checked out — billed ${formatMoney(result.grandTotal, company?.currency)}.`, 'success');
+      toast(`Checked out: billed ${formatMoney(result.grandTotal, company?.currency)}.`, 'success');
       onChanged(); onClose();
     } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }
   }
@@ -287,7 +287,7 @@ function ReservationPanel({ reservation, onClose, onChanged }) {
         </>
       )}
 
-      {reservation.status === 'checked_out' && <p className="text-sm text-accent-strong font-medium">Checked out — billed and closed.</p>}
+      {reservation.status === 'checked_out' && <p className="text-sm text-accent-strong font-medium">Checked out: billed and closed.</p>}
       {reservation.status === 'cancelled' && <p className="text-sm text-danger font-medium">Cancelled.</p>}
     </div>
   );
@@ -377,7 +377,7 @@ function RoomForm({ room, onClose, onSaved }) {
     try {
       if (isNew) {
         const product = products.find((p) => p._id === form.billingProductId);
-        if (!product) throw new Error('Select a billing product — it must have trackingMode "service".');
+        if (!product) throw new Error('Select a billing product: it must have trackingMode "service".');
         await api.post('/hotel/rooms', { ...form, ratePerNight: Number(form.ratePerNight), billingVariantId: product.variants[0]?._id });
         toast('Room added.', 'success');
       } else {
@@ -416,7 +416,7 @@ function RoomForm({ room, onClose, onSaved }) {
                 <option value="">Select…</option>
                 {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
               </select>
-              {products.length === 0 && <p className="text-xs text-warning mt-1">No service-tracked products found — create one on the Products page first (trackingMode: "service").</p>}
+              {products.length === 0 && <p className="text-xs text-warning mt-1">No service-tracked products found: create one on the Products page first (trackingMode: "service").</p>}
             </div>
           )}
         </div>

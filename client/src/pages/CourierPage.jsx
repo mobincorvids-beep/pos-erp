@@ -96,7 +96,7 @@ function TrackTab() {
             <span className={statusChipClass(result.status)}>{statusLabel(result.status)}</span>
           </div>
           {(result.origin || result.destination) && (
-            <p className="text-sm text-ink-muted mb-3">{result.origin || '—'} → {result.destination || '—'}</p>
+            <p className="text-sm text-ink-muted mb-3">{result.origin || '-'} → {result.destination || '-'}</p>
           )}
           <p className="field-label mb-2">History</p>
           <div className="space-y-2">
@@ -175,7 +175,7 @@ function ShipmentsTab() {
                   <tr key={s._id} className="border-b border-rule last:border-b-0">
                     <td className="px-4 py-3 num font-medium">{s.trackingNumber}</td>
                     <td className="px-4 py-3 text-ink-muted">{s.customerId?.name || 'Customer'}</td>
-                    <td className="px-4 py-3 text-ink-muted">{s.destination || '—'}</td>
+                    <td className="px-4 py-3 text-ink-muted">{s.destination || '-'}</td>
                     <td className="px-4 py-3">
                       <span className={statusChipClass(s.status)}>{statusLabel(s.status)}</span>
                     </td>

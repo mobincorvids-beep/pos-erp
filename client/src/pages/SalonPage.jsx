@@ -179,7 +179,7 @@ function BillServiceForm({ service, onClose }) {
     setSaving(true);
     try {
       const result = await api.post('/salon/services/bill', { ...form, salonServiceId: service._id });
-      toast(`Billed ${formatMoney(result.sale.totalAmount, company?.currency)} — commission recorded.`, 'success');
+      toast(`Billed ${formatMoney(result.sale.totalAmount, company?.currency)}: commission recorded.`, 'success');
       onClose();
     } catch (err) {
       toast(err.message, 'error');
@@ -485,7 +485,7 @@ function CommissionsTab() {
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-ink-muted p-3 border-t border-rule">Unpaid commissions get folded into the next payroll run automatically — see HR &amp; Payroll.</p>
+      <p className="text-xs text-ink-muted p-3 border-t border-rule">Unpaid commissions get folded into the next payroll run automatically, see HR &amp; Payroll.</p>
     </div>
   );
 }

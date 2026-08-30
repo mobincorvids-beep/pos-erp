@@ -51,7 +51,7 @@ async function arAgingReport(companyId, asOfDate = new Date()) {
   return { asOfDate, rows, buckets, totalOutstanding: Math.round(Object.values(buckets).reduce((s, v) => s + v, 0) * 100) / 100 };
 }
 
-/** The real write-off — a permanent, real accounting action, not a soft delete. Once written off, this sale's dueAmount is permanently 0 and it disappears from AR aging going forward. */
+/** The real write-off: a permanent, real accounting action, not a soft delete. Once written off, this sale's dueAmount is permanently 0 and it disappears from AR aging going forward. */
 async function writeOffReceivable(saleId, { badDebtExpenseAccountId, receivableAccountId, userId }) {
   const sale = await Sale.findById(saleId);
   if (!sale) throw new Error('Sale not found.');
@@ -60,7 +60,7 @@ async function writeOffReceivable(saleId, { badDebtExpenseAccountId, receivableA
 
   const amount = sale.dueAmount;
   const voucher = await accountingService.postVoucher({
-    companyId: sale.companyId, branchId: sale.branchId, type: 'journal', narration: `Bad debt write-off — invoice ${sale.invoiceNumber}`,
+    companyId: sale.companyId, branchId: sale.branchId, type: 'journal', narration: `Bad debt write-off: invoice ${sale.invoiceNumber}`,
     entries: [
       { accountId: badDebtExpenseAccountId, debit: amount, credit: 0 },
       { accountId: receivableAccountId, debit: 0, credit: amount },

@@ -15,7 +15,7 @@ async function list(req, res) {
   res.json(users);
 }
 
-/** Platform-level moderation — suspending a user across the whole platform. Distinct from a company owner deactivating their own staff via /users (tenant-scoped, permission-gated by USERS_MANAGE) — this is the cross-company override for the platform operator. */
+/** Platform-level moderation (suspending a user across the whole platform. Distinct from a company owner deactivating their own staff via /users (tenant-scoped, permission-gated by USERS_MANAGE)) this is the cross-company override for the platform operator. */
 async function setActive(req, res) {
   const { isActive } = req.body;
   const user = await User.findByIdAndUpdate(req.params.id, { isActive }, { new: true }).select('-passwordHash');

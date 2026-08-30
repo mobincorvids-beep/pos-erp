@@ -29,7 +29,7 @@ async function removeTags(customerId, tags) {
   return customer;
 }
 
-/** Customers matching ANY of the given tags — the "segment" itself is just this query. */
+/** Customers matching ANY of the given tags, the "segment" itself is just this query. */
 function findBySegment(companyId, tags) {
   const filter = { companyId };
   if (tags && tags.length > 0) filter.tags = { $in: tags };

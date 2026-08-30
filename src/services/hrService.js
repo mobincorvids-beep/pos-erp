@@ -226,7 +226,7 @@ async function generatePayroll({ companyId, month, year, userId }) {
 async function addBonusToDraftPayroll(payrollRunId, employeeId, amount, note) {
   const run = await PayrollRun.findById(payrollRunId);
   if (!run) throw new Error('Payroll run not found.');
-  if (run.status !== 'draft') throw new Error(`Cannot add pay to a payroll run with status "${run.status}" — only a draft can still be adjusted.`);
+  if (run.status !== 'draft') throw new Error(`Cannot add pay to a payroll run with status "${run.status}": only a draft can still be adjusted.`);
 
   const entry = run.entries.find((e) => String(e.employeeId) === String(employeeId));
   if (!entry) throw new Error('This employee is not on this payroll run (are they active and were they when it was generated?).');
@@ -254,7 +254,7 @@ async function postPayroll(payrollRunId, { paymentAccountId, userId }) {
       const salariesExpense = await defaultAccountsService.resolve(run.companyId, 'salariesExpenseId', session);
 
       if (!salariesExpense) {
-        throw new Error('No Salaries Expense account configured for this company — set one in Settings, or create an account named like "Salaries" before posting payroll.');
+        throw new Error('No Salaries Expense account configured for this company, set one in Settings, or create an account named like "Salaries" before posting payroll.');
       }
 
       const voucher = await accountingService.postVoucher({

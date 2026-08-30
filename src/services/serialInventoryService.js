@@ -46,7 +46,7 @@ async function markSold(variantId, serialNumbers, saleId, session) {
   );
 }
 
-/** Reverses a sale's hold on these serials — used by both void (all serials on the line) and a partial return (just the returned subset). Goods are assumed resellable; use a separate QC-style flow if that's ever not true. */
+/** Reverses a sale's hold on these serials: used by both void (all serials on the line) and a partial return (just the returned subset). Goods are assumed resellable; use a separate QC-style flow if that's ever not true. */
 async function releaseToStock(variantId, serialNumbers, session) {
   if (!serialNumbers || serialNumbers.length === 0) return;
   await ProductSerial.updateMany(

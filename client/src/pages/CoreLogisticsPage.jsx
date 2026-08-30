@@ -110,10 +110,10 @@ export function CoreLogisticsPage() {
                       </div>
                     </td>
                     <td className="py-3 px-5 text-sm text-ink-muted">
-                      <div>{s.carrierName || '—'}</div>
-                      <div className="text-xs num">{s.trackingNumber || '—'}</div>
+                      <div>{s.carrierName || '-'}</div>
+                      <div className="text-xs num">{s.trackingNumber || '-'}</div>
                     </td>
-                    <td className="py-3 px-5 text-sm text-ink">{s.destination?.city || '—'}</td>
+                    <td className="py-3 px-5 text-sm text-ink">{s.destination?.city || '-'}</td>
                     <td className="py-3 px-5"><StatusChip status={s.status} /></td>
                     <td className="py-3 px-5 text-sm text-ink font-semibold text-right num">{formatMoney(s.shippingCost || 0)}</td>
                     <td className="py-3 px-5 text-right">
@@ -167,7 +167,7 @@ function CreateShipmentModal({ onClose, onCreated }) {
       <form onSubmit={submit} className="card p-5 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
         <p className="font-display text-lg mb-4">New shipment</p>
         <div className="space-y-3">
-          <input className="field-input" placeholder="Sale ID (optional — leave blank for standalone)" value={form.saleId} onChange={(e) => setForm({ ...form, saleId: e.target.value })} />
+          <input className="field-input" placeholder="Sale ID (optional: leave blank for standalone)" value={form.saleId} onChange={(e) => setForm({ ...form, saleId: e.target.value })} />
           <input className="field-input" placeholder="Customer ID (optional)" value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} />
           <input className="field-input" placeholder="Carrier name" value={form.carrierName} onChange={(e) => setForm({ ...form, carrierName: e.target.value })} />
           <input className="field-input" placeholder="Tracking number" value={form.trackingNumber} onChange={(e) => setForm({ ...form, trackingNumber: e.target.value })} />
@@ -240,7 +240,7 @@ function ShipmentDetail({ id, onClose, onChanged }) {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm font-semibold text-ink num">{data.shipment.shipmentNumber}</p>
-                <p className="text-xs text-ink-muted mt-1">Tracking: <span className="num">{data.shipment.trackingNumber || '—'}</span> · Carrier: {data.shipment.carrierName || '—'}</p>
+                <p className="text-xs text-ink-muted mt-1">Tracking: <span className="num">{data.shipment.trackingNumber || '-'}</span> · Carrier: {data.shipment.carrierName || '-'}</p>
                 <p className="text-xs text-ink-muted">Destination: {data.shipment.destination?.line1} {data.shipment.destination?.city}</p>
               </div>
               <StatusChip status={data.shipment.status} />
@@ -264,7 +264,7 @@ function ShipmentDetail({ id, onClose, onChanged }) {
               <ul className="space-y-3">
                 {data.timeline.map((ev) => (
                   <li key={ev._id} className="text-sm border-l-2 border-accent/40 pl-3">
-                    <div className="text-ink font-medium">{STATUS_LABEL[ev.status] || ev.status} {ev.location ? `— ${ev.location}` : ''}</div>
+                    <div className="text-ink font-medium">{STATUS_LABEL[ev.status] || ev.status} {ev.location ? `, ${ev.location}` : ''}</div>
                     {ev.note && <div className="text-ink-muted">{ev.note}</div>}
                     <div className="text-xs text-ink-muted mt-0.5">{formatDateTime(ev.createdAt)}</div>
                   </li>

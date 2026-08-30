@@ -26,7 +26,7 @@ export function ConstructionPage() {
       <div className="flex items-end justify-between mb-6">
         <div>
           <p className="page-title">Bills of Quantities</p>
-          <p className="text-sm text-ink-muted mt-1 max-w-2xl">A real, pre-approved estimate created before costs start accumulating — compared against actual project costs your team already logs, line by line.</p>
+          <p className="text-sm text-ink-muted mt-1 max-w-2xl">A real, pre-approved estimate created before costs start accumulating, compared against actual project costs your team already logs, line by line.</p>
         </div>
         <button className="btn-primary" onClick={() => setShowForm(true)}>New BOQ</button>
       </div>
@@ -168,7 +168,7 @@ function VariancePanel({ boqId, onClose }) {
             <p className={`font-display text-lg font-bold mt-1 num ${report.totalVariance > 0 ? 'text-danger' : 'text-accent-strong'}`}>{formatMoney(report.totalVariance, company?.currency)}</p>
           </div>
         </div>
-        <p className="text-xs text-ink-muted mb-3">Actual totals include every cost type the project has actually incurred — even a category nobody budgeted for at all, which is real, meaningful overage, not noise.</p>
+        <p className="text-xs text-ink-muted mb-3">Actual totals include every cost type the project has actually incurred, even a category nobody budgeted for at all, which is real, meaningful overage, not noise.</p>
         <div className="card overflow-hidden">
           <table className="w-full text-left border-collapse text-sm">
             <thead>

@@ -149,7 +149,7 @@ function StaffForm({ onClose, onSaved }) {
         <div className="space-y-3">
           <div><label className="field-label">Name</label><input required autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
           <div><label className="field-label">Email (their login)</label><input type="email" required className="field-input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-          <div><label className="field-label">Temporary password</label><input type="text" required minLength={8} className="field-input" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="At least 8 characters — they should change it after first login" /></div>
+          <div><label className="field-label">Temporary password</label><input type="text" required minLength={8} className="field-input" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="At least 8 characters: they should change it after first login" /></div>
           <div>
             <label className="field-label">Branch</label>
             <select className="field-input" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value })}>
@@ -160,7 +160,7 @@ function StaffForm({ onClose, onSaved }) {
           <div>
             <label className="field-label">Role</label>
             <select className="field-input" value={form.roleId} onChange={(e) => setForm({ ...form, roleId: e.target.value })}>
-              <option value="">No role (full access — use carefully)</option>
+              <option value="">No role (full access: use carefully)</option>
               {roles.map((r) => <option key={r._id} value={r._id}>{r.name}</option>)}
             </select>
           </div>
@@ -199,7 +199,7 @@ function RolesTab({ canManage }) {
 
         {loading && <Loading />}
         {!loading && roles.length === 0 && (
-          <EmptyState title="No custom roles yet" description="Roles let you give staff exactly the access they need — a cashier who can sell but not see financial reports, for example." action={canManage && <button className="btn-primary" onClick={() => setShowForm(true)}>Create a role</button>} />
+          <EmptyState title="No custom roles yet" description="Roles let you give staff exactly the access they need, a cashier who can sell but not see financial reports, for example." action={canManage && <button className="btn-primary" onClick={() => setShowForm(true)}>Create a role</button>} />
         )}
         {!loading && roles.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">

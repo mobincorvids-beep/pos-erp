@@ -65,7 +65,7 @@ function ConsolidatedView({ data }) {
   const { company } = useAuth();
   return (
     <div>
-      <p className="text-xs text-ink-muted mb-3">Every company in your group (this company plus any sharing the same parent) — configured by your platform admin.</p>
+      <p className="text-xs text-ink-muted mb-3">Every company in your group (this company plus any sharing the same parent), configured by your platform admin.</p>
       <ReportTable
         columns={['Company', 'Invoices', 'Net sales']}
         rows={data.companies.map((c) => [c.companyName, String(c.invoiceCount), formatMoney(c.netSales, company?.currency)])}
@@ -121,7 +121,7 @@ function DateRangeReport({ path, render: Render }) {
   );
 }
 
-/** Stat tile matching the reference dashboard's KPI cards — big tabular
+/** Stat tile matching the reference dashboard's KPI cards: big tabular
  * number, small icon chip, optional trend caption underneath a divider.
  * Local to this page only; MetricCard (used elsewhere) is untouched. */
 function StatTile({ label, value, icon, caption, tone }) {
@@ -183,7 +183,7 @@ function TrialBalanceView({ data }) {
   return (
     <div>
       <div className={`chip-${data.balanced ? 'accent' : 'danger'} !inline-block mb-4`}>
-        {data.balanced ? 'Balanced' : 'Not balanced — check ledger entries'}
+        {data.balanced ? 'Balanced' : 'Not balanced: check ledger entries'}
       </div>
       <ReportTable
         columns={['Account', 'Type', 'Debit', 'Credit']}
@@ -345,7 +345,7 @@ function CashBankBookView({ data }) {
   );
 }
 
-/** Cash/bank book needs an account picker before it can load — unlike the other
+/** Cash/bank book needs an account picker before it can load, unlike the other
  * date-range reports, `cashBankBook` requires an `accountId` param. Pulls the
  * account list from /account-settings (same endpoint the Default Accounts
  * settings page uses), defaults to the first account once loaded. */

@@ -221,7 +221,7 @@ function RfqDetail({ rfq, onClose, onChanged }) {
               <tbody>
                 {quotations.map((q) => (
                   <tr key={q._id} className="border-b border-rule last:border-0">
-                    <td className="px-4 py-2.5">{q.supplierId?.name || '—'}</td>
+                    <td className="px-4 py-2.5">{q.supplierId?.name || '-'}</td>
                     <td className="px-4 py-2.5 num text-right">{formatMoney(q.totalAmount, company?.currency)}</td>
                   </tr>
                 ))}
@@ -244,7 +244,7 @@ function RfqDetail({ rfq, onClose, onChanged }) {
                 <tbody>
                   {comparison.bestByItem.map((b, i) => (
                     <tr key={i} className="border-b border-rule last:border-0">
-                      <td className="px-4 py-2.5">{b.supplierId?.name || '—'}</td>
+                      <td className="px-4 py-2.5">{b.supplierId?.name || '-'}</td>
                       <td className="px-4 py-2.5 num text-right">{formatMoney(b.unitPrice, company?.currency)}</td>
                     </tr>
                   ))}

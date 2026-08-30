@@ -5,6 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { formatMoney, formatQty } from '../lib/format';
 import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
+import { FieldError, errorInputClass } from '../components/FieldError';
+import { validatePkPhone } from '../lib/validation';
 
 export function PosPage() {
   const { t } = useTranslation();
@@ -28,6 +30,7 @@ export function PosPage() {
   const [couponCode, setCouponCode] = useState('');
   const [couponResult, setCouponResult] = useState(null); // null | { coupon, discountAmount } | { error }
   const [couponChecking, setCouponChecking] = useState(false);
+  const [gatewayPhoneTouched, setGatewayPhoneTouched] = useState(false);
   const [context, setContext] = useState(() => {
     try {
       const stored = localStorage.getItem('pos_erp_checkout_context');
@@ -114,6 +117,7 @@ export function PosPage() {
   const preCouponTotal = subtotal + taxTotal;
   const couponDiscount = couponResult?.discountAmount || 0;
   const total = Math.max(preCouponTotal - couponDiscount, 0);
+  const gatewayPhoneError = isGatewayMethod ? validatePkPhone(gatewayPhone, { label: t('pos.customerMobileNumber') }) : null;
   const itemCount = cart.reduce((sum, l) => sum + l.quantity, 0);
 
   /** Previews a coupon code against the current cart total — mirrors checkGiftCard()'s "look up before committing" shape. Re-validated server-side again at actual checkout, so this is purely a cashier-facing preview. */
@@ -169,6 +173,7 @@ export function PosPage() {
     setCart([]);
     setGatewayStatus(null);
     setGatewayPhone('');
+    setGatewayPhoneTouched(false);
     setGiftCardNumber('');
     setGiftCardLookup(null);
     setCouponCode('');
@@ -223,7 +228,8 @@ export function PosPage() {
       toast(t('pos.setupBeforeCheckout'), 'error');
       return;
     }
-    if (isGatewayMethod && !/^03\d{9}$/.test(gatewayPhone)) {
+    if (isGatewayMethod && gatewayPhoneError) {
+      setGatewayPhoneTouched(true);
       toast(t('pos.enterValidMobile', { provider: paymentMethod === 'jazzcash' ? 'JazzCash' : 'Easypaisa' }), 'error');
       return;
     }
@@ -316,7 +322,7 @@ export function PosPage() {
                 </div>
                 <div className="p-3 flex flex-col flex-1">
                   <p className="text-sm font-semibold text-ink line-clamp-2 leading-tight">{product.name}</p>
-                  <p className="text-xs text-ink-muted mt-1 mb-2">{product.sku ? t('pos.sku', { sku: product.sku }) : '—'}</p>
+                  <p className="text-xs text-ink-muted mt-1 mb-2">{product.sku ? t('pos.sku', { sku: product.sku }) : '-'}</p>
                   <div className="mt-auto flex items-end justify-between">
                     <span className="num text-sm font-bold text-accent">{formatMoney(product.sellingPrice, company?.currency)}</span>
                     <span className="w-7 h-7 rounded-full bg-accent-soft text-accent-strong flex items-center justify-center group-hover:bg-accent group-hover:text-white transition-colors shrink-0">
@@ -439,7 +445,7 @@ export function PosPage() {
             <select
               className="field-input"
               value={paymentMethod}
-              onChange={(e) => { setPaymentMethod(e.target.value); setGatewayStatus(null); setGiftCardLookup(null); }}
+              onChange={(e) => { setPaymentMethod(e.target.value); setGatewayStatus(null); setGiftCardLookup(null); setGatewayPhoneTouched(false); }}
             >
               <option value="cash">{t('pos.cash')}</option>
               <option value="card">{t('pos.card')}</option>
@@ -454,10 +460,15 @@ export function PosPage() {
             <div className="mb-2">
               <label className="field-label">{t('pos.customerMobileNumber')}</label>
               <input
-                type="tel" placeholder={t('pos.gatewayPhonePlaceholder')} className="field-input"
+                type="tel" inputMode="numeric" pattern="03[0-9]{9}" maxLength={11}
+                placeholder={t('pos.gatewayPhonePlaceholder')}
+                className={`field-input ${errorInputClass(gatewayPhoneTouched && gatewayPhoneError)}`}
                 value={gatewayPhone} onChange={(e) => setGatewayPhone(e.target.value.trim())}
+                onBlur={() => setGatewayPhoneTouched(true)}
                 disabled={checkingOut}
+                aria-invalid={Boolean(gatewayPhoneTouched && gatewayPhoneError)}
               />
+              <FieldError message={gatewayPhoneTouched ? gatewayPhoneError : null} />
             </div>
           )}
 
@@ -505,7 +516,7 @@ export function PosPage() {
 
           <button
             className="btn-primary w-full !py-3.5 !rounded-xl text-base justify-between !px-5"
-            disabled={cart.length === 0 || checkingOut}
+            disabled={cart.length === 0 || checkingOut || Boolean(isGatewayMethod && gatewayPhoneError)}
             onClick={handleCheckout}
           >
             <span>

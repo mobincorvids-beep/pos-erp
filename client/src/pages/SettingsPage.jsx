@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { Loading } from '../components/Loading';
 import { Pencil, Trash2, Plus, Building2, Landmark, Send } from 'lucide-react';
+import { FieldError, errorInputClass } from '../components/FieldError';
+import { validate, validateRequired, validatePositiveNumber, hasErrors } from '../lib/validation';
 
 const CURRENCIES = ['PKR', 'USD', 'AED', 'SAR', 'GBP', 'EUR', 'INR'];
 
@@ -202,9 +204,9 @@ function BranchesTab({ canManage }) {
               {branches.map((b) => (
                 <tr key={b._id} className="border-b border-rule last:border-0 hover:bg-accent-soft/30 transition-colors">
                   <td className="px-4 py-3 font-medium text-ink">{b.name}</td>
-                  <td className="px-4 py-3 text-ink-muted num">{b.code || '—'}</td>
-                  <td className="px-4 py-3 text-ink-muted">{b.address || '—'}</td>
-                  <td className="px-4 py-3 text-ink-muted num">{b.phone || '—'}</td>
+                  <td className="px-4 py-3 text-ink-muted num">{b.code || '-'}</td>
+                  <td className="px-4 py-3 text-ink-muted">{b.address || '-'}</td>
+                  <td className="px-4 py-3 text-ink-muted num">{b.phone || '-'}</td>
                   {canManage && (
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-2">
@@ -331,7 +333,7 @@ function TaxPaymentsTab({ canManage }) {
       } else if (result.taxPayment.status === 'failed') {
         toast(result.responseMessage || 'JazzCash declined the payment.', 'error');
       } else {
-        toast('Payment initiated — awaiting confirmation from JazzCash.', 'success');
+        toast('Payment initiated, awaiting confirmation from JazzCash.', 'success');
       }
       load();
     } catch (err) {
@@ -420,9 +422,22 @@ function NewTaxLiabilityForm({ onClose, onSaved }) {
   const toast = useToast();
   const [form, setForm] = useState({ periodLabel: '', taxAuthority: 'fbr', amountDue: '' });
   const [saving, setSaving] = useState(false);
+  const [touched, setTouched] = useState({});
+
+  const rules = {
+    periodLabel: (v) => validateRequired(v, 'Period'),
+    amountDue: (v) => validatePositiveNumber(v, 'Amount due'),
+  };
+  const errors = validate(form, rules);
+
+  function markTouched(field) {
+    setTouched((t) => ({ ...t, [field]: true }));
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setTouched({ periodLabel: true, amountDue: true });
+    if (hasErrors(errors)) return;
     setSaving(true);
     try {
       await api.post('/tax-payments', {
@@ -446,7 +461,14 @@ function NewTaxLiabilityForm({ onClose, onSaved }) {
         <div className="space-y-3">
           <div>
             <label className="field-label">Period</label>
-            <input required autoFocus placeholder="August 2026" className="field-input" value={form.periodLabel} onChange={(e) => setForm({ ...form, periodLabel: e.target.value })} />
+            <input
+              required autoFocus placeholder="August 2026" maxLength={60}
+              className={`field-input ${errorInputClass(touched.periodLabel && errors.periodLabel)}`}
+              value={form.periodLabel} onChange={(e) => setForm({ ...form, periodLabel: e.target.value })}
+              onBlur={() => markTouched('periodLabel')}
+              aria-invalid={Boolean(touched.periodLabel && errors.periodLabel)}
+            />
+            <FieldError message={touched.periodLabel ? errors.periodLabel : null} />
           </div>
           <div>
             <label className="field-label">Authority</label>
@@ -456,12 +478,19 @@ function NewTaxLiabilityForm({ onClose, onSaved }) {
           </div>
           <div>
             <label className="field-label">Amount due</label>
-            <input required type="number" min="0.01" step="0.01" className="field-input" value={form.amountDue} onChange={(e) => setForm({ ...form, amountDue: e.target.value })} />
+            <input
+              required type="number" min="0.01" step="0.01"
+              className={`field-input ${errorInputClass(touched.amountDue && errors.amountDue)}`}
+              value={form.amountDue} onChange={(e) => setForm({ ...form, amountDue: e.target.value })}
+              onBlur={() => markTouched('amountDue')}
+              aria-invalid={Boolean(touched.amountDue && errors.amountDue)}
+            />
+            <FieldError message={touched.amountDue ? errors.amountDue : null} />
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Record'}</button>
+          <button type="submit" disabled={saving || hasErrors(errors)} className="btn-primary">{saving ? 'Saving…' : 'Record'}</button>
         </div>
       </form>
     </div>
@@ -481,9 +510,25 @@ function JazzCashTaxPayCredentials({ company, canManage, onSaved }) {
     fbrAccountTitle: cfg.fbrAccountTitle || '',
   });
   const [saving, setSaving] = useState(false);
+  const [touched, setTouched] = useState({});
+
+  // Credentials are only required once the vendor turns this on — leaving it off with
+  // blank fields is a perfectly valid (default) state.
+  const rules = {
+    merchantId: (v) => (form.enabled ? validateRequired(v, 'JazzCash Merchant ID') : null),
+    password: (v) => (form.enabled ? validateRequired(v, 'Password') : null),
+    integritySalt: (v) => (form.enabled ? validateRequired(v, 'Integrity Salt') : null),
+  };
+  const errors = validate(form, rules);
+
+  function markTouched(field) {
+    setTouched((t) => ({ ...t, [field]: true }));
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setTouched({ merchantId: true, password: true, integritySalt: true });
+    if (hasErrors(errors)) return;
     setSaving(true);
     try {
       const updated = await api.put('/org/company', { jazzCashTaxPay: form });
@@ -514,16 +559,36 @@ function JazzCashTaxPayCredentials({ company, canManage, onSaved }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="field-label">JazzCash Merchant ID</label>
-              <input className="field-input" value={form.merchantId} onChange={(e) => setForm({ ...form, merchantId: e.target.value })} />
+              <input
+                className={`field-input ${errorInputClass(touched.merchantId && errors.merchantId)}`}
+                value={form.merchantId} onChange={(e) => setForm({ ...form, merchantId: e.target.value })}
+                onBlur={() => markTouched('merchantId')}
+                aria-invalid={Boolean(touched.merchantId && errors.merchantId)}
+              />
+              <FieldError message={touched.merchantId ? errors.merchantId : null} />
             </div>
             <div>
               <label className="field-label">Password</label>
-              <input type="password" autoComplete="new-password" className="field-input" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+              <input
+                type="password" autoComplete="new-password"
+                className={`field-input ${errorInputClass(touched.password && errors.password)}`}
+                value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })}
+                onBlur={() => markTouched('password')}
+                aria-invalid={Boolean(touched.password && errors.password)}
+              />
+              <FieldError message={touched.password ? errors.password : null} />
             </div>
           </div>
           <div>
             <label className="field-label">Integrity Salt</label>
-            <input type="password" autoComplete="new-password" className="field-input" value={form.integritySalt} onChange={(e) => setForm({ ...form, integritySalt: e.target.value })} />
+            <input
+              type="password" autoComplete="new-password"
+              className={`field-input ${errorInputClass(touched.integritySalt && errors.integritySalt)}`}
+              value={form.integritySalt} onChange={(e) => setForm({ ...form, integritySalt: e.target.value })}
+              onBlur={() => markTouched('integritySalt')}
+              aria-invalid={Boolean(touched.integritySalt && errors.integritySalt)}
+            />
+            <FieldError message={touched.integritySalt ? errors.integritySalt : null} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -538,7 +603,7 @@ function JazzCashTaxPayCredentials({ company, canManage, onSaved }) {
         </fieldset>
         {canManage && (
           <div className="flex justify-end pt-2">
-            <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save credentials'}</button>
+            <button type="submit" disabled={saving || hasErrors(errors)} className="btn-primary">{saving ? 'Saving…' : 'Save credentials'}</button>
           </div>
         )}
       </div>

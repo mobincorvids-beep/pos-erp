@@ -35,7 +35,7 @@ async function remove(req, res) {
   }
 }
 
-/** Idempotent "pull in the defaults" action for an existing company — matches by name, skips what's already there. */
+/** Idempotent "pull in the defaults" action for an existing company: matches by name, skips what's already there. */
 async function reseedDefaults(req, res) {
   const result = await categoryService.seedDefaultCategories(req.companyId);
   res.json({ ok: true, ...result });

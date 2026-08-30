@@ -35,7 +35,7 @@ async function pay(req, res) {
   }
 }
 
-/** PUBLIC — hit by JazzCash's own servers. No requireAuth/scopeToCompany in front; the TaxPayment's own companyId (via the pp_TxnRefNo billReference) is the only tenant scoping, verified through the company's own stored signature secret before anything is trusted. */
+/** PUBLIC: hit by JazzCash's own servers. No requireAuth/scopeToCompany in front; the TaxPayment's own companyId (via the pp_TxnRefNo billReference) is the only tenant scoping, verified through the company's own stored signature secret before anything is trusted. */
 async function jazzCashCallback(req, res) {
   try {
     const result = await taxPaymentService.handleCallback(req.body);

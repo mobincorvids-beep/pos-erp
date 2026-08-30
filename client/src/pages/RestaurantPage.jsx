@@ -235,7 +235,7 @@ function OrderPanel({ table, onClose }) {
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <div className="card p-5 w-full max-w-2xl max-h-[85vh] flex flex-col shadow-lg">
         <div className="flex items-center justify-between mb-4">
-          <p className="font-display text-lg font-semibold text-ink">{table.name} — order</p>
+          <p className="font-display text-lg font-semibold text-ink">{table.name}: order</p>
           <button onClick={onClose} className="text-ink-muted hover:text-ink"><X size={18} /></button>
         </div>
 
@@ -271,7 +271,7 @@ function OrderPanel({ table, onClose }) {
 
             <div>
               <p className="eyebrow mb-1.5">Kitchen status</p>
-              {!kot && <p className="text-sm text-ink-muted">No order sent yet — add items from the menu.</p>}
+              {!kot && <p className="text-sm text-ink-muted">No order sent yet: add items from the menu.</p>}
               {kot && (
                 <div className="space-y-1.5">
                   {kot.items.map((item) => (

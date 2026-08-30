@@ -51,7 +51,7 @@ export function PeriodsPage() {
       <div className="flex justify-between items-end flex-wrap gap-4 mb-6">
         <div>
           <p className="page-title">Fiscal Years &amp; Periods</p>
-          <p className="text-sm text-ink-muted mt-1 max-w-2xl">Closing a period is a real accounting control — once closed, no voucher can be posted with a date inside it, anywhere in the system, until it's reopened.</p>
+          <p className="text-sm text-ink-muted mt-1 max-w-2xl">Closing a period is a real accounting control, once closed, no voucher can be posted with a date inside it, anywhere in the system, until it's reopened.</p>
         </div>
         <div className="flex gap-2">
           <button className="btn-secondary" onClick={() => setShowFyForm(true)}>New fiscal year</button>
@@ -87,7 +87,7 @@ export function PeriodsPage() {
                 {periods.map((p) => (
                   <tr key={p._id} className="hover:bg-accent-soft/30 transition-colors">
                     <td className="py-3 px-5 text-sm font-semibold text-ink">{p.name}</td>
-                    <td className="py-3 px-5 text-sm text-ink-muted">{p.fiscalYearId?.name || '—'}</td>
+                    <td className="py-3 px-5 text-sm text-ink-muted">{p.fiscalYearId?.name || '-'}</td>
                     <td className="py-3 px-5 text-sm text-ink-muted num">{formatDate(p.startDate)} – {formatDate(p.endDate)}</td>
                     <td className="py-3 px-5"><StatusChip status={p.status} /></td>
                     <td className="py-3 px-5 text-right">

@@ -5,6 +5,8 @@ import { useToast } from '../components/Toast';
 import { Loading } from '../components/Loading';
 import { EmptyState } from '../components/EmptyState';
 import { formatMoney, formatDate } from '../lib/format';
+import { FieldError, errorInputClass } from '../components/FieldError';
+import { validate, validateRequired, validateEmail, validatePkPhone, validateNonNegativeNumber, hasErrors, isBlank } from '../lib/validation';
 
 export function CustomersPage() {
   const toast = useToast();
@@ -66,13 +68,13 @@ export function CustomersPage() {
                         </td>
                         <td className="px-4 py-3 cursor-pointer" onClick={() => setSelected(c)}>
                           <div className="flex flex-col">
-                            <span className="num text-ink-muted">{c.phone || '—'}</span>
+                            <span className="num text-ink-muted">{c.phone || '-'}</span>
                             {c.email && <span className="text-xs text-ink-muted">{c.email}</span>}
                           </div>
                         </td>
                         <td className="px-4 py-3 cursor-pointer" onClick={() => setSelected(c)}>
                           <div className="flex flex-wrap gap-1">
-                            {c.tags?.length ? c.tags.map((t) => <span key={t} className="chip-neutral">{t}</span>) : <span className="text-ink-muted text-xs">—</span>}
+                            {c.tags?.length ? c.tags.map((t) => <span key={t} className="chip-neutral">{t}</span>) : <span className="text-ink-muted text-xs">-</span>}
                           </div>
                         </td>
                         <td className="px-4 py-3 num text-right cursor-pointer" onClick={() => setSelected(c)}>{c.loyaltyPoints}</td>
@@ -104,9 +106,24 @@ function CustomerForm({ customer, onClose, onSaved }) {
     address: customer.address || '', creditLimit: customer.creditLimit ?? '',
   });
   const [saving, setSaving] = useState(false);
+  const [touched, setTouched] = useState({});
+
+  const rules = {
+    name: (v) => validateRequired(v, 'Name'),
+    phone: (v) => (isBlank(v) ? null : validatePkPhone(v, { required: false })),
+    email: (v) => (isBlank(v) ? null : validateEmail(v, { required: false })),
+    creditLimit: (v) => validateNonNegativeNumber(v, 'Credit limit', { required: false }),
+  };
+  const errors = validate(form, rules);
+
+  function markTouched(field) {
+    setTouched((t) => ({ ...t, [field]: true }));
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setTouched({ name: true, phone: true, email: true, creditLimit: true });
+    if (hasErrors(errors)) return;
     setSaving(true);
     try {
       const payload = { ...form, creditLimit: Number(form.creditLimit) || 0 };
@@ -131,15 +148,55 @@ function CustomerForm({ customer, onClose, onSaved }) {
         <p className="eyebrow mb-1">{isNew ? 'Add customer' : 'Edit customer'}</p>
         <p className="font-display text-lg font-semibold mb-4">{isNew ? 'New customer' : customer.name}</p>
         <div className="space-y-3">
-          <div><label className="field-label">Name</label><input required autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-          <div><label className="field-label">Phone</label><input className="field-input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
-          <div><label className="field-label">Email</label><input type="email" className="field-input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+          <div>
+            <label className="field-label">Name</label>
+            <input
+              required autoFocus maxLength={150}
+              className={`field-input ${errorInputClass(touched.name && errors.name)}`}
+              value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
+              onBlur={() => markTouched('name')}
+              aria-invalid={Boolean(touched.name && errors.name)}
+            />
+            <FieldError message={touched.name ? errors.name : null} />
+          </div>
+          <div>
+            <label className="field-label">Phone</label>
+            <input
+              type="tel" inputMode="numeric" placeholder="03XXXXXXXXX" maxLength={11}
+              className={`field-input ${errorInputClass(touched.phone && errors.phone)}`}
+              value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              onBlur={() => markTouched('phone')}
+              aria-invalid={Boolean(touched.phone && errors.phone)}
+            />
+            <FieldError message={touched.phone ? errors.phone : null} />
+          </div>
+          <div>
+            <label className="field-label">Email</label>
+            <input
+              type="email" maxLength={254}
+              className={`field-input ${errorInputClass(touched.email && errors.email)}`}
+              value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
+              onBlur={() => markTouched('email')}
+              aria-invalid={Boolean(touched.email && errors.email)}
+            />
+            <FieldError message={touched.email ? errors.email : null} />
+          </div>
           <div><label className="field-label">Address</label><input className="field-input" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
-          <div><label className="field-label">Credit limit</label><input type="number" className="field-input num" value={form.creditLimit} onChange={(e) => setForm({ ...form, creditLimit: e.target.value })} /></div>
+          <div>
+            <label className="field-label">Credit limit</label>
+            <input
+              type="number" min="0"
+              className={`field-input num ${errorInputClass(touched.creditLimit && errors.creditLimit)}`}
+              value={form.creditLimit} onChange={(e) => setForm({ ...form, creditLimit: e.target.value })}
+              onBlur={() => markTouched('creditLimit')}
+              aria-invalid={Boolean(touched.creditLimit && errors.creditLimit)}
+            />
+            <FieldError message={touched.creditLimit ? errors.creditLimit : null} />
+          </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save'}</button>
+          <button type="submit" disabled={saving || hasErrors(errors)} className="btn-primary">{saving ? 'Saving…' : 'Save'}</button>
         </div>
       </form>
     </div>
@@ -198,7 +255,7 @@ function CustomerLedgerPanel({ customer, onClose }) {
             {ledger.entries.length === 0 && <p className="text-ink-muted">No transactions yet.</p>}
             {ledger.entries.map((e, i) => (
               <div key={i} className="flex justify-between">
-                <span className="text-ink-muted">{formatDate(e.date)} — {e.type === 'sale' ? `Inv ${e.reference}` : e.type === 'sale_payment' ? `Paid at sale ${e.reference}` : 'Payment'}</span>
+                <span className="text-ink-muted">{formatDate(e.date)}: {e.type === 'sale' ? `Inv ${e.reference}` : e.type === 'sale_payment' ? `Paid at sale ${e.reference}` : 'Payment'}</span>
                 <span className={`num ${e.type === 'sale' ? 'text-ink' : 'text-accent-strong'}`}>
                   {e.type === 'sale' ? '+' : '−'}{formatMoney(e.type === 'sale' ? e.debit : e.credit, company?.currency)}
                 </span>
@@ -296,7 +353,7 @@ function LoyaltyRedeem({ customer }) {
     try {
       const result = await api.post(`/loyalty/customers/${customer._id}/redeem`, { points: Number(points) });
       setQuote(result);
-      toast(`Reserved — apply as a discount at checkout.`, 'success');
+      toast(`Reserved, apply as a discount at checkout.`, 'success');
     } catch (err) {
       toast(err.message, 'error');
     } finally {
@@ -307,7 +364,7 @@ function LoyaltyRedeem({ customer }) {
   return (
     <div>
       <p className="text-sm font-medium mb-1">Redeem loyalty points</p>
-      <p className="text-xs text-ink-muted mb-2">{customer.loyaltyPoints} points available. Quotes a discount value and reserves the points — apply it manually to the item lines at checkout (Sale has no header-level discount).</p>
+      <p className="text-xs text-ink-muted mb-2">{customer.loyaltyPoints} points available. Quotes a discount value and reserves the points; apply it manually to the item lines at checkout (Sale has no header-level discount).</p>
       <div className="flex gap-2">
         <input type="number" min="1" max={customer.loyaltyPoints} placeholder="Points" className="field-input num" value={points} onChange={(e) => setPoints(e.target.value)} />
         <button className="btn-secondary" disabled={busy || !points} onClick={redeem}>{busy ? 'Quoting…' : 'Quote'}</button>

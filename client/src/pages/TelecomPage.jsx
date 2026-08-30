@@ -66,8 +66,8 @@ function SubscriptionsTab() {
               <tbody>
                 {subs.map((s) => (
                   <tr key={s._id} onClick={() => setSelected(s)} className={`border-b border-rule last:border-0 cursor-pointer hover:bg-paper transition-colors ${selected?._id === s._id ? 'bg-accent-soft' : ''}`}>
-                    <td className="px-4 py-3 font-medium text-ink">{s.customerId?.name || '—'}</td>
-                    <td className="px-4 py-3 text-ink-muted">{s.planId?.name || '—'}</td>
+                    <td className="px-4 py-3 font-medium text-ink">{s.customerId?.name || '-'}</td>
+                    <td className="px-4 py-3 text-ink-muted">{s.planId?.name || '-'}</td>
                     <td className="px-4 py-3 text-ink-muted num">{s.usedMinutes}m · {s.usedDataMB}MB · {s.usedSms} SMS</td>
                     <td className="px-4 py-3"><span className={STATUS_CHIP[s.status]}>{s.status}</span></td>
                   </tr>
@@ -138,7 +138,7 @@ function SubscriptionForm({ onClose, onSaved }) {
             <label className="field-label">Plan</label>
             <select required className="field-input" value={form.planId} onChange={(e) => setForm({ ...form, planId: e.target.value })}>
               <option value="">Select…</option>
-              {plans.map((p) => <option key={p._id} value={p._id}>{p.name} — {formatMoney(p.monthlyFee)}/mo</option>)}
+              {plans.map((p) => <option key={p._id} value={p._id}>{p.name}: {formatMoney(p.monthlyFee)}/mo</option>)}
             </select>
           </div>
           <div>
@@ -199,7 +199,7 @@ function SubscriptionPanel({ subscription, onClose, onChanged }) {
     setBusy(true);
     try {
       const result = await api.post(`/telecom/subscriptions/${subscription._id}/bill`, { warehouseId, paymentAccountId });
-      toast(`Billed ${formatMoney(result.usageSummary.totalBilled, company?.currency)} — ${formatMoney(result.usageSummary.overageCost, company?.currency)} of that was overage.`, 'success');
+      toast(`Billed ${formatMoney(result.usageSummary.totalBilled, company?.currency)}: ${formatMoney(result.usageSummary.overageCost, company?.currency)} of that was overage.`, 'success');
       onChanged(); onClose();
     } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }
   }
@@ -212,7 +212,7 @@ function SubscriptionPanel({ subscription, onClose, onChanged }) {
       </div>
       <div className="flex items-center gap-2 mb-4">
         <span className={STATUS_CHIP[subscription.status]}>{subscription.status}</span>
-        <p className="text-sm text-ink-muted">{subscription.planId?.name} — {subscription.usedMinutes}m · {subscription.usedDataMB}MB · {subscription.usedSms} SMS used</p>
+        <p className="text-sm text-ink-muted">{subscription.planId?.name}: {subscription.usedMinutes}m · {subscription.usedDataMB}MB · {subscription.usedSms} SMS used</p>
       </div>
 
       {subscription.status === 'active' && (

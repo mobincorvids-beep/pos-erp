@@ -42,12 +42,16 @@ export default {
         mono: ['"IBM Plex Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
         icon: ['"Material Symbols Outlined"'],
       },
+      // Lowered across the board — boxes should still read as rounded, not
+      // pill-shaped/very-rounded. Kept as a scale (not one flat value) so
+      // relative sizing still holds — a modal reads a touch softer than a
+      // small chip — just uniformly tightened from the previous values.
       borderRadius: {
-        DEFAULT: '0.5rem',
-        sm: '0.375rem',
-        md: '0.5rem',
-        lg: '0.75rem',
-        xl: '1rem',
+        DEFAULT: '0.3rem',
+        sm: '0.25rem',
+        md: '0.3rem',
+        lg: '0.4rem',
+        xl: '0.5rem',
       },
     },
   },

@@ -41,7 +41,7 @@ function signPortalAccessToken(supplierPortalUser) {
   );
 }
 
-/** Staff-initiated — creates (or reuses) a portal login for a supplier and returns an activation link/token. No password is set yet; the supplier chooses their own via activateInvite(). */
+/** Staff-initiated: creates (or reuses) a portal login for a supplier and returns an activation link/token. No password is set yet; the supplier chooses their own via activateInvite(). */
 async function invite({ companyId, supplierId, email, userId }) {
   const supplier = await Supplier.findOne({ _id: supplierId, companyId });
   if (!supplier) throw new Error('Supplier not found.');
@@ -108,7 +108,7 @@ async function login({ email, password, deviceContext }) {
   return { accessToken, refreshToken, supplierId: portalUser.supplierId };
 }
 
-/** The portal home view — outstanding payable balance and recent activity, straight from the real payable ledger. */
+/** The portal home view: outstanding payable balance and recent activity, straight from the real payable ledger. */
 async function dashboard(supplierId) {
   const ledgerResult = await supplierLedgerService.ledger(supplierId);
   const recentOrders = await PurchaseOrder.find({ supplierId }).sort({ createdAt: -1 }).limit(10)
@@ -132,7 +132,7 @@ async function getPurchaseOrder(supplierId, poId) {
   return po;
 }
 
-/** Full payable ledger (entries + closing balance) — same underlying data as dashboard(), unpaginated. */
+/** Full payable ledger (entries + closing balance), same underlying data as dashboard(), unpaginated. */
 async function myPayments(supplierId) {
   return supplierLedgerService.ledger(supplierId);
 }

@@ -82,7 +82,7 @@ export function BarcodeScannerModal({ onDetected, onClose }) {
       osc.start();
       osc.stop(ctx.currentTime + 0.12);
       osc.onended = () => ctx.close();
-    } catch { /* audio isn't essential — the visual flash + toast still confirm the scan */ }
+    } catch { /* audio isn't essential: the visual flash + toast still confirm the scan */ }
   }
 
   return (
@@ -116,7 +116,7 @@ export function BarcodeScannerModal({ onDetected, onClose }) {
           </div>
         )}
 
-        <p className="text-xs text-ink-muted mt-3 text-center">Point the camera at a barcode — it's added automatically the moment it's recognized.</p>
+        <p className="text-xs text-ink-muted mt-3 text-center">Point the camera at a barcode, it's added automatically the moment it's recognized.</p>
       </div>
     </div>
   );

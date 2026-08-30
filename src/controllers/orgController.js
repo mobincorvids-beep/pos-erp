@@ -4,7 +4,7 @@ const PosTerminal = require('../models/PosTerminal');
 const Account = require('../models/Account');
 const Company = require('../models/Company');
 
-/** Editable-by-tenant subset of Company — deliberately excludes activeModules,
+/** Editable-by-tenant subset of Company: deliberately excludes activeModules,
  * defaultAccounts, ecommerceConfig, parentCompanyId etc., which are either
  * platform-admin controlled or wired automatically at provisioning time. */
 const EDITABLE_COMPANY_FIELDS = ['name', 'ntn', 'strn', 'fbrPosId', 'phone', 'email', 'address', 'currency', 'timezone'];
@@ -77,7 +77,7 @@ async function updateBranch(req, res) {
 async function deactivateBranch(req, res) {
   const activeCount = await Branch.countDocuments({ companyId: req.companyId, isActive: true });
   if (activeCount <= 1) {
-    return res.status(400).json({ error: 'Cannot remove the only branch — every business needs at least one.' });
+    return res.status(400).json({ error: 'Cannot remove the only branch, every business needs at least one.' });
   }
   const branch = await Branch.findOneAndUpdate(
     { _id: req.params.id, companyId: req.companyId }, { isActive: false }, { new: true }

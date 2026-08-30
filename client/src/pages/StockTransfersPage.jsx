@@ -122,7 +122,7 @@ function NewTransferModal({ onClose, onCreated }) {
     setBusy(true);
     try {
       await api.post('/stock-transfers', { fromWarehouseId, toWarehouseId, items, receiveImmediately });
-      toast(receiveImmediately ? 'Transfer completed.' : 'Transfer initiated — mark it received once goods arrive.', 'success');
+      toast(receiveImmediately ? 'Transfer completed.' : 'Transfer initiated: mark it received once goods arrive.', 'success');
       onCreated();
       onClose();
     } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }

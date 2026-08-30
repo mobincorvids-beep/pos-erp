@@ -88,10 +88,10 @@ async function moveStage(candidateId, newStage, { rejectionReason } = {}) {
   const nextIndex = STAGE_ORDER.indexOf(newStage);
   if (nextIndex === -1) throw new Error(`Invalid stage "${newStage}".`);
   if (nextIndex <= currentIndex) {
-    throw new Error(`Cannot move from "${candidate.stage}" back to "${newStage}" — stages only move forward.`);
+    throw new Error(`Cannot move from "${candidate.stage}" back to "${newStage}": stages only move forward.`);
   }
   if (nextIndex !== currentIndex + 1) {
-    throw new Error(`Cannot skip stages — candidate is at "${candidate.stage}", next stage must be "${STAGE_ORDER[currentIndex + 1]}".`);
+    throw new Error(`Cannot skip stages: candidate is at "${candidate.stage}", next stage must be "${STAGE_ORDER[currentIndex + 1]}".`);
   }
 
   candidate.stage = newStage;

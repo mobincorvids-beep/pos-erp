@@ -70,7 +70,7 @@ function BinsTab({ warehouseId }) {
   }
   useEffect(load, [warehouseId]);
 
-  const zoneName = (id) => zones.find((z) => z._id === id)?.name || '—';
+  const zoneName = (id) => zones.find((z) => z._id === id)?.name || '-';
 
   if (loading) return <Loading />;
 
@@ -101,7 +101,7 @@ function BinsTab({ warehouseId }) {
                     {zones.map((z) => (
                       <tr key={z._id} className="hover:bg-accent-soft/30 transition-colors">
                         <td className="py-3 px-5 text-sm font-semibold text-ink">{z.name}</td>
-                        <td className="py-3 px-5 text-sm text-ink-muted num">{z.code || '—'}</td>
+                        <td className="py-3 px-5 text-sm text-ink-muted num">{z.code || '-'}</td>
                         <td className="py-3 px-5"><span className="chip-neutral capitalize">{z.type}</span></td>
                       </tr>
                     ))}
@@ -147,7 +147,7 @@ function BinsTab({ warehouseId }) {
                           </div>
                         </td>
                         <td className="py-3 px-5 text-sm text-ink-muted">{zoneName(b.zoneId)}</td>
-                        <td className="py-3 px-5 text-sm text-ink-muted num text-right">{b.capacity ?? '—'}</td>
+                        <td className="py-3 px-5 text-sm text-ink-muted num text-right">{b.capacity ?? '-'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -480,7 +480,7 @@ function WavePanel({ wave, onClose, onChanged }) {
             <div key={l._id} className="flex items-center justify-between py-3 text-sm">
               <div>
                 <p className="text-ink">{l.productId?.name || l.productId}</p>
-                <p className="text-xs text-ink-muted num mt-0.5">Bin {l.binId?.binCode || l.binId} — {l.quantityPicked}/{l.quantityToPick}</p>
+                <p className="text-xs text-ink-muted num mt-0.5">Bin {l.binId?.binCode || l.binId}: {l.quantityPicked}/{l.quantityToPick}</p>
               </div>
               {l.status !== 'picked'
                 ? <button className="btn-secondary" disabled={busy} onClick={() => pick(l)}>Pick</button>

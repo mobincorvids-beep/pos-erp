@@ -233,7 +233,7 @@ function SaleDetailPanel({ sale, onClose, onChanged }) {
 
       {mode === 'credit_note' && (
         <div>
-          <p className="text-xs text-ink-muted mb-2">Issue a credit note against this invoice — reduces what the customer owes without moving any stock (e.g. a pricing correction or goodwill credit).</p>
+          <p className="text-xs text-ink-muted mb-2">Issue a credit note against this invoice, reduces what the customer owes without moving any stock (e.g. a pricing correction or goodwill credit).</p>
           <label className="field-label">Amount</label>
           <input
             type="number" min="0" max={sale.totalAmount} step="0.01"
@@ -277,7 +277,7 @@ function SaleDetailPanel({ sale, onClose, onChanged }) {
         <div>
           <label className="field-label">Void reason</label>
           <input className="field-input mb-2" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. entered by mistake" />
-          <p className="text-xs text-ink-muted mb-2">Voiding reverses stock and the ledger entirely — use this only when nothing should have been sold at all, not for a partial refund.</p>
+          <p className="text-xs text-ink-muted mb-2">Voiding reverses stock and the ledger entirely, use this only when nothing should have been sold at all, not for a partial refund.</p>
           <div className="flex gap-2">
             <button className="btn-secondary flex-1" onClick={() => setMode('view')}>Back</button>
             <button className="btn-danger flex-1" disabled={busy} onClick={handleVoid}>

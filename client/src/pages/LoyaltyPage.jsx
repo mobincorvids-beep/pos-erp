@@ -71,7 +71,7 @@ function LoyaltyProgramTab({ can }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-ink-muted max-w-2xl">Points are earned automatically on checkout. Redeeming points happens from a customer's ledger — see the Customers page.</p>
+        <p className="text-sm text-ink-muted max-w-2xl">Points are earned automatically on checkout. Redeeming points happens from a customer's ledger: see the Customers page.</p>
         {program && (
           program.isActive
             ? <span className="chip-accent">Active</span>
@@ -110,7 +110,7 @@ function LoyaltyProgramTab({ can }) {
           <ul className="text-sm text-white/80 space-y-3">
             <li className="flex gap-2">
               <span className="mt-0.5">•</span>
-              <span>Every completed sale with a customer attached earns points automatically after checkout — it never blocks or slows down the sale.</span>
+              <span>Every completed sale with a customer attached earns points automatically after checkout, it never blocks or slows down the sale.</span>
             </li>
             <li className="flex gap-2">
               <span className="mt-0.5">•</span>
@@ -166,7 +166,7 @@ function GiftCardsTab({ can }) {
       {!loading && cards.length === 0 && (
         <div className="card p-8 text-center">
           <p className="text-sm font-semibold text-ink">No gift cards yet</p>
-          <p className="text-sm text-ink-muted mt-1">Issue one to sell it — the customer can redeem the balance at checkout on the POS page.</p>
+          <p className="text-sm text-ink-muted mt-1">Issue one to sell it: the customer can redeem the balance at checkout on the POS page.</p>
         </div>
       )}
       {!loading && cards.length > 0 && (
@@ -188,11 +188,11 @@ function GiftCardsTab({ can }) {
                 {cards.map((c) => (
                   <tr key={c._id} className="align-top">
                     <td className="px-5 py-4 num text-accent font-semibold">{c.cardNumber}</td>
-                    <td className="px-5 py-4 text-ink-muted">{c.issuedToCustomerId?.name || '—'}</td>
+                    <td className="px-5 py-4 text-ink-muted">{c.issuedToCustomerId?.name || '-'}</td>
                     <td className="px-5 py-4 num text-right text-ink-muted">{formatMoney(c.initialBalance, company?.currency)}</td>
                     <td className="px-5 py-4 num text-right font-semibold text-ink">{formatMoney(c.currentBalance, company?.currency)}</td>
                     <td className="px-5 py-4"><span className={STATUS_CHIP[c.status] || 'chip-neutral'}>{c.status}</span></td>
-                    <td className="px-5 py-4 text-ink-muted">{c.expiresAt ? formatDate(c.expiresAt) : '—'}</td>
+                    <td className="px-5 py-4 text-ink-muted">{c.expiresAt ? formatDate(c.expiresAt) : '-'}</td>
                     <td className="px-5 py-4 text-ink-muted">{formatDate(c.createdAt)}</td>
                   </tr>
                 ))}
@@ -215,7 +215,7 @@ function GiftCardsTab({ can }) {
             <p className="eyebrow text-accent mb-2">Gift card issued</p>
             <p className="num text-2xl font-bold text-ink tracking-widest mb-1">{justIssued.cardNumber}</p>
             <p className="text-sm text-ink-muted mb-4">Balance: {formatMoney(justIssued.currentBalance, company?.currency)}</p>
-            <p className="text-xs text-ink-muted mb-5">Write this number on the physical card or send it to the customer — it won't be shown again from here, only looked up.</p>
+            <p className="text-xs text-ink-muted mb-5">Write this number on the physical card or send it to the customer, it won't be shown again from here, only looked up.</p>
             <button className="btn-primary w-full" onClick={() => setJustIssued(null)}>Done</button>
           </div>
         </div>
@@ -280,7 +280,7 @@ function IssueGiftCardForm({ onClose, onIssued }) {
   );
 }
 
-/** Manual balance lookup — for a cashier checking a card without going through the POS checkout flow (e.g. a customer just asking what's left on it). */
+/** Manual balance lookup: for a cashier checking a card without going through the POS checkout flow (e.g. a customer just asking what's left on it). */
 function GiftCardLookupTool() {
   const toast = useToast();
   const { company } = useAuth();
@@ -316,7 +316,7 @@ function GiftCardLookupTool() {
       </div>
       {result && (
         result.usable
-          ? <p className="text-sm text-accent-strong mt-2">Balance: {formatMoney(result.balance, company?.currency)} — usable at checkout.</p>
+          ? <p className="text-sm text-accent-strong mt-2">Balance: {formatMoney(result.balance, company?.currency)}: usable at checkout.</p>
           : <p className="text-sm text-danger mt-2">{result.reason}</p>
       )}
     </div>
@@ -364,7 +364,7 @@ function CouponsTab({ can }) {
       {!loading && coupons.length === 0 && (
         <div className="card p-8 text-center">
           <p className="text-sm font-semibold text-ink">No coupons yet</p>
-          <p className="text-sm text-ink-muted mt-1">Create one — a cashier can apply it by code on the POS checkout page.</p>
+          <p className="text-sm text-ink-muted mt-1">Create one: a cashier can apply it by code on the POS checkout page.</p>
         </div>
       )}
       {!loading && coupons.length > 0 && (
@@ -387,9 +387,9 @@ function CouponsTab({ can }) {
                   <tr key={c._id} className="align-top">
                     <td className="px-5 py-4 num font-semibold text-ink">{c.code}</td>
                     <td className="px-5 py-4 num text-right text-ink-muted">{c.discountType === 'percent' ? `${c.discountValue}%` : formatMoney(c.discountValue, company?.currency)}</td>
-                    <td className="px-5 py-4 num text-right text-ink-muted">{c.minPurchaseAmount ? formatMoney(c.minPurchaseAmount, company?.currency) : '—'}</td>
+                    <td className="px-5 py-4 num text-right text-ink-muted">{c.minPurchaseAmount ? formatMoney(c.minPurchaseAmount, company?.currency) : '-'}</td>
                     <td className="px-5 py-4 num text-ink-muted">{c.usageCount}{c.maxUsageCount ? ` / ${c.maxUsageCount}` : ''} <span className="text-xs">({c.maxUsagePerCustomer}/customer)</span></td>
-                    <td className="px-5 py-4 text-xs text-ink-muted">{c.validFrom ? formatDate(c.validFrom) : '—'} – {c.validUntil ? formatDate(c.validUntil) : 'no expiry'}</td>
+                    <td className="px-5 py-4 text-xs text-ink-muted">{c.validFrom ? formatDate(c.validFrom) : '-'} – {c.validUntil ? formatDate(c.validUntil) : 'no expiry'}</td>
                     <td className="px-5 py-4">
                       {!c.active ? <span className="chip-neutral">Inactive</span>
                         : isExpired(c) ? <span className="chip-warning">Expired</span>

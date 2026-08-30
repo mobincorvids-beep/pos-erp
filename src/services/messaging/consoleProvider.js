@@ -14,7 +14,7 @@ async function sendSms(to, message) {
 }
 
 async function sendEmail(to, subject, message) {
-  console.log(`[console-email-provider] would send to ${to} — subject "${subject}": "${message}"`);
+  console.log(`[console-email-provider] would send to ${to}: subject "${subject}": "${message}"`);
   return { success: true, provider: 'console' };
 }
 

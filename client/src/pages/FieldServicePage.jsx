@@ -58,7 +58,7 @@ export function FieldServicePage() {
 
         {loading && <Loading />}
         {!loading && jobs.length === 0 && (
-          <EmptyState title="No field service jobs yet" description="Dispatch a technician to a customer's site — track the job, parts, labor, and billing." action={<button className="btn-primary" onClick={() => setShowForm(true)}>Dispatch a technician</button>} />
+          <EmptyState title="No field service jobs yet" description="Dispatch a technician to a customer's site: track the job, parts, labor, and billing." action={<button className="btn-primary" onClick={() => setShowForm(true)}>Dispatch a technician</button>} />
         )}
         {!loading && jobs.length > 0 && (
           <div className="card overflow-hidden">
@@ -341,7 +341,7 @@ function JobPanel({ job, onClose, onChanged }) {
               <button className="btn-primary w-full" disabled={billing} onClick={billJob}>{billing ? 'Billing…' : 'Bill job'}</button>
             </div>
           )}
-          {job.saleId && <p className="text-xs text-ink-muted pt-2 border-t border-rule">Billed — invoice created.</p>}
+          {job.saleId && <p className="text-xs text-ink-muted pt-2 border-t border-rule">Billed: invoice created.</p>}
         </div>
       </div>
     </div>

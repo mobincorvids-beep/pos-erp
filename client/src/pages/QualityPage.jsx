@@ -62,7 +62,7 @@ export function QualityPage() {
           </div>
           <div className="card p-3">
             <p className="eyebrow">Avg days to close</p>
-            <p className="font-display text-2xl font-bold text-ink mt-1">{summary.avgDaysToClose ?? '—'}</p>
+            <p className="font-display text-2xl font-bold text-ink mt-1">{summary.avgDaysToClose ?? '-'}</p>
           </div>
         </div>
       )}
@@ -327,7 +327,7 @@ function ActionRow({ action, onChanged }) {
     <tr className="align-top">
       <td className="px-5 py-4 text-ink-muted">{action.actionType}</td>
       <td className="px-5 py-4 text-ink">{action.description}</td>
-      <td className="px-5 py-4 text-ink-muted">{action.dueDate ? formatDate(action.dueDate) : '—'}</td>
+      <td className="px-5 py-4 text-ink-muted">{action.dueDate ? formatDate(action.dueDate) : '-'}</td>
       <td className="px-5 py-4"><span className="chip-neutral">{action.status.replace('_', ' ')}</span></td>
       <td className="px-5 py-4 text-right">
         {action.status === 'open' && !editing && (

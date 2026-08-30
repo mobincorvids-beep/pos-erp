@@ -68,7 +68,7 @@ export function ProfessionalServicesPage() {
                 <tbody>
                   {entries.map((e) => (
                     <tr key={e._id} className="border-b border-rule last:border-0 hover:bg-surface-sunken/60">
-                      <td className="px-4 py-2.5 font-medium text-ink">{e.employeeId?.name || '—'}</td>
+                      <td className="px-4 py-2.5 font-medium text-ink">{e.employeeId?.name || '-'}</td>
                       <td className="px-4 py-2.5 text-ink-muted">{e.description}</td>
                       <td className="px-4 py-2.5 text-ink-muted">{formatDate(e.date)}</td>
                       <td className="px-4 py-2.5 num text-right">{e.hours}</td>
@@ -83,7 +83,7 @@ export function ProfessionalServicesPage() {
           <div className="card p-4 flex items-center justify-between max-w-md mb-4">
             <div>
               <p className="eyebrow">Total</p>
-              <p className="text-sm text-ink-muted mt-0.5">{totalHours} hours — each entry billed at its own rate, never an averaged one</p>
+              <p className="text-sm text-ink-muted mt-0.5">{totalHours} hours: each entry billed at its own rate, never an averaged one</p>
             </div>
             <p className="font-display text-xl num font-bold text-ink">{formatMoney(totalAmount, company?.currency)}</p>
           </div>
@@ -187,9 +187,9 @@ function InvoiceForm({ clientCustomerId, entryCount, totalAmount, onClose, onSav
     setSaving(true);
     try {
       const product = products.find((p) => p._id === form.billingProductId);
-      if (!product) throw new Error('Select a billing product — it must have trackingMode "service".');
+      if (!product) throw new Error('Select a billing product: it must have trackingMode "service".');
       const result = await api.post(`/professional-services/clients/${clientCustomerId}/generate-invoice`, { ...form, billingVariantId: product.variants[0]?._id, paymentAccountId: form.paymentAccountId || undefined });
-      toast(`Invoiced ${result.entriesInvoiced} entries — ${formatMoney(result.totalAmount, company?.currency)}.`, 'success');
+      toast(`Invoiced ${result.entriesInvoiced} entries: ${formatMoney(result.totalAmount, company?.currency)}.`, 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -202,7 +202,7 @@ function InvoiceForm({ clientCustomerId, entryCount, totalAmount, onClose, onSav
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
         <p className="font-display text-lg font-bold text-ink mb-1">Generate invoice</p>
-        <p className="text-sm text-ink-muted mb-4">{entryCount} unbilled entries — {formatMoney(totalAmount, company?.currency)}</p>
+        <p className="text-sm text-ink-muted mb-4">{entryCount} unbilled entries: {formatMoney(totalAmount, company?.currency)}</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Warehouse (for the Sale document)</label>

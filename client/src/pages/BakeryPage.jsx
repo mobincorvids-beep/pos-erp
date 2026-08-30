@@ -22,7 +22,7 @@ export function BakeryPage() {
   async function closeBatch(id) {
     try {
       const result = await api.post(`/bakery/batches/${id}/close`);
-      toast(result.wastedQuantity > 0 ? `Closed — ${result.wastedQuantity} units written off (${formatMoney(result.wasteValue, company?.currency)}).` : 'Closed — nothing wasted.', 'success');
+      toast(result.wastedQuantity > 0 ? `Closed (${result.wastedQuantity} units written off (${formatMoney(result.wasteValue, company?.currency)}).` : 'Closed) nothing wasted.', 'success');
       load();
     } catch (err) { toast(err.message, 'error'); }
   }
@@ -57,7 +57,7 @@ export function BakeryPage() {
               {b.status === 'closed' && b.wastedQuantity > 0 && (
                 <p className="text-xs text-danger mt-2 flex items-center gap-1">
                   <span className="material-symbols-outlined text-sm">delete</span>
-                  {b.wastedQuantity} wasted — {formatMoney(b.wasteValue, company?.currency)}
+                  {b.wastedQuantity} wasted: {formatMoney(b.wasteValue, company?.currency)}
                 </p>
               )}
             </div>

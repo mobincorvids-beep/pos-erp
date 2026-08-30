@@ -106,7 +106,7 @@ async function recordDelivery(shipmentId, { podNote = '' } = {}) {
     companyId: shipment.companyId,
     shipmentId: shipment._id,
     status: 'delivered',
-    note: podNote ? `Delivered — POD: ${podNote}` : 'Delivered',
+    note: podNote ? `Delivered: POD: ${podNote}` : 'Delivered',
   });
 
   return shipment;

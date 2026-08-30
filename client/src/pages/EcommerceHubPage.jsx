@@ -79,7 +79,7 @@ export function EcommerceHubPage() {
         <p className="eyebrow mb-1">Sales channels</p>
         <p className="page-title mb-1">E-commerce hub</p>
         <p className="text-sm text-ink-muted max-w-2xl">
-          Manage multiple sales channels (your online store, marketplaces, etc.) — each gets its own webhook
+          Manage multiple sales channels (your online store, marketplaces, etc.), each gets its own webhook
           URL and feeds orders into the same checkout pipeline as the counter. Looking for the original
           single-store integration? See the <strong className="text-ink">E-commerce</strong> page in the sidebar.
         </p>
@@ -111,7 +111,7 @@ export function EcommerceHubPage() {
       </form>
 
       <div className="grid gap-4 mb-8">
-        {channels.length === 0 && <p className="text-sm text-ink-muted">No sales channels yet — add one above.</p>}
+        {channels.length === 0 && <p className="text-sm text-ink-muted">No sales channels yet: add one above.</p>}
         {channels.map((c) => (
           <div key={c._id} className="card p-4">
             <div className="flex items-center justify-between flex-wrap gap-3">

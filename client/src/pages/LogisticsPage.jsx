@@ -71,8 +71,8 @@ function TripsTab() {
                     onClick={() => setSelected(t)}
                     className={`border-t border-rule cursor-pointer hover:bg-paper transition-colors ${selected?._id === t._id ? 'bg-accent-soft' : ''}`}
                   >
-                    <td className="px-4 py-3 font-medium text-ink">{t.vehicleId?.registrationNumber || '—'}</td>
-                    <td className="px-4 py-3">{t.driverId?.name || '—'}</td>
+                    <td className="px-4 py-3 font-medium text-ink">{t.vehicleId?.registrationNumber || '-'}</td>
+                    <td className="px-4 py-3">{t.driverId?.name || '-'}</td>
                     <td className="px-4 py-3 num text-ink-muted">{t.deliveries.length}</td>
                     <td className="px-4 py-3"><span className={STATUS_CHIP[t.status]}>{t.status}</span></td>
                   </tr>
@@ -182,7 +182,7 @@ function TripPanel({ trip, onClose, onChanged }) {
       const result = await api.post(`/logistics/trips/${trip._id}/complete`, {
         endOdometer: Number(endOdometer), fuelCost: fuelCost ? Number(fuelCost) : undefined, otherCosts: otherCosts ? Number(otherCosts) : undefined,
       });
-      toast(`Trip completed — ${result.distanceKm}km, ${formatMoney(result.profitability, company?.currency)} profit${result.costPerKm !== null ? `, ${formatMoney(result.costPerKm, company?.currency)}/km` : ''}.`, 'success');
+      toast(`Trip completed: ${result.distanceKm}km, ${formatMoney(result.profitability, company?.currency)} profit${result.costPerKm !== null ? `, ${formatMoney(result.costPerKm, company?.currency)}/km` : ''}.`, 'success');
       onChanged(); onClose();
     } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }
   }
@@ -193,7 +193,7 @@ function TripPanel({ trip, onClose, onChanged }) {
         <p className="font-display text-lg font-bold text-ink">{trip.vehicleId?.registrationNumber}</p>
         <button className="btn-ghost !px-2 !py-1 text-xs" onClick={onClose}>Close</button>
       </div>
-      <p className="text-sm text-ink-muted mb-4">{trip.driverId?.name} — started at <span className="num">{trip.startOdometer}</span></p>
+      <p className="text-sm text-ink-muted mb-4">{trip.driverId?.name}: started at <span className="num">{trip.startOdometer}</span></p>
 
       {trip.status === 'planned' && (
         <>

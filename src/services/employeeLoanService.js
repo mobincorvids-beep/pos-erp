@@ -16,10 +16,10 @@ async function disburseLoan(input) {
   if (!monthlyInstallment || monthlyInstallment <= 0) throw new Error('monthlyInstallment must be greater than zero.');
 
   const existing = await EmployeeLoan.findOne({ employeeId, status: 'active' });
-  if (existing) throw new Error('This employee already has an active loan — settle it before issuing a new one.');
+  if (existing) throw new Error('This employee already has an active loan, settle it before issuing a new one.');
 
   await accountingService.postVoucher({
-    companyId, branchId, type: 'payment', narration: `Employee loan disbursed — ${principalAmount}`,
+    companyId, branchId, type: 'payment', narration: `Employee loan disbursed: ${principalAmount}`,
     entries: [
       { accountId: loanReceivableAccountId, debit: principalAmount, credit: 0 },
       { accountId: disbursingAccountId, debit: 0, credit: principalAmount },
@@ -30,7 +30,7 @@ async function disburseLoan(input) {
   return EmployeeLoan.create({ companyId, employeeId, principalAmount, monthlyInstallment, remainingBalance: principalAmount, loanReceivableAccountId });
 }
 
-/** Pure, read-only lookup — the actual deduction for one employee this period: the lesser of the standard installment and whatever's genuinely still owed, so the very last payment never over-collects past a zero balance. */
+/** Pure, read-only lookup: the actual deduction for one employee this period: the lesser of the standard installment and whatever's genuinely still owed, so the very last payment never over-collects past a zero balance. */
 async function monthlyDeductionFor(employeeId) {
   const loan = await EmployeeLoan.findOne({ employeeId, status: 'active' });
   if (!loan) return 0;

@@ -97,7 +97,7 @@ function NewStockCountModal({ onClose, onCreated }) {
     try {
       // Omitting variantIds counts every variant currently stocked in this warehouse.
       await api.post('/stock-counts', { warehouseId });
-      toast('Stocktake started — enter counted quantities below.', 'success');
+      toast('Stocktake started: enter counted quantities below.', 'success');
       onCreated();
       onClose();
     } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }
@@ -111,7 +111,7 @@ function NewStockCountModal({ onClose, onCreated }) {
         <select className="field-input mb-4" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
           {warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
         </select>
-        <p className="text-xs text-ink-muted mb-4">Snapshots the system quantity for every variant currently stocked in this warehouse — you'll enter physical counts next, and any variance posts as an adjustment when you submit.</p>
+        <p className="text-xs text-ink-muted mb-4">Snapshots the system quantity for every variant currently stocked in this warehouse, you'll enter physical counts next, and any variance posts as an adjustment when you submit.</p>
         <div className="flex gap-2 justify-end">
           <button className="btn-secondary" onClick={onClose}>Cancel</button>
           <button className="btn-primary" disabled={busy || !warehouseId} onClick={start}>Start</button>
@@ -141,7 +141,7 @@ function StockCountPanel({ count, onClose, onChanged }) {
     setBusy(true);
     try {
       await api.post(`/stock-counts/${count._id}/submit`);
-      toast('Stocktake submitted — variances posted as adjustments.', 'success');
+      toast('Stocktake submitted: variances posted as adjustments.', 'success');
       onChanged();
       onClose();
     } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }

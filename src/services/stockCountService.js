@@ -30,7 +30,7 @@ async function startCount({ companyId, warehouseId, variantIds, userId }) {
   });
 }
 
-/** Records counted quantities for one or more lines — can be called multiple times as staff progress through the count. */
+/** Records counted quantities for one or more lines, can be called multiple times as staff progress through the count. */
 async function recordCounts(stockCountId, counts) {
   const stockCount = await StockCount.findById(stockCountId);
   if (!stockCount) throw new Error('Stock count not found.');

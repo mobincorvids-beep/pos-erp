@@ -35,7 +35,7 @@ export function CategoriesPage() {
     setReseeding(true);
     try {
       const result = await api.post('/categories/reseed-defaults');
-      toast(`Default categories applied — ${result.created} new added, the rest already existed.`, 'success');
+      toast(`Default categories applied: ${result.created} new added, the rest already existed.`, 'success');
       load();
     } catch (err) {
       toast(err.message, 'error');

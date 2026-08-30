@@ -65,7 +65,7 @@ async function issueCreditNote(input) {
       // reduces what the customer owes, without touching stock.
       await accountingService.postVoucher({
         companyId, branchId: resolvedBranchId, type: 'journal',
-        narration: `Credit note ${creditNote.noteNumber}${reason ? ` — ${reason}` : ''}`,
+        narration: `Credit note ${creditNote.noteNumber}${reason ? `: ${reason}` : ''}`,
         entries: [
           { accountId: revenueAccountId, debit: amount, credit: 0 },
           { accountId: arAccountId, debit: 0, credit: amount },
@@ -92,7 +92,7 @@ function listCreditNotes(companyId, { customerId, status, saleId } = {}) {
   return CreditNote.find(filter).sort({ createdAt: -1 });
 }
 
-/** Marks a note as consumed against a specific future sale — a bookkeeping marker only; the actual reduction of that sale's due amount is the caller's (sale/payment flow's) responsibility. */
+/** Marks a note as consumed against a specific future sale, a bookkeeping marker only; the actual reduction of that sale's due amount is the caller's (sale/payment flow's) responsibility. */
 async function applyCreditNote(id, { saleId, userId, companyId }) {
   const note = await CreditNote.findOne({ _id: id, companyId });
   if (!note) throw new Error('Credit note not found.');
@@ -126,7 +126,7 @@ async function voidCreditNote(id, { userId, companyId, reason }) {
       // Reverse the original posting: Dr Accounts Receivable, Cr Sales Revenue.
       await accountingService.postVoucher({
         companyId, branchId: note.branchId, type: 'journal',
-        narration: `Void credit note ${note.noteNumber}${reason ? ` — ${reason}` : ''}`,
+        narration: `Void credit note ${note.noteNumber}${reason ? `: ${reason}` : ''}`,
         entries: [
           { accountId: note.arAccountId, debit: note.amount, credit: 0 },
           { accountId: note.revenueAccountId, debit: 0, credit: note.amount },

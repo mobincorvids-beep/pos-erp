@@ -15,7 +15,7 @@ function notify({ companyId, userId, roleId, type, title, message, entityType, e
   return Notification.create({ companyId, userId, roleId, type, title, message, entityType, entityId });
 }
 
-/** A user sees notifications addressed to them directly, PLUS anything addressed to a role they hold — both audiences, not just one. */
+/** A user sees notifications addressed to them directly, PLUS anything addressed to a role they hold, both audiences, not just one. */
 function listForUser(companyId, userId, roleId, { unreadOnly } = {}) {
   const filter = {
     companyId,

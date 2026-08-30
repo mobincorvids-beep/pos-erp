@@ -38,7 +38,7 @@ async function listBins(warehouseId, companyId) {
   return WarehouseBin.find(filter).sort({ binCode: 1 });
 }
 
-/** Real on-hand quantity for a product at a warehouse, summed across all its variants (from StockLevel — the existing source of truth). */
+/** Real on-hand quantity for a product at a warehouse, summed across all its variants (from StockLevel, the existing source of truth). */
 async function productOnHandAtWarehouse(warehouseId, productId) {
   const product = await Product.findById(productId);
   if (!product) throw new Error('Product not found.');
@@ -48,7 +48,7 @@ async function productOnHandAtWarehouse(warehouseId, productId) {
   return levels.reduce((sum, l) => sum + (l.quantity || 0), 0);
 }
 
-/** Total quantity of a product already located to bins at a warehouse (excluding, optionally, one bin — used when moving/reassigning). */
+/** Total quantity of a product already located to bins at a warehouse (excluding, optionally, one bin, used when moving/reassigning). */
 async function binAssignedTotal(warehouseId, productId, excludeBinId = null) {
   const filter = { warehouseId, productId };
   if (excludeBinId) filter.binId = { $ne: excludeBinId };
@@ -74,7 +74,7 @@ async function assignStockToBin(binId, productId, quantity) {
   const otherBinsTotal = await binAssignedTotal(bin.warehouseId, productId, binId);
 
   if (otherBinsTotal + currentBinQty + quantity > onHand) {
-    throw new Error(`Cannot assign ${quantity} units to this bin — only ${Math.max(onHand - otherBinsTotal - currentBinQty, 0)} unassigned units are available for this product at this warehouse.`);
+    throw new Error(`Cannot assign ${quantity} units to this bin, only ${Math.max(onHand - otherBinsTotal - currentBinQty, 0)} unassigned units are available for this product at this warehouse.`);
   }
 
   const updated = await BinStock.findOneAndUpdate(
@@ -85,7 +85,7 @@ async function assignStockToBin(binId, productId, quantity) {
   return updated;
 }
 
-/** Moves already-located stock from one bin to another (does not touch StockLevel — purely a location change). */
+/** Moves already-located stock from one bin to another (does not touch StockLevel, purely a location change). */
 async function moveBinStock(fromBinId, toBinId, productId, quantity) {
   if (!quantity || quantity <= 0) throw new Error('Quantity must be greater than zero.');
   if (String(fromBinId) === String(toBinId)) throw new Error('Source and destination bins must differ.');

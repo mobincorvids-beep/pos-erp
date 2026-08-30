@@ -69,9 +69,9 @@ function DoctorsTab() {
                 {doctors.map((d) => (
                   <tr key={d._id} className="border-b border-rule last:border-0 hover:bg-surface-sunken/60 transition-colors">
                     <td className="px-5 py-3 font-medium text-ink">Dr. {d.name}</td>
-                    <td className="px-5 py-3 text-ink-muted">{d.specialization || '—'}</td>
-                    <td className="px-5 py-3 text-ink-muted num">{d.registrationNumber || '—'}</td>
-                    <td className="px-5 py-3 text-ink-muted">{d.phone || '—'}</td>
+                    <td className="px-5 py-3 text-ink-muted">{d.specialization || '-'}</td>
+                    <td className="px-5 py-3 text-ink-muted num">{d.registrationNumber || '-'}</td>
+                    <td className="px-5 py-3 text-ink-muted">{d.phone || '-'}</td>
                     <td className="px-5 py-3 text-right">
                       <button className="btn-ghost !text-ink-muted !px-2 text-xs" onClick={() => setEditing(d)}>Edit</button>
                       <button className="btn-ghost !text-danger !px-2 text-xs" onClick={() => handleRemove(d)}>Remove</button>
@@ -157,8 +157,8 @@ function PatientsTab() {
               {patients.map((p) => (
                 <tr key={p._id} className="border-b border-rule last:border-0">
                   <td className="px-3 py-2">{p.name}</td>
-                  <td className="px-3 py-2 text-ink-muted">{p.age || '—'}</td>
-                  <td className="px-3 py-2 text-ink-muted">{p.phone || '—'}</td>
+                  <td className="px-3 py-2 text-ink-muted">{p.age || '-'}</td>
+                  <td className="px-3 py-2 text-ink-muted">{p.phone || '-'}</td>
                   <td className="px-3 py-2">{p.allergies?.map((a) => <span key={a} className="chip-danger mr-1">{a}</span>)}</td>
                   <td className="px-3 py-2 text-right"><button className="btn-ghost !text-ink-muted !px-2 text-xs" onClick={() => setEditing(p)}>Edit</button></td>
                 </tr>
@@ -212,7 +212,7 @@ function PatientForm({ patient, onClose, onSaved }) {
             <div>
               <label className="field-label">Gender</label>
               <select className="field-input" value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}>
-                <option value="">—</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option>
+                <option value="">-</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option>
               </select>
             </div>
           </div>
@@ -422,7 +422,7 @@ function DispenseForm({ prescription, onClose, onDispensed }) {
             </select>
           </div>
         </div>
-        <p className="text-xs text-ink-muted mt-3">Dispenses the full prescribed quantity for every item — partial dispensing isn't supported yet.</p>
+        <p className="text-xs text-ink-muted mt-3">Dispenses the full prescribed quantity for every item, partial dispensing isn't supported yet.</p>
         <div className="flex justify-end gap-2 mt-4">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
           <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Dispensing…' : 'Dispense & bill'}</button>

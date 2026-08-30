@@ -20,7 +20,7 @@ async function create(req, res) {
   res.status(201).json(customer);
 }
 
-/** Was missing entirely — a wrong phone number, address, or credit limit had no way to be
+/** Was missing entirely, a wrong phone number, address, or credit limit had no way to be
  * corrected after intake. Deliberately excludes openingBalance and loyaltyPoints: those are
  * ledger-derived running totals, not free-text fields — changing them here would silently
  * desync the customer record from customerLedgerService's own math. */

@@ -85,7 +85,7 @@ function JobOpeningsTab({ onViewCandidates }) {
               {openings.map((o) => (
                 <tr key={o._id} className="border-b border-rule last:border-0 hover:bg-accent-soft/30 transition-colors">
                   <td className="px-4 py-2.5 font-medium">{o.title}</td>
-                  <td className="px-4 py-2.5 text-ink-muted">{o.departmentId?.name || '—'}</td>
+                  <td className="px-4 py-2.5 text-ink-muted">{o.departmentId?.name || '-'}</td>
                   <td className="px-4 py-2.5 num">{o.numberOfPositions}</td>
                   <td className="px-4 py-2.5"><span className={o.status === 'open' ? 'chip-accent' : o.status === 'on_hold' ? 'chip-warning' : 'chip-danger'}>{o.status.replace('_', ' ')}</span></td>
                   <td className="px-4 py-2.5 text-right">
@@ -465,7 +465,7 @@ function HireForm({ candidateId, onClose, onSaved }) {
         designation: form.designation, branchId: form.branchId || undefined,
         salaryStructure: { basic: Number(form.basic) || 0, allowances: Number(form.allowances) || 0, deductions: Number(form.deductions) || 0 },
       });
-      toast('Candidate hired — employee record created.', 'success');
+      toast('Candidate hired: employee record created.', 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -476,7 +476,7 @@ function HireForm({ candidateId, onClose, onSaved }) {
 
   return (
     <div className="mb-4 p-3 border border-rule rounded">
-      <p className="text-sm font-medium mb-2">Hire — create employee record</p>
+      <p className="text-sm font-medium mb-2">Hire: create employee record</p>
       <form onSubmit={handleSubmit} className="space-y-2">
         <div><label className="field-label">Designation</label><input className="field-input" value={form.designation} onChange={(e) => setForm({ ...form, designation: e.target.value })} /></div>
         <div>

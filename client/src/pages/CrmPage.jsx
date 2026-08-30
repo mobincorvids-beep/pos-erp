@@ -62,7 +62,7 @@ function CampaignsTab() {
   async function send(id) {
     try {
       const result = await api.post(`/crm/campaigns/${id}/send`);
-      toast(`Sent via ${result.campaign.provider} — ${result.campaign.successCount} succeeded, ${result.campaign.failureCount} failed.`, result.campaign.failureCount > 0 ? 'error' : 'success');
+      toast(`Sent via ${result.campaign.provider}: ${result.campaign.successCount} succeeded, ${result.campaign.failureCount} failed.`, result.campaign.failureCount > 0 ? 'error' : 'success');
       load();
     } catch (err) { toast(err.message, 'error'); }
   }
@@ -150,7 +150,7 @@ function CampaignForm({ onClose, onSaved }) {
           <div><label className="field-label">Target tags (comma-separated, empty = everyone)</label><input className="field-input" value={form.targetTags} onChange={(e) => setForm({ ...form, targetTags: e.target.value })} placeholder="VIP, Wholesale" /></div>
           <div><label className="field-label">Message</label><textarea required rows={3} className="field-input" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} /></div>
         </div>
-        <p className="text-xs text-ink-muted mt-2">Targeting is real (matches actual customers). Sending goes through a real provider abstraction — Twilio for SMS / SendGrid for email if configured, otherwise a working console/log transport so this still functions with zero setup.</p>
+        <p className="text-xs text-ink-muted mt-2">Targeting is real (matches actual customers). Sending goes through a real provider abstraction, Twilio for SMS / SendGrid for email if configured, otherwise a working console/log transport so this still functions with zero setup.</p>
         <div className="flex justify-end gap-2 mt-3">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
           <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save draft'}</button>
@@ -202,7 +202,7 @@ function FeedbackTab() {
             <tr key={f._id} className="border-b border-rule last:border-0 hover:bg-accent-soft/30 transition-colors">
               <td className="px-3 py-2 text-ink-muted">{formatDate(f.createdAt)}</td>
               <td className="px-3 py-2"><RatingStars rating={f.rating} /></td>
-              <td className="px-3 py-2">{f.comment || '—'}</td>
+              <td className="px-3 py-2">{f.comment || '-'}</td>
               <td className="px-3 py-2"><span className={f.status === 'resolved' ? 'chip-accent' : 'chip-warning'}>{f.status}</span></td>
               <td className="px-3 py-2 text-right">{f.status !== 'resolved' && <button className="btn-ghost !text-accent" onClick={() => resolve(f._id)}>Resolve</button>}</td>
             </tr>
@@ -373,7 +373,7 @@ function LeadsTab() {
               {leads.map((l) => (
                 <tr key={l._id} className="border-b border-rule last:border-0 hover:bg-accent-soft/30 transition-colors">
                   <td className="px-3 py-2">{l.name}</td>
-                  <td className="px-3 py-2 text-ink-muted">{l.phone || l.email || '—'}</td>
+                  <td className="px-3 py-2 text-ink-muted">{l.phone || l.email || '-'}</td>
                   <td className="px-3 py-2 uppercase text-xs text-ink-muted">{l.source}</td>
                   <td className="px-3 py-2">
                     {l.status === 'converted'
@@ -538,7 +538,7 @@ function PipelineTab() {
     <div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
         <PipelineStat label="Open pipeline value" value={formatMoney(summary?.openPipelineValue, company?.currency)} icon="💰" trend="neutral" trendLabel={summary ? `${summary.periodDays}d window` : ''} />
-        <PipelineStat label={`Win rate (${summary?.periodDays ?? ''}d)`} value={summary ? `${(summary.winRate * 100).toFixed(0)}%` : '—'} icon="🎯" trend={summary?.winRate >= 0.5 ? 'up' : 'down'} trendLabel={summary ? `${summary.wonCount} won this period` : ''} />
+        <PipelineStat label={`Win rate (${summary?.periodDays ?? ''}d)`} value={summary ? `${(summary.winRate * 100).toFixed(0)}%` : '-'} icon="🎯" trend={summary?.winRate >= 0.5 ? 'up' : 'down'} trendLabel={summary ? `${summary.wonCount} won this period` : ''} />
         <PipelineStat label={`Won deals (${summary?.periodDays ?? ''}d)`} value={summary?.wonCount ?? 0} icon="🤝" trend="up" trendLabel="closed-won" />
         <PipelineStat label="Average won deal size" value={formatMoney(summary?.averageWonDealSize, company?.currency)} icon="📈" trend="neutral" trendLabel="per closed deal" />
       </div>
@@ -742,7 +742,7 @@ function WinOpportunityModal({ opportunity, onClose, onDone }) {
     setSaving(true);
     try {
       await api.post(`/crm/opportunities/${opportunity._id}/stage`, { stage: 'won', branchId, warehouseId, items });
-      toast('Opportunity won — a quotation has been created.', 'success');
+      toast('Opportunity won: a quotation has been created.', 'success');
       onDone();
     } catch (err) { toast(err.message, 'error'); } finally { setSaving(false); }
   }
@@ -751,7 +751,7 @@ function WinOpportunityModal({ opportunity, onClose, onDone }) {
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <div className="card p-5 w-full max-w-lg">
         <p className="font-display text-lg mb-1">Win "{opportunity.title}"</p>
-        <p className="text-xs text-ink-muted mb-4">This creates a real quotation for the deal — pick the branch, warehouse, and products.</p>
+        <p className="text-xs text-ink-muted mb-4">This creates a real quotation for the deal, pick the branch, warehouse, and products.</p>
 
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div>

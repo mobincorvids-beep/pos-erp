@@ -65,7 +65,7 @@ function PoliciesTab() {
             <tbody>
               {policies.map((p) => (
                 <tr key={p._id} className="border-b border-rule last:border-0 hover:bg-surface-sunken/50">
-                  <td className="px-3 py-2.5">{p.customerId?.name || '—'}</td>
+                  <td className="px-3 py-2.5">{p.customerId?.name || '-'}</td>
                   <td className="px-3 py-2.5 text-ink-muted">{p.policyType}</td>
                   <td className="px-3 py-2.5 num text-right">{formatMoney(p.coverageAmount, company?.currency)}</td>
                   <td className="px-3 py-2.5 num text-right">{formatMoney(p.premiumAmount, company?.currency)}</td>
@@ -108,7 +108,7 @@ function PolicyForm({ onClose, onSaved }) {
     setSaving(true);
     try {
       const product = products.find((p) => p._id === form.billingProductId);
-      if (!product) throw new Error('Select a billing product — it must have trackingMode "service".');
+      if (!product) throw new Error('Select a billing product: it must have trackingMode "service".');
       await api.post('/insurance/policies', { ...form, coverageAmount: Number(form.coverageAmount), premiumAmount: Number(form.premiumAmount), billingVariantId: product.variants[0]?._id });
       toast('Policy sold.', 'success');
       onSaved();

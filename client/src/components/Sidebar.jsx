@@ -134,19 +134,16 @@ export function Sidebar({ mobileOpen, onClose }) {
   // blocks direct URL access as a second layer).
   const enabledIndustryModules = INDUSTRY_MODULES.filter((m) => m.key === company?.industryType);
 
-  // v3: nothing is hidden any more. Every nav item always renders, for every
-  // business — but items outside the business's default relevance render
-  // visually de-emphasized (a "not typical for your business" grouping,
-  // purely visual), so the sidebar still reads as tailored at a glance
-  // without ever removing something a vendor might actually need.
-  //
-  // What counts as "in scope" is itself customizable, per-company, and
-  // client-only (localStorage, keyed by company id) — a vendor whose
-  // business spans verticals can promote an out-of-scope item to full
-  // prominence, or demote an in-scope one, via "Customize" mode below. The
-  // override map takes precedence over the industry-default relevance from
-  // lib/businessProfile.js. This replaces the old binary "Show all modules"
-  // toggle, which no longer makes sense once nothing is actually hidden.
+  // v4: out-of-scope items are hidden by default again — no muted styling,
+  // no "extra" badge, just absent from the normal view. What counts as
+  // "in scope" is itself customizable, per-company, and client-only
+  // (localStorage, keyed by company id) — a vendor whose business spans
+  // verticals can explicitly reveal an out-of-scope item, or hide an
+  // in-scope one, via "Customize sidebar" mode below. The override map
+  // takes precedence over the industry-default relevance from
+  // lib/businessProfile.js. In customize mode ALL items render (so the
+  // vendor can see everything that exists) with pin/unpin controls; in the
+  // normal view only in-scope items render, at all.
   const overridesKey = company?.id ? `pos_erp_sidebar_overrides_${company.id}` : null;
   const [overrides, setOverrides] = useState({});
   const [customizeMode, setCustomizeMode] = useState(false);
@@ -191,22 +188,27 @@ export function Sidebar({ mobileOpen, onClose }) {
     return isDefaultRelevant(path);
   }
 
-  // Every item renders in every section, always — sections are no longer
-  // dropped even when everything in them is out-of-scope for this business.
-  const visibleSections = SECTIONS;
+  // Normal view: filter each section down to in-scope items only — an
+  // out-of-scope item is not rendered at all (not muted, not badged).
+  // Customize mode: show every item, unfiltered, so the vendor can see
+  // everything that exists and pin/unpin it.
+  const visibleSections = customizeMode
+    ? SECTIONS
+    : SECTIONS.map((section) => ({
+        ...section,
+        items: section.items.filter((item) => isInScope(item.to)),
+      })).filter((section) => section.items.length > 0);
 
   // Shared classes for every nav row — a bold, filled active state (dark
   // accent bg + white text + a left accent-strong border stripe) rather
   // than the old soft-tint active state, matching the SafePOS design
   // system's nav treatment. rtl:border-l-0 rtl:border-r-4 flips the
   // accent stripe to the visual "leading" edge under dir="rtl".
-  const linkClass = (deemphasized) => ({ isActive }) =>
+  const linkClass = () => ({ isActive }) =>
     `flex items-center gap-3 px-4 py-2.5 text-sm mx-2 rounded-lg font-semibold border-l-4 rtl:border-l-0 rtl:border-r-4 transition-colors ${
       isActive
         ? 'bg-accent text-white border-accent-strong shadow-sm'
-        : deemphasized
-          ? 'text-ink-muted border-transparent hover:bg-surface-sunken'
-          : 'text-ink border-transparent hover:bg-surface-sunken'
+        : 'text-ink border-transparent hover:bg-surface-sunken'
     }`;
 
   const content = (
@@ -221,7 +223,7 @@ export function Sidebar({ mobileOpen, onClose }) {
             <p className="eyebrow mt-1 truncate">{company?.name || 'Enterprise Ledger'}</p>
           </div>
         </div>
-        {/* Close button only rendered/visible in the mobile drawer — the static desktop sidebar has no need for it. */}
+        {/* Close button only rendered/visible in the mobile drawer, the static desktop sidebar has no need for it. */}
         <button onClick={onClose} className="md:hidden text-ink-muted hover:text-ink px-1" aria-label="Close menu">
           <X size={18} strokeWidth={2} />
         </button>
@@ -229,7 +231,7 @@ export function Sidebar({ mobileOpen, onClose }) {
 
       <nav className="flex-1 overflow-y-auto py-1">
         <div className="mb-4">
-          <NavLink to="/dashboard" end onClick={onClose} className={linkClass(false)}>
+          <NavLink to="/dashboard" end onClick={onClose} className={linkClass()}>
             <LayoutDashboard size={17} strokeWidth={2} className="shrink-0" />
             {t('nav.home')}
           </NavLink>
@@ -248,12 +250,9 @@ export function Sidebar({ mobileOpen, onClose }) {
                 const override = overrides[item.to];
                 return (
                   <div key={item.to} className="group relative">
-                    <NavLink to={item.to} onClick={onClose} className={linkClass(!inScope)}>
+                    <NavLink to={item.to} onClick={onClose} className={linkClass()}>
                       <ItemIcon size={17} strokeWidth={2} className="shrink-0" />
                       <span className="flex-1 truncate">{t(item.labelKey)}</span>
-                      {!inScope && !customizeMode && (
-                        <span className="chip-neutral !inline-block !rounded px-1.5 py-0.5 text-[10px] font-medium shrink-0">extra</span>
-                      )}
                     </NavLink>
                     {customizeMode && (
                       <button
@@ -265,7 +264,7 @@ export function Sidebar({ mobileOpen, onClose }) {
                         }}
                         title={
                           override
-                            ? 'Remove custom override — use default relevance for this item'
+                            ? 'Remove custom override: use default relevance for this item'
                             : inScope
                               ? 'Mark this item irrelevant for your business'
                               : 'Keep this item visible without graying it out'
@@ -290,7 +289,7 @@ export function Sidebar({ mobileOpen, onClose }) {
               {t('nav.sections.industry')}
             </p>
             {enabledIndustryModules.map((item) => (
-              <NavLink key={item.path} to={item.path} onClick={onClose} className={linkClass(false)}>
+              <NavLink key={item.path} to={item.path} onClick={onClose} className={linkClass()}>
                 <Circle size={17} strokeWidth={2} className="shrink-0" />
                 {item.label}
               </NavLink>
@@ -299,20 +298,20 @@ export function Sidebar({ mobileOpen, onClose }) {
         )}
       </nav>
 
-      {/* Settings is deliberately outside businessProfile.js scoping — every
+      {/* Settings is deliberately outside businessProfile.js scoping, every
           business, whatever its industry, needs a place to manage its own
           profile and branches, so this is never hidden per business type. */}
       <div className="mb-1">
-        <NavLink to="/settings" onClick={onClose} className={linkClass(false)}>
+        <NavLink to="/settings" onClick={onClose} className={linkClass()}>
           <Settings size={17} strokeWidth={2} className="shrink-0" />
           {t('nav.settings')}
         </NavLink>
       </div>
 
-      {/* Nothing is ever hidden any more — every item above always renders.
-          "Customize" reveals a per-item pin/unpin control so a vendor whose
-          business genuinely spans verticals can promote an out-of-scope item
-          to full prominence, or demote an in-scope one, instead of a single
+      {/* Out-of-scope items are hidden by default. "Customize sidebar" mode
+          reveals every item (with a per-item pin/unpin control) so a vendor
+          whose business genuinely spans verticals can explicitly turn on an
+          out-of-scope item, or turn off an in-scope one, instead of a single
           all-or-nothing "Show all modules" switch. */}
       <div className="px-5 pt-1 pb-2">
         <button
@@ -349,12 +348,12 @@ export function Sidebar({ mobileOpen, onClose }) {
 
   return (
     <>
-      {/* Static sidebar — desktop/tablet only. Always in the layout flow, never overlays content. */}
+      {/* Static sidebar: desktop/tablet only. Always in the layout flow, never overlays content. */}
       <aside className="hidden md:flex w-[264px] shrink-0 h-screen sticky top-0 bg-surface-sunken border-r border-rule flex-col">
         {content}
       </aside>
 
-      {/* Mobile drawer — an overlay + slide-in panel, only mounted below the md breakpoint.
+      {/* Mobile drawer: an overlay + slide-in panel, only mounted below the md breakpoint.
           Backdrop click and the × button both close it; navigating also closes it (onClose above).
           rtl:left-auto rtl:right-0 + rtl:translate-x-full flip the drawer to slide in from the
           visual "start" edge (the right, in RTL) instead of always sliding from the left. */}

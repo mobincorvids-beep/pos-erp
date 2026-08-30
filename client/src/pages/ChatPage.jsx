@@ -59,7 +59,7 @@ export function ChatPage() {
           </div>
           <div className="flex-1 overflow-y-auto -mx-1 px-1">
             {loadingChannels && <Loading />}
-            {!loadingChannels && channels.length === 0 && <p className="text-xs text-ink-muted px-2">No channels yet — create one to get started.</p>}
+            {!loadingChannels && channels.length === 0 && <p className="text-xs text-ink-muted px-2">No channels yet: create one to get started.</p>}
             <div className="space-y-1">
               {channels.map((c) => {
                 const isActive = c._id === activeChannelId;
@@ -159,7 +159,7 @@ function ChannelView({ channel, label, onChannelsChanged }) {
 
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
         {loading && <Loading />}
-        {!loading && messages.length === 0 && <p className="text-xs text-ink-muted">No messages yet — say hello.</p>}
+        {!loading && messages.length === 0 && <p className="text-xs text-ink-muted">No messages yet: say hello.</p>}
         {messages.map((m) => {
           const isMine = m.senderId?._id === user._id;
           return (

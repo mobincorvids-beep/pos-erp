@@ -30,7 +30,7 @@ function listPlans(companyId, { assetId, dueOnly } = {}) {
   return MaintenancePlan.find(filter).populate('assetId', 'name').sort({ nextDueDate: 1 });
 }
 
-/** Corrects a plan's schedule/checklist — safe at any time, nothing downstream snapshots these values except when a work order is actually opened from it. */
+/** Corrects a plan's schedule/checklist: safe at any time, nothing downstream snapshots these values except when a work order is actually opened from it. */
 async function updatePlan(planId, { name, frequencyDays, nextDueDate, checklist, estimatedCost, isActive }) {
   const plan = await MaintenancePlan.findById(planId);
   if (!plan) throw new Error('Plan not found.');
@@ -47,7 +47,7 @@ async function updatePlan(planId, { name, frequencyDays, nextDueDate, checklist,
   return plan;
 }
 
-/** Opens a work order — either against a due plan (carries its checklist/estimate forward) or ad-hoc for a real breakdown. */
+/** Opens a work order: either against a due plan (carries its checklist/estimate forward) or ad-hoc for a real breakdown. */
 async function openWorkOrder({ companyId, branchId, warehouseId, assetId, planId, issue, priority, assignedTechnicianId, userId }) {
   const asset = await FixedAsset.findOne({ _id: assetId, companyId });
   if (!asset) throw new Error('Asset not found.');
@@ -111,7 +111,7 @@ async function completeWorkOrder(workOrderId, { partsUsed, laborCost, expenseAcc
         if (!expenseAccountId || !paymentAccountId) throw new Error('expenseAccountId and paymentAccountId are required when there is a real cost to post.');
         const voucher = await accountingService.postVoucher({
           companyId: workOrder.companyId, branchId: workOrder.branchId, type: 'journal',
-          narration: `Maintenance work order — ${workOrder.issue}`,
+          narration: `Maintenance work order: ${workOrder.issue}`,
           entries: [
             { accountId: expenseAccountId, debit: totalCost, credit: 0 },
             { accountId: paymentAccountId, debit: 0, credit: totalCost },
@@ -149,7 +149,7 @@ function cancelWorkOrder(workOrderId) {
   );
 }
 
-/** Real downtime/cost history for an asset — the data the spec's MTTR/MTBF/downtime-cost reports need. */
+/** Real downtime/cost history for an asset, the data the spec's MTTR/MTBF/downtime-cost reports need. */
 async function assetMaintenanceHistory(assetId) {
   const orders = await MaintenanceWorkOrder.find({ assetId, status: 'completed' }).sort({ downtimeStart: 1 });
   const downtimeHours = orders.reduce((sum, o) => {

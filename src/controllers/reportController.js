@@ -1,7 +1,7 @@
 const reportingService = require('../services/reportingService');
 const reportExportService = require('../services/reportExportService');
 
-/** ?format=excel|pdf on top of the exact same reportingService.trialBalance() every other caller already uses — the report logic itself is never duplicated, only its output is optionally rendered as a real downloadable file instead of JSON. */
+/** ?format=excel|pdf on top of the exact same reportingService.trialBalance() every other caller already uses, the report logic itself is never duplicated, only its output is optionally rendered as a real downloadable file instead of JSON. */
 async function trialBalance(req, res) {
   try {
     const asOfDate = req.query.asOfDate ? new Date(req.query.asOfDate) : new Date();

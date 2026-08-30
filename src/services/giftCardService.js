@@ -31,7 +31,7 @@ async function issueGiftCard({ companyId, initialBalance, customerId, expiresAt,
     cardNumber = generateCardNumber();
     const clash = await GiftCard.findOne({ companyId, cardNumber });
     if (!clash) break;
-    if (attempt === 4) throw new Error('Could not generate a unique gift card number — try again.');
+    if (attempt === 4) throw new Error('Could not generate a unique gift card number, try again.');
   }
 
   const card = await GiftCard.create({

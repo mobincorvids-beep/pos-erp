@@ -119,7 +119,7 @@ function WorkOrderPanel({ workOrder, onClose, onChanged }) {
     setBusy(true);
     try {
       await api.post(`/manufacturing/work-orders/${workOrder._id}/start`);
-      toast('Production started — raw materials consumed.', 'success');
+      toast('Production started: raw materials consumed.', 'success');
       onChanged();
       onClose();
     } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }
@@ -129,7 +129,7 @@ function WorkOrderPanel({ workOrder, onClose, onChanged }) {
     setBusy(true);
     try {
       await api.post(`/manufacturing/work-orders/${workOrder._id}/complete`, { quantityProduced: Number(quantityProduced) });
-      toast('Production completed — finished goods added to stock.', 'success');
+      toast('Production completed: finished goods added to stock.', 'success');
       onChanged();
       onClose();
     } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }
@@ -152,13 +152,13 @@ function WorkOrderPanel({ workOrder, onClose, onChanged }) {
         <div>
           <label className="field-label">Quantity actually produced</label>
           <input type="number" className="field-input num mb-2" value={quantityProduced} onChange={(e) => setQuantityProduced(e.target.value)} />
-          <p className="text-xs text-ink-muted mb-2">If less than planned, the shortfall (wastage) makes each finished unit cost more — the difference isn't silently absorbed.</p>
+          <p className="text-xs text-ink-muted mb-2">If less than planned, the shortfall (wastage) makes each finished unit cost more, the difference isn't silently absorbed.</p>
           <button className="btn-primary w-full" disabled={busy} onClick={complete}>
             {busy ? 'Completing…' : 'Complete production'}
           </button>
         </div>
       )}
-      {workOrder.status === 'completed' && <p className="text-sm text-accent-strong">Completed — {formatQty(workOrder.quantityProduced)} units added to stock.</p>}
+      {workOrder.status === 'completed' && <p className="text-sm text-accent-strong">Completed: {formatQty(workOrder.quantityProduced)} units added to stock.</p>}
     </div>
   );
 }

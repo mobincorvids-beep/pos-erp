@@ -58,8 +58,8 @@ function TradeInsTab() {
             <tbody>
               {credits.map((c) => (
                 <tr key={c._id} className="border-t border-rule hover:bg-surface-sunken/50 transition-colors">
-                  <td className="px-4 py-2.5 font-medium text-ink">{c.customerId?.name || '—'}</td>
-                  <td className="px-4 py-2.5 text-ink-muted">{c.vehicleDescription || '—'}</td>
+                  <td className="px-4 py-2.5 font-medium text-ink">{c.customerId?.name || '-'}</td>
+                  <td className="px-4 py-2.5 text-ink-muted">{c.vehicleDescription || '-'}</td>
                   <td className="px-4 py-2.5 num">{formatMoney(c.appraisedValue, company?.currency)}</td>
                   <td className="px-4 py-2.5">
                     <span className={c.status === 'applied' ? 'chip-accent' : c.status === 'cancelled' ? 'chip-danger' : 'chip-warning'}>{c.status}</span>
@@ -161,7 +161,7 @@ function ApplyForm({ credit, onClose, onApplied }) {
     <div className="fixed inset-0 bg-ink/30 backdrop-blur-sm flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm shadow-lg">
         <p className="page-title text-lg mb-1">Apply trade-in credit</p>
-        <p className="text-sm text-ink-muted mb-4 num">{formatMoney(credit.appraisedValue, company?.currency)} — {credit.customerId?.name}</p>
+        <p className="text-sm text-ink-muted mb-4 num">{formatMoney(credit.appraisedValue, company?.currency)}: {credit.customerId?.name}</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Sale ID</label>

@@ -99,7 +99,7 @@ async function logFuel({ companyId, branchId, vehicleId, date, odometerReading, 
 
       const voucher = await accountingService.postVoucher({
         companyId, branchId: branchId || vehicle.branchId, type: 'payment',
-        narration: `Fuel — ${vehicle.registrationNumber}`,
+        narration: `Fuel: ${vehicle.registrationNumber}`,
         entries: [
           { accountId: expenseAccountId, debit: cost, credit: 0 },
           { accountId: paymentAccountId, debit: 0, credit: cost },
@@ -130,7 +130,7 @@ function listTrips(companyId, { vehicleId, status } = {}) {
 async function startTrip({ companyId, branchId, vehicleId, driverId, purpose, destination, startOdometer, userId }) {
   const vehicle = await Vehicle.findOne({ _id: vehicleId, companyId });
   if (!vehicle) throw new Error('Vehicle not found.');
-  if (vehicle.status !== 'active') throw new Error(`Cannot start a trip — vehicle status is "${vehicle.status}".`);
+  if (vehicle.status !== 'active') throw new Error(`Cannot start a trip: vehicle status is "${vehicle.status}".`);
   return VehicleTrip.create({
     companyId, branchId: branchId || vehicle.branchId || null, vehicleId,
     driverId: driverId || null, purpose: purpose || '', destination: destination || '',
@@ -175,7 +175,7 @@ function tripDistance(trip) {
   return trip.endOdometer - trip.startOdometer;
 }
 
-/** Real fuel + trip history for a vehicle. See file-level note above re: MaintenanceWorkOrder — honestly not linked, so not included. */
+/** Real fuel + trip history for a vehicle. See file-level note above re: MaintenanceWorkOrder, honestly not linked, so not included. */
 async function vehicleHistory(companyId, vehicleId) {
   const vehicle = await Vehicle.findOne({ _id: vehicleId, companyId });
   if (!vehicle) throw new Error('Vehicle not found.');

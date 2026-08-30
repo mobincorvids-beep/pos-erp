@@ -34,7 +34,7 @@ async function setDiscountTerms(purchaseOrderId, { paymentTermsDays, earlyPaymen
   return po;
 }
 
-/** Pure, read-only eligibility check — no money moves here. */
+/** Pure, read-only eligibility check: no money moves here. */
 async function calculateDiscount(purchaseOrderId, paymentDate) {
   const po = await PurchaseOrder.findById(purchaseOrderId);
   if (!po) throw new Error('Purchase order not found.');
@@ -43,7 +43,7 @@ async function calculateDiscount(purchaseOrderId, paymentDate) {
 
   const daysElapsed = Math.floor((new Date(paymentDate) - (po.orderDate || po.createdAt)) / MS_PER_DAY);
   if (daysElapsed > po.earlyPaymentDiscountDays) {
-    return { eligible: false, discountAmount: 0, reason: `Payment is ${daysElapsed} days after the order date — the discount window closed after ${po.earlyPaymentDiscountDays} days.`, daysElapsed };
+    return { eligible: false, discountAmount: 0, reason: `Payment is ${daysElapsed} days after the order date, the discount window closed after ${po.earlyPaymentDiscountDays} days.`, daysElapsed };
   }
 
   const discountAmount = Math.round(po.dueAmount * (po.earlyPaymentDiscountPercent / 100) * 100) / 100;
@@ -69,7 +69,7 @@ async function payWithEarlyDiscount(purchaseOrderId, { paymentDate, paymentAccou
 
   const voucher = await accountingService.postVoucher({
     companyId: po.companyId, branchId: po.branchId, type: 'payment', date: paymentDate || new Date(),
-    narration: `Early payment with discount — PO ${po.poNumber} (${po.earlyPaymentDiscountPercent}% off)`,
+    narration: `Early payment with discount: PO ${po.poNumber} (${po.earlyPaymentDiscountPercent}% off)`,
     entries: [
       { accountId: payableAccountId, debit: dueAmount, credit: 0 },
       { accountId: paymentAccountId, debit: 0, credit: amountPaid },

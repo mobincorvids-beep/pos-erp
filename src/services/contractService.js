@@ -188,7 +188,7 @@ async function getContract(contractId) {
   return contract;
 }
 
-/** Real query for contracts due for renewal review — same shape as documentService's checkExpiringDocuments' date-range check. */
+/** Real query for contracts due for renewal review, same shape as documentService's checkExpiringDocuments' date-range check. */
 async function expiringContracts(companyId, withinDays = 30) {
   await refreshExpiryStatuses(companyId);
   return Contract.find({

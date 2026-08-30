@@ -63,8 +63,8 @@ function StudentsTab() {
               {students.map((s) => (
                 <tr key={s._id} className="border-b border-rule last:border-0 hover:bg-surface-sunken/60">
                   <td className="px-4 py-2.5 font-medium text-ink">{s.name}</td>
-                  <td className="px-4 py-2.5 text-ink-muted">{s.className || '—'}</td>
-                  <td className="px-4 py-2.5 text-ink-muted">{s.guardianName || '—'} {s.guardianPhone && <span className="num">· {s.guardianPhone}</span>}</td>
+                  <td className="px-4 py-2.5 text-ink-muted">{s.className || '-'}</td>
+                  <td className="px-4 py-2.5 text-ink-muted">{s.guardianName || '-'} {s.guardianPhone && <span className="num">· {s.guardianPhone}</span>}</td>
                 </tr>
               ))}
             </tbody>
@@ -244,7 +244,7 @@ function GenerateInvoicesForm({ structure, onClose }) {
           <div><label className="field-label">Period</label><input required className="field-input" value={period} onChange={(e) => setPeriod(e.target.value)} placeholder="e.g. 2026-08" /></div>
           <div><label className="field-label">Due date</label><input type="date" required className="field-input" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></div>
         </div>
-        <p className="text-xs text-ink-muted mt-3">Safe to run again — students already invoiced for this period are skipped, not duplicated.</p>
+        <p className="text-xs text-ink-muted mt-3">Safe to run again: students already invoiced for this period are skipped, not duplicated.</p>
         <div className="flex justify-end gap-2 mt-4">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
           <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Generating…' : 'Generate'}</button>

@@ -14,7 +14,7 @@ export function AppLayout() {
       <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
 
       <div className="flex-1 min-w-0 flex flex-col">
-        {/* Mobile-only topbar — the static sidebar (md and up) already shows
+        {/* Mobile-only topbar: the static sidebar (md and up) already shows
             this info, so this whole bar is hidden at md+ rather than
             duplicating it alongside the always-visible desktop sidebar. */}
         <div className="md:hidden flex items-center gap-3 px-4 h-14 border-b border-rule bg-surface sticky top-0 z-30">
@@ -25,7 +25,7 @@ export function AppLayout() {
           <LanguageSwitcher />
         </div>
 
-        {/* Desktop-only slim header — just enough to host the language
+        {/* Desktop-only slim header: just enough to host the language
             switcher without duplicating the mobile topbar's branding
             (the static sidebar already carries that at md+). */}
         <div className="hidden md:flex items-center justify-end px-8 pt-4">

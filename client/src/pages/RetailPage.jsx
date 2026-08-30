@@ -29,7 +29,7 @@ export function RetailPage() {
     e.preventDefault();
     try {
       const result = await api.post(`/retail/layaway/${paying._id}/payments`, { amount: Number(amount), paymentAccountId });
-      toast(result.completed ? 'Payment complete — plan fulfilled!' : `Payment recorded — ${formatMoney(result.remaining, company?.currency)} remaining.`, 'success');
+      toast(result.completed ? 'Payment complete (plan fulfilled!' : `Payment recorded) ${formatMoney(result.remaining, company?.currency)} remaining.`, 'success');
       setPaying(null); setAmount('');
       load();
     } catch (err) { toast(err.message, 'error'); }
@@ -135,7 +135,7 @@ function PlanEditForm({ plan, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/30 backdrop-blur-[1px] flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-6 w-full max-w-xs">
-        <p className="font-display text-lg font-semibold text-ink mb-4">Edit plan — {plan.productId?.name}</p>
+        <p className="font-display text-lg font-semibold text-ink mb-4">Edit plan: {plan.productId?.name}</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Total price</label>

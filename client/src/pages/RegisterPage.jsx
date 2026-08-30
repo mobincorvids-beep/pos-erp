@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api, setToken } from '../api/client';
+import { FieldError, errorInputClass } from '../components/FieldError';
+import { validate, validateEmail, validatePassword, validateRequired, hasErrors } from '../lib/validation';
 
 export function RegisterPage() {
   const navigate = useNavigate();
@@ -11,9 +13,24 @@ export function RegisterPage() {
   const [adminPassword, setAdminPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [touched, setTouched] = useState({});
+
+  const rules = {
+    companyName: (v) => validateRequired(v, 'Company name'),
+    adminName: (v) => validateRequired(v, 'Your name'),
+    adminEmail: (v) => validateEmail(v),
+    adminPassword: (v) => validatePassword(v),
+  };
+  const errors = validate({ companyName, adminName, adminEmail, adminPassword }, rules);
+
+  function markTouched(field) {
+    setTouched((t) => ({ ...t, [field]: true }));
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setTouched({ companyName: true, adminName: true, adminEmail: true, adminPassword: true });
+    if (hasErrors(errors)) return;
     setError('');
     setLoading(true);
     try {
@@ -35,7 +52,7 @@ export function RegisterPage() {
         <div className="text-center mb-8">
           <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-accent text-white font-display text-xl font-bold mb-3">M</div>
           <p className="font-display text-3xl text-ink">Muhasib</p>
-          <p className="text-sm text-ink-muted mt-1">Set up your company — takes a minute</p>
+          <p className="text-sm text-ink-muted mt-1">Set up your company, takes a minute</p>
         </div>
 
         <form onSubmit={handleSubmit} className="card p-6 space-y-4">
@@ -45,11 +62,14 @@ export function RegisterPage() {
           <div>
             <label className="field-label" htmlFor="companyName">Company name</label>
             <input
-              id="companyName" type="text" required autoFocus
-              className="field-input"
+              id="companyName" type="text" required autoFocus maxLength={120}
+              className={`field-input ${errorInputClass(touched.companyName && errors.companyName)}`}
               value={companyName} onChange={(e) => setCompanyName(e.target.value)}
+              onBlur={() => markTouched('companyName')}
               placeholder="Acme Retail"
+              aria-invalid={Boolean(touched.companyName && errors.companyName)}
             />
+            <FieldError message={touched.companyName ? errors.companyName : null} />
           </div>
           <div>
             <label className="field-label" htmlFor="industryType">Industry</label>
@@ -70,31 +90,40 @@ export function RegisterPage() {
           <div>
             <label className="field-label" htmlFor="adminName">Your name</label>
             <input
-              id="adminName" type="text" required
-              className="field-input"
+              id="adminName" type="text" required maxLength={120}
+              className={`field-input ${errorInputClass(touched.adminName && errors.adminName)}`}
               value={adminName} onChange={(e) => setAdminName(e.target.value)}
+              onBlur={() => markTouched('adminName')}
               placeholder="Jane Doe"
+              aria-invalid={Boolean(touched.adminName && errors.adminName)}
             />
+            <FieldError message={touched.adminName ? errors.adminName : null} />
           </div>
           <div>
             <label className="field-label" htmlFor="adminEmail">Email</label>
             <input
-              id="adminEmail" type="email" required
-              className="field-input"
+              id="adminEmail" type="email" required maxLength={254}
+              className={`field-input ${errorInputClass(touched.adminEmail && errors.adminEmail)}`}
               value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)}
+              onBlur={() => markTouched('adminEmail')}
               placeholder="you@company.com"
+              aria-invalid={Boolean(touched.adminEmail && errors.adminEmail)}
             />
+            <FieldError message={touched.adminEmail ? errors.adminEmail : null} />
           </div>
           <div>
             <label className="field-label" htmlFor="adminPassword">Password</label>
             <input
               id="adminPassword" type="password" required minLength={8}
-              className="field-input"
+              className={`field-input ${errorInputClass(touched.adminPassword && errors.adminPassword)}`}
               value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)}
+              onBlur={() => markTouched('adminPassword')}
               placeholder="At least 8 characters"
+              aria-invalid={Boolean(touched.adminPassword && errors.adminPassword)}
             />
+            <FieldError message={touched.adminPassword ? errors.adminPassword : null} />
           </div>
-          <button type="submit" disabled={loading} className="btn-primary w-full">
+          <button type="submit" disabled={loading || hasErrors(errors)} className="btn-primary w-full">
             {loading ? 'Creating your company…' : 'Create company'}
           </button>
         </form>

@@ -10,7 +10,7 @@ const INVOICE_CHIP = { pending: 'chip-warning', paid: 'chip-accent', overdue: 'c
 const COMPLAINT_CHIP = { open: 'chip-warning', assigned: 'chip-accent', resolved: 'chip-neutral' };
 
 function initials(name) {
-  if (!name) return '—';
+  if (!name) return '-';
   const parts = name.trim().split(/\s+/);
   return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || name[0].toUpperCase();
 }
@@ -76,13 +76,13 @@ function InvoicesTab() {
               <tbody>
                 {invoices.map((i) => (
                   <tr key={i._id} className="border-b border-rule last:border-0 hover:bg-surface-sunken/40 transition-colors">
-                    <td className="px-4 py-3 num text-ink">{i.propertyId?.unitNumber || '—'}</td>
+                    <td className="px-4 py-3 num text-ink">{i.propertyId?.unitNumber || '-'}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
                         <span className="w-7 h-7 rounded-full bg-accent-soft text-accent-strong flex items-center justify-center text-xs font-semibold shrink-0">
                           {initials(i.residentCustomerId?.name)}
                         </span>
-                        <span className="text-ink">{i.residentCustomerId?.name || '—'}</span>
+                        <span className="text-ink">{i.residentCustomerId?.name || '-'}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-ink-muted">{i.period}</td>
@@ -119,7 +119,7 @@ function GenerateForm({ onClose, onSaved }) {
     setSaving(true);
     try {
       const result = await api.post('/housing-society/invoices/generate', { chargeId, period, dueDate });
-      toast(`Generated ${result.created.length} invoice(s)${result.skippedCount > 0 ? ` — ${result.skippedCount} already billed for this period, skipped` : ''}.`, 'success');
+      toast(`Generated ${result.created.length} invoice(s)${result.skippedCount > 0 ? `: ${result.skippedCount} already billed for this period, skipped` : ''}.`, 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -132,13 +132,13 @@ function GenerateForm({ onClose, onSaved }) {
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
         <p className="font-display text-lg font-semibold text-ink mb-1">Generate invoices</p>
-        <p className="text-xs text-ink-muted mb-4">Bills every active member — anyone already billed for this exact period is skipped, never double-charged.</p>
+        <p className="text-xs text-ink-muted mb-4">Bills every active member: anyone already billed for this exact period is skipped, never double-charged.</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Charge</label>
             <select required className="field-input" value={chargeId} onChange={(e) => setChargeId(e.target.value)}>
               <option value="">Charge…</option>
-              {charges.map((c) => <option key={c._id} value={c._id}>{c.name} — {formatMoney(c.amount)}</option>)}
+              {charges.map((c) => <option key={c._id} value={c._id}>{c.name}: {formatMoney(c.amount)}</option>)}
             </select>
           </div>
           <div>
@@ -194,7 +194,7 @@ function PayForm({ invoice, onClose, onPaid }) {
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
         <p className="font-display text-lg font-semibold text-ink mb-1">Pay invoice</p>
-        <p className="text-sm text-ink-muted mb-4">{invoice.propertyId?.unitNumber} — <span className="num">{formatMoney(invoice.amount, company?.currency)}</span></p>
+        <p className="text-sm text-ink-muted mb-4">{invoice.propertyId?.unitNumber}: <span className="num">{formatMoney(invoice.amount, company?.currency)}</span></p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Branch</label>
@@ -335,13 +335,13 @@ function MembersTab() {
           <tbody>
             {members.map((m) => (
               <tr key={m._id} className="border-b border-rule last:border-0 hover:bg-surface-sunken/40 transition-colors">
-                <td className="px-4 py-3 num text-ink">{m.propertyId?.unitNumber || '—'}</td>
+                <td className="px-4 py-3 num text-ink">{m.propertyId?.unitNumber || '-'}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2.5">
                     <span className="w-7 h-7 rounded-full bg-accent-soft text-accent-strong flex items-center justify-center text-xs font-semibold shrink-0">
                       {initials(m.residentCustomerId?.name)}
                     </span>
-                    <span className="text-ink">{m.residentCustomerId?.name || '—'}</span>
+                    <span className="text-ink">{m.residentCustomerId?.name || '-'}</span>
                   </div>
                 </td>
               </tr>

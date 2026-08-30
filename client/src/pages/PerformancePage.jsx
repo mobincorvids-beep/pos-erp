@@ -99,14 +99,14 @@ function GoalsTab() {
             <tbody>
               {rows.map((g) => (
                 <tr key={g._id} className="border-b border-rule last:border-0 hover:bg-accent-soft/30 transition-colors">
-                  <td className="px-4 py-2.5 font-medium">{g.employeeId?.name || '—'}</td>
+                  <td className="px-4 py-2.5 font-medium">{g.employeeId?.name || '-'}</td>
                   <td className="px-4 py-2.5">
                     <div>{g.title}</div>
                     {g.description && <div className="text-xs text-ink-muted">{g.description}</div>}
                   </td>
                   <td className="px-4 py-2.5 capitalize text-ink-muted">{g.category}</td>
                   <td className="px-4 py-2.5 num">{g.currentValue}{g.unit ? ` ${g.unit}` : ''} / {g.targetValue}{g.unit ? ` ${g.unit}` : ''}</td>
-                  <td className="px-4 py-2.5 text-ink-muted">{g.dueDate ? formatDate(g.dueDate) : '—'}</td>
+                  <td className="px-4 py-2.5 text-ink-muted">{g.dueDate ? formatDate(g.dueDate) : '-'}</td>
                   <td className="px-4 py-2.5"><span className={GOAL_STATUS_CHIP[g.status] || 'chip-neutral'}>{g.status.replace('_', ' ')}</span></td>
                   <td className="px-4 py-2.5 text-right">
                     {can('performance.manage') && (
@@ -317,10 +317,10 @@ function ReviewsTab() {
             <tbody>
               {rows.map((r) => (
                 <tr key={r._id} className="border-b border-rule last:border-0 hover:bg-accent-soft/30 transition-colors">
-                  <td className="px-4 py-2.5 font-medium">{r.employeeId?.name || '—'}</td>
+                  <td className="px-4 py-2.5 font-medium">{r.employeeId?.name || '-'}</td>
                   <td className="px-4 py-2.5 text-ink-muted">{r.period}</td>
-                  <td className="px-4 py-2.5 num">{r.overallRating ? `${r.overallRating}/5` : '—'}</td>
-                  <td className="px-4 py-2.5 text-ink-muted">{r.reviewerUserId?.name || r.reviewerUserId?.email || '—'}</td>
+                  <td className="px-4 py-2.5 num">{r.overallRating ? `${r.overallRating}/5` : '-'}</td>
+                  <td className="px-4 py-2.5 text-ink-muted">{r.reviewerUserId?.name || r.reviewerUserId?.email || '-'}</td>
                   <td className="px-4 py-2.5"><span className={REVIEW_STATUS_CHIP[r.status] || 'chip-neutral'}>{r.status}</span></td>
                   <td className="px-4 py-2.5 text-right">
                     <div className="flex gap-1 justify-end">
@@ -439,7 +439,7 @@ function ScorecardTab() {
           </div>
           <div className="card p-4">
             <p className="eyebrow mb-1.5">Avg. progress</p>
-            <p className="text-2xl font-display font-bold num text-ink">{scorecard.averageProgressPercent != null ? `${scorecard.averageProgressPercent}%` : '—'}</p>
+            <p className="text-2xl font-display font-bold num text-ink">{scorecard.averageProgressPercent != null ? `${scorecard.averageProgressPercent}%` : '-'}</p>
           </div>
         </div>
       )}
@@ -474,7 +474,7 @@ function ScorecardTab() {
                 <tr key={g._id} className="border-b border-rule last:border-0 hover:bg-accent-soft/30 transition-colors">
                   <td className="px-4 py-2.5 font-medium">{g.title}</td>
                   <td className="px-4 py-2.5 num">{g.currentValue}{g.unit ? ` ${g.unit}` : ''} / {g.targetValue}{g.unit ? ` ${g.unit}` : ''}</td>
-                  <td className="px-4 py-2.5 text-ink-muted">{g.dueDate ? formatDate(g.dueDate) : '—'}</td>
+                  <td className="px-4 py-2.5 text-ink-muted">{g.dueDate ? formatDate(g.dueDate) : '-'}</td>
                   <td className="px-4 py-2.5"><span className={GOAL_STATUS_CHIP[g.status] || 'chip-neutral'}>{g.status.replace('_', ' ')}</span></td>
                 </tr>
               ))}

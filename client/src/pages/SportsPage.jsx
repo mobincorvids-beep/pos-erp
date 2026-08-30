@@ -69,7 +69,7 @@ function BookingsTab() {
             <tbody>
               {bookings.map((b) => (
                 <tr key={b._id} className="border-b border-rule last:border-0 hover:bg-surface-sunken/60">
-                  <td className="px-4 py-2.5 font-medium text-ink">{b.customerId?.name || '—'}</td>
+                  <td className="px-4 py-2.5 font-medium text-ink">{b.customerId?.name || '-'}</td>
                   <td className="px-4 py-2.5 num text-ink-muted">{new Date(b.startTime).toLocaleString()}</td>
                   <td className="px-4 py-2.5 num text-ink-muted">{new Date(b.endTime).toLocaleString()}</td>
                   <td className="px-4 py-2.5"><span className={STATUS_CHIP[b.status]}>{b.status}</span></td>
@@ -112,7 +112,7 @@ function BookingForm({ onClose, onSaved }) {
     setSaving(true);
     try {
       const product = products.find((p) => p._id === form.billingProductId);
-      if (!product) throw new Error('Select a billing product — it must have trackingMode "service".');
+      if (!product) throw new Error('Select a billing product: it must have trackingMode "service".');
       const { facilityId, ...rest } = form;
       await api.post(`/sports/facilities/${facilityId}/book`, { ...rest, billingVariantId: product.variants[0]?._id });
       toast('Slot booked.', 'success');
@@ -137,7 +137,7 @@ function BookingForm({ onClose, onSaved }) {
             <label className="field-label">Facility</label>
             <select required className="field-input" value={form.facilityId} onChange={(e) => setForm({ ...form, facilityId: e.target.value })}>
               <option value="">Select…</option>
-              {facilities.map((f) => <option key={f._id} value={f._id}>{f.name} — {formatMoney(f.hourlyRate)}/hr</option>)}
+              {facilities.map((f) => <option key={f._id} value={f._id}>{f.name}: {formatMoney(f.hourlyRate)}/hr</option>)}
             </select>
           </div>
           <div>

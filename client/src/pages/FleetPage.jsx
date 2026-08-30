@@ -140,7 +140,7 @@ function VehiclesTab() {
                           <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => setEditing(v)}>Edit</button>
                           <button className="btn-ghost !text-danger !px-0 text-xs" onClick={() => retire(v._id)}>Retire</button>
                         </div>
-                      ) : <span className="text-xs text-ink-muted">—</span>}
+                      ) : <span className="text-xs text-ink-muted">-</span>}
                     </td>
                   </tr>
                 ))}
@@ -418,7 +418,7 @@ function TripsTab() {
                       </div>
                     </td>
                     <td className="py-3 px-5 text-sm text-ink-muted">{formatDateTime(t.startTime)}</td>
-                    <td className="py-3 px-5 text-sm text-ink-muted num">{t.endOdometer != null ? `${t.endOdometer - t.startOdometer} km` : '—'}</td>
+                    <td className="py-3 px-5 text-sm text-ink-muted num">{t.endOdometer != null ? `${t.endOdometer - t.startOdometer} km` : '-'}</td>
                     <td className="py-3 px-5"><StatusChip status={t.status} /></td>
                     <td className="py-3 px-5 text-right">
                       {(t.status === 'scheduled' || t.status === 'in_progress') ? (
@@ -426,7 +426,7 @@ function TripsTab() {
                           <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => setCompleting(t)}>Complete</button>
                           <button className="btn-ghost !text-danger !px-0 text-xs" onClick={() => cancel(t._id)}>Cancel</button>
                         </div>
-                      ) : <span className="text-xs text-ink-muted">—</span>}
+                      ) : <span className="text-xs text-ink-muted">-</span>}
                     </td>
                   </tr>
                 ))}

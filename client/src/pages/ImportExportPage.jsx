@@ -29,7 +29,7 @@ export function ImportExportPage() {
         <p className="page-title">Import shipments</p>
         <button className="btn-primary" onClick={() => setShowForm(true)}>New shipment</button>
       </div>
-      <p className="text-sm text-ink-muted mb-5 max-w-2xl">Customs duty, freight, and insurance are allocated proportionally across every item by value — the real landed cost each item enters inventory at, not just what the supplier invoiced.</p>
+      <p className="text-sm text-ink-muted mb-5 max-w-2xl">Customs duty, freight, and insurance are allocated proportionally across every item by value, the real landed cost each item enters inventory at, not just what the supplier invoiced.</p>
 
       {loading && <Loading />}
       {!loading && shipments.length === 0 && (
@@ -51,7 +51,7 @@ export function ImportExportPage() {
               <tbody>
                 {shipments.map((s) => (
                   <tr key={s._id} className="border-b border-rule last:border-0 hover:bg-surface-sunken/60">
-                    <td className="px-4 py-2.5 text-ink font-medium">{s.supplierId?.name || '—'}</td>
+                    <td className="px-4 py-2.5 text-ink font-medium">{s.supplierId?.name || '-'}</td>
                     <td className="px-4 py-2.5 text-ink-muted">{s.items.length}</td>
                     <td className="px-4 py-2.5 num text-right">{formatMoney(s.additionalCosts.reduce((sum, c) => sum + c.amount, 0), company?.currency)}</td>
                     <td className="px-4 py-2.5"><span className={STATUS_CHIP[s.status]}>{s.status}</span></td>
@@ -204,7 +204,7 @@ function ReceiveForm({ shipment, onClose, onReceived }) {
     setSaving(true);
     try {
       const result = await api.post(`/import-export/shipments/${shipment._id}/receive`, { warehouseId, inventoryAssetAccountId, supplierPayableAccountId });
-      toast(`Received — landed cost ${formatMoney(baseValue + totalAdditionalCosts, company?.currency)} total.`, 'success');
+      toast(`Received: landed cost ${formatMoney(baseValue + totalAdditionalCosts, company?.currency)} total.`, 'success');
       onReceived();
     } catch (err) {
       toast(err.message, 'error');

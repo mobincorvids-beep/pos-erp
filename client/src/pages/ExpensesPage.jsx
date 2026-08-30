@@ -65,7 +65,7 @@ export function ExpensesPage() {
                 {expenses.map((exp) => (
                   <tr key={exp._id} className="hover:bg-surface-sunken/50 transition-colors">
                     <td className="py-3 px-5 num text-ink-muted">{formatDate(exp.date)}</td>
-                    <td className="py-3 px-5 text-ink">{exp.note || '—'}</td>
+                    <td className="py-3 px-5 text-ink">{exp.note || '-'}</td>
                     <td className="py-3 px-5 text-center"><span className={STATUS_CHIP[exp.status]}>{exp.status}</span></td>
                     <td className="py-3 px-5 num text-right text-ink">{formatMoney(exp.amount, company?.currency)}</td>
                     <td className="py-3 px-5 text-right">

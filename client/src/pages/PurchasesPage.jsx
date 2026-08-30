@@ -113,7 +113,7 @@ function PurchaseOrderPanel({ po: initialPo, onClose, onChanged }) {
   async function recordQC(grnId, itemId, passed) {
     try {
       await api.post(`/purchase-orders/grn/${grnId}/items/${itemId}/qc`, { passed });
-      toast(passed ? 'Marked as passed QC.' : 'Marked as failed QC — stock reversed.', 'success');
+      toast(passed ? 'Marked as passed QC.' : 'Marked as failed QC: stock reversed.', 'success');
       loadGrns();
       onChanged();
     } catch (err) {
@@ -224,7 +224,7 @@ function ReceiveGoodsForm({ po, onClose, onReceived }) {
     setLines((prev) => prev.map((l, idx) => idx === i ? { ...l, ...patch } : l));
   }
 
-  /** Camera scan for goods receiving — matches the scanned barcode to a product already on this PO's outstanding lines and sets that line's received quantity to its full remaining amount (the common "scan it, it's all here" receiving flow). A code that doesn't match any outstanding line just gets reported, nothing else changes. */
+  /** Camera scan for goods receiving, matches the scanned barcode to a product already on this PO's outstanding lines and sets that line's received quantity to its full remaining amount (the common "scan it, it's all here" receiving flow). A code that doesn't match any outstanding line just gets reported, nothing else changes. */
   function handleBarcodeDetected(code) {
     setScannerOpen(false);
     const line = lines.find((l) => {
@@ -259,7 +259,7 @@ function ReceiveGoodsForm({ po, onClose, onReceived }) {
           if (product?.trackingMode === 'serial') {
             const serialNumbers = l.serialNumbersText.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
             if (serialNumbers.length !== item.quantity) {
-              throw new Error(`${product.name}: enter exactly ${item.quantity} serial number(s) — one per unit received (got ${serialNumbers.length}).`);
+              throw new Error(`${product.name}: enter exactly ${item.quantity} serial number(s), one per unit received (got ${serialNumbers.length}).`);
             }
             item.serialNumbers = serialNumbers;
           }
@@ -287,7 +287,7 @@ function ReceiveGoodsForm({ po, onClose, onReceived }) {
             Scan barcode
           </button>
         </div>
-        <p className="text-xs text-ink-muted mb-4">Against <span className="num">{po.poNumber}</span>. Leave a line at 0 to skip it — partial receiving is fine, you can receive the rest later. Scanning a barcode marks that line fully received.</p>
+        <p className="text-xs text-ink-muted mb-4">Against <span className="num">{po.poNumber}</span>. Leave a line at 0 to skip it, partial receiving is fine, you can receive the rest later. Scanning a barcode marks that line fully received.</p>
         {scannerOpen && <BarcodeScannerModal onDetected={handleBarcodeDetected} onClose={() => setScannerOpen(false)} />}
 
         <div className="space-y-3">
@@ -345,7 +345,7 @@ function ReceiveGoodsForm({ po, onClose, onReceived }) {
                       rows={3}
                       value={line.serialNumbersText}
                       onChange={(e) => updateLine(i, { serialNumbersText: e.target.value })}
-                      placeholder="One per line or comma-separated — exactly one serial per unit received"
+                      placeholder="One per line or comma-separated: exactly one serial per unit received"
                     />
                   </div>
                 )}
@@ -398,7 +398,7 @@ function PurchaseOrderForm({ onClose, onSaved }) {
         branchId, warehouseId, supplierId,
         items: lines.filter((l) => l.productId).map((l) => ({ productId: l.productId, variantId: l.variantId, quantityOrdered: Number(l.quantityOrdered), unitCost: Number(l.unitCost) })),
       });
-      toast('Purchase order created — awaiting approval.', 'success');
+      toast('Purchase order created: awaiting approval.', 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');

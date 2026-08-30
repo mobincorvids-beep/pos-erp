@@ -49,7 +49,7 @@ export function FunnelsPage() {
             <Plus size={16} /> New funnel
           </button>
         </div>
-        <p className="text-sm text-ink-muted mt-1">Lead-capture landing pages — headline, body text, and a short form — published at a public URL.</p>
+        <p className="text-sm text-ink-muted mt-1">Lead-capture landing pages (headline, body text, and a short form) published at a public URL.</p>
       </div>
 
       {funnels === null ? (
@@ -57,7 +57,7 @@ export function FunnelsPage() {
       ) : funnels.length === 0 ? (
         <EmptyState
           title="No funnels yet"
-          description="Create a simple lead-capture landing page — headline, body text, and a short form — that anyone can submit without logging in."
+          description="Create a simple lead-capture landing page (headline, body text, and a short form) that anyone can submit without logging in."
           action={<button className="btn-primary" onClick={() => setSelected('new')}>Create your first funnel</button>}
         />
       ) : (
@@ -224,7 +224,7 @@ function FunnelEditor({ funnel, onClose, onSaved }) {
         <div>
           <label className="field-label">Body content (plain text)</label>
           <textarea className="field-input" rows={5} value={bodyContent} onChange={(e) => setBodyContent(e.target.value)}
-            placeholder="Tell visitors what they're signing up for. Plain text or simple markdown — this is a lead-capture page, not a drag-and-drop builder." />
+            placeholder="Tell visitors what they're signing up for. Plain text or simple markdown, this is a lead-capture page, not a drag-and-drop builder." />
         </div>
 
         <div>

@@ -37,7 +37,7 @@ async function analytics(req, res) {
   res.json(data);
 }
 
-/** Public webhook receiver — no requireAuth/scopeToCompany, mirrors ecommerceWebhookRoutes.js's pattern of resolving tenant from the credential itself (here, the per-channel token) rather than a JWT. */
+/** Public webhook receiver: no requireAuth/scopeToCompany, mirrors ecommerceWebhookRoutes.js's pattern of resolving tenant from the credential itself (here, the per-channel token) rather than a JWT. */
 async function webhook(req, res) {
   try {
     const channelOrder = await salesChannelService.receiveOrder(req.params.token, req.body);

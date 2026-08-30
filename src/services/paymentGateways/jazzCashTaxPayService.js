@@ -43,7 +43,7 @@ function formatDateTime(date) {
 function requireCredentials(config) {
   const { merchantId, password, integritySalt } = config || {};
   if (!merchantId || !password || !integritySalt) {
-    throw new Error('JazzCash tax-pay is not configured for this company — set merchantId, password and integritySalt under Settings.');
+    throw new Error('JazzCash tax-pay is not configured for this company, set merchantId, password and integritySalt under Settings.');
   }
   return { merchantId, password, integritySalt };
 }

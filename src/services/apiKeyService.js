@@ -55,7 +55,7 @@ async function createApiKey(companyId, { name, scopes = [], userId }) {
   };
 }
 
-/** Never returns the raw key or the hash — listing is safe to hand straight to the client. */
+/** Never returns the raw key or the hash, listing is safe to hand straight to the client. */
 async function listApiKeys(companyId) {
   const keys = await ApiKey.find({ companyId }).sort({ createdAt: -1 }).select('name keyPrefix scopes lastUsedAt revokedAt expiresAt createdAt');
   return keys.map((k) => ({

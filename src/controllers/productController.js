@@ -7,14 +7,14 @@ async function list(req, res) {
   res.json(products);
 }
 
-/** categoryId is required going forward — every NEW product must be filed under a
+/** categoryId is required going forward, every NEW product must be filed under a
  * category (and optionally a subcategory). Products created before this requirement
  * existed keep whatever they have (including none) — see categoryService's
  * "Uncategorized" fallback, used by the CSV importer and available for manual cleanup. */
 async function create(req, res) {
   try {
     if (!req.body.categoryId) {
-      return res.status(400).json({ error: 'categoryId is required — choose a category (and optionally a subcategory) for this product.' });
+      return res.status(400).json({ error: 'categoryId is required, choose a category (and optionally a subcategory) for this product.' });
     }
     const product = await Product.create({ ...req.body, companyId: req.companyId });
     res.status(201).json(product);
@@ -23,7 +23,7 @@ async function create(req, res) {
   }
 }
 
-/** Was missing entirely — the most-used entity in the whole app had no way to correct a
+/** Was missing entirely, the most-used entity in the whole app had no way to correct a
  * price, a name typo, or reorder levels after creation. Deliberately excludes trackingMode/
  * hasVariants/bundleComponents: those change how stock itself is tracked and can't be
  * flipped after sales/stock movements already exist against the product. */
@@ -41,7 +41,7 @@ async function update(req, res) {
   res.json(product);
 }
 
-/** Soft-deactivate — every Sale/PurchaseOrder/StockMovement references products by id and
+/** Soft-deactivate: every Sale/PurchaseOrder/StockMovement references products by id and
  * must keep resolving. Hides it from POS/catalog listings (list() above already filters
  * isActive: true) without touching any history. */
 async function deactivate(req, res) {
@@ -60,7 +60,7 @@ async function addVariant(req, res) {
   res.status(201).json(product);
 }
 
-/** Edits one variant's sku/barcode/price/weight — was missing, same gap as the product-level
+/** Edits one variant's sku/barcode/price/weight: was missing, same gap as the product-level
  * update above but for the actual sellable line item. */
 async function updateVariant(req, res) {
   const product = await Product.findOne({ _id: req.params.id, companyId: req.companyId });
@@ -75,7 +75,7 @@ async function updateVariant(req, res) {
   res.json(product);
 }
 
-/** Soft-deactivate one variant — same reasoning as deactivate() above, at the variant level:
+/** Soft-deactivate one variant: same reasoning as deactivate() above, at the variant level:
  * past sales reference this exact variantId and must keep resolving. */
 async function deactivateVariant(req, res) {
   const product = await Product.findOne({ _id: req.params.id, companyId: req.companyId });
@@ -100,7 +100,7 @@ async function listBatches(req, res) {
   res.json(await inventoryService.listProductBatches(req.companyId, req.query));
 }
 
-/** POST /products/import-csv — bulk create/update products (and post opening stock) from an uploaded CSV. Never fails the whole batch on one bad row; see productImportService for the row-by-row contract. */
+/** POST /products/import-csv: bulk create/update products (and post opening stock) from an uploaded CSV. Never fails the whole batch on one bad row; see productImportService for the row-by-row contract. */
 async function importCsv(req, res) {
   if (!req.file) return res.status(400).json({ error: 'No CSV file was uploaded (expected multipart field "file").' });
   try {

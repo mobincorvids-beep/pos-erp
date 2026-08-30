@@ -81,7 +81,7 @@ export function FixedAssetsPage() {
                         <p className="text-sm font-semibold text-ink">{a.name}</p>
                       </div>
                     </td>
-                    <td className="py-3 px-5 text-sm text-ink-muted">{a.category || '—'}</td>
+                    <td className="py-3 px-5 text-sm text-ink-muted">{a.category || '-'}</td>
                     <td className="py-3 px-5 text-sm text-ink font-semibold text-right num">{formatMoney(a.purchaseCost, company?.currency)}</td>
                     <td className="py-3 px-5"><StatusChip status={a.status} /></td>
                     <td className="py-3 px-5 text-right">
@@ -204,7 +204,7 @@ function DisposeForm({ asset, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-xs">
-        <p className="font-display text-lg mb-4">Dispose — {asset.name}</p>
+        <p className="font-display text-lg mb-4">Dispose: {asset.name}</p>
         <label className="field-label">Disposal proceeds</label>
         <input type="number" min="0" required className="field-input num" value={disposalProceeds} onChange={(e) => setDisposalProceeds(e.target.value)} />
         <div className="flex justify-end gap-2 mt-5">
@@ -223,7 +223,7 @@ function HistoryPanel({ asset, onClose }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <div className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Maintenance history — {asset.name}</p>
+        <p className="font-display text-lg mb-4">Maintenance history: {asset.name}</p>
         {!history && <Loading />}
         {history && (
           <div className="space-y-2 text-sm">

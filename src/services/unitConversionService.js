@@ -17,7 +17,7 @@
  */
 const Unit = require('../models/Unit');
 
-/** Resolves a unit's quantity into its base-unit-equivalent quantity. A unit with no baseUnitId IS a base unit — its own quantity, unconverted. */
+/** Resolves a unit's quantity into its base-unit-equivalent quantity. A unit with no baseUnitId IS a base unit, its own quantity, unconverted. */
 function toBaseQuantity(unit, quantity) {
   return unit.baseUnitId ? Math.round(quantity * unit.conversionFactor * 1e6) / 1e6 : quantity;
 }
@@ -38,20 +38,20 @@ async function convertQuantity(fromUnitId, toUnitId, quantity) {
 
   const fromBaseId = fromUnit.baseUnitId ? String(fromUnit.baseUnitId) : String(fromUnit._id);
   const toBaseId = toUnit.baseUnitId ? String(toUnit.baseUnitId) : String(toUnit._id);
-  if (fromBaseId !== toBaseId) throw new Error(`"${fromUnit.name}" and "${toUnit.name}" don't share a common base unit — they can't be converted between each other.`);
+  if (fromBaseId !== toBaseId) throw new Error(`"${fromUnit.name}" and "${toUnit.name}" don't share a common base unit, they can't be converted between each other.`);
 
   const baseQty = toBaseQuantity(fromUnit, quantity);
   const converted = toUnit.baseUnitId ? baseQty / toUnit.conversionFactor : baseQty;
   return Math.round(converted * 1e6) / 1e6;
 }
 
-/** Converts a quantity FROM some alternate unit INTO a product's own real tracking unit — the actual call site every purchase/sale flow needs before handing a quantity to recordMovement/checkout. */
+/** Converts a quantity FROM some alternate unit INTO a product's own real tracking unit: the actual call site every purchase/sale flow needs before handing a quantity to recordMovement/checkout. */
 async function convertToProductUnit(product, fromUnitId, quantity) {
   if (!product.unitId) return quantity; // product has no tracking unit configured — nothing to convert against, pass through unchanged
   return convertQuantity(fromUnitId, product.unitId, quantity);
 }
 
-/** Converts a per-unit COST from one unit to another — the necessary companion to convertQuantity(). If 1 fromUnit = K toUnits, the real cost per toUnit is fromUnitCost / K, preserving the true total cost regardless of which unit it's expressed in (2 cartons × 500 must equal 576 pieces × the converted per-piece cost). */
+/** Converts a per-unit COST from one unit to another, the necessary companion to convertQuantity(). If 1 fromUnit = K toUnits, the real cost per toUnit is fromUnitCost / K, preserving the true total cost regardless of which unit it's expressed in (2 cartons × 500 must equal 576 pieces × the converted per-piece cost). */
 async function convertUnitCost(fromUnitId, toUnitId, unitCost) {
   if (String(fromUnitId) === String(toUnitId)) return unitCost;
   const conversionRatio = await convertQuantity(fromUnitId, toUnitId, 1); // how many toUnits equal exactly 1 fromUnit

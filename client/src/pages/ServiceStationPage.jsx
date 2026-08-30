@@ -60,7 +60,7 @@ function VehiclesTab() {
               <tbody>
                 {vehicles.map((v) => (
                   <tr key={v._id} onClick={() => setSelected(v)} className={`border-t border-rule cursor-pointer hover:bg-surface-sunken/50 transition-colors ${selected?._id === v._id ? 'bg-accent-soft/40' : ''}`}>
-                    <td className="px-4 py-2.5 font-medium text-ink">{v.make} {v.model} ({v.year}) — {v.registrationNumber}</td>
+                    <td className="px-4 py-2.5 font-medium text-ink">{v.make} {v.model} ({v.year}): {v.registrationNumber}</td>
                     <td className="px-4 py-2.5 text-ink-muted">{v.customerId?.name}</td>
                     <td className="px-4 py-2.5 num text-right">{v.currentMileage}</td>
                   </tr>
@@ -159,7 +159,7 @@ function VehiclePanel({ vehicle, onClose, onChanged }) {
     setBusy(true);
     try {
       await api.post(`/service-station/vehicles/${vehicle._id}/service-completed`, { mileageAtService: Number(mileage) });
-      toast('Service recorded — next-due reset.', 'success');
+      toast('Service recorded: next-due reset.', 'success');
       onChanged(); onClose();
     } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }
   }
@@ -213,7 +213,7 @@ function DueTab() {
         <tbody>
           {rows.map((v) => (
             <tr key={v._id} className="border-t border-rule hover:bg-surface-sunken/50 transition-colors">
-              <td className="px-4 py-2.5 font-medium text-ink">{v.make} {v.model} — {v.registrationNumber}</td>
+              <td className="px-4 py-2.5 font-medium text-ink">{v.make} {v.model}: {v.registrationNumber}</td>
               <td className="px-4 py-2.5 text-ink-muted">{v.customerId?.name}</td>
               <td className="px-4 py-2.5 num text-right text-danger">{v.currentMileage}</td>
             </tr>

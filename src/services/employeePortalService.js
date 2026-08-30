@@ -35,7 +35,7 @@ function signPortalAccessToken(portalUser) {
   );
 }
 
-/** Staff-initiated — creates (or reuses) a portal login for an employee and returns an activation invite token. No password is set yet; the employee chooses their own via activateInvite(). */
+/** Staff-initiated: creates (or reuses) a portal login for an employee and returns an activation invite token. No password is set yet; the employee chooses their own via activateInvite(). */
 async function invite({ companyId, employeeId, email, userId }) {
   const employee = await Employee.findOne({ _id: employeeId, companyId });
   if (!employee) throw new Error('Employee not found.');
@@ -100,7 +100,7 @@ async function login({ email, password, deviceContext }) {
   return { accessToken, refreshToken, employeeId: portalUser.employeeId };
 }
 
-/** Exchanges a refresh token for a new access token — same rotation-with-reuse-detection flow the staff/customer-portal sessions use. */
+/** Exchanges a refresh token for a new access token, same rotation-with-reuse-detection flow the staff/customer-portal sessions use. */
 async function refresh(rawRefreshToken) {
   const { subjectType, subjectId, newToken } = await refreshTokenService.rotate(rawRefreshToken);
   if (subjectType !== 'EmployeePortalUser') throw new Error('Invalid refresh token.');
@@ -109,7 +109,7 @@ async function refresh(rawRefreshToken) {
   return { accessToken: signPortalAccessToken(portalUser), refreshToken: newToken };
 }
 
-/** The portal home view — the employee's own basic profile summary. */
+/** The portal home view: the employee's own basic profile summary. */
 async function dashboard(employeeId) {
   const employee = await Employee.findById(employeeId).select('name designation status joiningDate salaryStructure.basic');
   if (!employee) throw new Error('Employee not found.');
