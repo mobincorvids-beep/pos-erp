@@ -40,8 +40,13 @@ jobs:
           function walk(dir) {
             for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
               const full = path.join(dir, entry.name);
-              if (entry.isDirectory()) walk(full);
-              else if (entry.name.endsWith('.js') && !full.endsWith('server.js') && !full.endsWith('seed.js') && !full.endsWith('seedPlatformAdmin.js') && !full.endsWith('smokeTest.js')) {
+              // src/tests holds Jest suites that use beforeAll/it/expect —
+              // real Jest globals that only exist under the Jest runner
+              // (npm test, run separately below), not under plain \`node\`.
+              // Requiring them here would always fail with 'beforeAll is
+              // not defined', so they're walked by npm test instead.
+              if (entry.isDirectory()) { if (full !== 'src/tests') walk(full); }
+              else if (entry.name.endsWith('.js') && !full.startsWith('src/tests/') && !full.endsWith('server.js') && !full.endsWith('seed.js') && !full.endsWith('seedPlatformAdmin.js') && !full.endsWith('smokeTest.js')) {
                 try { require(path.resolve(full)); } catch (e) { ok = false; console.log('FAIL', full, '->', e.message); }
               }
             }
@@ -136,3 +141,6 @@ jobs:
 
       - name: Run the smoke test against a real database
         run: npm run smoke-test
+
+      - name: Run the Jest business-rule test suite against a real database
+        run: npm test
