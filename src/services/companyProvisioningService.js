@@ -115,7 +115,7 @@ async function onboardCompany(input) {
     // of what makes a company "provisioned" — a failure here shouldn't roll
     // back the company/branch/accounts/admin that just succeeded.
     try {
-      await categoryService.seedDefaultCategories(result.company._id);
+      await categoryService.seedDefaultCategories(result.company._id, result.company.industryType);
     } catch (err) {
       console.error(`Default category seeding failed for company ${result.company._id} (onboarding still succeeded):`, err.message);
     }

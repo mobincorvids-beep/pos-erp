@@ -33,7 +33,7 @@ async function seed() {
   // companyProvisioningService seeds for every real tenant — the demo
   // company needs it too, or the Products page's required Category field
   // has nothing to select from.
-  await categoryService.seedDefaultCategories(company._id);
+  await categoryService.seedDefaultCategories(company._id, 'retail');
 
   const branch = await Branch.create({ companyId: company._id, name: 'Main Branch', code: 'MAIN' });
   const warehouse = await Warehouse.create({ companyId: company._id, branchId: branch._id, name: 'Main Warehouse', isDefault: true });
