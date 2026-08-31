@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
@@ -9,6 +10,7 @@ import { FieldError, errorInputClass } from '../components/FieldError';
 import { validate, validateRequired, validateEmail, validatePkPhone, validateNonNegativeNumber, hasErrors, isBlank } from '../lib/validation';
 
 export function CustomersPage() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,16 +28,16 @@ export function CustomersPage() {
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-1">
           <div>
-            <p className="eyebrow mb-1">Directory</p>
-            <p className="page-title">Customers</p>
+            <p className="eyebrow mb-1">{t('customers.directory')}</p>
+            <p className="page-title">{t('customers.title')}</p>
           </div>
-          <button className="btn-primary" onClick={() => setEditing({})}>+ New customer</button>
+          <button className="btn-primary" onClick={() => setEditing({})}>{t('customers.newCustomer')}</button>
         </div>
-        <p className="text-sm text-ink-muted mb-5">{customers.length} {customers.length === 1 ? 'customer' : 'customers'} on file</p>
+        <p className="text-sm text-ink-muted mb-5">{t('customers.onFile', { count: customers.length })}</p>
 
         {loading && <Loading />}
         {!loading && customers.length === 0 && (
-          <EmptyState title="No customers yet" description="Add customers to track credit sales and loyalty." action={<button className="btn-primary" onClick={() => setEditing({})}>Add a customer</button>} />
+          <EmptyState title={t('customers.emptyTitle')} description={t('customers.emptyDescription')} action={<button className="btn-primary" onClick={() => setEditing({})}>{t('customers.addCustomer')}</button>} />
         )}
 
         {!loading && customers.length > 0 && (
@@ -44,12 +46,12 @@ export function CustomersPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken/60">
-                    <th className="px-4 py-3 font-semibold">Customer</th>
-                    <th className="px-4 py-3 font-semibold">Contact</th>
-                    <th className="px-4 py-3 font-semibold">Tags</th>
-                    <th className="px-4 py-3 font-semibold text-right">Loyalty pts</th>
-                    <th className="px-4 py-3 font-semibold text-right">Status</th>
-                    <th className="px-4 py-3 font-semibold text-right">Actions</th>
+                    <th className="px-4 py-3 font-semibold">{t('customers.colCustomer')}</th>
+                    <th className="px-4 py-3 font-semibold">{t('customers.colContact')}</th>
+                    <th className="px-4 py-3 font-semibold">{t('customers.colTags')}</th>
+                    <th className="px-4 py-3 font-semibold text-right">{t('customers.colLoyaltyPts')}</th>
+                    <th className="px-4 py-3 font-semibold text-right">{t('customers.colStatus')}</th>
+                    <th className="px-4 py-3 font-semibold text-right">{t('customers.colActions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -79,9 +81,9 @@ export function CustomersPage() {
                         </td>
                         <td className="px-4 py-3 num text-right cursor-pointer" onClick={() => setSelected(c)}>{c.loyaltyPoints}</td>
                         <td className="px-4 py-3 text-right cursor-pointer" onClick={() => setSelected(c)}>
-                          <span className={c.creditLimit > 0 ? 'chip-accent' : 'chip-neutral'}>{c.creditLimit > 0 ? 'Credit customer' : 'Standard'}</span>
+                          <span className={c.creditLimit > 0 ? 'chip-accent' : 'chip-neutral'}>{c.creditLimit > 0 ? t('customers.creditCustomer') : t('customers.standard')}</span>
                         </td>
-                        <td className="px-4 py-3 text-right"><button className="btn-ghost !text-ink-muted !px-2 text-xs" onClick={() => setEditing(c)}>Edit</button></td>
+                        <td className="px-4 py-3 text-right"><button className="btn-ghost !text-ink-muted !px-2 text-xs" onClick={() => setEditing(c)}>{t('common.edit')}</button></td>
                       </tr>
                     );
                   })}
@@ -99,6 +101,7 @@ export function CustomersPage() {
 }
 
 function CustomerForm({ customer, onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const isNew = !customer._id;
   const [form, setForm] = useState({
@@ -129,10 +132,10 @@ function CustomerForm({ customer, onClose, onSaved }) {
       const payload = { ...form, creditLimit: Number(form.creditLimit) || 0 };
       if (isNew) {
         await api.post('/customers', payload);
-        toast('Customer added.', 'success');
+        toast(t('customers.customerAdded'), 'success');
       } else {
         await api.put(`/customers/${customer._id}`, payload);
-        toast('Customer updated.', 'success');
+        toast(t('customers.customerUpdated'), 'success');
       }
       onSaved();
     } catch (err) {
@@ -145,11 +148,11 @@ function CustomerForm({ customer, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 backdrop-blur-[2px] flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-6 w-full max-w-sm">
-        <p className="eyebrow mb-1">{isNew ? 'Add customer' : 'Edit customer'}</p>
-        <p className="font-display text-lg font-semibold mb-4">{isNew ? 'New customer' : customer.name}</p>
+        <p className="eyebrow mb-1">{isNew ? t('customers.addCustomerTitle') : t('customers.editCustomerTitle')}</p>
+        <p className="font-display text-lg font-semibold mb-4">{isNew ? t('customers.newCustomerTitle') : customer.name}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Name</label>
+            <label className="field-label">{t('customers.fieldName')}</label>
             <input
               required autoFocus maxLength={150}
               className={`field-input ${errorInputClass(touched.name && errors.name)}`}
@@ -160,9 +163,9 @@ function CustomerForm({ customer, onClose, onSaved }) {
             <FieldError message={touched.name ? errors.name : null} />
           </div>
           <div>
-            <label className="field-label">Phone</label>
+            <label className="field-label">{t('customers.fieldPhone')}</label>
             <input
-              type="tel" inputMode="numeric" placeholder="03XXXXXXXXX" maxLength={11}
+              type="tel" inputMode="numeric" placeholder={t('customers.phonePlaceholder')} maxLength={11}
               className={`field-input ${errorInputClass(touched.phone && errors.phone)}`}
               value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
               onBlur={() => markTouched('phone')}
@@ -171,7 +174,7 @@ function CustomerForm({ customer, onClose, onSaved }) {
             <FieldError message={touched.phone ? errors.phone : null} />
           </div>
           <div>
-            <label className="field-label">Email</label>
+            <label className="field-label">{t('customers.fieldEmail')}</label>
             <input
               type="email" maxLength={254}
               className={`field-input ${errorInputClass(touched.email && errors.email)}`}
@@ -181,9 +184,9 @@ function CustomerForm({ customer, onClose, onSaved }) {
             />
             <FieldError message={touched.email ? errors.email : null} />
           </div>
-          <div><label className="field-label">Address</label><input className="field-input" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
+          <div><label className="field-label">{t('customers.fieldAddress')}</label><input className="field-input" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
           <div>
-            <label className="field-label">Credit limit</label>
+            <label className="field-label">{t('customers.fieldCreditLimit')}</label>
             <input
               type="number" min="0"
               className={`field-input num ${errorInputClass(touched.creditLimit && errors.creditLimit)}`}
@@ -195,8 +198,8 @@ function CustomerForm({ customer, onClose, onSaved }) {
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving || hasErrors(errors)} className="btn-primary">{saving ? 'Saving…' : 'Save'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('common.cancel')}</button>
+          <button type="submit" disabled={saving || hasErrors(errors)} className="btn-primary">{saving ? t('common.saving') : t('common.save')}</button>
         </div>
       </form>
     </div>
@@ -204,6 +207,7 @@ function CustomerForm({ customer, onClose, onSaved }) {
 }
 
 function CustomerLedgerPanel({ customer, onClose }) {
+  const { t } = useTranslation();
   const { company } = useAuth();
   const toast = useToast();
   const [ledger, setLedger] = useState(null);
@@ -226,7 +230,7 @@ function CustomerLedgerPanel({ customer, onClose }) {
     setBusy(true);
     try {
       await api.post(`/customers/${customer._id}/payments`, { amount: Number(paymentAmount), paymentAccountId, date: new Date().toISOString() });
-      toast('Payment recorded.', 'success');
+      toast(t('customers.paymentRecorded'), 'success');
       setPaymentAmount('');
       load();
     } catch (err) {
@@ -240,10 +244,10 @@ function CustomerLedgerPanel({ customer, onClose }) {
     <div className="w-full lg:w-96 shrink-0 card p-5 h-fit">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <p className="eyebrow mb-0.5">Ledger</p>
+          <p className="eyebrow mb-0.5">{t('customers.ledger')}</p>
           <p className="font-display text-lg font-semibold">{customer.name}</p>
         </div>
-        <button className="btn-ghost !px-2 text-xs" onClick={onClose}>Close</button>
+        <button className="btn-ghost !px-2 text-xs" onClick={onClose}>{t('common.close')}</button>
       </div>
 
       <InvitePortalButton customer={customer} />
@@ -252,10 +256,10 @@ function CustomerLedgerPanel({ customer, onClose }) {
       {ledger && (
         <>
           <div className="space-y-1.5 text-sm max-h-64 overflow-y-auto mb-3">
-            {ledger.entries.length === 0 && <p className="text-ink-muted">No transactions yet.</p>}
+            {ledger.entries.length === 0 && <p className="text-ink-muted">{t('customers.noTransactions')}</p>}
             {ledger.entries.map((e, i) => (
               <div key={i} className="flex justify-between">
-                <span className="text-ink-muted">{formatDate(e.date)}: {e.type === 'sale' ? `Inv ${e.reference}` : e.type === 'sale_payment' ? `Paid at sale ${e.reference}` : 'Payment'}</span>
+                <span className="text-ink-muted">{formatDate(e.date)}: {e.type === 'sale' ? t('customers.invLabel', { ref: e.reference }) : e.type === 'sale_payment' ? t('customers.paidAtSale', { ref: e.reference }) : t('customers.payment')}</span>
                 <span className={`num ${e.type === 'sale' ? 'text-ink' : 'text-accent-strong'}`}>
                   {e.type === 'sale' ? '+' : '−'}{formatMoney(e.type === 'sale' ? e.debit : e.credit, company?.currency)}
                 </span>
@@ -264,24 +268,24 @@ function CustomerLedgerPanel({ customer, onClose }) {
           </div>
           <div className="tear-line my-2" />
           <div className="flex items-center justify-between mb-4">
-            <span className="text-sm font-medium">Balance owed</span>
+            <span className="text-sm font-medium">{t('customers.balanceOwed')}</span>
             <span className={ledger.closingBalance > 0 ? 'chip-warning' : 'chip-accent'}>
               <span className="num">{formatMoney(ledger.closingBalance, company?.currency)}</span>
             </span>
           </div>
 
-          <p className="text-sm font-semibold mb-2">Record a payment</p>
+          <p className="text-sm font-semibold mb-2">{t('customers.recordAPayment')}</p>
           <div className="grid grid-cols-2 gap-2 mb-2">
-            <input type="number" placeholder="Amount" className="field-input num" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} />
+            <input type="number" placeholder={t('customers.amountPlaceholder')} className="field-input num" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} />
             <select className="field-input" value={paymentAccountId} onChange={(e) => setPaymentAccountId(e.target.value)}>
-              <option value="">Account…</option>
+              <option value="">{t('customers.accountPlaceholder')}</option>
               {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
             </select>
           </div>
           <button className="btn-primary w-full" disabled={busy || !paymentAmount || !paymentAccountId} onClick={recordPayment}>
-            {busy ? 'Recording…' : 'Record payment'}
+            {busy ? t('common.recording') : t('customers.recordPayment')}
           </button>
-          <p className="text-xs text-ink-muted mt-2">Auto-allocated against the oldest unpaid invoices first.</p>
+          <p className="text-xs text-ink-muted mt-2">{t('customers.autoAllocatedHint')}</p>
 
           <div className="tear-line my-3" />
           <LoyaltyRedeem customer={customer} />
@@ -295,6 +299,7 @@ function CustomerLedgerPanel({ customer, onClose }) {
 }
 
 function CreditNoteHistory({ creditNotes, onVoided }) {
+  const { t } = useTranslation();
   const { company } = useAuth();
   const toast = useToast();
   const [busyId, setBusyId] = useState(null);
@@ -303,7 +308,7 @@ function CreditNoteHistory({ creditNotes, onVoided }) {
     setBusyId(id);
     try {
       await api.post(`/credit-notes/${id}/void`, {});
-      toast('Credit note voided.', 'success');
+      toast(t('customers.creditNoteVoided'), 'success');
       onVoided();
     } catch (err) {
       toast(err.message, 'error');
@@ -316,8 +321,8 @@ function CreditNoteHistory({ creditNotes, onVoided }) {
 
   return (
     <div>
-      <p className="text-sm font-semibold mb-2">Credit notes</p>
-      {creditNotes.length === 0 && <p className="text-xs text-ink-muted">No credit notes issued.</p>}
+      <p className="text-sm font-semibold mb-2">{t('customers.creditNotes')}</p>
+      {creditNotes.length === 0 && <p className="text-xs text-ink-muted">{t('customers.noCreditNotes')}</p>}
       <div className="space-y-1.5 text-sm max-h-56 overflow-y-auto">
         {creditNotes.map((cn) => (
           <div key={cn._id} className="flex items-center justify-between gap-2">
@@ -330,7 +335,7 @@ function CreditNoteHistory({ creditNotes, onVoided }) {
               <span className={STATUS_CHIP[cn.status] || 'chip-neutral'}>{cn.status}</span>
               {cn.status === 'issued' && (
                 <button className="btn-ghost !text-danger !px-1.5 text-xs" disabled={busyId === cn._id} onClick={() => voidNote(cn._id)}>
-                  {busyId === cn._id ? '…' : 'Void'}
+                  {busyId === cn._id ? '…' : t('customers.void')}
                 </button>
               )}
             </div>
@@ -342,6 +347,7 @@ function CreditNoteHistory({ creditNotes, onVoided }) {
 }
 
 function LoyaltyRedeem({ customer }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [points, setPoints] = useState('');
   const [quote, setQuote] = useState(null);
@@ -353,7 +359,7 @@ function LoyaltyRedeem({ customer }) {
     try {
       const result = await api.post(`/loyalty/customers/${customer._id}/redeem`, { points: Number(points) });
       setQuote(result);
-      toast(`Reserved, apply as a discount at checkout.`, 'success');
+      toast(t('customers.loyaltyReserved'), 'success');
     } catch (err) {
       toast(err.message, 'error');
     } finally {
@@ -363,20 +369,21 @@ function LoyaltyRedeem({ customer }) {
 
   return (
     <div>
-      <p className="text-sm font-medium mb-1">Redeem loyalty points</p>
-      <p className="text-xs text-ink-muted mb-2">{customer.loyaltyPoints} points available. Quotes a discount value and reserves the points; apply it manually to the item lines at checkout (Sale has no header-level discount).</p>
+      <p className="text-sm font-medium mb-1">{t('customers.redeemLoyalty')}</p>
+      <p className="text-xs text-ink-muted mb-2">{t('customers.loyaltyAvailable', { count: customer.loyaltyPoints })}</p>
       <div className="flex gap-2">
-        <input type="number" min="1" max={customer.loyaltyPoints} placeholder="Points" className="field-input num" value={points} onChange={(e) => setPoints(e.target.value)} />
-        <button className="btn-secondary" disabled={busy || !points} onClick={redeem}>{busy ? 'Quoting…' : 'Quote'}</button>
+        <input type="number" min="1" max={customer.loyaltyPoints} placeholder={t('customers.pointsPlaceholder')} className="field-input num" value={points} onChange={(e) => setPoints(e.target.value)} />
+        <button className="btn-secondary" disabled={busy || !points} onClick={redeem}>{busy ? t('customers.quoting') : t('customers.quote')}</button>
       </div>
       {quote && (
-        <p className="text-sm mt-2">Discount value: <span className="num text-accent-strong">{quote.discountValue}</span> for {quote.points} points.</p>
+        <p className="text-sm mt-2">{t('customers.discountValueFor', { value: quote.discountValue, points: quote.points })}</p>
       )}
     </div>
   );
 }
 
 function InvitePortalButton({ customer }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [showForm, setShowForm] = useState(false);
   const [email, setEmail] = useState(customer.email || '');
@@ -391,7 +398,7 @@ function InvitePortalButton({ customer }) {
       // No email provider is wired up yet, so the invite link is shown
       // directly here to copy/send manually — see portalController.js.
       setInviteLink(`${window.location.origin}/portal/activate?token=${result.inviteToken}`);
-      toast('Portal invite created.', 'success');
+      toast(t('customers.portalInviteCreated'), 'success');
     } catch (err) {
       toast(err.message, 'error');
     } finally {
@@ -400,25 +407,25 @@ function InvitePortalButton({ customer }) {
   }
 
   if (!showForm) {
-    return <button className="text-xs font-semibold text-accent mb-3 hover:underline" onClick={() => setShowForm(true)}>Invite to customer portal</button>;
+    return <button className="text-xs font-semibold text-accent mb-3 hover:underline" onClick={() => setShowForm(true)}>{t('customers.invitePortal')}</button>;
   }
 
   return (
     <div className="mb-3 p-3 border border-rule rounded-lg bg-surface-sunken/50">
       {!inviteLink ? (
         <form onSubmit={handleInvite} className="space-y-2">
-          <label className="field-label">Portal email</label>
+          <label className="field-label">{t('customers.portalEmail')}</label>
           <input type="email" required className="field-input" value={email} onChange={(e) => setEmail(e.target.value)} />
           <div className="flex gap-2">
-            <button type="button" className="btn-secondary text-xs" onClick={() => setShowForm(false)}>Cancel</button>
-            <button type="submit" disabled={sending} className="btn-primary text-xs">{sending ? 'Sending…' : 'Create invite'}</button>
+            <button type="button" className="btn-secondary text-xs" onClick={() => setShowForm(false)}>{t('common.cancel')}</button>
+            <button type="submit" disabled={sending} className="btn-primary text-xs">{sending ? t('customers.sending') : t('customers.createInvite')}</button>
           </div>
         </form>
       ) : (
         <div>
-          <p className="text-xs text-ink-muted mb-1">Send this activation link to the customer:</p>
+          <p className="text-xs text-ink-muted mb-1">{t('customers.sendActivationLink')}</p>
           <input readOnly className="field-input text-xs" value={inviteLink} onClick={(e) => e.target.select()} />
-          <button className="text-xs text-accent mt-2" onClick={() => { setShowForm(false); setInviteLink(''); }}>Done</button>
+          <button className="text-xs text-accent mt-2" onClick={() => { setShowForm(false); setInviteLink(''); }}>{t('customers.done')}</button>
         </div>
       )}
     </div>

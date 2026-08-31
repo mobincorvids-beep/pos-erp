@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
@@ -10,6 +11,7 @@ import { validate, validateRequired, validatePositiveNumber, hasErrors } from '.
 const CURRENCIES = ['PKR', 'USD', 'AED', 'SAR', 'GBP', 'EUR', 'INR'];
 
 export function SettingsPage() {
+  const { t } = useTranslation();
   const { can, refreshUser } = useAuth();
   const canManage = can('roles.manage');
   const [tab, setTab] = useState('business');
@@ -18,11 +20,11 @@ export function SettingsPage() {
     <div>
       <div className="flex justify-between items-end mb-5 gap-4 flex-wrap">
         <div>
-          <p className="page-title mb-1">Settings</p>
-          <p className="text-sm text-ink-muted max-w-2xl">Business profile and branch management for your account.</p>
+          <p className="page-title mb-1">{t('settings.title')}</p>
+          <p className="text-sm text-ink-muted max-w-2xl">{t('settings.subtitle')}</p>
         </div>
         <div className="flex gap-1 p-1 rounded-lg bg-surface-sunken border border-rule">
-          {[['business', 'Business details'], ['branches', 'Branches'], ['tax-payments', 'Tax payments']].map(([key, label]) => (
+          {[['business', t('settings.tabBusiness')], ['branches', t('settings.tabBranches')], ['tax-payments', t('settings.tabTaxPayments')]].map(([key, label]) => (
             <button
               key={key}
               onClick={() => setTab(key)}
@@ -42,6 +44,7 @@ export function SettingsPage() {
 }
 
 function BusinessDetailsTab({ canManage, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [company, setCompany] = useState(null);
   const [form, setForm] = useState(null);
@@ -63,11 +66,12 @@ function BusinessDetailsTab({ canManage, onSaved }) {
     try {
       const updated = await api.put('/org/company', {
         name: form.name, ntn: form.ntn, strn: form.strn, fbrPosId: form.fbrPosId,
+        fbrApiToken: form.fbrApiToken, fbrSandboxMode: form.fbrSandboxMode,
         phone: form.phone, email: form.email, address: form.address,
         currency: form.currency, timezone: form.timezone,
       });
       setCompany(updated);
-      toast('Business details saved.', 'success');
+      toast(t('settings.businessSaved'), 'success');
       onSaved?.();
     } catch (err) {
       toast(err.message, 'error');
@@ -82,67 +86,84 @@ function BusinessDetailsTab({ canManage, onSaved }) {
     <form onSubmit={handleSubmit} className="card max-w-2xl overflow-hidden">
       <div className="p-5 border-b border-rule flex items-center gap-2">
         <Building2 size={18} className="text-accent" />
-        <p className="font-display text-lg font-semibold text-ink">Company profile</p>
+        <p className="font-display text-lg font-semibold text-ink">{t('settings.companyProfile')}</p>
       </div>
       <div className="p-5 space-y-4">
       {!canManage && (
-        <p className="text-xs text-ink-muted bg-surface-sunken rounded-lg px-3 py-2">You can view business details, but only an admin can change them.</p>
+        <p className="text-xs text-ink-muted bg-surface-sunken rounded-lg px-3 py-2">{t('settings.viewOnlyBusiness')}</p>
       )}
       <fieldset disabled={!canManage} className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="field-label">Business name</label>
+            <label className="field-label">{t('settings.fieldBusinessName')}</label>
             <input required className="field-input" value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </div>
           <div>
-            <label className="field-label">Industry type</label>
+            <label className="field-label">{t('settings.fieldIndustryType')}</label>
             <input disabled className="field-input opacity-60" value={form.industryType || ''} />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="field-label">Phone</label>
+            <label className="field-label">{t('settings.fieldPhone')}</label>
             <input className="field-input" value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
           </div>
           <div>
-            <label className="field-label">Email</label>
+            <label className="field-label">{t('settings.fieldEmail')}</label>
             <input type="email" className="field-input" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} />
           </div>
         </div>
         <div>
-          <label className="field-label">Address</label>
+          <label className="field-label">{t('settings.fieldAddress')}</label>
           <input className="field-input" value={form.address || ''} onChange={(e) => setForm({ ...form, address: e.target.value })} />
         </div>
         <div className="grid grid-cols-3 gap-3">
           <div>
-            <label className="field-label">NTN</label>
+            <label className="field-label">{t('settings.fieldNtn')}</label>
             <input className="field-input" value={form.ntn || ''} onChange={(e) => setForm({ ...form, ntn: e.target.value })} />
           </div>
           <div>
-            <label className="field-label">STRN</label>
+            <label className="field-label">{t('settings.fieldStrn')}</label>
             <input className="field-input" value={form.strn || ''} onChange={(e) => setForm({ ...form, strn: e.target.value })} />
           </div>
           <div>
-            <label className="field-label">FBR POS ID</label>
+            <label className="field-label">{t('settings.fieldFbrPosId')}</label>
             <input className="field-input" value={form.fbrPosId || ''} onChange={(e) => setForm({ ...form, fbrPosId: e.target.value })} />
           </div>
         </div>
+        <div>
+          <label className="field-label">{t('settings.fieldFbrApiToken')}</label>
+          <input
+            type="password" autoComplete="off" className="field-input"
+            value={form.fbrApiToken || ''} onChange={(e) => setForm({ ...form, fbrApiToken: e.target.value })}
+          />
+          <p className="text-xs text-ink-muted mt-1">
+            {t('settings.fbrTokenHint')}
+          </p>
+        </div>
+        <label className="flex items-center gap-2 text-sm text-ink">
+          <input
+            type="checkbox" checked={form.fbrSandboxMode ?? true}
+            onChange={(e) => setForm({ ...form, fbrSandboxMode: e.target.checked })}
+          />
+          {t('settings.sandboxMode')}
+        </label>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="field-label">Currency</label>
+            <label className="field-label">{t('settings.fieldCurrency')}</label>
             <select className="field-input" value={form.currency || 'PKR'} onChange={(e) => setForm({ ...form, currency: e.target.value })}>
               {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Timezone</label>
+            <label className="field-label">{t('settings.fieldTimezone')}</label>
             <input className="field-input" value={form.timezone || ''} onChange={(e) => setForm({ ...form, timezone: e.target.value })} />
           </div>
         </div>
       </fieldset>
       {canManage && (
         <div className="flex justify-end pt-2">
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save changes'}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('common.saving') : t('settings.saveChanges')}</button>
         </div>
       )}
       </div>
@@ -151,6 +172,7 @@ function BusinessDetailsTab({ canManage, onSaved }) {
 }
 
 function BranchesTab({ canManage }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -163,10 +185,10 @@ function BranchesTab({ canManage }) {
   useEffect(load, []);
 
   async function handleRemove(branch) {
-    if (!window.confirm(`Remove branch "${branch.name}"? Its sales history stays intact, but it will no longer appear anywhere new.`)) return;
+    if (!window.confirm(t('settings.removeBranchConfirm', { name: branch.name }))) return;
     try {
       await api.del(`/org/branches/${branch._id}`);
-      toast('Branch removed.', 'success');
+      toast(t('settings.branchRemoved'), 'success');
       load();
     } catch (err) {
       toast(err.message, 'error');
@@ -178,12 +200,12 @@ function BranchesTab({ canManage }) {
       <div className="card overflow-hidden">
         <div className="p-5 border-b border-rule flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <p className="font-display text-lg font-semibold text-ink">Branches</p>
-            <p className="text-sm text-ink-muted max-w-md mt-0.5">Every branch gets its own warehouse and POS counter automatically, so it's ready to sell from as soon as it's created.</p>
+            <p className="font-display text-lg font-semibold text-ink">{t('settings.branches')}</p>
+            <p className="text-sm text-ink-muted max-w-md mt-0.5">{t('settings.branchesDescription')}</p>
           </div>
           {canManage && (
             <button className="btn-primary flex items-center gap-1.5 shrink-0" onClick={() => setEditing({})}>
-              <Plus size={14} /> New branch
+              <Plus size={14} /> {t('settings.newBranch')}
             </button>
           )}
         </div>
@@ -193,11 +215,11 @@ function BranchesTab({ canManage }) {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-surface-sunken border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                <th className="px-4 py-3 font-semibold">Name</th>
-                <th className="px-4 py-3 font-semibold">Code</th>
-                <th className="px-4 py-3 font-semibold">Address</th>
-                <th className="px-4 py-3 font-semibold">Phone</th>
-                {canManage && <th className="px-4 py-3 font-semibold text-right">Actions</th>}
+                <th className="px-4 py-3 font-semibold">{t('settings.colName')}</th>
+                <th className="px-4 py-3 font-semibold">{t('settings.colCode')}</th>
+                <th className="px-4 py-3 font-semibold">{t('settings.colAddress')}</th>
+                <th className="px-4 py-3 font-semibold">{t('settings.colPhone')}</th>
+                {canManage && <th className="px-4 py-3 font-semibold text-right">{t('settings.colActions')}</th>}
               </tr>
             </thead>
             <tbody>
@@ -210,10 +232,10 @@ function BranchesTab({ canManage }) {
                   {canManage && (
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-2">
-                        <button className="text-ink-muted hover:text-accent-strong" onClick={() => setEditing(b)} aria-label="Edit branch">
+                        <button className="text-ink-muted hover:text-accent-strong" onClick={() => setEditing(b)} aria-label={t('settings.editBranchAria')}>
                           <Pencil size={15} />
                         </button>
-                        <button className="text-ink-muted hover:text-danger" onClick={() => handleRemove(b)} aria-label="Remove branch">
+                        <button className="text-ink-muted hover:text-danger" onClick={() => handleRemove(b)} aria-label={t('settings.removeBranchAria')}>
                           <Trash2 size={15} />
                         </button>
                       </div>
@@ -234,6 +256,7 @@ function BranchesTab({ canManage }) {
 }
 
 function BranchForm({ branch, onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const isNew = !branch._id;
   const [form, setForm] = useState({ name: branch.name || '', code: branch.code || '', address: branch.address || '', phone: branch.phone || '' });
@@ -245,10 +268,10 @@ function BranchForm({ branch, onClose, onSaved }) {
     try {
       if (isNew) {
         await api.post('/org/branches', form);
-        toast('Branch created.', 'success');
+        toast(t('settings.branchCreated'), 'success');
       } else {
         await api.put(`/org/branches/${branch._id}`, form);
-        toast('Branch updated.', 'success');
+        toast(t('settings.branchUpdated'), 'success');
       }
       onSaved();
     } catch (err) {
@@ -261,28 +284,28 @@ function BranchForm({ branch, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg font-semibold text-ink mb-4">{isNew ? 'New branch' : 'Edit branch'}</p>
+        <p className="font-display text-lg font-semibold text-ink mb-4">{isNew ? t('settings.newBranchTitle') : t('settings.editBranchTitle')}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Branch name</label>
-            <input required autoFocus placeholder="Gulberg Branch" className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <label className="field-label">{t('settings.fieldBranchName')}</label>
+            <input required autoFocus placeholder={t('settings.branchNamePlaceholder')} className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </div>
           <div>
-            <label className="field-label">Code</label>
-            <input placeholder="LHR-02" className="field-input" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
+            <label className="field-label">{t('settings.colCode')}</label>
+            <input placeholder={t('settings.codePlaceholder')} className="field-input" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
           </div>
           <div>
-            <label className="field-label">Address</label>
+            <label className="field-label">{t('settings.colAddress')}</label>
             <input className="field-input" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
           </div>
           <div>
-            <label className="field-label">Phone</label>
+            <label className="field-label">{t('settings.colPhone')}</label>
             <input className="field-input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : isNew ? 'Create' : 'Save'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('common.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('common.saving') : isNew ? t('settings.create') : t('common.save')}</button>
         </div>
       </form>
     </div>
@@ -307,6 +330,7 @@ const TAX_PAYMENT_STATUS_CHIP = {
  * itself returns the final status.
  */
 function TaxPaymentsTab({ canManage }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [company, setCompany] = useState(null);
   const [payments, setPayments] = useState([]);
@@ -324,16 +348,16 @@ function TaxPaymentsTab({ canManage }) {
   useEffect(load, []);
 
   async function handlePay(taxPayment) {
-    if (!window.confirm(`Send ${formatMoney(taxPayment.amountDue, company?.currency)} to FBR via JazzCash for "${taxPayment.periodLabel}"?`)) return;
+    if (!window.confirm(t('settings.payConfirm', { amount: formatMoney(taxPayment.amountDue, company?.currency), period: taxPayment.periodLabel }))) return;
     setPayingId(taxPayment._id);
     try {
       const result = await api.post(`/tax-payments/${taxPayment._id}/pay`, {});
       if (result.taxPayment.status === 'paid') {
-        toast('Tax payment completed via JazzCash.', 'success');
+        toast(t('settings.taxPaid'), 'success');
       } else if (result.taxPayment.status === 'failed') {
-        toast(result.responseMessage || 'JazzCash declined the payment.', 'error');
+        toast(result.responseMessage || t('settings.jazzCashDeclined'), 'error');
       } else {
-        toast('Payment initiated, awaiting confirmation from JazzCash.', 'success');
+        toast(t('settings.paymentInitiated'), 'success');
       }
       load();
     } catch (err) {
@@ -352,12 +376,12 @@ function TaxPaymentsTab({ canManage }) {
       <div className="card overflow-hidden">
         <div className="p-5 border-b border-rule flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <p className="font-display text-lg font-semibold text-ink">Tax liabilities</p>
-            <p className="text-sm text-ink-muted max-w-md mt-0.5">Record what you owe each period, then pay it online via JazzCash straight to the FBR-designated account.</p>
+            <p className="font-display text-lg font-semibold text-ink">{t('settings.taxLiabilities')}</p>
+            <p className="text-sm text-ink-muted max-w-md mt-0.5">{t('settings.taxLiabilitiesDescription')}</p>
           </div>
           {canManage && (
             <button className="btn-primary flex items-center gap-1.5 shrink-0" onClick={() => setShowNewForm(true)}>
-              <Plus size={14} /> Record liability
+              <Plus size={14} /> {t('settings.recordLiability')}
             </button>
           )}
         </div>
@@ -365,16 +389,16 @@ function TaxPaymentsTab({ canManage }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-surface-sunken border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-              <th className="px-4 py-3 font-semibold">Period</th>
-              <th className="px-4 py-3 font-semibold">Authority</th>
-              <th className="px-4 py-3 font-semibold text-right">Amount due</th>
-              <th className="px-4 py-3 font-semibold">Status</th>
-              {canManage && <th className="px-4 py-3 font-semibold text-right">Actions</th>}
+              <th className="px-4 py-3 font-semibold">{t('settings.colPeriod')}</th>
+              <th className="px-4 py-3 font-semibold">{t('settings.colAuthority')}</th>
+              <th className="px-4 py-3 font-semibold text-right">{t('settings.colAmountDue')}</th>
+              <th className="px-4 py-3 font-semibold">{t('settings.colStatus')}</th>
+              {canManage && <th className="px-4 py-3 font-semibold text-right">{t('settings.colActions')}</th>}
             </tr>
           </thead>
           <tbody>
             {payments.length === 0 && (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-ink-muted">No tax liabilities recorded yet.</td></tr>
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-ink-muted">{t('settings.noLiabilities')}</td></tr>
             )}
             {payments.map((p) => (
               <tr key={p._id} className="border-b border-rule last:border-0 hover:bg-accent-soft/30 transition-colors">
@@ -391,10 +415,10 @@ function TaxPaymentsTab({ canManage }) {
                           disabled={payingId === p._id || !company.jazzCashTaxPay?.enabled}
                           onClick={() => handlePay(p)}
                         >
-                          <Send size={13} /> {payingId === p._id ? 'Paying…' : 'Pay via JazzCash'}
+                          <Send size={13} /> {payingId === p._id ? t('settings.paying') : t('settings.payViaJazzCash')}
                         </button>
                       ) : (
-                        <span className="text-xs text-ink-muted">Paid {p.paidAt ? new Date(p.paidAt).toLocaleDateString() : ''}</span>
+                        <span className="text-xs text-ink-muted">{t('settings.paidOn', { date: p.paidAt ? new Date(p.paidAt).toLocaleDateString() : '' })}</span>
                       )}
                     </div>
                   </td>
@@ -404,7 +428,7 @@ function TaxPaymentsTab({ canManage }) {
           </tbody>
         </table>
         {canManage && !company.jazzCashTaxPay?.enabled && payments.length > 0 && (
-          <p className="text-xs text-ink-muted bg-surface-sunken px-5 py-3 border-t border-rule">Add your JazzCash tax-pay credentials above and enable them to pay these online.</p>
+          <p className="text-xs text-ink-muted bg-surface-sunken px-5 py-3 border-t border-rule">{t('settings.addCredentialsHint')}</p>
         )}
       </div>
 
@@ -419,6 +443,7 @@ function formatMoney(amount, currency) {
 }
 
 function NewTaxLiabilityForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [form, setForm] = useState({ periodLabel: '', taxAuthority: 'fbr', amountDue: '' });
   const [saving, setSaving] = useState(false);
@@ -445,7 +470,7 @@ function NewTaxLiabilityForm({ onClose, onSaved }) {
         taxAuthority: form.taxAuthority,
         amountDue: Number(form.amountDue),
       });
-      toast('Tax liability recorded.', 'success');
+      toast(t('settings.taxLiabilityRecorded'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -457,12 +482,12 @@ function NewTaxLiabilityForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg font-semibold text-ink mb-4">Record tax liability</p>
+        <p className="font-display text-lg font-semibold text-ink mb-4">{t('settings.recordTaxLiability')}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Period</label>
+            <label className="field-label">{t('settings.colPeriod')}</label>
             <input
-              required autoFocus placeholder="August 2026" maxLength={60}
+              required autoFocus placeholder={t('settings.periodPlaceholder')} maxLength={60}
               className={`field-input ${errorInputClass(touched.periodLabel && errors.periodLabel)}`}
               value={form.periodLabel} onChange={(e) => setForm({ ...form, periodLabel: e.target.value })}
               onBlur={() => markTouched('periodLabel')}
@@ -471,13 +496,13 @@ function NewTaxLiabilityForm({ onClose, onSaved }) {
             <FieldError message={touched.periodLabel ? errors.periodLabel : null} />
           </div>
           <div>
-            <label className="field-label">Authority</label>
+            <label className="field-label">{t('settings.colAuthority')}</label>
             <select className="field-input" value={form.taxAuthority} onChange={(e) => setForm({ ...form, taxAuthority: e.target.value })}>
               {['fbr', 'srb', 'pra', 'kpra', 'bra'].map((a) => <option key={a} value={a}>{a.toUpperCase()}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Amount due</label>
+            <label className="field-label">{t('settings.colAmountDue')}</label>
             <input
               required type="number" min="0.01" step="0.01"
               className={`field-input ${errorInputClass(touched.amountDue && errors.amountDue)}`}
@@ -489,8 +514,8 @@ function NewTaxLiabilityForm({ onClose, onSaved }) {
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving || hasErrors(errors)} className="btn-primary">{saving ? 'Saving…' : 'Record'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('common.cancel')}</button>
+          <button type="submit" disabled={saving || hasErrors(errors)} className="btn-primary">{saving ? t('common.saving') : t('settings.record')}</button>
         </div>
       </form>
     </div>
@@ -499,6 +524,7 @@ function NewTaxLiabilityForm({ onClose, onSaved }) {
 
 /** Lets the vendor plug in their own JazzCash merchant credentials for paying tax liability — kept distinct from any JazzCash config used for POS checkout since this is per-tenant, not platform-wide. */
 function JazzCashTaxPayCredentials({ company, canManage, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const cfg = company.jazzCashTaxPay || {};
   const [form, setForm] = useState({
@@ -533,7 +559,7 @@ function JazzCashTaxPayCredentials({ company, canManage, onSaved }) {
     try {
       const updated = await api.put('/org/company', { jazzCashTaxPay: form });
       onSaved(updated);
-      toast('JazzCash tax-pay settings saved.', 'success');
+      toast(t('settings.jazzCashSaved'), 'success');
     } catch (err) {
       toast(err.message, 'error');
     } finally {
@@ -545,20 +571,20 @@ function JazzCashTaxPayCredentials({ company, canManage, onSaved }) {
     <form onSubmit={handleSubmit} className="card max-w-2xl overflow-hidden">
       <div className="p-5 border-b border-rule flex items-center gap-2">
         <Landmark size={18} className="text-accent" />
-        <p className="font-display text-lg font-semibold text-ink">JazzCash tax-pay credentials</p>
+        <p className="font-display text-lg font-semibold text-ink">{t('settings.jazzCashCredentials')}</p>
       </div>
       <div className="p-5 space-y-4">
         {!canManage && (
-          <p className="text-xs text-ink-muted bg-surface-sunken rounded-lg px-3 py-2">You can view this configuration, but only an admin can change it.</p>
+          <p className="text-xs text-ink-muted bg-surface-sunken rounded-lg px-3 py-2">{t('settings.viewOnlyConfig')}</p>
         )}
         <fieldset disabled={!canManage} className="space-y-4">
           <label className="flex items-center gap-2 text-sm text-ink">
             <input type="checkbox" checked={form.enabled} onChange={(e) => setForm({ ...form, enabled: e.target.checked })} />
-            Enable paying tax liability online via JazzCash
+            {t('settings.enableJazzCashTaxPay')}
           </label>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="field-label">JazzCash Merchant ID</label>
+              <label className="field-label">{t('settings.fieldMerchantId')}</label>
               <input
                 className={`field-input ${errorInputClass(touched.merchantId && errors.merchantId)}`}
                 value={form.merchantId} onChange={(e) => setForm({ ...form, merchantId: e.target.value })}
@@ -568,7 +594,7 @@ function JazzCashTaxPayCredentials({ company, canManage, onSaved }) {
               <FieldError message={touched.merchantId ? errors.merchantId : null} />
             </div>
             <div>
-              <label className="field-label">Password</label>
+              <label className="field-label">{t('settings.fieldPassword')}</label>
               <input
                 type="password" autoComplete="new-password"
                 className={`field-input ${errorInputClass(touched.password && errors.password)}`}
@@ -580,7 +606,7 @@ function JazzCashTaxPayCredentials({ company, canManage, onSaved }) {
             </div>
           </div>
           <div>
-            <label className="field-label">Integrity Salt</label>
+            <label className="field-label">{t('settings.fieldIntegritySalt')}</label>
             <input
               type="password" autoComplete="new-password"
               className={`field-input ${errorInputClass(touched.integritySalt && errors.integritySalt)}`}
@@ -592,18 +618,18 @@ function JazzCashTaxPayCredentials({ company, canManage, onSaved }) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="field-label">FBR account number</label>
+              <label className="field-label">{t('settings.fieldFbrAccountNumber')}</label>
               <input className="field-input" value={form.fbrAccountNumber} onChange={(e) => setForm({ ...form, fbrAccountNumber: e.target.value })} />
             </div>
             <div>
-              <label className="field-label">FBR account title</label>
+              <label className="field-label">{t('settings.fieldFbrAccountTitle')}</label>
               <input className="field-input" value={form.fbrAccountTitle} onChange={(e) => setForm({ ...form, fbrAccountTitle: e.target.value })} />
             </div>
           </div>
         </fieldset>
         {canManage && (
           <div className="flex justify-end pt-2">
-            <button type="submit" disabled={saving || hasErrors(errors)} className="btn-primary">{saving ? 'Saving…' : 'Save credentials'}</button>
+            <button type="submit" disabled={saving || hasErrors(errors)} className="btn-primary">{saving ? t('common.saving') : t('settings.saveCredentials')}</button>
           </div>
         )}
       </div>

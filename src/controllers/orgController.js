@@ -7,7 +7,7 @@ const Company = require('../models/Company');
 /** Editable-by-tenant subset of Company: deliberately excludes activeModules,
  * defaultAccounts, ecommerceConfig, parentCompanyId etc., which are either
  * platform-admin controlled or wired automatically at provisioning time. */
-const EDITABLE_COMPANY_FIELDS = ['name', 'ntn', 'strn', 'fbrPosId', 'phone', 'email', 'address', 'currency', 'timezone'];
+const EDITABLE_COMPANY_FIELDS = ['name', 'ntn', 'strn', 'fbrPosId', 'fbrApiToken', 'fbrSandboxMode', 'phone', 'email', 'address', 'currency', 'timezone'];
 
 async function getCompany(req, res) {
   const company = await Company.findById(req.companyId);

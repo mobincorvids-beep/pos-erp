@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
@@ -9,17 +10,17 @@ import { ImportCsvModal } from '../components/ImportCsvModal';
 import { FieldError, errorInputClass } from '../components/FieldError';
 import { validate, validateRequired, validateNonNegativeNumber, hasErrors } from '../lib/validation';
 
-const TRACKING_LABELS = {
-  simple: 'Simple',
-  variant: 'Variant',
-  batch: 'Batch/expiry',
-  serial: 'Serial/IMEI',
-  weight: 'Weight-based',
-  bundle: 'Bundle',
-  service: 'Service',
-};
-
 export function ProductsPage() {
+  const { t } = useTranslation();
+  const TRACKING_LABELS = {
+    simple: t('products.trackingLabels.simple'),
+    variant: t('products.trackingLabels.variant'),
+    batch: t('products.trackingLabels.batch'),
+    serial: t('products.trackingLabels.serial'),
+    weight: t('products.trackingLabels.weight'),
+    bundle: t('products.trackingLabels.bundle'),
+    service: t('products.trackingLabels.service'),
+  };
   const { company } = useAuth();
   const toast = useToast();
   const [products, setProducts] = useState([]);
@@ -36,10 +37,10 @@ export function ProductsPage() {
   useEffect(load, []);
 
   async function handleRemove(p) {
-    if (!window.confirm(`Remove "${p.name}" from your catalog? Past sales and stock history are unaffected.`)) return;
+    if (!window.confirm(t('products.removeConfirm', { name: p.name }))) return;
     try {
       await api.del(`/products/${p._id}`);
-      toast('Product removed.', 'success');
+      toast(t('products.removed'), 'success');
       load();
     } catch (err) { toast(err.message, 'error'); }
   }
@@ -56,17 +57,17 @@ export function ProductsPage() {
     <div>
       <div className="flex items-end justify-between mb-6">
         <div>
-          <p className="page-title">Products</p>
-          <p className="text-sm text-ink-muted mt-1">{products.length} product{products.length === 1 ? '' : 's'} in your catalog</p>
+          <p className="page-title">{t('products.title')}</p>
+          <p className="text-sm text-ink-muted mt-1">{t('products.subtitle', { count: products.length })}</p>
         </div>
         <div className="flex gap-2">
           <button className="btn-secondary" onClick={() => setImportOpen(true)}>
             <span className="font-icon text-[18px] leading-none">upload_file</span>
-            Import CSV
+            {t('products.importCsv')}
           </button>
           <button className="btn-primary" onClick={() => setEditing({})}>
             <span className="font-icon text-[18px] leading-none">add</span>
-            New product
+            {t('products.newProduct')}
           </button>
         </div>
       </div>
@@ -75,9 +76,9 @@ export function ProductsPage() {
 
       {!loading && products.length === 0 && (
         <EmptyState
-          title="No products yet"
-          description="Add your first product to start selling and tracking stock."
-          action={<button className="btn-primary" onClick={() => setEditing({})}>Add a product</button>}
+          title={t('products.emptyTitle')}
+          description={t('products.emptyDescription')}
+          action={<button className="btn-primary" onClick={() => setEditing({})}>{t('products.addProduct')}</button>}
         />
       )}
 
@@ -86,20 +87,20 @@ export function ProductsPage() {
           {/* Catalog overview strip */}
           <div className="grid grid-cols-12 gap-6 mb-6">
             <div className="col-span-12 lg:col-span-4 card p-6">
-              <p className="font-display text-lg font-semibold text-accent mb-4">Catalog Overview</p>
+              <p className="font-display text-lg font-semibold text-accent mb-4">{t('products.catalogOverview')}</p>
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-surface-sunken p-4 rounded-lg">
-                  <p className="eyebrow mb-1">Total items</p>
+                  <p className="eyebrow mb-1">{t('products.totalItems')}</p>
                   <p className="font-display text-3xl font-bold text-accent num">{products.length}</p>
                 </div>
                 <div className="bg-surface-sunken p-4 rounded-lg">
-                  <p className="eyebrow mb-1">Reorder alerts</p>
+                  <p className="eyebrow mb-1">{t('products.reorderAlerts')}</p>
                   <p className="font-display text-3xl font-bold text-danger num">{lowStockCount}</p>
                 </div>
               </div>
             </div>
             <div className="col-span-12 lg:col-span-8 card p-6 flex flex-col justify-center">
-              <p className="font-display text-lg font-semibold text-accent mb-2">Tracking modes in use</p>
+              <p className="font-display text-lg font-semibold text-accent mb-2">{t('products.trackingModesInUse')}</p>
               <div className="flex flex-wrap gap-2">
                 {Object.entries(TRACKING_LABELS).map(([key, label]) => {
                   const count = products.filter((p) => p.trackingMode === key).length;
@@ -112,13 +113,13 @@ export function ProductsPage() {
 
           <div className="card overflow-hidden">
             <div className="p-5 border-b border-rule flex items-center justify-between gap-4 flex-wrap">
-              <p className="font-display text-lg font-semibold text-accent">Current Catalog</p>
+              <p className="font-display text-lg font-semibold text-accent">{t('products.currentCatalog')}</p>
               <div className="relative">
                 <span className="font-icon text-[18px] absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted">search</span>
                 <input
                   type="text"
                   className="field-input !w-64 pl-9"
-                  placeholder="Search SKU or product…"
+                  placeholder={t('products.searchPlaceholder')}
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                 />
@@ -128,11 +129,11 @@ export function ProductsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-rule text-left bg-surface-sunken">
-                  <th className="px-6 py-3 font-semibold text-ink-muted text-xs uppercase tracking-wide">SKU</th>
-                  <th className="px-6 py-3 font-semibold text-ink-muted text-xs uppercase tracking-wide">Product name</th>
-                  <th className="px-6 py-3 font-semibold text-ink-muted text-xs uppercase tracking-wide">Tracking</th>
-                  <th className="px-6 py-3 font-semibold text-ink-muted text-xs uppercase tracking-wide text-right">Cost</th>
-                  <th className="px-6 py-3 font-semibold text-ink-muted text-xs uppercase tracking-wide text-right">Price</th>
+                  <th className="px-6 py-3 font-semibold text-ink-muted text-xs uppercase tracking-wide">{t('products.colSku')}</th>
+                  <th className="px-6 py-3 font-semibold text-ink-muted text-xs uppercase tracking-wide">{t('products.colName')}</th>
+                  <th className="px-6 py-3 font-semibold text-ink-muted text-xs uppercase tracking-wide">{t('products.colTracking')}</th>
+                  <th className="px-6 py-3 font-semibold text-ink-muted text-xs uppercase tracking-wide text-right">{t('products.colCost')}</th>
+                  <th className="px-6 py-3 font-semibold text-ink-muted text-xs uppercase tracking-wide text-right">{t('products.colPrice')}</th>
                   <th className="px-6 py-3"></th>
                 </tr>
               </thead>
@@ -149,7 +150,7 @@ export function ProductsPage() {
                       <td className="px-6 py-3 font-medium text-ink">
                         <span className="inline-flex items-center gap-2">
                           {p.name}
-                          {lowStock && <span className="font-icon text-[16px] text-danger" title="Low stock">warning</span>}
+                          {lowStock && <span className="font-icon text-[16px] text-danger" title={t('products.lowStock')}>warning</span>}
                         </span>
                       </td>
                       <td className="px-6 py-3"><span className="chip-neutral capitalize">{TRACKING_LABELS[p.trackingMode] || p.trackingMode}</span></td>
@@ -160,25 +161,25 @@ export function ProductsPage() {
                           className="btn-ghost !text-ink-muted !px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={(e) => { e.stopPropagation(); setEditing(p); }}
                         >
-                          Edit
+                          {t('common.edit')}
                         </button>
                         <button
                           className="btn-ghost !text-danger !px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={(e) => { e.stopPropagation(); handleRemove(p); }}
                         >
-                          Remove
+                          {t('common.remove')}
                         </button>
                       </td>
                     </tr>
                   );
                 })}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={6} className="px-6 py-8 text-center text-sm text-ink-muted">No products match "{query}".</td></tr>
+                  <tr><td colSpan={6} className="px-6 py-8 text-center text-sm text-ink-muted">{t('products.noMatch', { query })}</td></tr>
                 )}
               </tbody>
             </table>
             <div className="px-6 py-3 border-t border-rule bg-surface-sunken flex items-center justify-between">
-              <span className="text-sm text-ink-muted">Showing {filtered.length} of {products.length} product{products.length === 1 ? '' : 's'}</span>
+              <span className="text-sm text-ink-muted">{t('products.showing', { shown: filtered.length, total: products.length, count: products.length })}</span>
             </div>
           </div>
         </>
@@ -189,7 +190,7 @@ export function ProductsPage() {
       {importOpen && (
         <ImportCsvModal
           endpoint="/products/import-csv"
-          title="Import products from CSV"
+          title={t('products.importCsv')}
           templateHeaders={['name', 'sku', 'barcode', 'category', 'subcategory', 'unit', 'costPrice', 'sellingPrice', 'openingStock', 'minStock', 'reorderLevel']}
           templateFilename="product_import_template.csv"
           onClose={() => setImportOpen(false)}
@@ -201,6 +202,7 @@ export function ProductsPage() {
 }
 
 function ProductForm({ product, onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const isNew = !product._id;
   const [form, setForm] = useState({
@@ -257,11 +259,11 @@ function ProductForm({ product, onClose, onSaved }) {
     e.preventDefault();
     setTouched({ name: true, costPrice: true, sellingPrice: true, minStock: true, reorderLevel: true });
     if (!effectiveCategoryId) {
-      setError('Choose a category before saving.');
+      setError(t('products.chooseCategory'));
       return;
     }
     if (hasErrors(errors)) {
-      setError('Fix the highlighted fields before saving.');
+      setError(t('products.fixFields'));
       return;
     }
     setSaving(true);
@@ -275,7 +277,7 @@ function ProductForm({ product, onClose, onSaved }) {
           costPrice: Number(form.costPrice) || 0, sellingPrice: Number(form.sellingPrice) || 0,
           variants: [{ sku: form.sku || undefined, barcode: form.barcode || undefined, sellingPrice: Number(form.sellingPrice) || 0 }],
         });
-        toast('Product created.', 'success');
+        toast(t('products.created'), 'success');
       } else {
         await api.put(`/products/${product._id}`, {
           name: form.name, sku: form.sku || undefined, barcode: form.barcode || undefined,
@@ -283,7 +285,7 @@ function ProductForm({ product, onClose, onSaved }) {
           costPrice: Number(form.costPrice) || 0, sellingPrice: Number(form.sellingPrice) || 0,
           minStock: Number(form.minStock) || 0, reorderLevel: Number(form.reorderLevel) || 0,
         });
-        toast('Product updated.', 'success');
+        toast(t('products.updated'), 'success');
       }
       onSaved();
     } catch (err) {
@@ -296,12 +298,12 @@ function ProductForm({ product, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-md">
-        <p className="font-display text-lg mb-4">{isNew ? 'New product' : 'Edit product'}</p>
+        <p className="font-display text-lg mb-4">{isNew ? t('products.newProduct') : t('products.editProduct')}</p>
         {error && <p className="chip-danger !inline-block w-full !rounded px-3 py-2 text-sm mb-3">{error}</p>}
 
         <div className="space-y-3">
           <div>
-            <label className="field-label">Name</label>
+            <label className="field-label">{t('products.fieldName')}</label>
             <input
               required autoFocus maxLength={200}
               className={`field-input ${errorInputClass(touched.name && errors.name)}`}
@@ -313,42 +315,42 @@ function ProductForm({ product, onClose, onSaved }) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="field-label">Category</label>
+              <label className="field-label">{t('products.fieldCategory')}</label>
               <select
                 required className="field-input"
                 value={topCategoryId}
                 onChange={(e) => { setTopCategoryId(e.target.value); setSubCategoryId(''); }}
               >
-                <option value="">Select…</option>
+                <option value="">{t('common.select')}</option>
                 {categoryTree.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
               </select>
             </div>
             <div>
-              <label className="field-label">Subcategory {selectedTop?.children.length ? '' : '(none for this category)'}</label>
+              <label className="field-label">{t('products.fieldSubcategory')} {selectedTop?.children.length ? '' : t('products.subcategoryNone')}</label>
               <select
                 className="field-input"
                 value={subCategoryId}
                 onChange={(e) => setSubCategoryId(e.target.value)}
                 disabled={!selectedTop?.children.length}
               >
-                <option value="">None</option>
+                <option value="">{t('common.none')}</option>
                 {selectedTop?.children.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
               </select>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="field-label">SKU</label>
+              <label className="field-label">{t('products.fieldSku')}</label>
               <input className="field-input" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} />
             </div>
             <div>
-              <label className="field-label">Barcode</label>
+              <label className="field-label">{t('products.fieldBarcode')}</label>
               <input className="field-input" value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="field-label">Cost price</label>
+              <label className="field-label">{t('products.fieldCostPrice')}</label>
               <input
                 type="number" step="0.01" min="0"
                 className={`field-input num ${errorInputClass(touched.costPrice && errors.costPrice)}`}
@@ -359,7 +361,7 @@ function ProductForm({ product, onClose, onSaved }) {
               <FieldError message={touched.costPrice ? errors.costPrice : null} />
             </div>
             <div>
-              <label className="field-label">Selling price</label>
+              <label className="field-label">{t('products.fieldSellingPrice')}</label>
               <input
                 type="number" step="0.01" min="0" required
                 className={`field-input num ${errorInputClass(touched.sellingPrice && errors.sellingPrice)}`}
@@ -369,14 +371,14 @@ function ProductForm({ product, onClose, onSaved }) {
               />
               <FieldError message={touched.sellingPrice ? errors.sellingPrice : null} />
               {!errors.sellingPrice && sellingBelowCost && (
-                <p className="mt-1 text-xs font-medium text-warning">Selling price is below cost price. Double-check before saving.</p>
+                <p className="mt-1 text-xs font-medium text-warning">{t('products.sellingBelowCost')}</p>
               )}
             </div>
           </div>
           {!isNew && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="field-label">Min stock</label>
+                <label className="field-label">{t('products.fieldMinStock')}</label>
                 <input
                   type="number" min="0"
                   className={`field-input num ${errorInputClass(touched.minStock && errors.minStock)}`}
@@ -387,7 +389,7 @@ function ProductForm({ product, onClose, onSaved }) {
                 <FieldError message={touched.minStock ? errors.minStock : null} />
               </div>
               <div>
-                <label className="field-label">Reorder level</label>
+                <label className="field-label">{t('products.fieldReorderLevel')}</label>
                 <input
                   type="number" min="0"
                   className={`field-input num ${errorInputClass(touched.reorderLevel && errors.reorderLevel)}`}
@@ -400,26 +402,26 @@ function ProductForm({ product, onClose, onSaved }) {
             </div>
           )}
           <div>
-            <label className="field-label">Tracking mode</label>
+            <label className="field-label">{t('products.fieldTrackingMode')}</label>
             {isNew ? (
               <select className="field-input" value={form.trackingMode} onChange={(e) => setForm({ ...form, trackingMode: e.target.value })}>
-                <option value="simple">Simple</option>
-                <option value="variant">Variant (size/color)</option>
-                <option value="batch">Batch/expiry</option>
-                <option value="serial">Serial/IMEI</option>
-                <option value="weight">Weight-based</option>
-                <option value="bundle">Bundle</option>
-                <option value="service">Service (no stock, a haircut, a room-night, a fee...)</option>
+                <option value="simple">{t('products.trackingOptions.simple')}</option>
+                <option value="variant">{t('products.trackingOptions.variant')}</option>
+                <option value="batch">{t('products.trackingOptions.batch')}</option>
+                <option value="serial">{t('products.trackingOptions.serial')}</option>
+                <option value="weight">{t('products.trackingOptions.weight')}</option>
+                <option value="bundle">{t('products.trackingOptions.bundle')}</option>
+                <option value="service">{t('products.trackingOptions.service')}</option>
               </select>
             ) : (
-              <p className="text-sm text-ink-muted">{form.trackingMode} <span className="text-xs">(can't be changed after creation: how stock is already tracked depends on it)</span></p>
+              <p className="text-sm text-ink-muted">{form.trackingMode} <span className="text-xs">{t('products.trackingLocked')}</span></p>
             )}
           </div>
         </div>
 
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving || hasErrors(errors)} className="btn-primary">{saving ? 'Saving…' : 'Save product'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('common.cancel')}</button>
+          <button type="submit" disabled={saving || hasErrors(errors)} className="btn-primary">{saving ? t('common.saving') : t('products.saveProduct')}</button>
         </div>
       </form>
     </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
@@ -28,6 +29,7 @@ function avatarClass(name) {
 }
 
 export function SalesHistoryPage() {
+  const { t } = useTranslation();
   const { company } = useAuth();
   const toast = useToast();
   const [sales, setSales] = useState([]);
@@ -46,13 +48,13 @@ export function SalesHistoryPage() {
       <div className="flex-1 min-w-0">
         <div className="flex items-end justify-between gap-4 mb-5">
           <div>
-            <p className="page-title mb-1">Sales history</p>
-            <p className="text-sm text-ink-muted">Most recent 100 invoices. Click one to view or take an action.</p>
+            <p className="page-title mb-1">{t('salesHistory.title')}</p>
+            <p className="text-sm text-ink-muted">{t('salesHistory.subtitle')}</p>
           </div>
         </div>
 
         {loading && <Loading />}
-        {!loading && sales.length === 0 && <EmptyState title="No sales yet" description="Completed checkouts will show up here." />}
+        {!loading && sales.length === 0 && <EmptyState title={t('salesHistory.emptyTitle')} description={t('salesHistory.emptyDescription')} />}
 
         {!loading && sales.length > 0 && (
           <div className="card overflow-hidden">
@@ -60,16 +62,16 @@ export function SalesHistoryPage() {
               <table className="w-full text-left border-collapse text-sm">
                 <thead>
                   <tr className="bg-surface-sunken/60 border-y border-rule">
-                    <th className="py-3 px-4 eyebrow font-semibold">Invoice</th>
-                    <th className="py-3 px-4 eyebrow font-semibold">Customer</th>
-                    <th className="py-3 px-4 eyebrow font-semibold">Date</th>
-                    <th className="py-3 px-4 eyebrow font-semibold">Status</th>
-                    <th className="py-3 px-4 eyebrow font-semibold text-right">Total</th>
+                    <th className="py-3 px-4 eyebrow font-semibold">{t('salesHistory.colInvoice')}</th>
+                    <th className="py-3 px-4 eyebrow font-semibold">{t('salesHistory.colCustomer')}</th>
+                    <th className="py-3 px-4 eyebrow font-semibold">{t('salesHistory.colDate')}</th>
+                    <th className="py-3 px-4 eyebrow font-semibold">{t('salesHistory.colStatus')}</th>
+                    <th className="py-3 px-4 eyebrow font-semibold text-right">{t('salesHistory.colTotal')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {sales.map((sale) => {
-                    const name = sale.customerId?.name || 'Walk-in';
+                    const name = sale.customerId?.name || t('salesHistory.walkIn');
                     return (
                       <tr
                         key={sale._id}
@@ -95,7 +97,7 @@ export function SalesHistoryPage() {
               </table>
             </div>
             <div className="p-4 border-t border-rule flex items-center justify-between bg-surface">
-              <span className="text-xs text-ink-muted">Showing {sales.length} {sales.length === 1 ? 'entry' : 'entries'}</span>
+              <span className="text-xs text-ink-muted">{t('salesHistory.showing', { count: sales.length })}</span>
             </div>
           </div>
         )}
@@ -107,6 +109,7 @@ export function SalesHistoryPage() {
 }
 
 function SaleDetailPanel({ sale, onClose, onChanged }) {
+  const { t } = useTranslation();
   const { company } = useAuth();
   const toast = useToast();
   const [mode, setMode] = useState('view'); // view | return | void | credit_note
@@ -124,7 +127,7 @@ function SaleDetailPanel({ sale, onClose, onChanged }) {
     setBusy(true);
     try {
       await api.post(`/sales/${sale._id}/void`, { reason });
-      toast('Sale voided.', 'success');
+      toast(t('salesHistory.saleVoided'), 'success');
       onChanged();
       onClose();
     } catch (err) {
@@ -147,7 +150,7 @@ function SaleDetailPanel({ sale, onClose, onChanged }) {
         items: returnItems.map((r) => ({ productId: r.item.productId, variantId: r.item.variantId, batchId: r.item.batchId, quantity: r.quantity })),
         refundAccountId, reason,
       });
-      toast('Return processed.', 'success');
+      toast(t('salesHistory.returnProcessed'), 'success');
       onChanged();
       onClose();
     } catch (err) {
@@ -166,7 +169,7 @@ function SaleDetailPanel({ sale, onClose, onChanged }) {
         customerId: sale.customerId?._id || sale.customerId,
         saleId: sale._id, amount, reason: creditReason,
       });
-      toast('Credit note issued.', 'success');
+      toast(t('salesHistory.creditNoteIssued'), 'success');
       onChanged();
       onClose();
     } catch (err) {
@@ -180,7 +183,7 @@ function SaleDetailPanel({ sale, onClose, onChanged }) {
     <div className="w-full lg:w-80 shrink-0 card p-4 h-fit">
       <div className="flex items-center justify-between mb-3">
         <p className="font-display font-bold text-lg num text-accent">{sale.invoiceNumber || sale.documentNumber}</p>
-        <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button>
+        <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>{t('common.close')}</button>
       </div>
 
       {mode === 'view' && (
@@ -196,10 +199,10 @@ function SaleDetailPanel({ sale, onClose, onChanged }) {
 
       {mode === 'return' && (
         <div className="space-y-2 text-sm mb-3">
-          <p className="text-xs text-ink-muted">How many of each item is being returned?</p>
+          <p className="text-xs text-ink-muted">{t('salesHistory.howManyReturn')}</p>
           {sale.items.map((item, i) => (
             <div key={i} className="flex items-center justify-between gap-2">
-              <span className="truncate flex-1">{formatMoney(item.unitPrice, company?.currency)} each</span>
+              <span className="truncate flex-1">{formatMoney(item.unitPrice, company?.currency)} {t('salesHistory.each')}</span>
               <input
                 type="number" min="0" max={item.quantity}
                 className="field-input num w-16 !py-1"
@@ -217,39 +220,39 @@ function SaleDetailPanel({ sale, onClose, onChanged }) {
 
       <div className="tear-line my-2" />
       <div className="flex justify-between text-base font-medium mb-4">
-        <span>{mode === 'return' ? 'Return total' : 'Total'}</span>
+        <span>{mode === 'return' ? t('salesHistory.returnTotal') : t('salesHistory.total')}</span>
         <span className="num">{formatMoney(mode === 'return' ? returnTotal : sale.totalAmount, company?.currency)}</span>
       </div>
 
       {sale.status === 'completed' && mode === 'view' && (
         <div className="flex flex-col gap-2">
           <div className="flex gap-2">
-            <button className="btn-secondary flex-1" onClick={() => setMode('return')}>Return items</button>
-            <button className="btn-danger flex-1" onClick={() => setMode('void')}>Void sale</button>
+            <button className="btn-secondary flex-1" onClick={() => setMode('return')}>{t('salesHistory.returnItems')}</button>
+            <button className="btn-danger flex-1" onClick={() => setMode('void')}>{t('salesHistory.voidSale')}</button>
           </div>
-          <button className="btn-secondary" onClick={() => { setCreditAmount(String(sale.totalAmount)); setMode('credit_note'); }}>Issue credit note</button>
+          <button className="btn-secondary" onClick={() => { setCreditAmount(String(sale.totalAmount)); setMode('credit_note'); }}>{t('salesHistory.issueCreditNote')}</button>
         </div>
       )}
 
       {mode === 'credit_note' && (
         <div>
-          <p className="text-xs text-ink-muted mb-2">Issue a credit note against this invoice, reduces what the customer owes without moving any stock (e.g. a pricing correction or goodwill credit).</p>
-          <label className="field-label">Amount</label>
+          <p className="text-xs text-ink-muted mb-2">{t('salesHistory.creditNoteHint')}</p>
+          <label className="field-label">{t('salesHistory.fieldAmount')}</label>
           <input
             type="number" min="0" max={sale.totalAmount} step="0.01"
             className="field-input num mb-2" value={creditAmount}
             onChange={(e) => setCreditAmount(e.target.value)}
           />
-          <label className="field-label">Reason</label>
-          <input className="field-input mb-2" value={creditReason} onChange={(e) => setCreditReason(e.target.value)} placeholder="e.g. pricing correction, goodwill credit" />
+          <label className="field-label">{t('salesHistory.fieldReason')}</label>
+          <input className="field-input mb-2" value={creditReason} onChange={(e) => setCreditReason(e.target.value)} placeholder={t('salesHistory.reasonPlaceholderCredit')} />
           <div className="flex gap-2">
-            <button className="btn-secondary flex-1" onClick={() => setMode('view')}>Back</button>
+            <button className="btn-secondary flex-1" onClick={() => setMode('view')}>{t('common.back')}</button>
             <button
               className="btn-primary flex-1"
               disabled={busy || !creditAmount || Number(creditAmount) <= 0 || Number(creditAmount) > sale.totalAmount}
               onClick={handleIssueCreditNote}
             >
-              {busy ? 'Issuing…' : 'Issue credit note'}
+              {busy ? t('salesHistory.issuing') : t('salesHistory.issueCreditNote')}
             </button>
           </div>
         </div>
@@ -257,17 +260,17 @@ function SaleDetailPanel({ sale, onClose, onChanged }) {
 
       {sale.status === 'completed' && mode === 'return' && (
         <div>
-          <label className="field-label">Refund from</label>
+          <label className="field-label">{t('salesHistory.refundFrom')}</label>
           <select className="field-input mb-2" value={refundAccountId} onChange={(e) => setRefundAccountId(e.target.value)}>
-            <option value="">Select account…</option>
+            <option value="">{t('salesHistory.selectAccount')}</option>
             {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
           </select>
-          <label className="field-label">Reason</label>
-          <input className="field-input mb-2" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. damaged, wrong item" />
+          <label className="field-label">{t('salesHistory.fieldReason')}</label>
+          <input className="field-input mb-2" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t('salesHistory.reasonPlaceholderReturn')} />
           <div className="flex gap-2">
-            <button className="btn-secondary flex-1" onClick={() => setMode('view')}>Back</button>
+            <button className="btn-secondary flex-1" onClick={() => setMode('view')}>{t('common.back')}</button>
             <button className="btn-primary flex-1" disabled={busy || returnItems.length === 0 || !refundAccountId} onClick={handleReturn}>
-              {busy ? 'Processing…' : 'Process return'}
+              {busy ? t('salesHistory.processing') : t('salesHistory.processReturn')}
             </button>
           </div>
         </div>
@@ -275,13 +278,13 @@ function SaleDetailPanel({ sale, onClose, onChanged }) {
 
       {sale.status === 'completed' && mode === 'void' && (
         <div>
-          <label className="field-label">Void reason</label>
-          <input className="field-input mb-2" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. entered by mistake" />
-          <p className="text-xs text-ink-muted mb-2">Voiding reverses stock and the ledger entirely, use this only when nothing should have been sold at all, not for a partial refund.</p>
+          <label className="field-label">{t('salesHistory.voidReason')}</label>
+          <input className="field-input mb-2" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t('salesHistory.voidReasonPlaceholder')} />
+          <p className="text-xs text-ink-muted mb-2">{t('salesHistory.voidHint')}</p>
           <div className="flex gap-2">
-            <button className="btn-secondary flex-1" onClick={() => setMode('view')}>Back</button>
+            <button className="btn-secondary flex-1" onClick={() => setMode('view')}>{t('common.back')}</button>
             <button className="btn-danger flex-1" disabled={busy} onClick={handleVoid}>
-              {busy ? 'Voiding…' : 'Confirm void'}
+              {busy ? t('salesHistory.voiding') : t('salesHistory.confirmVoid')}
             </button>
           </div>
         </div>

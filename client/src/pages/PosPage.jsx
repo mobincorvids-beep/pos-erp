@@ -337,7 +337,7 @@ export function PosPage() {
       </div>
 
       {/* Right pane — current ticket */}
-      <div className="w-full lg:w-[380px] shrink-0 card flex flex-col lg:h-full overflow-hidden">
+      <div className="w-full lg:w-[440px] shrink-0 card flex flex-col h-[70vh] lg:h-full overflow-hidden">
         {/* Ticket header */}
         <div className="p-4 border-b border-rule bg-surface-sunken flex justify-between items-center shrink-0">
           <div>
@@ -359,7 +359,7 @@ export function PosPage() {
             {t('pos.tapToAdd')}
           </p>
         ) : (
-          <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2.5">
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col gap-2.5">
             {cart.map((line) => (
               <div key={line.variantId} className="card !shadow-none p-3 hover:border-accent/40 transition-colors">
                 <div className="flex justify-between items-start gap-2 mb-1.5">

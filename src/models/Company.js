@@ -7,6 +7,20 @@ const companySchema = new Schema({
   ntn: String,        // National Tax Number
   strn: String,       // Sales Tax Registration Number
   fbrPosId: String,   // FBR POS registration ID
+  // Each vendor has their own separate FBR IRIS registration and Bearer
+  // token — there is no shared/platform-wide FBR account, so this is
+  // entered per-company under Settings, same self-service pattern as
+  // jazzCashTaxPay below. TODO(security): encrypt at rest in production —
+  // stored plain for now, no existing encryption helper in this codebase
+  // to reuse (same caveat already noted on jazzCashTaxPay.password below).
+  fbrApiToken: { type: String, default: null },
+  // FBR's sandbox and production Digital Invoicing environments are
+  // authenticated by different tokens against the SAME host
+  // (gw.fbr.gov.pk/di_data/v1/di) per FBR's own integration guides — this
+  // flag exists so fbrService picks the right token lifecycle stage to
+  // report in errors/UI, not to switch hosts. Vendor turns this off once
+  // they've requested and received a production token from IRIS.
+  fbrSandboxMode: { type: Boolean, default: true },
   phone: String,
   email: String,
   address: String,
