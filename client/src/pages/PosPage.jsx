@@ -274,7 +274,7 @@ export function PosPage() {
   return (
     <div className="flex flex-col lg:flex-row gap-6 lg:h-[calc(100vh-6rem)]">
       {/* Left pane — product search & grid */}
-      <div className="flex-1 min-w-0 flex flex-col">
+      <div className="flex-1 min-w-0 min-h-0 flex flex-col">
         <p className="page-title mb-4">{t('pos.checkout')}</p>
 
         <div className="flex flex-col gap-3 mb-4 shrink-0">
@@ -310,7 +310,7 @@ export function PosPage() {
         ) : filtered.length === 0 ? (
           <p className="text-sm text-ink-muted mt-6">{t('pos.noProductsMatch', { query: search })}</p>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 lg:overflow-y-auto pr-1 rtl:pr-0 rtl:pl-1 mt-4 pb-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 auto-rows-min gap-4 lg:overflow-y-auto pr-1 rtl:pr-0 rtl:pl-1 mt-4 pb-4">
             {filtered.map((product) => (
               <button
                 key={product._id}
