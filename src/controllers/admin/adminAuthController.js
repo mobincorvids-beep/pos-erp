@@ -87,7 +87,7 @@ async function createAdmin(req, res) {
   }
 }
 
-/** An admin resets another platform admin's password (e.g. they're locked out) — no email-based reset flow exists yet, so this is the in-app equivalent. */
+/** An admin resets another platform admin's password (e.g. they're locked out): no email-based reset flow exists yet, so this is the in-app equivalent. */
 async function resetPassword(req, res) {
   try {
     const target = await PlatformAdmin.findById(req.params.id);

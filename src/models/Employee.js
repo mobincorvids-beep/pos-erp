@@ -10,6 +10,7 @@ const employeeSchema = new Schema({
   branchId: { type: Schema.Types.ObjectId, ref: 'Branch' },
   departmentId: { type: Schema.Types.ObjectId, ref: 'Department' },
   userId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+  shiftId: { type: Schema.Types.ObjectId, ref: 'Shift', default: null },
 
   name: { type: String, required: true },
   designation: String, // Cashier, Waiter, Accountant...

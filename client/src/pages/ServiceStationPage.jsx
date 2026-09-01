@@ -9,10 +9,11 @@ export function ServiceStationPage() {
   const [tab, setTab] = useState('vehicles');
   return (
     <div>
+      <p className="eyebrow mb-1">Workshop</p>
       <p className="page-title mb-4">Service Station</p>
-      <div className="flex gap-1 border-b border-rule mb-5">
+      <div className="flex gap-2 mb-5">
         {[['vehicles', 'Vehicles'], ['due', 'Service due']].map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} className={`px-3 py-2 text-sm -mb-px border-b-2 ${tab === key ? 'border-accent text-accent-strong font-medium' : 'border-transparent text-ink-muted hover:text-ink'}`}>{label}</button>
+          <button key={key} onClick={() => setTab(key)} className={tab === key ? 'pill-active' : 'pill'}>{label}</button>
         ))}
       </div>
       {tab === 'vehicles' && <VehiclesTab />}
@@ -37,19 +38,31 @@ function VehiclesTab() {
   return (
     <div className="flex flex-col lg:flex-row gap-6">
       <div className="flex-1 min-w-0">
-        <div className="flex justify-end mb-3"><button className="btn-primary" onClick={() => setShowForm(true)}>Register vehicle</button></div>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm text-ink-muted">Registered vehicles and their service intervals.</p>
+          <button className="btn-primary" onClick={() => setShowForm(true)}>
+            <span className="font-icon text-base leading-none">add</span>
+            Register vehicle
+          </button>
+        </div>
         {loading && <Loading />}
         {!loading && vehicles.length === 0 && <EmptyState title="No vehicles registered" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Register one</button>} />}
         {!loading && vehicles.length > 0 && (
           <div className="card overflow-hidden">
             <table className="w-full text-sm">
-              <thead><tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide"><th className="px-3 py-2 font-medium">Vehicle</th><th className="px-3 py-2 font-medium">Owner</th><th className="px-3 py-2 font-medium text-right">Mileage</th></tr></thead>
+              <thead>
+                <tr className="bg-surface-sunken text-left text-xs text-ink-muted uppercase tracking-wide">
+                  <th className="px-4 py-2.5 font-semibold">Vehicle</th>
+                  <th className="px-4 py-2.5 font-semibold">Owner</th>
+                  <th className="px-4 py-2.5 font-semibold text-right">Mileage</th>
+                </tr>
+              </thead>
               <tbody>
                 {vehicles.map((v) => (
-                  <tr key={v._id} onClick={() => setSelected(v)} className={`border-b border-rule last:border-0 cursor-pointer hover:bg-paper ${selected?._id === v._id ? 'bg-accent-soft/40' : ''}`}>
-                    <td className="px-3 py-2">{v.make} {v.model} ({v.year}) — {v.registrationNumber}</td>
-                    <td className="px-3 py-2 text-ink-muted">{v.customerId?.name}</td>
-                    <td className="px-3 py-2 num text-right">{v.currentMileage}</td>
+                  <tr key={v._id} onClick={() => setSelected(v)} className={`border-t border-rule cursor-pointer hover:bg-surface-sunken/50 transition-colors ${selected?._id === v._id ? 'bg-accent-soft/40' : ''}`}>
+                    <td className="px-4 py-2.5 font-medium text-ink">{v.make} {v.model} ({v.year}): {v.registrationNumber}</td>
+                    <td className="px-4 py-2.5 text-ink-muted">{v.customerId?.name}</td>
+                    <td className="px-4 py-2.5 num text-right">{v.currentMileage}</td>
                   </tr>
                 ))}
               </tbody>
@@ -82,11 +95,17 @@ function VehicleForm({ onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
-      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Register vehicle</p>
+    <div className="fixed inset-0 bg-ink/30 backdrop-blur-sm flex items-center justify-center z-40 px-4">
+      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm shadow-lg">
+        <p className="page-title text-lg mb-4">Register vehicle</p>
         <div className="space-y-3">
-          <div><label className="field-label">Owner</label><select required className="field-input" value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })}><option value="">Select…</option>{customers.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}</select></div>
+          <div>
+            <label className="field-label">Owner</label>
+            <select required className="field-input" value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })}>
+              <option value="">Select…</option>
+              {customers.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
+            </select>
+          </div>
           <div className="grid grid-cols-2 gap-2">
             <input placeholder="Make" className="field-input" value={form.make} onChange={(e) => setForm({ ...form, make: e.target.value })} />
             <input placeholder="Model" className="field-input" value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} />
@@ -95,13 +114,25 @@ function VehicleForm({ onClose, onSaved }) {
             <input type="number" placeholder="Year" className="field-input num" value={form.year} onChange={(e) => setForm({ ...form, year: e.target.value })} />
             <input placeholder="Reg. number" required className="field-input" value={form.registrationNumber} onChange={(e) => setForm({ ...form, registrationNumber: e.target.value })} />
           </div>
-          <div><label className="field-label">Current mileage</label><input type="number" className="field-input num" value={form.currentMileage} onChange={(e) => setForm({ ...form, currentMileage: e.target.value })} /></div>
+          <div>
+            <label className="field-label">Current mileage</label>
+            <input type="number" className="field-input num" value={form.currentMileage} onChange={(e) => setForm({ ...form, currentMileage: e.target.value })} />
+          </div>
           <div className="grid grid-cols-2 gap-2">
-            <div><label className="field-label">Service every (mi)</label><input type="number" className="field-input num" value={form.serviceIntervalMileage} onChange={(e) => setForm({ ...form, serviceIntervalMileage: e.target.value })} /></div>
-            <div><label className="field-label">Or every (months)</label><input type="number" className="field-input num" value={form.serviceIntervalMonths} onChange={(e) => setForm({ ...form, serviceIntervalMonths: e.target.value })} /></div>
+            <div>
+              <label className="field-label">Service every (mi)</label>
+              <input type="number" className="field-input num" value={form.serviceIntervalMileage} onChange={(e) => setForm({ ...form, serviceIntervalMileage: e.target.value })} />
+            </div>
+            <div>
+              <label className="field-label">Or every (months)</label>
+              <input type="number" className="field-input num" value={form.serviceIntervalMonths} onChange={(e) => setForm({ ...form, serviceIntervalMonths: e.target.value })} />
+            </div>
           </div>
         </div>
-        <div className="flex justify-end gap-2 mt-5"><button type="button" className="btn-secondary" onClick={onClose}>Cancel</button><button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Register'}</button></div>
+        <div className="flex justify-end gap-2 mt-5">
+          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Register'}</button>
+        </div>
       </form>
     </div>
   );
@@ -128,23 +159,31 @@ function VehiclePanel({ vehicle, onClose, onChanged }) {
     setBusy(true);
     try {
       await api.post(`/service-station/vehicles/${vehicle._id}/service-completed`, { mileageAtService: Number(mileage) });
-      toast('Service recorded — next-due reset.', 'success');
+      toast('Service recorded: next-due reset.', 'success');
       onChanged(); onClose();
     } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }
   }
 
   return (
     <div className="w-full lg:w-96 shrink-0 card p-4 h-fit">
-      <div className="flex items-center justify-between mb-3"><p className="font-display text-lg">{vehicle.make} {vehicle.model}</p><button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button></div>
+      <div className="flex items-center justify-between mb-3">
+        <p className="page-title text-lg">{vehicle.make} {vehicle.model}</p>
+        <button className="btn-ghost !px-0 text-xs" onClick={onClose}>Close</button>
+      </div>
       <p className="text-sm text-ink-muted mb-4">{vehicle.registrationNumber}</p>
       <label className="field-label">Update mileage</label>
       <input type="number" className="field-input num mb-2" value={mileage} onChange={(e) => setMileage(e.target.value)} />
       <button className="btn-secondary w-full mb-4" disabled={busy} onClick={updateMileage}>Update</button>
       <button className="btn-primary w-full mb-4" disabled={busy} onClick={recordServiceCompleted}>Record service completed here</button>
       <div className="tear-line my-3" />
-      <p className="text-sm font-medium mb-2">Service history</p>
+      <p className="text-sm font-semibold text-ink mb-2">Service history</p>
       {history.length === 0 && <p className="text-sm text-ink-muted">No job cards yet.</p>}
-      {history.map((h) => <div key={h._id} className="text-sm border-b border-rule py-1.5">{h.itemDescription} — <span className="chip-neutral">{h.status}</span></div>)}
+      {history.map((h) => (
+        <div key={h._id} className="flex items-center justify-between text-sm border-t border-rule py-1.5 first:border-0">
+          <span className="text-ink">{h.itemDescription}</span>
+          <span className="chip-neutral">{h.status}</span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -164,8 +203,22 @@ function DueTab() {
   return (
     <div className="card overflow-hidden">
       <table className="w-full text-sm">
-        <thead><tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide"><th className="px-3 py-2 font-medium">Vehicle</th><th className="px-3 py-2 font-medium">Owner</th><th className="px-3 py-2 font-medium text-right">Mileage</th></tr></thead>
-        <tbody>{rows.map((v) => (<tr key={v._id} className="border-b border-rule last:border-0"><td className="px-3 py-2">{v.make} {v.model} — {v.registrationNumber}</td><td className="px-3 py-2 text-ink-muted">{v.customerId?.name}</td><td className="px-3 py-2 num text-right text-danger">{v.currentMileage}</td></tr>))}</tbody>
+        <thead>
+          <tr className="bg-surface-sunken text-left text-xs text-ink-muted uppercase tracking-wide">
+            <th className="px-4 py-2.5 font-semibold">Vehicle</th>
+            <th className="px-4 py-2.5 font-semibold">Owner</th>
+            <th className="px-4 py-2.5 font-semibold text-right">Mileage</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((v) => (
+            <tr key={v._id} className="border-t border-rule hover:bg-surface-sunken/50 transition-colors">
+              <td className="px-4 py-2.5 font-medium text-ink">{v.make} {v.model}: {v.registrationNumber}</td>
+              <td className="px-4 py-2.5 text-ink-muted">{v.customerId?.name}</td>
+              <td className="px-4 py-2.5 num text-right text-danger">{v.currentMileage}</td>
+            </tr>
+          ))}
+        </tbody>
       </table>
     </div>
   );

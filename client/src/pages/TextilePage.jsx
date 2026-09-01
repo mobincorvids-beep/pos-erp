@@ -32,19 +32,35 @@ export function TextilePage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <p className="page-title">Fabric Rolls</p>
-        <button className="btn-primary" onClick={() => setShowForm(true)}>Receive roll</button>
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <p className="eyebrow mb-1">Textile operations</p>
+          <p className="page-title">Fabric rolls</p>
+        </div>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>
+          <span className="material-symbols-outlined text-sm">add</span>
+          Receive roll
+        </button>
       </div>
+
       {loading && <Loading />}
       {!loading && rolls.length === 0 && <EmptyState title="No rolls yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Receive one</button>} />}
       {!loading && rolls.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {rolls.map((r) => (
-            <div key={r._id} className="card p-3">
-              <div className="flex items-center justify-between mb-1"><p className="text-sm font-medium">{r.rollNumber}</p><span className={STATUS_CHIP[r.status]}>{r.status}</span></div>
-              <p className="text-xs text-ink-muted">{r.remainingLength}/{r.originalLength} {r.unitOfMeasure}</p>
-              {r.status !== 'exhausted' && <button className="btn-ghost !text-accent !px-0 text-xs mt-2" onClick={() => setCutting(r)}>Cut</button>}
+            <div key={r._id} className="card p-4">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-semibold text-ink flex items-center gap-2">
+                  <span className="material-symbols-outlined text-accent text-base">texture</span>
+                  {r.rollNumber}
+                </p>
+                <span className={STATUS_CHIP[r.status]}>{r.status}</span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-ink-muted">Remaining</span>
+                <span className="num text-ink">{r.remainingLength}/{r.originalLength} {r.unitOfMeasure}</span>
+              </div>
+              {r.status !== 'exhausted' && <button className="btn-ghost !text-accent !px-0 text-xs mt-3" onClick={() => setCutting(r)}>Cut</button>}
             </div>
           ))}
         </div>
@@ -53,10 +69,19 @@ export function TextilePage() {
       {cutting && (
         <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
           <form onSubmit={cut} className="card p-5 w-full max-w-xs">
-            <p className="font-display text-lg mb-1">Cut from {cutting.rollNumber}</p>
+            <p className="font-display text-lg font-bold text-ink mb-1 flex items-center gap-2">
+              <span className="material-symbols-outlined text-accent">content_cut</span>
+              Cut from {cutting.rollNumber}
+            </p>
             <p className="text-sm text-ink-muted mb-4">{cutting.remainingLength} {cutting.unitOfMeasure} remaining</p>
-            <input type="number" required className="field-input num mb-4" value={cutLength} onChange={(e) => setCutLength(e.target.value)} placeholder="Length to cut" />
-            <div className="flex justify-end gap-2"><button type="button" className="btn-secondary" onClick={() => setCutting(null)}>Cancel</button><button type="submit" className="btn-primary">Cut</button></div>
+            <div className="mb-4">
+              <label className="field-label">Length to cut</label>
+              <input type="number" required className="field-input num" value={cutLength} onChange={(e) => setCutLength(e.target.value)} />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button type="button" className="btn-secondary" onClick={() => setCutting(null)}>Cancel</button>
+              <button type="submit" className="btn-primary">Cut</button>
+            </div>
           </form>
         </div>
       )}
@@ -86,18 +111,51 @@ function RollForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Receive roll</p>
+        <p className="font-display text-lg font-bold text-ink mb-4 flex items-center gap-2">
+          <span className="material-symbols-outlined text-accent">texture</span>
+          Receive roll
+        </p>
         <div className="space-y-3">
-          <select required className="field-input" value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })}><option value="">Product…</option>{products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}</select>
-          <select required className="field-input" value={form.warehouseId} onChange={(e) => setForm({ ...form, warehouseId: e.target.value })}><option value="">Warehouse…</option>{warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}</select>
-          <input required placeholder="Roll number" className="field-input" value={form.rollNumber} onChange={(e) => setForm({ ...form, rollNumber: e.target.value })} />
-          <div className="grid grid-cols-2 gap-2">
-            <input type="number" required placeholder="Length" className="field-input num" value={form.length} onChange={(e) => setForm({ ...form, length: e.target.value })} />
-            <select className="field-input" value={form.unitOfMeasure} onChange={(e) => setForm({ ...form, unitOfMeasure: e.target.value })}><option value="meters">Meters</option><option value="yards">Yards</option></select>
+          <div>
+            <label className="field-label">Product</label>
+            <select required className="field-input" value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })}>
+              <option value="">Select…</option>
+              {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
+            </select>
           </div>
-          <input type="number" placeholder="Remnant threshold" className="field-input num" value={form.remnantThreshold} onChange={(e) => setForm({ ...form, remnantThreshold: e.target.value })} />
+          <div>
+            <label className="field-label">Warehouse</label>
+            <select required className="field-input" value={form.warehouseId} onChange={(e) => setForm({ ...form, warehouseId: e.target.value })}>
+              <option value="">Select…</option>
+              {warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="field-label">Roll number</label>
+            <input required className="field-input" value={form.rollNumber} onChange={(e) => setForm({ ...form, rollNumber: e.target.value })} />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="field-label">Length</label>
+              <input type="number" required className="field-input num" value={form.length} onChange={(e) => setForm({ ...form, length: e.target.value })} />
+            </div>
+            <div>
+              <label className="field-label">Unit</label>
+              <select className="field-input" value={form.unitOfMeasure} onChange={(e) => setForm({ ...form, unitOfMeasure: e.target.value })}>
+                <option value="meters">Meters</option>
+                <option value="yards">Yards</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="field-label">Remnant threshold</label>
+            <input type="number" className="field-input num" value={form.remnantThreshold} onChange={(e) => setForm({ ...form, remnantThreshold: e.target.value })} />
+          </div>
         </div>
-        <div className="flex justify-end gap-2 mt-5"><button type="button" className="btn-secondary" onClick={onClose}>Cancel</button><button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Receive'}</button></div>
+        <div className="flex justify-end gap-2 mt-5">
+          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Receive'}</button>
+        </div>
       </form>
     </div>
   );

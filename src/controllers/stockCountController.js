@@ -41,4 +41,22 @@ async function submit(req, res) {
   }
 }
 
-module.exports = { list, get, start, recordCounts, submit };
+async function remove(req, res) {
+  try {
+    await stockCountService.deleteCount(req.params.id, req.companyId, req.auth.userId);
+    res.status(204).end();
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function removeItem(req, res) {
+  try {
+    const stockCount = await stockCountService.removeItem(req.params.id, req.params.itemId, req.companyId);
+    res.json(stockCount);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+module.exports = { list, get, start, recordCounts, submit, remove, removeItem };

@@ -6,6 +6,11 @@ import { EmptyState } from '../components/EmptyState';
 import { Pencil, Trash2, Plus, X } from 'lucide-react';
 
 const STATUS_CHIP = { free: 'chip-accent', occupied: 'chip-warning', reserved: 'chip-neutral' };
+const STATUS_CARD = {
+  free: 'border-rule-strong',
+  occupied: 'border-warning bg-warning-soft/40',
+  reserved: 'border-rule-strong bg-surface-sunken',
+};
 const ITEM_STATUS_NEXT = { pending: 'preparing', preparing: 'ready', ready: 'served', served: 'served' };
 const ITEM_STATUS_CHIP = { pending: 'chip-neutral', preparing: 'chip-warning', ready: 'chip-accent', served: 'chip-neutral' };
 
@@ -47,8 +52,11 @@ export function RestaurantPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <p className="page-title">Tables</p>
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <p className="eyebrow mb-1">Floor Logistics</p>
+          <p className="page-title">Tables</p>
+        </div>
         <button className="btn-primary flex items-center gap-1.5" onClick={() => setEditingTable({})}>
           <Plus size={14} /> Add table
         </button>
@@ -61,24 +69,24 @@ export function RestaurantPage() {
       {!loading && tables.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {tables.map((t) => (
-            <div key={t._id} className="card p-3">
+            <div key={t._id} className={`card p-4 border-2 ${STATUS_CARD[t.status]}`}>
               <div className="flex items-center justify-between mb-1">
-                <p className="text-sm font-medium">{t.name}</p>
+                <p className="font-display text-base font-semibold text-ink">{t.name}</p>
                 <span className={STATUS_CHIP[t.status]}>{t.status}</span>
               </div>
-              <p className="text-xs text-ink-muted mb-2">{t.seats} seats</p>
-              <div className="flex flex-wrap gap-2 items-center">
+              <p className="text-xs text-ink-muted mb-3">{t.seats} seats</p>
+              <div className="flex flex-wrap gap-3 items-center">
                 {t.status === 'free' && (
                   <>
-                    <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => setOrderTable(t)}>Open order</button>
-                    <button className="btn-ghost !text-ink-muted !px-0 text-xs" onClick={() => setReserved(t)}>Reserve</button>
+                    <button className="text-xs font-semibold text-accent hover:text-accent-strong" onClick={() => setOrderTable(t)}>Open order</button>
+                    <button className="text-xs font-semibold text-ink-muted hover:text-ink" onClick={() => setReserved(t)}>Reserve</button>
                   </>
                 )}
                 {t.status === 'occupied' && (
-                  <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => setOrderTable(t)}>View order</button>
+                  <button className="text-xs font-semibold text-accent hover:text-accent-strong" onClick={() => setOrderTable(t)}>View order</button>
                 )}
                 {t.status === 'reserved' && (
-                  <button className="btn-ghost !text-ink-muted !px-0 text-xs" onClick={() => releaseTable(t)}>Release</button>
+                  <button className="text-xs font-semibold text-ink-muted hover:text-ink" onClick={() => releaseTable(t)}>Release</button>
                 )}
                 <span className="flex-1" />
                 <button className="text-ink-muted hover:text-accent-strong" onClick={() => setEditingTable(t)} aria-label="Edit table"><Pencil size={13} /></button>
@@ -131,8 +139,8 @@ function TableForm({ table, onClose, onSaved }) {
 
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
-      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-xs">
-        <p className="font-display text-lg mb-4">{isNew ? 'Add table' : 'Edit table'}</p>
+      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-xs shadow-lg">
+        <p className="font-display text-lg font-semibold text-ink mb-4">{isNew ? 'Add table' : 'Edit table'}</p>
         <div className="space-y-3">
           {isNew && (
             <div>
@@ -225,9 +233,9 @@ function OrderPanel({ table, onClose }) {
 
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
-      <div className="card p-5 w-full max-w-2xl max-h-[85vh] flex flex-col">
-        <div className="flex items-center justify-between mb-3">
-          <p className="font-display text-lg">{table.name} — order</p>
+      <div className="card p-5 w-full max-w-2xl max-h-[85vh] flex flex-col shadow-lg">
+        <div className="flex items-center justify-between mb-4">
+          <p className="font-display text-lg font-semibold text-ink">{table.name}: order</p>
           <button onClick={onClose} className="text-ink-muted hover:text-ink"><X size={18} /></button>
         </div>
 
@@ -236,19 +244,19 @@ function OrderPanel({ table, onClose }) {
         {!loading && (
           <div className="flex-1 overflow-y-auto grid sm:grid-cols-2 gap-4">
             <div>
-              <p className="field-label mb-1">Menu</p>
-              <div className="border border-rule rounded max-h-64 overflow-y-auto">
+              <p className="eyebrow mb-1.5">Menu</p>
+              <div className="border border-rule rounded-lg max-h-64 overflow-y-auto">
                 {products.map((p) => (
-                  <button key={p._id} type="button" onClick={() => addToCart(p)} className="w-full text-left px-2.5 py-1.5 text-sm hover:bg-paper flex justify-between">
+                  <button key={p._id} type="button" onClick={() => addToCart(p)} className="w-full text-left px-2.5 py-1.5 text-sm hover:bg-surface-sunken flex justify-between">
                     <span>{p.name}</span>
-                    <span className="text-ink-muted">{p.sellingPrice}</span>
+                    <span className="text-ink-muted num">{p.sellingPrice}</span>
                   </button>
                 ))}
               </div>
 
               {cart.length > 0 && (
                 <div className="mt-3">
-                  <p className="field-label mb-1">Adding this round</p>
+                  <p className="eyebrow mb-1.5">Adding this round</p>
                   {cart.map((c, i) => (
                     <div key={i} className="flex items-center gap-2 text-sm py-1">
                       <span className="flex-1">{c.name}</span>
@@ -262,8 +270,8 @@ function OrderPanel({ table, onClose }) {
             </div>
 
             <div>
-              <p className="field-label mb-1">Kitchen status</p>
-              {!kot && <p className="text-sm text-ink-muted">No order sent yet — add items from the menu.</p>}
+              <p className="eyebrow mb-1.5">Kitchen status</p>
+              {!kot && <p className="text-sm text-ink-muted">No order sent yet: add items from the menu.</p>}
               {kot && (
                 <div className="space-y-1.5">
                   {kot.items.map((item) => (

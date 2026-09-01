@@ -4,10 +4,10 @@ const PosTerminal = require('../models/PosTerminal');
 const Account = require('../models/Account');
 const Company = require('../models/Company');
 
-/** Editable-by-tenant subset of Company — deliberately excludes activeModules,
+/** Editable-by-tenant subset of Company: deliberately excludes activeModules,
  * defaultAccounts, ecommerceConfig, parentCompanyId etc., which are either
  * platform-admin controlled or wired automatically at provisioning time. */
-const EDITABLE_COMPANY_FIELDS = ['name', 'ntn', 'strn', 'fbrPosId', 'phone', 'email', 'address', 'currency', 'timezone'];
+const EDITABLE_COMPANY_FIELDS = ['name', 'ntn', 'strn', 'fbrPosId', 'fbrApiToken', 'fbrSandboxMode', 'phone', 'email', 'address', 'currency', 'timezone'];
 
 async function getCompany(req, res) {
   const company = await Company.findById(req.companyId);
@@ -19,6 +19,14 @@ async function updateCompany(req, res) {
   const updates = {};
   for (const field of EDITABLE_COMPANY_FIELDS) {
     if (req.body[field] !== undefined) updates[field] = req.body[field];
+  }
+  // jazzCashTaxPay is a per-tenant credential block for paying the
+  // company's own FBR tax liability (see taxPaymentService) — merged
+  // shallowly onto whatever's already there so a caller can update just
+  // one field (e.g. flipping `enabled`) without re-sending the rest.
+  if (req.body.jazzCashTaxPay && typeof req.body.jazzCashTaxPay === 'object') {
+    const existing = await Company.findById(req.companyId).select('jazzCashTaxPay');
+    updates.jazzCashTaxPay = { ...(existing?.jazzCashTaxPay?.toObject?.() || existing?.jazzCashTaxPay || {}), ...req.body.jazzCashTaxPay };
   }
   const company = await Company.findByIdAndUpdate(req.companyId, updates, { new: true, runValidators: true });
   if (!company) return res.status(404).json({ error: 'Company not found.' });
@@ -69,7 +77,7 @@ async function updateBranch(req, res) {
 async function deactivateBranch(req, res) {
   const activeCount = await Branch.countDocuments({ companyId: req.companyId, isActive: true });
   if (activeCount <= 1) {
-    return res.status(400).json({ error: 'Cannot remove the only branch — every business needs at least one.' });
+    return res.status(400).json({ error: 'Cannot remove the only branch, every business needs at least one.' });
   }
   const branch = await Branch.findOneAndUpdate(
     { _id: req.params.id, companyId: req.companyId }, { isActive: false }, { new: true }

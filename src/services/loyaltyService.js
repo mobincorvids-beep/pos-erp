@@ -15,7 +15,7 @@ async function getProgram(companyId) {
   return LoyaltyProgram.findOne({ companyId, isActive: true });
 }
 
-/** Awards points for a completed sale. Called after checkout succeeds — see saleController. */
+/** Awards points for a completed sale. Called after checkout succeeds, see saleController. */
 async function earnPointsForSale(sale) {
   const program = await getProgram(sale.companyId);
   if (!program || !sale.customerId) return null;

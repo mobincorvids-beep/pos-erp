@@ -61,7 +61,7 @@ async function onboard(req, res) {
 }
 
 async function update(req, res) {
-  const allowedFields = ['name', 'industryType', 'currency', 'ntn', 'strn', 'fbrPosId', 'phone', 'email', 'address', 'taxAuthorities', 'parentCompanyId'];
+  const allowedFields = ['name', 'industryType', 'currency', 'ntn', 'strn', 'fbrPosId', 'fbrApiToken', 'fbrSandboxMode', 'phone', 'email', 'address', 'taxAuthorities', 'parentCompanyId'];
   const patch = {};
   for (const field of allowedFields) {
     if (req.body[field] !== undefined) patch[field] = req.body[field];

@@ -18,7 +18,7 @@ function hasSendGridConfig() {
   return !!(process.env.SENDGRID_API_KEY && process.env.SENDGRID_FROM_EMAIL);
 }
 
-/** @returns {Promise<{success: boolean, provider: string, error?: string}>} — never throws; a failed send is a normal, expected outcome for one recipient in a batch, not a reason to abort the whole campaign. */
+/** @returns {Promise<{success: boolean, provider: string, error?: string}>}: never throws; a failed send is a normal, expected outcome for one recipient in a batch, not a reason to abort the whole campaign. */
 async function sendSms(to, message) {
   if (!to) return { success: false, provider: 'none', error: 'No phone number on file for this customer.' };
   try {
@@ -29,7 +29,7 @@ async function sendSms(to, message) {
   }
 }
 
-/** Same contract as sendSms — never throws. */
+/** Same contract as sendSms: never throws. */
 async function sendEmail(to, subject, message) {
   if (!to) return { success: false, provider: 'none', error: 'No email address on file for this customer.' };
   try {

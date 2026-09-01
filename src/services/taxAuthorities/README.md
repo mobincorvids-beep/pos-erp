@@ -1,4 +1,4 @@
-# Pakistani tax-authority integrations — status and honest limitations
+# Pakistani tax-authority integrations: status and honest limitations
 
 This POS submits sales to five tax authorities: FBR (federal, goods) and
 SRB / PRA / KPRA / BRA (provincial, services). Their integration maturity
@@ -19,7 +19,7 @@ going live:
 1. Register for FBR's sandbox and obtain a bearer token (`FBR_API_TOKEN`).
 2. Leave `FBR_ENV=sandbox` (the default) and post real invoices there.
 3. Compare FBR's actual responses/rejections against the field mapping in
-   `buildInvoicePayload` and adjust anything that doesn't match — in
+   `buildInvoicePayload` and adjust anything that doesn't match: in
    particular `scenarioId`, `sellerProvince`, HS codes, and the QR code
    format, none of which this codebase can guess correctly without your
    actual registration details.
@@ -29,11 +29,11 @@ going live:
 
 Unlike FBR, the four provincial revenue authorities do **not** have a
 single, uniformly documented, publicly known real-time e-invoicing API.
-Each province's system is different — some are portal-only with no API,
+Each province's system is different, some are portal-only with no API,
 some require SOAP/XML, and the real endpoint URLs and payload field names
 are only available from each authority's own developer documentation,
 typically issued **after** a business completes tax registration with
-that authority. They are not public, and this codebase — or any AI system
+that authority. They are not public, and this codebase, or any AI system
 — cannot correctly guess them.
 
 Accordingly:
@@ -55,15 +55,15 @@ Accordingly:
 **This is a legal/compliance matter, not something that can be guessed
 correctly from public sources.** Obtaining each province's real API specs
 directly from that authority, after registering, is a required step before
-these four integrations can be considered production-ready — this codebase
+these four integrations can be considered production-ready, this codebase
 gives you a working, configurable skeleton to plug that documentation into,
 not a finished, verified integration.
 
 ## Retry / reconciliation
 
-- `fbrService.findUnsubmittedSales(companyId)` — completed sales never
+- `fbrService.findUnsubmittedSales(companyId)`: completed sales never
   submitted to FBR.
-- `taxComplianceService.findPendingComplianceSales(companyId)` — completed
+- `taxComplianceService.findPendingComplianceSales(companyId)`: completed
   sales missing a submission for any authority the company is registered
   with (FBR and/or the provincial ones), for use from a cron or admin
   "retry failed submissions" action.

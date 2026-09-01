@@ -55,7 +55,7 @@ async function ownerDashboard(companyId) {
   };
 }
 
-/** Sales Manager view — the pipeline that actually matters to someone running sales, not the whole company's books. */
+/** Sales Manager view: the pipeline that actually matters to someone running sales, not the whole company's books. */
 async function salesManagerDashboard(companyId) {
   const [salesSummary, topProducts, topCustomers] = await Promise.all([
     reportingService.salesSummary(companyId, daysAgo(30), today()),
@@ -65,7 +65,7 @@ async function salesManagerDashboard(companyId) {
   return { role: 'sales_manager', salesTotal30d: salesSummary.summary.netSales, saleCount30d: salesSummary.summary.invoiceCount, topProducts, topCustomers };
 }
 
-/** Warehouse Manager view — stock health, not financial statements. */
+/** Warehouse Manager view: stock health, not financial statements. */
 async function warehouseManagerDashboard(companyId) {
   const [lowStock, stockValuation] = await Promise.all([
     reportingService.lowStockReport(companyId),
@@ -74,20 +74,20 @@ async function warehouseManagerDashboard(companyId) {
   return { role: 'warehouse_manager', lowStockCount: lowStock.length, lowStockItems: lowStock.slice(0, 10), inventoryValue: stockValuation.totalValue };
 }
 
-/** HR Manager view — attendance/leave, the day-to-day HR queue, not sales or inventory. */
+/** HR Manager view: attendance/leave, the day-to-day HR queue, not sales or inventory. */
 async function hrManagerDashboard(companyId) {
   const pendingLeave = await LeaveRequest.countDocuments({ companyId, status: 'pending' });
   return { role: 'hr_manager', pendingLeaveRequests: pendingLeave };
 }
 
-/** Cashier view — deliberately the smallest, most operational slice: what THEY sold today, nothing about the company's overall finances. */
+/** Cashier view: deliberately the smallest, most operational slice: what THEY sold today, nothing about the company's overall finances. */
 async function cashierDashboard(companyId, userId) {
   const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
   const salesSummary = await reportingService.salesSummary(companyId, todayStart, today());
   return { role: 'cashier', salesTotalToday: salesSummary.summary.netSales, saleCountToday: salesSummary.summary.invoiceCount };
 }
 
-/** Common to every role regardless of their specific slice — real unread notifications and pending approvals, since everyone needs to know what's waiting on THEM specifically. */
+/** Common to every role regardless of their specific slice, real unread notifications and pending approvals, since everyone needs to know what's waiting on THEM specifically. */
 async function commonWidgets(companyId, userId, roleId) {
   const [unreadNotifications, pendingApprovals, pendingExpenses, openStockCounts] = await Promise.all([
     Notification.countDocuments({ companyId, read: false, $or: [{ userId }, ...(roleId ? [{ roleId }] : [])] }),

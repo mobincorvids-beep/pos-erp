@@ -23,32 +23,34 @@ export function ConstructionPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <p className="page-title">Bills of Quantities</p>
+      <div className="flex items-end justify-between mb-6">
+        <div>
+          <p className="page-title">Bills of Quantities</p>
+          <p className="text-sm text-ink-muted mt-1 max-w-2xl">A real, pre-approved estimate created before costs start accumulating, compared against actual project costs your team already logs, line by line.</p>
+        </div>
         <button className="btn-primary" onClick={() => setShowForm(true)}>New BOQ</button>
       </div>
-      <p className="text-sm text-ink-muted mb-5 max-w-2xl">A real, pre-approved estimate created before costs start accumulating — compared against actual project costs your team already logs, line by line.</p>
 
       {loading && <Loading />}
       {!loading && boqs.length === 0 && <EmptyState title="No BOQs yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Create one</button>} />}
       {!loading && boqs.length > 0 && (
         <div className="card overflow-hidden">
-          <table className="w-full text-sm">
+          <table className="w-full text-left border-collapse text-sm">
             <thead>
-              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                <th className="px-3 py-2 font-medium">Title</th>
-                <th className="px-3 py-2 font-medium">Line items</th>
-                <th className="px-3 py-2 font-medium text-right">Estimated total</th>
-                <th className="px-3 py-2 font-medium"></th>
+              <tr className="bg-surface-sunken border-b border-rule">
+                <th className="py-3 px-4 eyebrow font-medium">Title</th>
+                <th className="py-3 px-4 eyebrow font-medium">Line items</th>
+                <th className="py-3 px-4 eyebrow font-medium text-right">Estimated total</th>
+                <th className="py-3 px-4"></th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-rule">
               {boqs.map((b) => (
-                <tr key={b._id} className="border-b border-rule last:border-0">
-                  <td className="px-3 py-2">{b.title}</td>
-                  <td className="px-3 py-2 text-ink-muted">{b.lineItems.length}</td>
-                  <td className="px-3 py-2 num text-right">{formatMoney(b.totalEstimated)}</td>
-                  <td className="px-3 py-2 text-right">
+                <tr key={b._id} className="hover:bg-paper transition-colors">
+                  <td className="py-3 px-4 font-medium text-ink">{b.title}</td>
+                  <td className="py-3 px-4 text-ink-muted">{b.lineItems.length}</td>
+                  <td className="py-3 px-4 num text-right">{formatMoney(b.totalEstimated)}</td>
+                  <td className="py-3 px-4 text-right">
                     <button className="btn-ghost !text-accent" onClick={() => setViewingId(b._id)}>Variance</button>
                   </td>
                 </tr>
@@ -98,8 +100,8 @@ function BoqForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-lg max-h-[85vh] overflow-y-auto">
-        <p className="font-display text-lg mb-4">New BOQ</p>
-        <div className="space-y-3 mb-3">
+        <p className="font-display text-lg font-bold text-ink mb-4">New BOQ</p>
+        <div className="space-y-3 mb-4">
           <select required className="field-input" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
             <option value="">Project…</option>
             {projects.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
@@ -107,7 +109,7 @@ function BoqForm({ onClose, onSaved }) {
           <input required className="field-input" placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
         </div>
 
-        <p className="field-label mb-1">Line items</p>
+        <p className="field-label mb-2">Line items</p>
         <div className="space-y-2 mb-2">
           {lines.map((l, i) => (
             <div key={i} className="grid grid-cols-6 gap-2">
@@ -125,7 +127,7 @@ function BoqForm({ onClose, onSaved }) {
           + Add line
         </button>
 
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2 pt-3 border-t border-rule">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
           <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Creating…' : 'Create BOQ'}</button>
         </div>
@@ -149,41 +151,41 @@ function VariancePanel({ boqId, onClose }) {
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <div className="card p-5 w-full max-w-lg max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
-          <p className="font-display text-lg">Variance</p>
+          <p className="font-display text-lg font-bold text-ink">Variance</p>
           <button className="btn-ghost" onClick={onClose}>Close</button>
         </div>
         <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="card p-3">
-            <p className="text-xs text-ink-muted uppercase tracking-wide">Estimated</p>
-            <p className="font-display text-lg mt-1 num">{formatMoney(report.totalEstimated, company?.currency)}</p>
+          <div className="card bg-surface-sunken p-3">
+            <p className="eyebrow">Estimated</p>
+            <p className="font-display text-lg font-bold mt-1 num text-ink">{formatMoney(report.totalEstimated, company?.currency)}</p>
           </div>
-          <div className="card p-3">
-            <p className="text-xs text-ink-muted uppercase tracking-wide">Actual</p>
-            <p className="font-display text-lg mt-1 num">{formatMoney(report.totalActual, company?.currency)}</p>
+          <div className="card bg-surface-sunken p-3">
+            <p className="eyebrow">Actual</p>
+            <p className="font-display text-lg font-bold mt-1 num text-ink">{formatMoney(report.totalActual, company?.currency)}</p>
           </div>
-          <div className="card p-3">
-            <p className="text-xs text-ink-muted uppercase tracking-wide">Variance</p>
-            <p className={`font-display text-lg mt-1 num ${report.totalVariance > 0 ? 'text-danger' : 'text-accent-strong'}`}>{formatMoney(report.totalVariance, company?.currency)}</p>
+          <div className="card bg-surface-sunken p-3">
+            <p className="eyebrow">Variance</p>
+            <p className={`font-display text-lg font-bold mt-1 num ${report.totalVariance > 0 ? 'text-danger' : 'text-accent-strong'}`}>{formatMoney(report.totalVariance, company?.currency)}</p>
           </div>
         </div>
-        <p className="text-xs text-ink-muted mb-3">Actual totals include every cost type the project has actually incurred — even a category nobody budgeted for at all, which is real, meaningful overage, not noise.</p>
+        <p className="text-xs text-ink-muted mb-3">Actual totals include every cost type the project has actually incurred, even a category nobody budgeted for at all, which is real, meaningful overage, not noise.</p>
         <div className="card overflow-hidden">
-          <table className="w-full text-sm">
+          <table className="w-full text-left border-collapse text-sm">
             <thead>
-              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                <th className="px-3 py-2 font-medium">Type</th>
-                <th className="px-3 py-2 font-medium text-right">Estimated</th>
-                <th className="px-3 py-2 font-medium text-right">Actual</th>
-                <th className="px-3 py-2 font-medium text-right">Variance</th>
+              <tr className="bg-surface-sunken border-b border-rule">
+                <th className="py-2.5 px-3 eyebrow font-medium">Type</th>
+                <th className="py-2.5 px-3 eyebrow font-medium text-right">Estimated</th>
+                <th className="py-2.5 px-3 eyebrow font-medium text-right">Actual</th>
+                <th className="py-2.5 px-3 eyebrow font-medium text-right">Variance</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-rule">
               {report.byType.map((r) => (
-                <tr key={r.costType} className="border-b border-rule last:border-0">
-                  <td className="px-3 py-2 capitalize">{r.costType}</td>
-                  <td className="px-3 py-2 num text-right">{formatMoney(r.estimated, company?.currency)}</td>
-                  <td className="px-3 py-2 num text-right">{formatMoney(r.actual, company?.currency)}</td>
-                  <td className={`px-3 py-2 num text-right ${r.variance > 0 ? 'text-danger' : 'text-accent-strong'}`}>{formatMoney(r.variance, company?.currency)} {r.variancePercent !== null ? `(${r.variancePercent}%)` : ''}</td>
+                <tr key={r.costType} className="hover:bg-paper transition-colors">
+                  <td className="py-2.5 px-3 capitalize text-ink">{r.costType}</td>
+                  <td className="py-2.5 px-3 num text-right">{formatMoney(r.estimated, company?.currency)}</td>
+                  <td className="py-2.5 px-3 num text-right">{formatMoney(r.actual, company?.currency)}</td>
+                  <td className={`py-2.5 px-3 num text-right ${r.variance > 0 ? 'text-danger' : 'text-accent-strong'}`}>{formatMoney(r.variance, company?.currency)} {r.variancePercent !== null ? `(${r.variancePercent}%)` : ''}</td>
                 </tr>
               ))}
             </tbody>

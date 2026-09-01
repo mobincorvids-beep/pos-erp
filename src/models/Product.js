@@ -25,6 +25,20 @@ const productSchema = new Schema({
   barcode: { type: String, index: true },
   description: String,
 
+  // Images stored inline as base64 data-URI strings — this app has no cloud/object
+  // storage configured, so uploads are resized/compressed client-side (~800px max
+  // dimension, JPEG ~0.7 quality) before being sent here. Capped at 4 images and
+  // ~1.5MB (base64) per string so a product document can never approach MongoDB's
+  // 16MB document limit.
+  images: {
+    type: [{ type: String, maxlength: 1_500_000 }],
+    default: undefined,
+    validate: {
+      validator: (arr) => !arr || arr.length <= 4,
+      message: 'A product may have at most 4 images.',
+    },
+  },
+
   // simple | variant | batch | serial | weight | recipe | bundle
   trackingMode: { type: String, default: 'simple' },
 

@@ -66,6 +66,14 @@ const saleSchema = new Schema({
   discountAmount: { type: Number, default: 0 },
   taxAmount: { type: Number, default: 0 },
   totalAmount: { type: Number, default: 0 },
+  // A coupon applied at checkout, on top of the per-line discounts already
+  // folded into discountAmount above. Sale has no other header-level
+  // discount field (see loyaltyService's header comment on why point
+  // redemption goes through items[].discountAmount instead) — a coupon
+  // is a straight subtraction from totalAmount, snapshotted here so the
+  // invoice can show what was applied without re-deriving it from Coupon later.
+  couponCode: { type: String, default: null },
+  couponDiscountAmount: { type: Number, default: 0 },
   paidAmount: { type: Number, default: 0 },
   dueAmount: { type: Number, default: 0 },
   writtenOff: { type: Boolean, default: false }, // once true, dueAmount is permanently 0 — see badDebtService.writeOffReceivable

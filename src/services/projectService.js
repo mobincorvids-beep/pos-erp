@@ -29,7 +29,7 @@ async function updateStatus(projectId, status) {
   return project;
 }
 
-/** Manual cost entry — for costs with no Expense/PurchaseOrder of their own (e.g. internal labor). Auto-created costs (type expense/material) come from elsewhere and shouldn't be entered here too. */
+/** Manual cost entry: for costs with no Expense/PurchaseOrder of their own (e.g. internal labor). Auto-created costs (type expense/material) come from elsewhere and shouldn't be entered here too. */
 function logManualCost(input) {
   const { companyId, projectId, amount, note, date, userId } = input;
   if (!amount || amount <= 0) throw new Error('Cost amount must be greater than zero.');

@@ -39,6 +39,16 @@ const OPTIONAL_ITEMS = new Set([
   '/products', '/units', '/purchases', '/rfqs', '/early-payment-discount',
   '/stock-transfers', '/stock-counts', '/ecommerce', '/loyalty',
   '/recurring-invoices',
+  '/fleet', '/field-service', '/quality', '/contracts',
+  '/logistics-core', '/warehouse', '/funnels', '/ecommerce-hub',
+  // 'enterprise-hr' tag — sub-modules of HR/asset management that make
+  // sense for larger or formally-staffed organizations, but are noise for
+  // a single-location shop/restaurant/salon. HR & Payroll itself stays
+  // core (every business has employees) — only these sub-modules hide.
+  '/recruitment', '/performance', '/employee-loans', '/timesheets', '/fixed-assets', '/maintenance',
+  // 'dev' tag — a technical/admin surface, not a day-to-day business
+  // module for anyone by default; only shown behind "Show all modules".
+  '/developer-platform',
 ]);
 
 // Explicit, per-industry list of which optional items that business
@@ -47,64 +57,79 @@ const OPTIONAL_ITEMS = new Set([
 // tag; every line reflects a deliberate decision about that one business.
 const INDUSTRY_VISIBLE_ITEMS = {
   // ---- Goods-led retail & wholesale ----
-  retail: ['products', 'units', 'purchases', 'rfqs', 'early-payment-discount', 'stock-transfers', 'stock-counts', 'ecommerce', 'loyalty'],
-  grocery: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts'],
-  pharmacy: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'appointments'],
-  jewelry: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts'],
+  retail: ['products', 'units', 'purchases', 'rfqs', 'early-payment-discount', 'stock-transfers', 'stock-counts', 'ecommerce', 'ecommerce-hub', 'loyalty', 'logistics-core', 'warehouse', 'funnels'],
+  grocery: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'logistics-core', 'warehouse'],
+  pharmacy: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'appointments', 'logistics-core', 'warehouse'],
+  jewelry: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'logistics-core'],
   // Approved warranty claims open a real core ServiceOrder repair job
   // (warrantyService.js) — confirmed via direct model reference, not
   // inferred — so Service Orders needs to be visible here too.
-  electronics: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'ecommerce', 'service-orders'],
-  furniture: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'manufacturing'],
-  fashion: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'ecommerce', 'loyalty'],
-  bakery: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'manufacturing'],
-  footwear: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'ecommerce'],
-  textile: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'manufacturing'],
-  hardware: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts'],
-  auto_parts: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'service-orders'],
-  toys_gifts: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'ecommerce'],
-  dairy: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'manufacturing'],
-  distribution: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts'],
+  electronics: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'ecommerce', 'ecommerce-hub', 'service-orders', 'field-service', 'quality', 'logistics-core', 'warehouse'],
+  furniture: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'manufacturing', 'quality', 'logistics-core'],
+  fashion: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'ecommerce', 'ecommerce-hub', 'loyalty', 'logistics-core', 'funnels'],
+  bakery: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'manufacturing', 'quality'],
+  footwear: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'ecommerce', 'ecommerce-hub', 'logistics-core'],
+  textile: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'manufacturing', 'quality', 'logistics-core'],
+  hardware: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'field-service', 'logistics-core'],
+  auto_parts: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'service-orders', 'field-service', 'quality', 'logistics-core'],
+  toys_gifts: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'ecommerce', 'ecommerce-hub', 'logistics-core'],
+  dairy: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'manufacturing', 'quality', 'logistics-core'],
+  distribution: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'fleet', 'logistics-core', 'warehouse'],
   // 3PL bills storage on a schedule and never buys the stock it holds —
-  // no Purchases, but Recurring Invoices for contract billing.
-  warehouse_3pl: ['products', 'units', 'stock-transfers', 'stock-counts', 'recurring-invoices'],
-  import_export: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts'],
-  agriculture: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'manufacturing'],
+  // no Purchases, but Recurring Invoices for contract billing. Fleet
+  // covers its own delivery trucks; Contracts tracks the legal storage
+  // agreement itself (separate from StorageContract's billing math — see
+  // contractService.js header comment).
+  warehouse_3pl: ['products', 'units', 'stock-transfers', 'stock-counts', 'recurring-invoices', 'fleet', 'contracts', 'logistics-core', 'warehouse'],
+  import_export: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'contracts', 'logistics-core', 'warehouse'],
+  agriculture: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'manufacturing', 'fleet', 'field-service', 'quality'],
   petrol_pump: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts'],
-  pharmaceutical: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'manufacturing'],
+  pharmaceutical: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'manufacturing', 'quality', 'logistics-core'],
   cafe: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts'],
 
   // ---- Appointment / service-led ----
-  salon: ['appointments', 'loyalty'],
-  gym: ['appointments', 'recurring-invoices'],
-  professional_services: ['recurring-invoices'],
+  salon: ['appointments', 'loyalty', 'funnels'],
+  gym: ['appointments', 'recurring-invoices', 'funnels'],
+  professional_services: ['recurring-invoices', 'contracts'],
   hospital: ['appointments'],
-  service_station: ['appointments', 'service-orders'],
-  automobile: ['products', 'purchases', 'stock-transfers', 'stock-counts', 'service-orders'],
-  telecom: ['recurring-invoices'],
-  courier: [],
+  service_station: ['appointments', 'service-orders', 'field-service'],
+  automobile: ['products', 'purchases', 'stock-transfers', 'stock-counts', 'service-orders', 'field-service'],
+  telecom: ['recurring-invoices', 'field-service'],
+  courier: ['fleet', 'logistics-core'],
 
   // ---- Hospitality ----
-  restaurant: ['products', 'purchases', 'stock-transfers', 'stock-counts'],
+  restaurant: ['products', 'purchases', 'stock-transfers', 'stock-counts', 'funnels'],
   hotel: ['products', 'purchases', 'stock-transfers', 'stock-counts', 'appointments'],
   banquet: ['appointments'],
 
   // ---- Projects / one-off, mostly non-inventory ----
   // Construction materials procurement is real goods AND needs formal
   // supplier RFQs for material sourcing (flagged as a real gap before —
-  // fixed here).
-  construction: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'manufacturing'],
-  real_estate: ['recurring-invoices'],
-  insurance: ['recurring-invoices'],
-  travel: [],
-  car_rental: ['appointments'],
-  logistics: [],
+  // fixed here). Also runs vehicles/equipment (Fleet), field crews
+  // (Field service), formal client/supplier contracts, and NCR/CAPA
+  // quality tracking on build defects.
+  construction: ['products', 'units', 'purchases', 'rfqs', 'stock-transfers', 'stock-counts', 'manufacturing', 'fleet', 'field-service', 'quality', 'contracts'],
+  real_estate: ['recurring-invoices', 'contracts', 'funnels'],
+  insurance: ['recurring-invoices', 'contracts'],
+  travel: ['funnels'],
+  car_rental: ['appointments', 'fleet'],
+  logistics: ['fleet', 'logistics-core'],
   ngo: [],
-  school: ['appointments', 'recurring-invoices'],
-  housing_society: ['recurring-invoices'],
+  school: ['appointments', 'recurring-invoices', 'funnels'],
+  housing_society: ['recurring-invoices', 'contracts'],
   hajj_umrah: [],
-  media_entertainment: ['appointments'],
+  media_entertainment: ['appointments', 'funnels'],
   sports: ['products', 'units', 'purchases', 'stock-transfers', 'stock-counts', 'appointments'],
+
+  // ---- New (bulk buy-and-resell / production) verticals ----
+  // All three are bulk-buying/reselling-or-producing B2B operations: Purchase
+  // orders, RFQs, Early payment discount, Transfers, Stocktakes, and
+  // Warehouse locations are core to every one of them.
+  wholesaler: ['products', 'units', 'purchases', 'rfqs', 'early-payment-discount', 'stock-transfers', 'stock-counts', 'warehouse'],
+  // Production-specific: Manufacturing, Quality, Fleet (own delivery/logistics
+  // fleet) and Logistics/Shipments, on top of the shared bulk-buying set.
+  manufacturer: ['products', 'units', 'purchases', 'rfqs', 'early-payment-discount', 'stock-transfers', 'stock-counts', 'warehouse', 'manufacturing', 'quality', 'fleet', 'logistics-core'],
+  distributor: ['products', 'units', 'purchases', 'rfqs', 'early-payment-discount', 'stock-transfers', 'stock-counts', 'warehouse'],
 };
 
 const PATH_TO_KEY = {
@@ -113,20 +138,51 @@ const PATH_TO_KEY = {
   '/early-payment-discount': 'early-payment-discount', '/stock-transfers': 'stock-transfers',
   '/stock-counts': 'stock-counts', '/ecommerce': 'ecommerce', '/loyalty': 'loyalty',
   '/recurring-invoices': 'recurring-invoices',
+  '/fleet': 'fleet', '/field-service': 'field-service', '/quality': 'quality', '/contracts': 'contracts',
+  '/logistics-core': 'logistics-core', '/warehouse': 'warehouse', '/funnels': 'funnels', '/ecommerce-hub': 'ecommerce-hub',
+  '/recruitment': 'recruitment', '/performance': 'performance', '/employee-loans': 'employee-loans',
+  '/timesheets': 'timesheets', '/fixed-assets': 'fixed-assets', '/maintenance': 'maintenance',
+  '/developer-platform': 'developer-platform',
 };
+
+// 'enterprise-hr' tag: which industries see the fuller HR/asset-management
+// sub-modules (Recruitment, Performance & Goals, Employee loans, Timesheets,
+// Fixed Assets, Maintenance) by default. Aimed at larger or formally-staffed
+// organizations and asset-heavy operators — not the common small single-
+// location vendor (restaurant, cafe, salon, small retail counter, etc.).
+const ENTERPRISE_HR_INDUSTRIES = new Set([
+  'hospital', 'school', 'professional_services', 'logistics', 'construction', 'hotel',
+  'retail', 'distribution', 'warehouse_3pl', 'import_export', 'courier', 'automobile',
+  'textile', 'furniture', 'electronics', 'pharmaceutical', 'agriculture', 'dairy',
+  'service_station', 'petrol_pump', 'media_entertainment', 'real_estate', 'insurance',
+  'car_rental', 'housing_society', 'banquet', 'travel', 'hajj_umrah',
+  // Wholesaler/distributor are larger, more established B2B operations —
+  // matches the same enterprise-HR allow-list pattern as retail/distribution.
+  'wholesaler', 'distributor',
+]);
+const ENTERPRISE_HR_KEYS = ['recruitment', 'performance', 'employee-loans', 'timesheets', 'fixed-assets', 'maintenance'];
 
 /**
  * @param {string} industryType
+ * @param {boolean} [showAll] — the per-company "Show all modules" override;
+ *   when true, every item is shown regardless of industry (never lossy —
+ *   this is purely a default-view declutter, not a hard restriction).
  * @returns {(path: string) => boolean} true if that nav item should show
  */
-export function getNavVisibility(industryType) {
+export function getNavVisibility(industryType, showAll = false) {
+  if (showAll) return () => true;
+
   const list = INDUSTRY_VISIBLE_ITEMS[industryType];
   // Unknown/uncatalogued industry types fall back to "show everything"
   // rather than hiding something a business might genuinely need.
   const unknownIndustry = list === undefined;
   const visibleSet = new Set(list || []);
+  if (ENTERPRISE_HR_INDUSTRIES.has(industryType)) {
+    for (const key of ENTERPRISE_HR_KEYS) visibleSet.add(key);
+  }
   return (path) => {
-    if (!OPTIONAL_ITEMS.has(path)) return true; // universal item
+    if (!OPTIONAL_ITEMS.has(path)) return true; // universal/core item
+    if (path === '/developer-platform') return false; // dev tooling: only via "Show all modules"
     if (unknownIndustry) return true;
     const key = PATH_TO_KEY[path];
     return visibleSet.has(key);

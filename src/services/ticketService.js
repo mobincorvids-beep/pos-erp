@@ -59,7 +59,7 @@ async function assignTicket(ticketId, { assignedToUserId }) {
 async function resolveTicket(ticketId, { resolutionNote }) {
   const ticket = await Ticket.findById(ticketId);
   if (!ticket) throw new Error('Ticket not found.');
-  if (ticket.status !== 'assigned') throw new Error(`Cannot resolve a ticket with status "${ticket.status}" — it must be assigned first.`);
+  if (ticket.status !== 'assigned') throw new Error(`Cannot resolve a ticket with status "${ticket.status}": it must be assigned first.`);
   ticket.status = 'resolved';
   ticket.resolutionNote = resolutionNote;
   ticket.resolvedAt = new Date();
@@ -70,13 +70,13 @@ async function resolveTicket(ticketId, { resolutionNote }) {
 async function closeTicket(ticketId) {
   const ticket = await Ticket.findById(ticketId);
   if (!ticket) throw new Error('Ticket not found.');
-  if (ticket.status !== 'resolved') throw new Error(`Cannot close a ticket with status "${ticket.status}" — it must be resolved first.`);
+  if (ticket.status !== 'resolved') throw new Error(`Cannot close a ticket with status "${ticket.status}": it must be resolved first.`);
   ticket.status = 'closed';
   await ticket.save();
   return ticket;
 }
 
-/** Real compliance math: the actual percentage of RESPONDED-TO tickets that met their SLA, broken down by priority — not a guess, not an average of averages. */
+/** Real compliance math: the actual percentage of RESPONDED-TO tickets that met their SLA, broken down by priority, not a guess, not an average of averages. */
 async function slaComplianceReport(companyId) {
   const responded = await Ticket.find({ companyId, firstRespondedAt: { $ne: null } });
   const byPriority = {};

@@ -30,7 +30,7 @@ function requireConfig() {
   const merchantId = process.env.EASYPAISA_MERCHANT_ID;
   const hashKey = process.env.EASYPAISA_HASH_KEY;
   if (!storeId || !merchantId || !hashKey) {
-    throw new Error('Easypaisa is not configured — set EASYPAISA_STORE_ID, EASYPAISA_MERCHANT_ID and EASYPAISA_HASH_KEY.');
+    throw new Error('Easypaisa is not configured, set EASYPAISA_STORE_ID, EASYPAISA_MERCHANT_ID and EASYPAISA_HASH_KEY.');
   }
   return { storeId, merchantId, hashKey };
 }

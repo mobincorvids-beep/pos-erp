@@ -7,6 +7,12 @@ import { formatDateTime } from '../lib/format';
 
 const STATUS_CHIP = { scheduled: 'chip-neutral', confirmed: 'chip-info', completed: 'chip-accent', cancelled: 'chip-danger', no_show: 'chip-warning' };
 
+function initials(name) {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || name[0].toUpperCase();
+}
+
 export function AppointmentsPage() {
   const toast = useToast();
   const [appointments, setAppointments] = useState([]);
@@ -29,9 +35,15 @@ export function AppointmentsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <p className="page-title">Appointments</p>
-        <button className="btn-primary" onClick={() => setShowForm(true)}>Book appointment</button>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <p className="page-title">Appointments</p>
+          <p className="text-sm text-ink-muted mt-1">Real-time scheduling and staff double-booking prevention.</p>
+        </div>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>
+          <span className="material-symbols-outlined text-[18px]">add</span>
+          Book appointment
+        </button>
       </div>
 
       {loading && <Loading />}
@@ -40,39 +52,50 @@ export function AppointmentsPage() {
       )}
       {!loading && appointments.length > 0 && (
         <div className="card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                <th className="px-3 py-2 font-medium">Service</th>
-                <th className="px-3 py-2 font-medium">When</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-                <th className="px-3 py-2 font-medium"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {appointments.map((a) => (
-                <tr key={a._id} className="border-b border-rule last:border-0">
-                  <td className="px-3 py-2">{a.serviceName}</td>
-                  <td className="px-3 py-2 text-ink-muted">{formatDateTime(a.startTime)}</td>
-                  <td className="px-3 py-2"><span className={STATUS_CHIP[a.status]}>{a.status.replace('_', ' ')}</span></td>
-                  <td className="px-3 py-2 text-right">
+          <div className="px-5 py-4 border-b border-rule flex items-center justify-between bg-surface">
+            <p className="font-display text-lg font-semibold text-ink">Daily queue</p>
+            <span className="eyebrow">{appointments.length} total</span>
+          </div>
+          <div className="divide-y divide-rule">
+            {appointments.map((a) => {
+              const isActive = a.status === 'confirmed';
+              return (
+                <div
+                  key={a._id}
+                  className={
+                    isActive
+                      ? 'p-4 flex items-center gap-4 bg-accent-soft border-l-4 border-accent'
+                      : 'p-4 flex items-center gap-4 border-l-4 border-transparent hover:bg-surface-sunken transition-colors'
+                  }
+                >
+                  <div className="w-10 h-10 shrink-0 rounded-full bg-surface-sunken flex items-center justify-center text-sm font-semibold text-ink font-display">
+                    {initials(a.customerName || a.serviceName)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-ink-muted num">{formatDateTime(a.startTime)}</span>
+                      <span className={STATUS_CHIP[a.status]}>{a.status.replace('_', ' ')}</span>
+                    </div>
+                    <p className="font-semibold text-ink mt-1 truncate">{a.serviceName}</p>
+                  </div>
+                  <div className="shrink-0 flex gap-2">
                     {a.status === 'scheduled' && (
-                      <div className="flex gap-1 justify-end">
-                        <button className="btn-ghost !text-accent" onClick={() => updateStatus(a._id, 'confirmed')}>Confirm</button>
-                        <button className="btn-ghost !text-danger" onClick={() => updateStatus(a._id, 'cancelled')}>Cancel</button>
-                      </div>
+                      <>
+                        <button className="btn-secondary !py-1.5 !px-3 text-xs" onClick={() => updateStatus(a._id, 'confirmed')}>Confirm</button>
+                        <button className="btn-ghost !text-danger !py-1.5 !px-3 text-xs" onClick={() => updateStatus(a._id, 'cancelled')}>Cancel</button>
+                      </>
                     )}
                     {a.status === 'confirmed' && (
-                      <div className="flex gap-1 justify-end">
-                        <button className="btn-ghost !text-accent" onClick={() => updateStatus(a._id, 'completed')}>Complete</button>
-                        <button className="btn-ghost !text-warning" onClick={() => updateStatus(a._id, 'no_show')}>No-show</button>
-                      </div>
+                      <>
+                        <button className="btn-primary !py-1.5 !px-3 text-xs" onClick={() => updateStatus(a._id, 'completed')}>Complete</button>
+                        <button className="btn-ghost !text-warning !py-1.5 !px-3 text-xs" onClick={() => updateStatus(a._id, 'no_show')}>No-show</button>
+                      </>
                     )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -112,7 +135,7 @@ function AppointmentForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Book appointment</p>
+        <p className="font-display text-lg font-semibold text-ink mb-4">Book appointment</p>
         <div className="space-y-3">
           <div><label className="field-label">Service</label><input required autoFocus className="field-input" value={form.serviceName} onChange={(e) => setForm({ ...form, serviceName: e.target.value })} placeholder="e.g. Haircut" /></div>
           <div>

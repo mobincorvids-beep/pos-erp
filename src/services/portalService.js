@@ -33,7 +33,7 @@ function signPortalAccessToken(portalUser) {
   );
 }
 
-/** Staff-initiated — creates (or reuses) a portal login for a customer and emails them an activation link. No password is set yet; the customer chooses their own via activateInvite(). */
+/** Staff-initiated: creates (or reuses) a portal login for a customer and emails them an activation link. No password is set yet; the customer chooses their own via activateInvite(). */
 async function invite({ companyId, customerId, email, userId }) {
   const customer = await Customer.findOne({ _id: customerId, companyId });
   if (!customer) throw new Error('Customer not found.');
@@ -99,7 +99,7 @@ async function login({ email, password, deviceContext }) {
   return { accessToken, refreshToken, customerId: portalUser.customerId };
 }
 
-/** The portal home view — outstanding balance and recent activity, straight from the real ledger, not a separate summary that could drift from it. */
+/** The portal home view: outstanding balance and recent activity, straight from the real ledger, not a separate summary that could drift from it. */
 async function dashboard(customerId) {
   const ledgerResult = await customerLedgerService.ledger(customerId);
   const recentInvoices = await Sale.find({ customerId, status: 'completed' }).sort({ createdAt: -1 }).limit(10)
@@ -123,14 +123,14 @@ async function getInvoice(customerId, saleId) {
   return sale;
 }
 
-/** Lets the customer raise a support request themselves, through the same real Ticket/SLA engine staff use — not a separate, disconnected "contact us" form. Uses the company's first active branch since a customer has no branch of their own to pick from. */
+/** Lets the customer raise a support request themselves, through the same real Ticket/SLA engine staff use, not a separate, disconnected "contact us" form. Uses the company's first active branch since a customer has no branch of their own to pick from. */
 async function submitTicket(companyId, customerId, { category, subject, description, priority }) {
   const branch = await Branch.findOne({ companyId, isActive: true }).sort({ createdAt: 1 });
   if (!branch) throw new Error('This company has no active branch configured to route the ticket to.');
   return ticketService.createTicket({ companyId, branchId: branch._id, customerId, category, subject, description, priority: priority || 'medium' });
 }
 
-/** Exchanges a refresh token for a new access token, same rotation-with-reuse-detection flow the staff session uses (refreshTokenService.rotate is subject-type-agnostic — 'PortalUser' here instead of 'User'). */
+/** Exchanges a refresh token for a new access token, same rotation-with-reuse-detection flow the staff session uses (refreshTokenService.rotate is subject-type-agnostic, 'PortalUser' here instead of 'User'). */
 async function refresh(rawRefreshToken) {
   const { subjectType, subjectId, newToken } = await refreshTokenService.rotate(rawRefreshToken);
   if (subjectType !== 'PortalUser') throw new Error('Invalid refresh token.');

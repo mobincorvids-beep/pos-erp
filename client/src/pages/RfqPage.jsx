@@ -23,39 +23,58 @@ export function RfqPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <p className="page-title">RFQs</p>
-        <button className="btn-primary" onClick={() => setShowForm(true)}>New RFQ</button>
-      </div>
-
       {loading && <Loading />}
       {!loading && rfqs.length === 0 && (
-        <EmptyState title="No RFQs yet" description="Send the same item list to several suppliers and let the system find the cheapest price per item, not just an overall winner." action={<button className="btn-primary" onClick={() => setShowForm(true)}>Create an RFQ</button>} />
+        <>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="page-title">RFQs</p>
+              <p className="text-sm text-ink-muted mt-1">Manage requests for quotation and compare supplier pricing.</p>
+            </div>
+            <button className="btn-primary" onClick={() => setShowForm(true)}>
+              <span className="material-symbols-outlined text-[18px]">add</span>
+              New RFQ
+            </button>
+          </div>
+          <EmptyState title="No RFQs yet" description="Send the same item list to several suppliers and let the system find the cheapest price per item, not just an overall winner." action={<button className="btn-primary" onClick={() => setShowForm(true)}>Create an RFQ</button>} />
+        </>
       )}
       {!loading && rfqs.length > 0 && (
-        <div className="card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                <th className="px-3 py-2 font-medium">Items</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-                <th className="px-3 py-2 font-medium">Created</th>
-                <th className="px-3 py-2 font-medium"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {rfqs.map((r) => (
-                <tr key={r._id} className="border-b border-rule last:border-0">
-                  <td className="px-3 py-2">{r.items.length} item{r.items.length !== 1 ? 's' : ''}</td>
-                  <td className="px-3 py-2"><span className={STATUS_CHIP[r.status]}>{r.status}</span></td>
-                  <td className="px-3 py-2 text-ink-muted">{new Date(r.createdAt).toLocaleDateString()}</td>
-                  <td className="px-3 py-2 text-right">
-                    <button className="btn-ghost !text-accent" onClick={() => setSelected(r)}>Open</button>
-                  </td>
+        <div className="card overflow-hidden flex flex-col min-h-[70vh]">
+          <div className="p-6 border-b border-rule flex justify-between items-center bg-surface">
+            <div>
+              <p className="page-title">Active Opportunities</p>
+              <p className="text-sm text-ink-muted mt-1">Manage current RFQs and compare supplier pricing.</p>
+            </div>
+            <button className="btn-primary" onClick={() => setShowForm(true)}>
+              <span className="material-symbols-outlined text-[18px]">add</span>
+              New RFQ
+            </button>
+          </div>
+          <div className="overflow-x-auto flex-1">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-surface-sunken border-b border-rule">
+                  <th className="py-3 px-6 eyebrow">Items</th>
+                  <th className="py-3 px-6 eyebrow">Status</th>
+                  <th className="py-3 px-6 eyebrow">Created</th>
+                  <th className="py-3 px-6"></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="text-sm">
+                {rfqs.map((r) => (
+                  <tr key={r._id} className="border-b border-rule last:border-0 hover:bg-accent-soft/30 transition-colors cursor-pointer group" onClick={() => setSelected(r)}>
+                    <td className="py-3 px-6 num text-ink">{r.items.length} item{r.items.length !== 1 ? 's' : ''}</td>
+                    <td className="py-3 px-6"><span className={STATUS_CHIP[r.status]}>{r.status}</span></td>
+                    <td className="py-3 px-6 text-ink-muted">{new Date(r.createdAt).toLocaleDateString()}</td>
+                    <td className="py-3 px-6 text-right">
+                      <button className="btn-ghost !text-accent opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => { e.stopPropagation(); setSelected(r); }}>Open</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -105,8 +124,8 @@ function RfqForm({ onClose, onSaved }) {
 
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
-      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-lg max-h-[85vh] overflow-y-auto">
-        <p className="font-display text-lg mb-4">New RFQ</p>
+      <form onSubmit={handleSubmit} className="card p-6 w-full max-w-lg max-h-[85vh] overflow-y-auto">
+        <p className="font-display text-lg font-bold text-ink mb-4">New RFQ</p>
         <select required className="field-input mb-3" value={branchId} onChange={(e) => setBranchId(e.target.value)}>
           <option value="">Branch…</option>
           {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
@@ -172,10 +191,16 @@ function RfqDetail({ rfq, onClose, onChanged }) {
 
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
-      <div className="card p-5 w-full max-w-2xl max-h-[85vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-4">
-          <p className="font-display text-lg">RFQ — {rfq.items.length} item{rfq.items.length !== 1 ? 's' : ''}</p>
-          <button className="btn-ghost" onClick={onClose}>Close</button>
+      <div className="card p-6 w-full max-w-2xl max-h-[85vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <p className="eyebrow mb-1">RFQ</p>
+            <p className="font-display text-lg font-bold text-ink">{rfq.items.length} item{rfq.items.length !== 1 ? 's' : ''} requested</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className={STATUS_CHIP[rfq.status]}>{rfq.status}</span>
+            <button className="btn-ghost" onClick={onClose}>Close</button>
+          </div>
         </div>
 
         {rfq.status === 'open' && (
@@ -185,19 +210,19 @@ function RfqDetail({ rfq, onClose, onChanged }) {
         <p className="field-label mb-2">Quotations received ({quotations.length})</p>
         {quotations.length === 0 && <p className="text-sm text-ink-muted mb-4">No quotations yet.</p>}
         {quotations.length > 0 && (
-          <div className="card overflow-hidden mb-4">
-            <table className="w-full text-sm">
+          <div className="card overflow-hidden mb-5">
+            <table className="w-full text-sm border-collapse">
               <thead>
-                <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                  <th className="px-3 py-2 font-medium">Supplier</th>
-                  <th className="px-3 py-2 font-medium text-right">Total</th>
+                <tr className="bg-surface-sunken border-b border-rule">
+                  <th className="px-4 py-2.5 eyebrow">Supplier</th>
+                  <th className="px-4 py-2.5 eyebrow text-right">Total</th>
                 </tr>
               </thead>
               <tbody>
                 {quotations.map((q) => (
                   <tr key={q._id} className="border-b border-rule last:border-0">
-                    <td className="px-3 py-2">{q.supplierId?.name || '—'}</td>
-                    <td className="px-3 py-2 num text-right">{formatMoney(q.totalAmount, company?.currency)}</td>
+                    <td className="px-4 py-2.5">{q.supplierId?.name || '-'}</td>
+                    <td className="px-4 py-2.5 num text-right">{formatMoney(q.totalAmount, company?.currency)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -208,19 +233,19 @@ function RfqDetail({ rfq, onClose, onChanged }) {
         {comparison?.bestByItem?.length > 0 && (
           <>
             <p className="field-label mb-2">Best price per item</p>
-            <div className="card overflow-hidden mb-4">
-              <table className="w-full text-sm">
+            <div className="card overflow-hidden mb-5">
+              <table className="w-full text-sm border-collapse">
                 <thead>
-                  <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                    <th className="px-3 py-2 font-medium">Winning supplier</th>
-                    <th className="px-3 py-2 font-medium text-right">Unit price</th>
+                  <tr className="bg-surface-sunken border-b border-rule">
+                    <th className="px-4 py-2.5 eyebrow">Winning supplier</th>
+                    <th className="px-4 py-2.5 eyebrow text-right">Unit price</th>
                   </tr>
                 </thead>
                 <tbody>
                   {comparison.bestByItem.map((b, i) => (
                     <tr key={i} className="border-b border-rule last:border-0">
-                      <td className="px-3 py-2">{b.supplierId?.name || '—'}</td>
-                      <td className="px-3 py-2 num text-right">{formatMoney(b.unitPrice, company?.currency)}</td>
+                      <td className="px-4 py-2.5">{b.supplierId?.name || '-'}</td>
+                      <td className="px-4 py-2.5 num text-right">{formatMoney(b.unitPrice, company?.currency)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -268,8 +293,8 @@ function QuoteForm({ rfq, onClose, onSaved }) {
 
   return (
     <div className="fixed inset-0 bg-ink/30 flex items-center justify-center z-50 px-4">
-      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Submit a quotation</p>
+      <form onSubmit={handleSubmit} className="card p-6 w-full max-w-sm">
+        <p className="font-display text-lg font-bold text-ink mb-4">Submit a quotation</p>
         <select required className="field-input mb-3" value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
           <option value="">Supplier…</option>
           {suppliers.map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}

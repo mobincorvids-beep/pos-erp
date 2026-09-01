@@ -35,7 +35,7 @@ function submitQuote(input) {
   return SupplierQuote.create({ companyId, requisitionId, supplierId, items, validUntil });
 }
 
-/** Quotes for a requisition, ranked cheapest-total-first — the "cost comparison" the proposal called out under Purchase & Supplier Management. */
+/** Quotes for a requisition, ranked cheapest-total-first, the "cost comparison" the proposal called out under Purchase & Supplier Management. */
 async function compareQuotes(requisitionId) {
   const quotes = await SupplierQuote.find({ requisitionId }).populate('supplierId', 'name');
   return quotes

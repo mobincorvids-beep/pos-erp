@@ -19,5 +19,7 @@ router.get('/:id', controller.get);
 router.post('/', requirePermission(INVENTORY_ADJUST), requireBranchAccess(extractBranchIdFromWarehouse), controller.start);           // { warehouseId, variantIds? }
 router.patch('/:id/counts', requirePermission(INVENTORY_ADJUST), controller.recordCounts); // { counts: [{ itemId, countedQuantity }] }
 router.post('/:id/submit', requirePermission(INVENTORY_ADJUST), controller.submit);
+router.delete('/:id', requirePermission(INVENTORY_ADJUST), controller.remove); // only while in_progress — see stockCountService.deleteCount
+router.delete('/:id/items/:itemId', requirePermission(INVENTORY_ADJUST), controller.removeItem);
 
 module.exports = router;

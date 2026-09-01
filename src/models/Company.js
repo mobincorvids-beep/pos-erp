@@ -3,10 +3,24 @@ const { Schema, model } = require('mongoose');
 const companySchema = new Schema({
   name: { type: String, required: true },
   slug: { type: String, required: true, unique: true },
-  industryType: { type: String, default: 'retail' }, // retail, restaurant, pharmacy, salon...
+  industryType: { type: String, default: 'retail' }, // retail, restaurant, pharmacy, salon, wholesaler, manufacturer, distributor...
   ntn: String,        // National Tax Number
   strn: String,       // Sales Tax Registration Number
   fbrPosId: String,   // FBR POS registration ID
+  // Each vendor has their own separate FBR IRIS registration and Bearer
+  // token — there is no shared/platform-wide FBR account, so this is
+  // entered per-company under Settings, same self-service pattern as
+  // jazzCashTaxPay below. TODO(security): encrypt at rest in production —
+  // stored plain for now, no existing encryption helper in this codebase
+  // to reuse (same caveat already noted on jazzCashTaxPay.password below).
+  fbrApiToken: { type: String, default: null },
+  // FBR's sandbox and production Digital Invoicing environments are
+  // authenticated by different tokens against the SAME host
+  // (gw.fbr.gov.pk/di_data/v1/di) per FBR's own integration guides — this
+  // flag exists so fbrService picks the right token lifecycle stage to
+  // report in errors/UI, not to switch hosts. Vendor turns this off once
+  // they've requested and received a production token from IRIS.
+  fbrSandboxMode: { type: Boolean, default: true },
   phone: String,
   email: String,
   address: String,
@@ -52,6 +66,24 @@ const companySchema = new Schema({
   // companyProvisioningService.onboardCompany() from the accounts it just
   // created — see defaultAccountsService for how a lookup here falls back
   // to a name-based guess only when a company was set up some other way.
+  // Per-tenant JazzCash credentials used ONLY for paying this company's OWN
+  // tax liability to FBR (Bill Payment / Tax Payment API family) — kept
+  // entirely separate from the platform-wide JAZZCASH_* env vars that
+  // jazzCashService.js uses for customer-facing POS checkout, since each
+  // vendor connects their own JazzCash merchant account for this flow.
+  // NOTE: password/integritySalt are sensitive credentials stored as-is
+  // below — no encrypted-field pattern exists elsewhere in this codebase
+  // (grepped for "encrypt", found none) to reuse, so production deployments
+  // should add field-level encryption-at-rest for these two before go-live.
+  jazzCashTaxPay: {
+    enabled: { type: Boolean, default: false },
+    merchantId: { type: String, default: null },
+    password: { type: String, default: null }, // TODO(security): encrypt at rest in production — stored plain for now, no existing encryption helper in this codebase to reuse.
+    integritySalt: { type: String, default: null }, // TODO(security): encrypt at rest in production, see note above.
+    fbrAccountNumber: { type: String, default: null },
+    fbrAccountTitle: { type: String, default: null },
+  },
+
   defaultAccounts: {
     inventoryAssetId: { type: Schema.Types.ObjectId, ref: 'Account', default: null },
     costOfGoodsSoldId: { type: Schema.Types.ObjectId, ref: 'Account', default: null },

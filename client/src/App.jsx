@@ -10,6 +10,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { HomeDashboardPage } from './pages/HomeDashboardPage';
 import { PosPage } from './pages/PosPage';
 import { ProductsPage } from './pages/ProductsPage';
+import { CategoriesPage } from './pages/CategoriesPage';
 import { SalesHistoryPage } from './pages/SalesHistoryPage';
 import { SalesWorkflowPage } from './pages/SalesWorkflowPage';
 import { PurchasesPage } from './pages/PurchasesPage';
@@ -26,6 +27,7 @@ import { SecurityPage } from './pages/SecurityPage';
 import { RfqPage } from './pages/RfqPage';
 import { BudgetsPage } from './pages/BudgetsPage';
 import { EmployeeLoansPage } from './pages/EmployeeLoansPage';
+import { TimesheetsPage } from './pages/TimesheetsPage';
 import { RecurringInvoicesPage } from './pages/RecurringInvoicesPage';
 import { AgingPage } from './pages/AgingPage';
 import { PeriodsPage } from './pages/PeriodsPage';
@@ -47,6 +49,20 @@ import { LoyaltyPage } from './pages/LoyaltyPage';
 import { AppointmentsPage } from './pages/AppointmentsPage';
 import { EcommercePage } from './pages/EcommercePage';
 import { AiInsightsPage } from './pages/AiInsightsPage';
+import { FleetPage } from './pages/FleetPage';
+import { FieldServicePage } from './pages/FieldServicePage';
+import { QualityPage } from './pages/QualityPage';
+import { ContractsPage } from './pages/ContractsPage';
+import { SupplierPortalApp } from './portal-supplier/SupplierPortalApp';
+import { EmployeePortalApp } from './portal-employee/EmployeePortalApp';
+import { CoreLogisticsPage } from './pages/CoreLogisticsPage';
+import { WarehouseZonesPage } from './pages/WarehouseZonesPage';
+import { RecruitmentPage } from './pages/RecruitmentPage';
+import { PerformancePage } from './pages/PerformancePage';
+import { FunnelsPage } from './pages/FunnelsPage';
+import { FunnelLandingPage } from './public/FunnelLandingPage';
+import { DeveloperPlatformPage } from './pages/DeveloperPlatformPage';
+import { EcommerceHubPage } from './pages/EcommerceHubPage';
 import { INDUSTRY_MODULES } from './industryModuleRegistry';
 import { Suspense } from 'react';
 import { useAuth } from './context/AuthContext';
@@ -115,6 +131,7 @@ export default function App() {
               <Route path="/sales" element={<SalesHistoryPage />} />
               <Route path="/sales-workflow" element={<SalesWorkflowPage />} />
               <Route path="/products" element={<ProductsPage />} />
+              <Route path="/categories" element={<CategoriesPage />} />
               <Route path="/purchases" element={<PurchasesPage />} />
               <Route path="/stock-transfers" element={<StockTransfersPage />} />
               <Route path="/stock-counts" element={<StockCountsPage />} />
@@ -129,6 +146,7 @@ export default function App() {
               <Route path="/rfqs" element={<RfqPage />} />
               <Route path="/budgets" element={<BudgetsPage />} />
               <Route path="/employee-loans" element={<EmployeeLoansPage />} />
+              <Route path="/timesheets" element={<TimesheetsPage />} />
               <Route path="/recurring-invoices" element={<RecurringInvoicesPage />} />
               <Route path="/aging" element={<AgingPage />} />
               <Route path="/periods" element={<PeriodsPage />} />
@@ -149,6 +167,17 @@ export default function App() {
               <Route path="/appointments" element={<AppointmentsPage />} />
               <Route path="/ecommerce" element={<EcommercePage />} />
               <Route path="/ai-insights" element={<AiInsightsPage />} />
+              <Route path="/fleet" element={<FleetPage />} />
+              <Route path="/field-service" element={<FieldServicePage />} />
+              <Route path="/quality" element={<QualityPage />} />
+              <Route path="/contracts" element={<ContractsPage />} />
+              <Route path="/logistics-core" element={<CoreLogisticsPage />} />
+              <Route path="/warehouse" element={<WarehouseZonesPage />} />
+              <Route path="/recruitment" element={<RecruitmentPage />} />
+              <Route path="/performance" element={<PerformancePage />} />
+              <Route path="/funnels" element={<FunnelsPage />} />
+              <Route path="/developer-platform" element={<DeveloperPlatformPage />} />
+              <Route path="/ecommerce-hub" element={<EcommerceHubPage />} />
               {INDUSTRY_MODULES.map(({ key, path, label, component: Component }) => (
                 <Route key={key} path={path} element={
                   <IndustryModuleGate industryKey={key} label={label}>
@@ -162,6 +191,9 @@ export default function App() {
           {/* Customer portal — completely separate auth context/token (see
               api/portalClient.js), never mixed with the staff app above. */}
           <Route path="/portal/*" element={<PortalApp />} />
+          <Route path="/supplier-portal/*" element={<SupplierPortalApp />} />
+          <Route path="/employee-portal/*" element={<EmployeePortalApp />} />
+          <Route path="/f/:slug" element={<FunnelLandingPage />} />
 
           {/* Platform-admin section — completely separate auth context/token
               (see admin/api.js), never mixed with the tenant app above. */}

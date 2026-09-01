@@ -22,7 +22,7 @@ function registerAsset(input) {
   } = input;
   if (!purchaseCost || purchaseCost <= 0) throw new Error('purchaseCost must be greater than zero.');
   if (!usefulLifeMonths || usefulLifeMonths <= 0) throw new Error('usefulLifeMonths must be greater than zero.');
-  if ((salvageValue || 0) >= purchaseCost) throw new Error('salvageValue must be less than purchaseCost — an asset can\'t be worth its full original cost forever.');
+  if ((salvageValue || 0) >= purchaseCost) throw new Error('salvageValue must be less than purchaseCost, an asset can\'t be worth its full original cost forever.');
 
   const monthlyDepreciation = Math.round(((purchaseCost - (salvageValue || 0)) / usefulLifeMonths) * 100) / 100;
 
@@ -60,7 +60,7 @@ async function runDepreciation(assetId, { period, userId }) {
 
   const voucher = await accountingService.postVoucher({
     companyId: asset.companyId, branchId: asset.branchId, type: 'journal',
-    narration: `Depreciation — ${asset.name} — ${period}`,
+    narration: `Depreciation (${asset.name}) ${period}`,
     entries: [
       { accountId: asset.depreciationExpenseAccountId, debit: amount, credit: 0 },
       { accountId: asset.accumulatedDepreciationAccountId, debit: 0, credit: amount },
@@ -108,7 +108,7 @@ async function disposeAsset(assetId, { disposalDate, disposalProceeds, gainLossA
 
   const voucher = await accountingService.postVoucher({
     companyId: asset.companyId, branchId: asset.branchId, type: 'journal',
-    narration: `Disposal — ${asset.name}`,
+    narration: `Disposal: ${asset.name}`,
     entries, referenceType: 'FixedAsset', referenceId: asset._id, userId,
   });
 

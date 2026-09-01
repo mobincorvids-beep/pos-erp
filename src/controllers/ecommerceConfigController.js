@@ -6,7 +6,7 @@ async function getConfig(req, res) {
   res.json(company.ecommerceConfig || { enabled: false });
 }
 
-/** Enables (or re-configures) the integration and issues/rotates the webhook token — shown once in the response, same principle as the platform-admin onboarding password. */
+/** Enables (or re-configures) the integration and issues/rotates the webhook token, shown once in the response, same principle as the platform-admin onboarding password. */
 async function enable(req, res) {
   try {
     const company = await Company.findById(req.companyId);

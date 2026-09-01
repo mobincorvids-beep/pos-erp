@@ -10,10 +10,11 @@ export function CarRentalPage() {
   const [tab, setTab] = useState('fleet');
   return (
     <div>
+      <p className="eyebrow mb-1">Rentals</p>
       <p className="page-title mb-4">Car Rental</p>
-      <div className="flex gap-1 border-b border-rule mb-5">
+      <div className="flex gap-2 mb-5">
         {[['fleet', 'Fleet'], ['bookings', 'Bookings']].map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} className={`px-3 py-2 text-sm -mb-px border-b-2 ${tab === key ? 'border-accent text-accent-strong font-medium' : 'border-transparent text-ink-muted hover:text-ink'}`}>
+          <button key={key} onClick={() => setTab(key)} className={tab === key ? 'pill-active' : 'pill'}>
             {label}
           </button>
         ))}
@@ -49,24 +50,32 @@ function FleetTab() {
     }
   }
 
+  const statusChip = { available: 'chip-accent', rented: 'chip-info', maintenance: 'chip-warning' };
+
   return (
     <div>
-      <div className="flex justify-end mb-3">
-        <button className="btn-primary" onClick={() => setShowForm(true)}>Add vehicle</button>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm text-ink-muted">Vehicles available for rent across branches.</p>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>
+          <span className="font-icon text-base leading-none">add</span>
+          Add vehicle
+        </button>
       </div>
       {loading && <Loading />}
       {!loading && fleet.length === 0 && <EmptyState title="No vehicles yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Add a vehicle</button>} />}
       {!loading && fleet.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {fleet.map((v) => (
-            <div key={v._id} className="card p-3">
-              <p className="text-sm font-medium">{v.vehicleClass}</p>
+            <div key={v._id} className="card p-4">
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-display font-semibold text-ink">{v.vehicleClass}</p>
+                <span className={statusChip[v.status] || 'chip-neutral'}>{v.status}</span>
+              </div>
               <p className="text-xs text-ink-muted mt-1">{v.registrationNumber}</p>
-              <p className="num text-sm text-accent-strong mt-1">{formatMoney(v.dailyRate, company?.currency)}/day</p>
-              <p className="text-xs text-ink-muted mt-1 capitalize">{v.status}</p>
-              <div className="flex gap-3 mt-2">
-                <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => setEditing(v)}>Edit</button>
-                <button className="btn-ghost !text-red-600 !px-0 text-xs" onClick={() => handleDelete(v)}>Remove</button>
+              <p className="num text-sm font-semibold text-accent-strong mt-2">{formatMoney(v.dailyRate, company?.currency)}<span className="text-xs font-normal text-ink-muted">/day</span></p>
+              <div className="flex gap-3 mt-3 pt-3 border-t border-rule">
+                <button className="btn-ghost !text-accent !px-0 text-xs font-semibold" onClick={() => setEditing(v)}>Edit</button>
+                <button className="btn-ghost !text-danger !px-0 text-xs font-semibold" onClick={() => handleDelete(v)}>Remove</button>
               </div>
             </div>
           ))}
@@ -98,12 +107,18 @@ function VehicleEditForm({ vehicle, onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
-      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Edit vehicle — {vehicle.registrationNumber}</p>
+    <div className="fixed inset-0 bg-ink/30 backdrop-blur-sm flex items-center justify-center z-40 px-4">
+      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm shadow-lg">
+        <p className="page-title text-lg mb-4">Edit vehicle: {vehicle.registrationNumber}</p>
         <div className="space-y-3">
-          <div><label className="field-label">Vehicle class</label><input required className="field-input" value={form.vehicleClass} onChange={(e) => setForm({ ...form, vehicleClass: e.target.value })} /></div>
-          <div><label className="field-label">Daily rate</label><input type="number" required className="field-input num" value={form.dailyRate} onChange={(e) => setForm({ ...form, dailyRate: e.target.value })} /></div>
+          <div>
+            <label className="field-label">Vehicle class</label>
+            <input required className="field-input" value={form.vehicleClass} onChange={(e) => setForm({ ...form, vehicleClass: e.target.value })} />
+          </div>
+          <div>
+            <label className="field-label">Daily rate</label>
+            <input type="number" required className="field-input num" value={form.dailyRate} onChange={(e) => setForm({ ...form, dailyRate: e.target.value })} />
+          </div>
           <div>
             <label className="field-label">Status</label>
             <select className="field-input" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
@@ -145,9 +160,9 @@ function VehicleForm({ onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
-      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Add vehicle</p>
+    <div className="fixed inset-0 bg-ink/30 backdrop-blur-sm flex items-center justify-center z-40 px-4">
+      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm shadow-lg">
+        <p className="page-title text-lg mb-4">Add vehicle</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Branch</label>
@@ -156,9 +171,18 @@ function VehicleForm({ onClose, onSaved }) {
               {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
             </select>
           </div>
-          <div><label className="field-label">Vehicle class</label><input required autoFocus className="field-input" value={form.vehicleClass} onChange={(e) => setForm({ ...form, vehicleClass: e.target.value })} placeholder="e.g. Sedan" /></div>
-          <div><label className="field-label">Registration number</label><input required className="field-input" value={form.registrationNumber} onChange={(e) => setForm({ ...form, registrationNumber: e.target.value })} /></div>
-          <div><label className="field-label">Daily rate</label><input type="number" required className="field-input num" value={form.dailyRate} onChange={(e) => setForm({ ...form, dailyRate: e.target.value })} /></div>
+          <div>
+            <label className="field-label">Vehicle class</label>
+            <input required autoFocus className="field-input" value={form.vehicleClass} onChange={(e) => setForm({ ...form, vehicleClass: e.target.value })} placeholder="e.g. Sedan" />
+          </div>
+          <div>
+            <label className="field-label">Registration number</label>
+            <input required className="field-input" value={form.registrationNumber} onChange={(e) => setForm({ ...form, registrationNumber: e.target.value })} />
+          </div>
+          <div>
+            <label className="field-label">Daily rate</label>
+            <input type="number" required className="field-input num" value={form.dailyRate} onChange={(e) => setForm({ ...form, dailyRate: e.target.value })} />
+          </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
@@ -183,24 +207,32 @@ function BookingsTab() {
   }
   useEffect(load, []);
 
+  const statusChip = { booked: 'chip-accent', returned: 'chip-info', cancelled: 'chip-danger' };
+
   return (
     <div>
-      <div className="flex justify-end mb-3">
-        <button className="btn-primary" onClick={() => setShowForm(true)}>New booking</button>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm text-ink-muted">Reservations, returns, and cancellations.</p>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>
+          <span className="font-icon text-base leading-none">add</span>
+          New booking
+        </button>
       </div>
       {loading && <Loading />}
       {!loading && bookings.length === 0 && <EmptyState title="No bookings yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Create a booking</button>} />}
       {!loading && bookings.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {bookings.map((b) => (
-            <div key={b._id} className="card p-3">
-              <p className="text-sm font-medium">{b.vehicleClass}</p>
-              <p className="text-xs text-ink-muted mt-1">{b.startDate?.slice(0, 10)} → {b.endDate?.slice(0, 10)}</p>
-              <p className="text-xs text-ink-muted mt-1 capitalize">{b.status}</p>
+            <div key={b._id} className="card p-4">
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-display font-semibold text-ink">{b.vehicleClass}</p>
+                <span className={statusChip[b.status] || 'chip-neutral'}>{b.status}</span>
+              </div>
+              <p className="text-xs text-ink-muted mt-1 num">{b.startDate?.slice(0, 10)} → {b.endDate?.slice(0, 10)}</p>
               {b.status === 'booked' && (
-                <div className="flex gap-3 mt-2">
-                  <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => setReturning(b)}>Return vehicle</button>
-                  <button className="btn-ghost !text-red-600 !px-0 text-xs" onClick={() => setCancelling(b)}>Cancel</button>
+                <div className="flex gap-3 mt-3 pt-3 border-t border-rule">
+                  <button className="btn-ghost !text-accent !px-0 text-xs font-semibold" onClick={() => setReturning(b)}>Return vehicle</button>
+                  <button className="btn-ghost !text-danger !px-0 text-xs font-semibold" onClick={() => setCancelling(b)}>Cancel</button>
                 </div>
               )}
             </div>
@@ -240,13 +272,16 @@ function CancelBookingForm({ booking, onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
-      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Cancel booking — {booking.vehicleClass}</p>
+    <div className="fixed inset-0 bg-ink/30 backdrop-blur-sm flex items-center justify-center z-40 px-4">
+      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm shadow-lg">
+        <p className="page-title text-lg mb-4">Cancel booking: {booking.vehicleClass}</p>
         {hasDeposit ? (
           <div className="space-y-3">
             <p className="text-xs text-ink-muted">A deposit of {booking.depositAmount} was taken for this booking. Set how much of it is refunded vs. kept.</p>
-            <div><label className="field-label">Refund percent</label><input type="number" min="0" max="100" required className="field-input num" value={refundPercent} onChange={(e) => setRefundPercent(e.target.value)} /></div>
+            <div>
+              <label className="field-label">Refund percent</label>
+              <input type="number" min="0" max="100" required className="field-input num" value={refundPercent} onChange={(e) => setRefundPercent(e.target.value)} />
+            </div>
             {Number(refundPercent) > 0 && (
               <div>
                 <label className="field-label">Refund from account</label>
@@ -267,11 +302,11 @@ function CancelBookingForm({ booking, onClose, onSaved }) {
             )}
           </div>
         ) : (
-          <p className="text-sm text-ink-muted">No deposit was taken — this booking will simply be marked cancelled.</p>
+          <p className="text-sm text-ink-muted">No deposit was taken, this booking will simply be marked cancelled.</p>
         )}
         <div className="flex justify-end gap-2 mt-5">
           <button type="button" className="btn-secondary" onClick={onClose}>Back</button>
-          <button type="submit" disabled={saving} className="btn-primary !bg-red-600 hover:!bg-red-700">{saving ? 'Cancelling…' : 'Confirm cancel'}</button>
+          <button type="submit" disabled={saving} className="btn-danger">{saving ? 'Cancelling…' : 'Confirm cancel'}</button>
         </div>
       </form>
     </div>
@@ -312,9 +347,9 @@ function BookingForm({ onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
-      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">New booking</p>
+    <div className="fixed inset-0 bg-ink/30 backdrop-blur-sm flex items-center justify-center z-40 px-4">
+      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm shadow-lg">
+        <p className="page-title text-lg mb-4">New booking</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Branch</label>
@@ -342,8 +377,14 @@ function BookingForm({ onClose, onSaved }) {
             </select>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <div><label className="field-label">Start date</label><input type="date" required className="field-input" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} /></div>
-            <div><label className="field-label">End date</label><input type="date" required className="field-input" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} /></div>
+            <div>
+              <label className="field-label">Start date</label>
+              <input type="date" required className="field-input" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} />
+            </div>
+            <div>
+              <label className="field-label">End date</label>
+              <input type="date" required className="field-input" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} />
+            </div>
           </div>
           <div>
             <label className="field-label">Billing product</label>
@@ -397,9 +438,9 @@ function ReturnForm({ booking, onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
-      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Return vehicle — {booking.vehicleClass}</p>
+    <div className="fixed inset-0 bg-ink/30 backdrop-blur-sm flex items-center justify-center z-40 px-4">
+      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm shadow-lg">
+        <p className="page-title text-lg mb-4">Return vehicle: {booking.vehicleClass}</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Branch</label>

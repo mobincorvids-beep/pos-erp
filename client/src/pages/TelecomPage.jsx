@@ -12,10 +12,11 @@ export function TelecomPage() {
   const [tab, setTab] = useState('subscriptions');
   return (
     <div>
-      <p className="page-title mb-4">Telecom</p>
+      <p className="eyebrow mb-1">Telecom</p>
+      <p className="page-title mb-4">Subscriber &amp; Plan Management</p>
       <div className="flex gap-1 border-b border-rule mb-5">
         {[['subscriptions', 'Subscriptions'], ['plans', 'Plans']].map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} className={`px-3 py-2 text-sm -mb-px border-b-2 ${tab === key ? 'border-accent text-accent-strong font-medium' : 'border-transparent text-ink-muted hover:text-ink'}`}>
+          <button key={key} onClick={() => setTab(key)} className={`px-3 py-2 text-sm -mb-px border-b-2 transition-colors ${tab === key ? 'border-accent text-accent-strong font-semibold' : 'border-transparent text-ink-muted hover:text-ink'}`}>
             {label}
           </button>
         ))}
@@ -42,8 +43,12 @@ function SubscriptionsTab() {
   return (
     <div className="flex flex-col lg:flex-row gap-6">
       <div className="flex-1 min-w-0">
-        <div className="flex justify-end mb-3">
-          <button className="btn-primary" onClick={() => setShowForm(true)}>New subscription</button>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm text-ink-muted">{subs.length} subscription{subs.length === 1 ? '' : 's'}</p>
+          <button className="btn-primary" onClick={() => setShowForm(true)}>
+            <span className="font-icon text-base leading-none">add</span>
+            New subscription
+          </button>
         </div>
         {loading && <Loading />}
         {!loading && subs.length === 0 && <EmptyState title="No subscriptions yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Subscribe a customer</button>} />}
@@ -51,20 +56,20 @@ function SubscriptionsTab() {
           <div className="card overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                  <th className="px-3 py-2 font-medium">Customer</th>
-                  <th className="px-3 py-2 font-medium">Plan</th>
-                  <th className="px-3 py-2 font-medium">Used this period</th>
-                  <th className="px-3 py-2 font-medium">Status</th>
+                <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken">
+                  <th className="px-4 py-2.5 font-semibold">Customer</th>
+                  <th className="px-4 py-2.5 font-semibold">Plan</th>
+                  <th className="px-4 py-2.5 font-semibold">Used this period</th>
+                  <th className="px-4 py-2.5 font-semibold">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {subs.map((s) => (
-                  <tr key={s._id} onClick={() => setSelected(s)} className={`border-b border-rule last:border-0 cursor-pointer hover:bg-paper ${selected?._id === s._id ? 'bg-accent-soft/40' : ''}`}>
-                    <td className="px-3 py-2">{s.customerId?.name || '—'}</td>
-                    <td className="px-3 py-2 text-ink-muted">{s.planId?.name || '—'}</td>
-                    <td className="px-3 py-2 text-ink-muted">{s.usedMinutes}m · {s.usedDataMB}MB · {s.usedSms} SMS</td>
-                    <td className="px-3 py-2"><span className={STATUS_CHIP[s.status]}>{s.status}</span></td>
+                  <tr key={s._id} onClick={() => setSelected(s)} className={`border-b border-rule last:border-0 cursor-pointer hover:bg-paper transition-colors ${selected?._id === s._id ? 'bg-accent-soft' : ''}`}>
+                    <td className="px-4 py-3 font-medium text-ink">{s.customerId?.name || '-'}</td>
+                    <td className="px-4 py-3 text-ink-muted">{s.planId?.name || '-'}</td>
+                    <td className="px-4 py-3 text-ink-muted num">{s.usedMinutes}m · {s.usedDataMB}MB · {s.usedSms} SMS</td>
+                    <td className="px-4 py-3"><span className={STATUS_CHIP[s.status]}>{s.status}</span></td>
                   </tr>
                 ))}
               </tbody>
@@ -113,7 +118,7 @@ function SubscriptionForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">New subscription</p>
+        <p className="font-display text-lg font-semibold mb-4">New subscription</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Branch</label>
@@ -133,7 +138,7 @@ function SubscriptionForm({ onClose, onSaved }) {
             <label className="field-label">Plan</label>
             <select required className="field-input" value={form.planId} onChange={(e) => setForm({ ...form, planId: e.target.value })}>
               <option value="">Select…</option>
-              {plans.map((p) => <option key={p._id} value={p._id}>{p.name} — {formatMoney(p.monthlyFee)}/mo</option>)}
+              {plans.map((p) => <option key={p._id} value={p._id}>{p.name}: {formatMoney(p.monthlyFee)}/mo</option>)}
             </select>
           </div>
           <div>
@@ -194,23 +199,26 @@ function SubscriptionPanel({ subscription, onClose, onChanged }) {
     setBusy(true);
     try {
       const result = await api.post(`/telecom/subscriptions/${subscription._id}/bill`, { warehouseId, paymentAccountId });
-      toast(`Billed ${formatMoney(result.usageSummary.totalBilled, company?.currency)} — ${formatMoney(result.usageSummary.overageCost, company?.currency)} of that was overage.`, 'success');
+      toast(`Billed ${formatMoney(result.usageSummary.totalBilled, company?.currency)}: ${formatMoney(result.usageSummary.overageCost, company?.currency)} of that was overage.`, 'success');
       onChanged(); onClose();
     } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }
   }
 
   return (
     <div className="w-full lg:w-96 shrink-0 card p-4 h-fit">
-      <div className="flex items-center justify-between mb-3">
-        <p className="font-display text-lg">{subscription.customerId?.name}</p>
-        <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button>
+      <div className="flex items-center justify-between mb-1">
+        <p className="font-display text-lg font-semibold">{subscription.customerId?.name}</p>
+        <button className="btn-ghost !px-2 !py-1 text-sm" onClick={onClose}>Close</button>
       </div>
-      <p className="text-sm text-ink-muted mb-4">{subscription.planId?.name} — used this period: {subscription.usedMinutes}m · {subscription.usedDataMB}MB · {subscription.usedSms} SMS</p>
+      <div className="flex items-center gap-2 mb-4">
+        <span className={STATUS_CHIP[subscription.status]}>{subscription.status}</span>
+        <p className="text-sm text-ink-muted">{subscription.planId?.name}: {subscription.usedMinutes}m · {subscription.usedDataMB}MB · {subscription.usedSms} SMS used</p>
+      </div>
 
       {subscription.status === 'active' && (
         <>
           <form onSubmit={recordUsage} className="mb-4">
-            <p className="text-sm font-medium mb-2">Record usage</p>
+            <p className="eyebrow mb-2">Record usage</p>
             <div className="grid grid-cols-3 gap-2 mb-2">
               <input type="number" min="0" className="field-input num" placeholder="Minutes" value={usage.minutes} onChange={(e) => setUsage({ ...usage, minutes: e.target.value })} />
               <input type="number" min="0" className="field-input num" placeholder="Data MB" value={usage.dataMB} onChange={(e) => setUsage({ ...usage, dataMB: e.target.value })} />
@@ -220,7 +228,7 @@ function SubscriptionPanel({ subscription, onClose, onChanged }) {
           </form>
 
           <div className="tear-line my-3" />
-          <p className="text-sm font-medium mb-2">Generate monthly bill</p>
+          <p className="eyebrow mb-2">Generate monthly bill</p>
           <div className="space-y-2 mb-2">
             <select className="field-input" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
               <option value="">Warehouse (for the Sale document)…</option>
@@ -254,18 +262,22 @@ function PlansTab() {
 
   return (
     <div>
-      <div className="flex justify-end mb-3">
-        <button className="btn-primary" onClick={() => setShowForm(true)}>New plan</button>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm text-ink-muted">{plans.length} plan{plans.length === 1 ? '' : 's'}</p>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>
+          <span className="font-icon text-base leading-none">add</span>
+          New plan
+        </button>
       </div>
       {loading && <Loading />}
       {!loading && plans.length === 0 && <EmptyState title="No plans yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Create one</button>} />}
       {!loading && plans.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {plans.map((p) => (
-            <div key={p._id} className="card p-3">
-              <p className="text-sm font-medium">{p.name}</p>
-              <p className="num text-sm text-ink-muted mt-1">{formatMoney(p.monthlyFee)}/mo</p>
-              <p className="text-xs text-ink-muted mt-1">{p.includedMinutes}m · {p.includedDataMB}MB · {p.includedSms} SMS included</p>
+            <div key={p._id} className="card p-4">
+              <p className="text-sm font-semibold text-ink">{p.name}</p>
+              <p className="num text-lg font-display font-semibold text-accent-strong mt-1">{formatMoney(p.monthlyFee)}<span className="text-xs font-sans font-normal text-ink-muted">/mo</span></p>
+              <p className="text-xs text-ink-muted mt-1 num">{p.includedMinutes}m · {p.includedDataMB}MB · {p.includedSms} SMS included</p>
             </div>
           ))}
         </div>
@@ -308,11 +320,11 @@ function PlanForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm max-h-[85vh] overflow-y-auto">
-        <p className="font-display text-lg mb-4">New plan</p>
+        <p className="font-display text-lg font-semibold mb-4">New plan</p>
         <div className="space-y-3">
           <div><label className="field-label">Name</label><input required className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Postpaid 500" /></div>
           <div><label className="field-label">Monthly fee</label><input type="number" required className="field-input num" value={form.monthlyFee} onChange={(e) => setForm({ ...form, monthlyFee: e.target.value })} /></div>
-          <p className="text-xs text-ink-muted">Included quota / overage rate:</p>
+          <p className="eyebrow">Included quota / overage rate</p>
           <div className="grid grid-cols-2 gap-2">
             <input type="number" min="0" className="field-input num" placeholder="Minutes included" value={form.includedMinutes} onChange={(e) => setForm({ ...form, includedMinutes: e.target.value })} />
             <input type="number" min="0" step="0.01" className="field-input num" placeholder="Rate/min" value={form.overageRatePerMinute} onChange={(e) => setForm({ ...form, overageRatePerMinute: e.target.value })} />

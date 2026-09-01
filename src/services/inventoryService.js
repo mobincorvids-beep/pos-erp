@@ -140,9 +140,19 @@ async function checkLowStockAndNotify({ companyId, warehouseId, productId, varia
     await notificationService.notify({
       companyId, roleId: role._id, type: 'low_stock',
       title: `Low stock: ${product.name}${variant?.sku ? ` (${variant.sku})` : ''}`,
-      message: `Only ${currentQuantity} remaining — at or below the reorder level of ${product.reorderLevel}.`,
+      message: `Only ${currentQuantity} remaining, at or below the reorder level of ${product.reorderLevel}.`,
       entityType: 'Product', entityId: productId,
     });
+  }
+
+  // Developer Platform outbound webhook — same "never let this block or
+  // fail the real operation" rule as the in-app notification above.
+  try {
+    await require('./webhookSubscriptionService').triggerWebhook(String(companyId), 'product.low_stock', {
+      productId, variantId, warehouseId, currentQuantity, reorderLevel: product.reorderLevel, productName: product.name,
+    });
+  } catch (err) {
+    console.error('Developer Platform webhook delivery for product.low_stock failed:', err.message);
   }
 }
 
@@ -152,13 +162,13 @@ async function getStockLevel(warehouseId, variantId, batchId = null) {
   return level ? level.quantity : 0;
 }
 
-/** Current weighted-average cost per unit — used for stock valuation and COGS. */
+/** Current weighted-average cost per unit, used for stock valuation and COGS. */
 async function getAvgCost(warehouseId, variantId, batchId = null) {
   const level = await StockLevel.findOne({ warehouseId, variantId, batchId });
   return level?.avgCost || 0;
 }
 
-/** Throws if selling `quantity` would take stock negative. Accounts for reservedQuantity — reserved units aren't available for a NEW commitment, but ARE available for the sale that reserved them (pass ignoreReservation:true from convertToInvoice). */
+/** Throws if selling `quantity` would take stock negative. Accounts for reservedQuantity, reserved units aren't available for a NEW commitment, but ARE available for the sale that reserved them (pass ignoreReservation:true from convertToInvoice). */
 async function assertSufficientStock(warehouseId, variantId, batchId, quantity, { ignoreReservation = false } = {}) {
   const level = await StockLevel.findOne({ warehouseId, variantId, batchId });
   const onHand = level?.quantity || 0;
@@ -171,7 +181,7 @@ async function assertSufficientStock(warehouseId, variantId, batchId, quantity, 
   }
 }
 
-/** Reserves quantity against a Sales Order without moving stock — see StockLevel.reservedQuantity. */
+/** Reserves quantity against a Sales Order without moving stock, see StockLevel.reservedQuantity. */
 async function reserve(warehouseId, variantId, batchId, quantity, session) {
   await StockLevel.findOneAndUpdate(
     { warehouseId, variantId, batchId },
@@ -180,7 +190,7 @@ async function reserve(warehouseId, variantId, batchId, quantity, session) {
   );
 }
 
-/** Releases a reservation — called when a Sales Order is converted to an invoice (the stock actually leaves) or cancelled (the hold is dropped). */
+/** Releases a reservation: called when a Sales Order is converted to an invoice (the stock actually leaves) or cancelled (the hold is dropped). */
 async function releaseReservation(warehouseId, variantId, batchId, quantity, session) {
   await StockLevel.findOneAndUpdate(
     { warehouseId, variantId, batchId },
@@ -189,7 +199,7 @@ async function releaseReservation(warehouseId, variantId, batchId, quantity, ses
   );
 }
 
-/** A real, previously-missing read endpoint — ProductBatch has been written to by purchasing this whole project but had no way to be listed back out, something a batch recall (or any real batch-selection UI) genuinely needs. */
+/** A real, previously-missing read endpoint, ProductBatch has been written to by purchasing this whole project but had no way to be listed back out, something a batch recall (or any real batch-selection UI) genuinely needs. */
 function listProductBatches(companyId, { productId } = {}) {
   const filter = { companyId };
   if (productId) filter.productId = productId;

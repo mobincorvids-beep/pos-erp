@@ -11,7 +11,7 @@ async function create(req, res) {
   res.status(201).json(supplier);
 }
 
-/** Was missing — same reasoning as customerController.update: openingBalance stays out
+/** Was missing, same reasoning as customerController.update: openingBalance stays out
  * since it's a ledger-derived total, not a free-text field. */
 async function update(req, res) {
   const allowed = ['name', 'phone', 'email', 'address'];

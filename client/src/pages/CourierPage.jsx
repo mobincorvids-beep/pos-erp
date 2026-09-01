@@ -20,10 +20,11 @@ function statusLabel(status) {
   return status.split('_').map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
 }
 
-function statusBadgeClass(status) {
-  if (status === 'delivered') return 'bg-success/10 text-success';
-  if (status === 'failed' || status === 'returned') return 'bg-danger/10 text-danger';
-  return 'bg-accent/10 text-accent-strong';
+function statusChipClass(status) {
+  if (status === 'delivered') return 'chip-accent';
+  if (status === 'failed' || status === 'returned') return 'chip-danger';
+  if (status === 'booked') return 'chip-neutral';
+  return 'chip-info';
 }
 
 function generateTrackingNumber() {
@@ -35,9 +36,9 @@ export function CourierPage() {
   return (
     <div>
       <p className="page-title mb-4">Courier</p>
-      <div className="flex gap-1 border-b border-rule mb-5">
+      <div className="flex gap-2 mb-5">
         {[['shipments', 'Shipments'], ['track', 'Track a package']].map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} className={`px-3 py-2 text-sm -mb-px border-b-2 ${tab === key ? 'border-accent text-accent-strong font-medium' : 'border-transparent text-ink-muted hover:text-ink'}`}>
+          <button key={key} onClick={() => setTab(key)} className={tab === key ? 'pill-active' : 'pill'}>
             {label}
           </button>
         ))}
@@ -91,17 +92,17 @@ function TrackTab() {
       {!loading && result && (
         <div className="card p-4 mt-4 max-w-lg">
           <div className="flex items-center justify-between mb-2">
-            <p className="font-display text-lg">{result.trackingNumber}</p>
-            <span className={`text-xs px-2 py-1 rounded-full font-medium ${statusBadgeClass(result.status)}`}>{statusLabel(result.status)}</span>
+            <p className="font-display text-lg num">{result.trackingNumber}</p>
+            <span className={statusChipClass(result.status)}>{statusLabel(result.status)}</span>
           </div>
           {(result.origin || result.destination) && (
-            <p className="text-sm text-ink-muted mb-3">{result.origin || '—'} → {result.destination || '—'}</p>
+            <p className="text-sm text-ink-muted mb-3">{result.origin || '-'} → {result.destination || '-'}</p>
           )}
           <p className="field-label mb-2">History</p>
           <div className="space-y-2">
             {(result.history || []).slice().reverse().map((ev, i) => (
               <div key={i} className="text-sm flex items-start gap-2">
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${statusBadgeClass(ev.status)}`}>{statusLabel(ev.status)}</span>
+                <span className={`${statusChipClass(ev.status)} shrink-0`}>{statusLabel(ev.status)}</span>
                 <div>
                   <p className="text-ink-muted">{ev.location || ''}{ev.note ? (ev.location ? ' · ' : '') + ev.note : ''}</p>
                   <p className="text-xs text-ink-muted">{ev.at ? new Date(ev.at).toLocaleString() : ''}</p>
@@ -155,35 +156,51 @@ function ShipmentsTab() {
         <EmptyState title="No shipments yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Book a shipment</button>} />
       )}
       {!loading && shipments.length > 0 && (
-        <div className="space-y-2">
-          {shipments.map((s) => {
-            const nextOptions = ALLOWED_TRANSITIONS[s.status] || [];
-            const canDeliver = s.status === 'out_for_delivery';
-            return (
-              <div key={s._id} className="card p-3 flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium">{s.trackingNumber}</p>
-                  <p className="text-xs text-ink-muted mt-0.5">{s.customerId?.name || 'Customer'}{s.destination ? ` · ${s.destination}` : ''}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${statusBadgeClass(s.status)}`}>{statusLabel(s.status)}</span>
-                  {nextOptions.length > 0 && (
-                    <select
-                      className="field-input !w-auto text-xs !py-1"
-                      value=""
-                      onChange={(e) => { if (e.target.value) advance(s, e.target.value); }}
-                    >
-                      <option value="">Advance status…</option>
-                      {nextOptions.map((opt) => <option key={opt} value={opt}>{statusLabel(opt)}</option>)}
-                    </select>
-                  )}
-                  {canDeliver && (
-                    <button className="btn-ghost !text-accent !px-2 text-xs" onClick={() => setDelivering(s)}>Mark delivered</button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+        <div className="card overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-rule text-left">
+                <th className="eyebrow px-4 py-3 font-semibold">Tracking No.</th>
+                <th className="eyebrow px-4 py-3 font-semibold">Customer</th>
+                <th className="eyebrow px-4 py-3 font-semibold">Destination</th>
+                <th className="eyebrow px-4 py-3 font-semibold">Status</th>
+                <th className="eyebrow px-4 py-3 font-semibold text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {shipments.map((s) => {
+                const nextOptions = ALLOWED_TRANSITIONS[s.status] || [];
+                const canDeliver = s.status === 'out_for_delivery';
+                return (
+                  <tr key={s._id} className="border-b border-rule last:border-b-0">
+                    <td className="px-4 py-3 num font-medium">{s.trackingNumber}</td>
+                    <td className="px-4 py-3 text-ink-muted">{s.customerId?.name || 'Customer'}</td>
+                    <td className="px-4 py-3 text-ink-muted">{s.destination || '-'}</td>
+                    <td className="px-4 py-3">
+                      <span className={statusChipClass(s.status)}>{statusLabel(s.status)}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-2">
+                        {nextOptions.length > 0 && (
+                          <select
+                            className="field-input !w-auto text-xs !py-1"
+                            value=""
+                            onChange={(e) => { if (e.target.value) advance(s, e.target.value); }}
+                          >
+                            <option value="">Advance status…</option>
+                            {nextOptions.map((opt) => <option key={opt} value={opt}>{statusLabel(opt)}</option>)}
+                          </select>
+                        )}
+                        {canDeliver && (
+                          <button className="btn-ghost !px-2 text-xs" onClick={() => setDelivering(s)}>Mark delivered</button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -248,7 +265,7 @@ function ShipmentForm({ onClose, onSaved }) {
           <div>
             <label className="field-label">Tracking number</label>
             <div className="flex gap-2">
-              <input required className="field-input" value={form.trackingNumber} onChange={(e) => setForm({ ...form, trackingNumber: e.target.value })} />
+              <input required className="field-input num" value={form.trackingNumber} onChange={(e) => setForm({ ...form, trackingNumber: e.target.value })} />
               <button type="button" className="btn-secondary shrink-0" onClick={() => setForm({ ...form, trackingNumber: generateTrackingNumber() })}>Generate</button>
             </div>
           </div>
@@ -293,7 +310,7 @@ function DeliverForm({ shipment, onClose, onSaved }) {
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
         <p className="font-display text-lg mb-1">Mark delivered</p>
-        <p className="text-sm text-ink-muted mb-4">{shipment.trackingNumber}</p>
+        <p className="text-sm text-ink-muted num mb-4">{shipment.trackingNumber}</p>
         <div>
           <label className="field-label">Proof of delivery note (who signed, etc.)</label>
           <input className="field-input" autoFocus value={proofOfDeliveryNote} onChange={(e) => setProofOfDeliveryNote(e.target.value)} />

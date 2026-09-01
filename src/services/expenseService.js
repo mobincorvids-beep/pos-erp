@@ -41,7 +41,7 @@ async function approveExpense(expenseId, approverUserId) {
         branchId: expense.branchId,
         type: 'payment',
         date: expense.date,
-        narration: `Expense approved: ${category.name}${expense.note ? ' — ' + expense.note : ''}`,
+        narration: `Expense approved: ${category.name}${expense.note ? ': ' + expense.note : ''}`,
         entries: [
           { accountId: category.accountId, debit: expense.amount, credit: 0 },       // Dr Expense
           { accountId: expense.paymentAccountId, debit: 0, credit: expense.amount }, // Cr Cash/Bank

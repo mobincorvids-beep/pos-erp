@@ -13,10 +13,11 @@ export function AgingPage() {
 
   return (
     <div>
-      <p className="page-title mb-4">Receivables &amp; Payables Aging</p>
+      <p className="page-title">Receivables &amp; Payables Aging</p>
+      <p className="text-sm text-ink-muted mt-1 mb-5">Comprehensive overview of credit exposure and overdue accounts.</p>
       <div className="flex gap-1 border-b border-rule mb-5">
         {[['ar', 'Receivables (AR)'], ['ap', 'Payables (AP)']].map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} className={`px-3 py-2 text-sm -mb-px border-b-2 ${tab === key ? 'border-accent text-accent-strong font-medium' : 'border-transparent text-ink-muted hover:text-ink'}`}>
+          <button key={key} onClick={() => setTab(key)} className={`px-3 py-2 text-sm -mb-px border-b-2 font-semibold ${tab === key ? 'border-accent text-accent' : 'border-transparent text-ink-muted hover:text-ink'}`}>
             {label}
           </button>
         ))}
@@ -42,41 +43,46 @@ function ArAgingTab() {
 
   return (
     <>
-      <div className="grid grid-cols-4 gap-3 mb-5 max-w-xl">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
         {Object.entries(report.buckets).map(([bucket, amount]) => (
-          <div key={bucket} className="card p-3">
-            <p className="text-xs text-ink-muted uppercase tracking-wide">{bucket} days</p>
-            <p className="font-display text-xl mt-1 num">{formatMoney(amount, company?.currency)}</p>
+          <div key={bucket} className="card p-4">
+            <p className="eyebrow">{bucket} days</p>
+            <p className={`font-display text-2xl mt-1 num ${bucket === '61-90' || bucket === '90+' ? 'text-danger' : 'text-ink'}`}>{formatMoney(amount, company?.currency)}</p>
           </div>
         ))}
       </div>
       <div className="card overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-              <th className="px-3 py-2 font-medium">Invoice</th>
-              <th className="px-3 py-2 font-medium">Customer</th>
-              <th className="px-3 py-2 font-medium">Days overdue</th>
-              <th className="px-3 py-2 font-medium">Bucket</th>
-              <th className="px-3 py-2 font-medium text-right">Due</th>
-              <th className="px-3 py-2 font-medium"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {report.rows.map((r) => (
-              <tr key={r.saleId} className="border-b border-rule last:border-0">
-                <td className="px-3 py-2">{r.invoiceNumber}</td>
-                <td className="px-3 py-2">{r.customerName}</td>
-                <td className="px-3 py-2 text-ink-muted">{r.daysOverdue}</td>
-                <td className="px-3 py-2"><span className={BUCKET_CHIP[r.bucket]}>{r.bucket}</span></td>
-                <td className="px-3 py-2 num text-right">{formatMoney(r.dueAmount, company?.currency)}</td>
-                <td className="px-3 py-2 text-right">
-                  {can('reports.financial') && <button className="btn-ghost !text-danger" onClick={() => setWritingOff(r)}>Write off</button>}
-                </td>
+        <div className="px-5 py-4 border-b border-rule">
+          <p className="font-display text-lg text-ink">Aging Ledger Detail</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
+                <th className="px-5 py-3 font-semibold">Invoice</th>
+                <th className="px-5 py-3 font-semibold">Customer</th>
+                <th className="px-5 py-3 font-semibold text-right">Days overdue</th>
+                <th className="px-5 py-3 font-semibold text-center">Bucket</th>
+                <th className="px-5 py-3 font-semibold text-right">Due</th>
+                <th className="px-5 py-3 font-semibold"></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {report.rows.map((r) => (
+                <tr key={r.saleId} className={`border-b border-rule last:border-0 hover:bg-surface-sunken transition-colors ${(r.bucket === '61-90' || r.bucket === '90+') ? 'bg-danger-soft/30' : ''}`}>
+                  <td className="px-5 py-3 text-ink-muted num">{r.invoiceNumber}</td>
+                  <td className="px-5 py-3 text-ink font-medium">{r.customerName}</td>
+                  <td className="px-5 py-3 text-right num text-ink-muted">{r.daysOverdue}</td>
+                  <td className="px-5 py-3 text-center"><span className={BUCKET_CHIP[r.bucket]}>{r.bucket}</span></td>
+                  <td className={`px-5 py-3 num text-right ${(r.bucket === '61-90' || r.bucket === '90+') ? 'text-danger font-semibold' : 'text-ink'}`}>{formatMoney(r.dueAmount, company?.currency)}</td>
+                  <td className="px-5 py-3 text-right">
+                    {can('reports.financial') && <button className="btn-ghost !text-danger" onClick={() => setWritingOff(r)}>Write off</button>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
       {writingOff && <WriteOffForm row={writingOff} onClose={() => setWritingOff(null)} onSaved={() => { setWritingOff(null); load(); }} />}
     </>
@@ -111,7 +117,7 @@ function WriteOffForm({ row, onClose, onSaved }) {
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
         <p className="font-display text-lg mb-1">Write off {row.invoiceNumber}</p>
-        <p className="text-sm text-ink-muted mb-4">{row.customerName} — {formatMoney(row.dueAmount, company?.currency)}. This is permanent and cannot be undone.</p>
+        <p className="text-sm text-ink-muted mb-4">{row.customerName}: {formatMoney(row.dueAmount, company?.currency)}. This is permanent and cannot be undone.</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Bad debt expense account</label>
@@ -151,37 +157,42 @@ function ApAgingTab() {
 
   return (
     <>
-      <div className="grid grid-cols-4 gap-3 mb-5 max-w-xl">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
         {Object.entries(report.buckets).map(([bucket, amount]) => (
-          <div key={bucket} className="card p-3">
-            <p className="text-xs text-ink-muted uppercase tracking-wide">{bucket} days</p>
-            <p className="font-display text-xl mt-1 num">{formatMoney(amount, company?.currency)}</p>
+          <div key={bucket} className="card p-4">
+            <p className="eyebrow">{bucket} days</p>
+            <p className={`font-display text-2xl mt-1 num ${bucket === '61-90' || bucket === '90+' ? 'text-danger' : 'text-ink'}`}>{formatMoney(amount, company?.currency)}</p>
           </div>
         ))}
       </div>
       <div className="card overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-              <th className="px-3 py-2 font-medium">PO</th>
-              <th className="px-3 py-2 font-medium">Supplier</th>
-              <th className="px-3 py-2 font-medium">Days overdue</th>
-              <th className="px-3 py-2 font-medium">Bucket</th>
-              <th className="px-3 py-2 font-medium text-right">Due</th>
-            </tr>
-          </thead>
-          <tbody>
-            {report.rows.map((r) => (
-              <tr key={r.purchaseOrderId} className="border-b border-rule last:border-0">
-                <td className="px-3 py-2">{r.poNumber}</td>
-                <td className="px-3 py-2">{r.supplierName}</td>
-                <td className="px-3 py-2 text-ink-muted">{r.daysOverdue}</td>
-                <td className="px-3 py-2"><span className={BUCKET_CHIP[r.bucket]}>{r.bucket}</span></td>
-                <td className="px-3 py-2 num text-right">{formatMoney(r.dueAmount, company?.currency)}</td>
+        <div className="px-5 py-4 border-b border-rule">
+          <p className="font-display text-lg text-ink">Aging Ledger Detail</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
+                <th className="px-5 py-3 font-semibold">PO</th>
+                <th className="px-5 py-3 font-semibold">Supplier</th>
+                <th className="px-5 py-3 font-semibold text-right">Days overdue</th>
+                <th className="px-5 py-3 font-semibold text-center">Bucket</th>
+                <th className="px-5 py-3 font-semibold text-right">Due</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {report.rows.map((r) => (
+                <tr key={r.purchaseOrderId} className={`border-b border-rule last:border-0 hover:bg-surface-sunken transition-colors ${(r.bucket === '61-90' || r.bucket === '90+') ? 'bg-danger-soft/30' : ''}`}>
+                  <td className="px-5 py-3 text-ink-muted num">{r.poNumber}</td>
+                  <td className="px-5 py-3 text-ink font-medium">{r.supplierName}</td>
+                  <td className="px-5 py-3 text-right num text-ink-muted">{r.daysOverdue}</td>
+                  <td className="px-5 py-3 text-center"><span className={BUCKET_CHIP[r.bucket]}>{r.bucket}</span></td>
+                  <td className={`px-5 py-3 num text-right ${(r.bucket === '61-90' || r.bucket === '90+') ? 'text-danger font-semibold' : 'text-ink'}`}>{formatMoney(r.dueAmount, company?.currency)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </>
   );

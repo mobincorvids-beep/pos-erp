@@ -10,10 +10,15 @@ export function PharmacyPage() {
   const [tab, setTab] = useState('prescriptions');
   return (
     <div>
-      <p className="page-title mb-4">Pharmacy</p>
-      <div className="flex gap-1 border-b border-rule mb-5">
+      <header className="mb-6 flex flex-wrap justify-between items-end gap-3">
+        <div>
+          <p className="page-title mb-1">Pharmacy</p>
+          <p className="text-sm text-ink-muted">Prescriptions, patients, prescribers, and expiry tracking.</p>
+        </div>
+      </header>
+      <div className="flex flex-wrap gap-2 mb-6">
         {[['prescriptions', 'Prescriptions'], ['patients', 'Patients'], ['doctors', 'Doctors'], ['expiry', 'Near-expiry']].map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} className={`px-3 py-2 text-sm -mb-px border-b-2 ${tab === key ? 'border-accent text-accent-strong font-medium' : 'border-transparent text-ink-muted hover:text-ink'}`}>
+          <button key={key} onClick={() => setTab(key)} className={tab === key ? 'pill-active' : 'pill'}>
             {label}
           </button>
         ))}
@@ -49,28 +54,33 @@ function DoctorsTab() {
 
   return (
     <div>
-      <div className="flex justify-end mb-3"><button className="btn-primary" onClick={() => setEditing({})}>Add doctor</button></div>
+      <div className="flex justify-end mb-4"><button className="btn-primary" onClick={() => setEditing({})}>Add doctor</button></div>
       {loading && <Loading />}
       {!loading && doctors.length === 0 && <EmptyState title="No doctors yet" description="Register the doctors whose prescriptions you fill." action={<button className="btn-primary" onClick={() => setEditing({})}>Add one</button>} />}
       {!loading && doctors.length > 0 && (
         <div className="card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead><tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide"><th className="px-3 py-2 font-medium">Name</th><th className="px-3 py-2 font-medium">Specialization</th><th className="px-3 py-2 font-medium">Reg. #</th><th className="px-3 py-2 font-medium">Phone</th><th className="px-3 py-2 font-medium text-right">Actions</th></tr></thead>
-            <tbody>
-              {doctors.map((d) => (
-                <tr key={d._id} className="border-b border-rule last:border-0">
-                  <td className="px-3 py-2">Dr. {d.name}</td>
-                  <td className="px-3 py-2 text-ink-muted">{d.specialization || '—'}</td>
-                  <td className="px-3 py-2 text-ink-muted num">{d.registrationNumber || '—'}</td>
-                  <td className="px-3 py-2 text-ink-muted">{d.phone || '—'}</td>
-                  <td className="px-3 py-2 text-right">
-                    <button className="btn-ghost !text-ink-muted !px-2 text-xs" onClick={() => setEditing(d)}>Edit</button>
-                    <button className="btn-ghost !text-danger !px-2 text-xs" onClick={() => handleRemove(d)}>Remove</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="px-5 py-3 border-b border-rule flex items-center justify-between">
+            <p className="font-display text-base font-semibold text-ink">Doctors</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead><tr className="border-b border-rule text-left eyebrow"><th className="px-5 py-3 font-semibold">Name</th><th className="px-5 py-3 font-semibold">Specialization</th><th className="px-5 py-3 font-semibold">Reg. #</th><th className="px-5 py-3 font-semibold">Phone</th><th className="px-5 py-3 font-semibold text-right">Actions</th></tr></thead>
+              <tbody>
+                {doctors.map((d) => (
+                  <tr key={d._id} className="border-b border-rule last:border-0 hover:bg-surface-sunken/60 transition-colors">
+                    <td className="px-5 py-3 font-medium text-ink">Dr. {d.name}</td>
+                    <td className="px-5 py-3 text-ink-muted">{d.specialization || '-'}</td>
+                    <td className="px-5 py-3 text-ink-muted num">{d.registrationNumber || '-'}</td>
+                    <td className="px-5 py-3 text-ink-muted">{d.phone || '-'}</td>
+                    <td className="px-5 py-3 text-right">
+                      <button className="btn-ghost !text-ink-muted !px-2 text-xs" onClick={() => setEditing(d)}>Edit</button>
+                      <button className="btn-ghost !text-danger !px-2 text-xs" onClick={() => handleRemove(d)}>Remove</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
       {editing !== null && <DoctorForm doctor={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
@@ -147,8 +157,8 @@ function PatientsTab() {
               {patients.map((p) => (
                 <tr key={p._id} className="border-b border-rule last:border-0">
                   <td className="px-3 py-2">{p.name}</td>
-                  <td className="px-3 py-2 text-ink-muted">{p.age || '—'}</td>
-                  <td className="px-3 py-2 text-ink-muted">{p.phone || '—'}</td>
+                  <td className="px-3 py-2 text-ink-muted">{p.age || '-'}</td>
+                  <td className="px-3 py-2 text-ink-muted">{p.phone || '-'}</td>
                   <td className="px-3 py-2">{p.allergies?.map((a) => <span key={a} className="chip-danger mr-1">{a}</span>)}</td>
                   <td className="px-3 py-2 text-right"><button className="btn-ghost !text-ink-muted !px-2 text-xs" onClick={() => setEditing(p)}>Edit</button></td>
                 </tr>
@@ -202,7 +212,7 @@ function PatientForm({ patient, onClose, onSaved }) {
             <div>
               <label className="field-label">Gender</label>
               <select className="field-input" value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}>
-                <option value="">—</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option>
+                <option value="">-</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option>
               </select>
             </div>
           </div>
@@ -412,7 +422,7 @@ function DispenseForm({ prescription, onClose, onDispensed }) {
             </select>
           </div>
         </div>
-        <p className="text-xs text-ink-muted mt-3">Dispenses the full prescribed quantity for every item — partial dispensing isn't supported yet.</p>
+        <p className="text-xs text-ink-muted mt-3">Dispenses the full prescribed quantity for every item, partial dispensing isn't supported yet.</p>
         <div className="flex justify-end gap-2 mt-4">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
           <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Dispensing…' : 'Dispense & bill'}</button>

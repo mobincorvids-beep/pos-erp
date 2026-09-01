@@ -9,7 +9,11 @@ const paymentValidation = [
   body('amount').isFloat({ gt: 0 }).withMessage('amount must be greater than zero.'),
   body('paymentAccountId').isString().notEmpty().withMessage('paymentAccountId is required.'),
 ];
-const createValidation = [body('name').isString().trim().notEmpty().withMessage('Name is required.')];
+const createValidation = [
+  body('name').isString().trim().notEmpty().withMessage('Name is required.'),
+  body('tags').optional().isArray({ max: 10 }).withMessage('tags must be an array of at most 10 items.'),
+  body('tags.*').isString().trim().isLength({ min: 1, max: 30 }).withMessage('Each tag must be 1-30 characters.'),
+];
 
 router.use(requireAuth, scopeToCompany);
 router.get('/', controller.list);

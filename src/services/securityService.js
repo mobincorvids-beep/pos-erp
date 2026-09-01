@@ -13,7 +13,7 @@ const notificationService = require('./notificationService');
 const FAILED_ATTEMPT_THRESHOLD = 5;
 const FAILED_ATTEMPT_WINDOW_MINUTES = 15;
 
-/** Records one attempt — always, regardless of outcome, since a login history with only the successes shown is not a real security log. */
+/** Records one attempt: always, regardless of outcome, since a login history with only the successes shown is not a real security log. */
 function recordAttempt({ email, userId, companyId, success, failureReason, ipAddress, userAgent }) {
   return LoginAttempt.create({ email: email.toLowerCase(), userId, companyId, success, failureReason, ipAddress, userAgent });
 }

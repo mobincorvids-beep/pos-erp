@@ -26,7 +26,7 @@ async function createChannel({ companyId, name, isPrivate, purpose, memberIds, r
   });
 }
 
-/** Opens (or reuses) a 1:1 DM channel between two users — findOneAndUpdate with upsert on the unique dmKey index makes "get or create" a single atomic call, so two people opening a DM with each other at the same moment can't create two separate channels. */
+/** Opens (or reuses) a 1:1 DM channel between two users, findOneAndUpdate with upsert on the unique dmKey index makes "get or create" a single atomic call, so two people opening a DM with each other at the same moment can't create two separate channels. */
 async function openDirectMessage({ companyId, userId, otherUserId }) {
   if (String(userId) === String(otherUserId)) throw new Error('Cannot open a DM with yourself.');
   const dmKey = dmKeyFor(userId, otherUserId);
@@ -53,7 +53,7 @@ async function listChannelsForUser(companyId, userId) {
   }));
 }
 
-/** Root messages in a channel (not thread replies), newest-first page, oldest-first once returned — the conventional way a chat view loads history. */
+/** Root messages in a channel (not thread replies), newest-first page, oldest-first once returned, the conventional way a chat view loads history. */
 async function listMessages(channelId, { before, limit = 50 } = {}) {
   const filter = { channelId, replyToMessageId: null };
   if (before) filter.createdAt = { $lt: new Date(before) };
@@ -66,14 +66,14 @@ function listThreadReplies(rootMessageId) {
   return ChatMessage.find({ replyToMessageId: rootMessageId }).sort({ createdAt: 1 }).populate('senderId', 'name');
 }
 
-/** Extracts @mentioned user ids from message text by matching against the channel's own member list — deliberately scoped to actual members rather than a free-text username parse, so a mention can never silently target someone who isn't even in the channel. */
+/** Extracts @mentioned user ids from message text by matching against the channel's own member list: deliberately scoped to actual members rather than a free-text username parse, so a mention can never silently target someone who isn't even in the channel. */
 async function resolveMentions(channel, text) {
   const User = require('../models/User');
   const members = await User.find({ _id: { $in: channel.memberIds } }, 'name');
   return members.filter((m) => text.includes(`@${m.name}`)).map((m) => m._id);
 }
 
-/** Posts a message. Mentioned members get a real in-app notification, same channel every other automated alert in this app uses — a mention isn't a second-class event. */
+/** Posts a message. Mentioned members get a real in-app notification, same channel every other automated alert in this app uses, a mention isn't a second-class event. */
 async function sendMessage({ companyId, channelId, senderId, text, replyToMessageId, attachmentUrls }) {
   if (!text || !text.trim()) throw new Error('Message text is required.');
   const channel = await ChatChannel.findOne({ _id: channelId, companyId });
@@ -105,7 +105,7 @@ async function sendMessage({ companyId, channelId, senderId, text, replyToMessag
   return ChatMessage.findById(message._id).populate('senderId', 'name');
 }
 
-/** Edits a message — only the original sender may edit their own message. */
+/** Edits a message: only the original sender may edit their own message. */
 async function editMessage(messageId, { text, userId }) {
   const message = await ChatMessage.findById(messageId);
   if (!message || message.deletedAt) throw new Error('Message not found.');
@@ -117,7 +117,7 @@ async function editMessage(messageId, { text, userId }) {
   return message;
 }
 
-/** Soft-deletes a message — text is cleared but the row stays (with deletedAt set) so any replies in its thread keep a valid, if now-empty, parent instead of pointing at nothing. */
+/** Soft-deletes a message: text is cleared but the row stays (with deletedAt set) so any replies in its thread keep a valid, if now-empty, parent instead of pointing at nothing. */
 async function deleteMessage(messageId, userId) {
   const message = await ChatMessage.findById(messageId);
   if (!message || message.deletedAt) throw new Error('Message not found.');
@@ -136,7 +136,7 @@ function listPinned(channelId) {
   return ChatMessage.find({ channelId, pinned: true, deletedAt: null }).sort({ createdAt: -1 }).populate('senderId', 'name');
 }
 
-/** Marks a channel read up to now — the simple, standard "open the channel = read it" behavior most chat apps use, rather than per-message read receipts. */
+/** Marks a channel read up to now, the simple, standard "open the channel = read it" behavior most chat apps use, rather than per-message read receipts. */
 function markChannelRead(companyId, channelId, userId) {
   return ChatChannelRead.findOneAndUpdate(
     { companyId, channelId, userId },
@@ -148,7 +148,7 @@ function markChannelRead(companyId, channelId, userId) {
 async function addMember(channelId, userId) {
   const channel = await ChatChannel.findById(channelId);
   if (!channel) throw new Error('Channel not found.');
-  if (channel.type === 'dm') throw new Error('Cannot add members to a DM — start a group channel instead.');
+  if (channel.type === 'dm') throw new Error('Cannot add members to a DM, start a group channel instead.');
   if (!channel.memberIds.some((id) => String(id) === String(userId))) {
     channel.memberIds.push(userId);
     await channel.save();

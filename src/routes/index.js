@@ -2,6 +2,7 @@ const router = require('express').Router();
 
 router.use('/auth', require('./authRoutes'));
 router.use('/products', require('./productRoutes'));
+router.use('/categories', require('./categoryRoutes'));
 router.use('/sales', require('./saleRoutes'));
 router.use('/sales-workflow', require('./salesOrderRoutes')); // quotations & sales orders
 router.use('/purchase-orders', require('./purchaseRoutes'));
@@ -11,6 +12,9 @@ router.use('/cost-centers', require('./costCenterRoutes'));
 router.use('/units', require('./unitRoutes'));
 router.use('/accounting-periods', require('./periodRoutes'));
 router.use('/employee-loans', require('./employeeLoanRoutes'));
+router.use('/credit-notes', require('./creditNoteRoutes'));
+router.use('/debit-notes', require('./debitNoteRoutes'));
+router.use('/timesheets', require('./timesheetRoutes'));
 router.use('/recurring-invoices', require('./recurringInvoiceRoutes'));
 router.use('/budgets', require('./budgetRoutes'));
 router.use('/purchase-orders/early-payment', require('./earlyPaymentDiscountRoutes'));
@@ -30,6 +34,8 @@ router.use('/expenses', require('./expenseRoutes'));
 router.use('/customers', require('./customerRoutes'));
 router.use('/suppliers', require('./supplierRoutes'));
 router.use('/loyalty', require('./loyaltyRoutes'));
+router.use('/coupons', require('./couponRoutes'));
+router.use('/gift-cards', require('./giftCardRoutes'));
 router.use('/appointments', require('./appointmentRoutes'));
 router.use('/crm', require('./crmRoutes'));
 router.use('/hr', require('./hrRoutes'));
@@ -47,11 +53,32 @@ router.use('/portal-session', require('./portalSessionRoutes'));
 router.use('/workflows', require('./workflowRoutes'));
 router.use('/webhooks', require('./webhookRoutes'));
 router.use('/payment-gateway', require('./paymentGatewayRoutes')); // JazzCash/Easypaisa — callback/:provider is public, see that file
+router.use('/tax-payments', require('./taxPaymentRoutes')); // vendor pays own FBR tax liability via JazzCash — jazzcash-callback is public, see that file
 router.use('/projects', require('./projectRoutes'));
+router.use('/tasks', require('./taskRoutes'));
 router.use('/ecommerce-config', require('./ecommerceConfigRoutes')); // tenant-side setup
 router.use('/ecommerce', require('./ecommerceWebhookRoutes'));        // external store calls this — webhook-token auth, not JWT
 router.use('/ai', require('./aiInsightsRoutes'));
 router.use('/account-settings', require('./accountSettingsRoutes'));
+router.use('/fleet', require('./fleetRoutes'));
+router.use('/field-service', require('./fieldServiceRoutes'));
+router.use('/quality', require('./qualityRoutes'));
+router.use('/contracts', require('./contractRoutes'));
+router.use('/supplier-portal', require('./supplierPortalRoutes'));
+router.use('/supplier-portal-session', require('./supplierPortalSessionRoutes'));
+router.use('/employee-portal', require('./employeePortalRoutes'));
+router.use('/employee-portal-session', require('./employeePortalSessionRoutes'));
+router.use('/logistics', require('./logisticsRoutes'));
+router.use('/warehouse', require('./warehouseZoneRoutes'));
+router.use('/pick-waves', require('./pickWaveRoutes'));
+router.use('/recruitment', require('./recruitmentRoutes'));
+router.use('/performance', require('./performanceRoutes'));
+router.use('/funnels', require('./funnelRoutes'));
+router.use('/public/funnels', require('./publicFunnelRoutes')); // public, no JWT — mirrors ecommerceWebhookRoutes.js
+router.use('/developer/api-keys', require('./apiKeyRoutes'));
+router.use('/developer/webhooks', require('./webhookSubscriptionRoutes'));
+router.use('/public-api/v1', require('./publicApiRoutes')); // public, apiKeyAuth only — no JWT
+router.use('/sales-channels', require('./salesChannelRoutes')); // includes public /webhook/:token receiver
 router.use('/admin', require('./admin')); // platform-admin layer — separate JWT namespace, see middleware/platformAuth.js
 
 // Industry modules auto-mount themselves here — every folder under

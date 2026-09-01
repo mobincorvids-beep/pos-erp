@@ -3,7 +3,6 @@ import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { Loading } from '../components/Loading';
 import { formatMoney, toDateInputValue } from '../lib/format';
-import { MetricCard } from '../components/MetricCard';
 
 const TABS = [
   { key: 'sales-summary', label: 'Sales summary' },
@@ -27,13 +26,17 @@ export function ReportsPage() {
 
   return (
     <div>
-      <p className="page-title mb-4">Reports</p>
-      <div className="flex gap-1 border-b border-rule mb-5 overflow-x-auto">
+      <div className="mb-5">
+        <p className="page-title">Reports</p>
+        <p className="text-sm text-ink-muted mt-1">Real-time financial performance and operational metrics.</p>
+      </div>
+
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
         {TABS.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`shrink-0 whitespace-nowrap px-3 py-2 text-sm -mb-px border-b-2 ${tab === t.key ? 'border-accent text-accent-strong font-medium' : 'border-transparent text-ink-muted hover:text-ink'}`}
+            className={`shrink-0 ${tab === t.key ? 'pill-active' : 'pill'}`}
           >
             {t.label}
           </button>
@@ -62,7 +65,7 @@ function ConsolidatedView({ data }) {
   const { company } = useAuth();
   return (
     <div>
-      <p className="text-xs text-ink-muted mb-3">Every company in your group (this company plus any sharing the same parent) — configured by your platform admin.</p>
+      <p className="text-xs text-ink-muted mb-3">Every company in your group (this company plus any sharing the same parent), configured by your platform admin.</p>
       <ReportTable
         columns={['Company', 'Invoices', 'Net sales']}
         rows={data.companies.map((c) => [c.companyName, String(c.invoiceCount), formatMoney(c.netSales, company?.currency)])}
@@ -106,14 +109,36 @@ function DateRangeReport({ path, render: Render }) {
 
   return (
     <div>
-      <div className="flex items-end gap-2 mb-4">
+      <div className="card flex flex-wrap items-end gap-3 p-4 mb-5">
         <div><label className="field-label">From</label><input type="date" className="field-input" value={from} onChange={(e) => setFrom(e.target.value)} /></div>
         <div><label className="field-label">To</label><input type="date" className="field-input" value={to} onChange={(e) => setTo(e.target.value)} /></div>
-        <button className="btn-secondary" onClick={load}>Update</button>
+        <button className="btn-primary" onClick={load}>Update</button>
       </div>
       {loading && <Loading />}
       {error && <p className="text-sm text-danger">{error}</p>}
       {!loading && data && <Render data={data} />}
+    </div>
+  );
+}
+
+/** Stat tile matching the reference dashboard's KPI cards: big tabular
+ * number, small icon chip, optional trend caption underneath a divider.
+ * Local to this page only; MetricCard (used elsewhere) is untouched. */
+function StatTile({ label, value, icon, caption, tone }) {
+  return (
+    <div className="card p-5">
+      <div className="flex items-start justify-between">
+        <p className="eyebrow">{label}</p>
+        {icon && (
+          <span className="w-9 h-9 rounded-lg bg-accent-soft text-accent-strong flex items-center justify-center shrink-0">
+            <span className="font-icon text-lg leading-none">{icon}</span>
+          </span>
+        )}
+      </div>
+      <p className={`num text-3xl font-semibold mt-2 ${tone === 'warning' ? 'text-warning' : tone === 'danger' ? 'text-danger' : 'text-ink'}`}>{value}</p>
+      {caption && (
+        <p className="text-xs text-ink-muted mt-3 pt-3 border-t border-rule">{caption}</p>
+      )}
     </div>
   );
 }
@@ -123,13 +148,13 @@ function SalesSummaryView({ data }) {
   const s = data.summary;
   return (
     <div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-        <MetricCard label="Net sales" value={formatMoney(s.netSales, company?.currency)} />
-        <MetricCard label="Invoices" value={String(s.invoiceCount)} plain />
-        <MetricCard label="Discounts" value={formatMoney(s.totalDiscount, company?.currency)} />
-        <MetricCard label="Outstanding" value={formatMoney(s.totalDue, company?.currency)} tone="warning" />
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        <StatTile label="Net sales" value={formatMoney(s.netSales, company?.currency)} icon="payments" />
+        <StatTile label="Invoices" value={String(s.invoiceCount)} icon="receipt_long" />
+        <StatTile label="Discounts" value={formatMoney(s.totalDiscount, company?.currency)} icon="sell" />
+        <StatTile label="Outstanding" value={formatMoney(s.totalDue, company?.currency)} icon="hourglass_top" tone="warning" />
       </div>
-      <p className="text-sm font-medium mb-2">By day</p>
+      <p className="text-sm font-semibold mb-2">By day</p>
       <ReportTable
         columns={['Date', 'Invoices', 'Net sales']}
         rows={data.byDay.map((d) => [d.date, String(d.invoiceCount), formatMoney(d.netSales, company?.currency)])}
@@ -142,7 +167,9 @@ function StockValuationView({ data }) {
   const { company } = useAuth();
   return (
     <div>
-      <MetricCard label="Total inventory value" value={formatMoney(data.totalValue, company?.currency)} className="mb-4 w-64" />
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        <StatTile label="Total inventory value" value={formatMoney(data.totalValue, company?.currency)} icon="inventory_2" />
+      </div>
       <ReportTable
         columns={['Product', 'Qty', 'Unit cost', 'Value']}
         rows={data.rows.map((r) => [r.productName, r.quantity, formatMoney(r.unitCost, company?.currency), formatMoney(r.value, company?.currency)])}
@@ -156,7 +183,7 @@ function TrialBalanceView({ data }) {
   return (
     <div>
       <div className={`chip-${data.balanced ? 'accent' : 'danger'} !inline-block mb-4`}>
-        {data.balanced ? 'Balanced' : 'Not balanced — check ledger entries'}
+        {data.balanced ? 'Balanced' : 'Not balanced: check ledger entries'}
       </div>
       <ReportTable
         columns={['Account', 'Type', 'Debit', 'Credit']}
@@ -171,11 +198,11 @@ function ProfitAndLossView({ data }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
       <div>
-        <p className="text-sm font-medium mb-2">Income</p>
+        <p className="eyebrow mb-2">Income</p>
         <ReportTable columns={['Account', 'Amount']} rows={data.income.map((r) => [r.name, formatMoney(r.amount, company?.currency)])} />
       </div>
       <div>
-        <p className="text-sm font-medium mb-2">Expenses</p>
+        <p className="eyebrow mb-2">Expenses</p>
         <ReportTable columns={['Account', 'Amount']} rows={data.expenses.map((r) => [r.name, formatMoney(r.amount, company?.currency)])} />
       </div>
       <div className="col-span-2 tear-line pt-3 flex justify-between text-base font-medium">
@@ -195,17 +222,17 @@ function BalanceSheetView({ data }) {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         <div>
-          <p className="text-sm font-medium mb-2">Assets</p>
+          <p className="eyebrow mb-2">Assets</p>
           <ReportTable columns={['Account', 'Balance']} rows={data.assets.map((r) => [r.name, formatMoney(r.balance, company?.currency)])} />
           <p className="num text-sm font-medium mt-2 text-right">{formatMoney(data.totalAssets, company?.currency)}</p>
         </div>
         <div>
-          <p className="text-sm font-medium mb-2">Liabilities</p>
+          <p className="eyebrow mb-2">Liabilities</p>
           <ReportTable columns={['Account', 'Balance']} rows={data.liabilities.map((r) => [r.name, formatMoney(r.balance, company?.currency)])} />
           <p className="num text-sm font-medium mt-2 text-right">{formatMoney(data.totalLiabilities, company?.currency)}</p>
         </div>
         <div>
-          <p className="text-sm font-medium mb-2">Equity</p>
+          <p className="eyebrow mb-2">Equity</p>
           <ReportTable columns={['Account', 'Balance']} rows={data.equity.map((r) => [r.name, formatMoney(r.balance, company?.currency)])} />
           <p className="num text-sm font-medium mt-2 text-right">{formatMoney(data.totalEquity, company?.currency)}</p>
         </div>
@@ -297,10 +324,10 @@ function CashBankBookView({ data }) {
   const { company } = useAuth();
   return (
     <div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
-        <MetricCard label="Account" value={data.accountName} plain />
-        <MetricCard label="Opening balance" value={formatMoney(data.openingBalance, company?.currency)} />
-        <MetricCard label="Closing balance" value={formatMoney(data.closingBalance, company?.currency)} />
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+        <StatTile label="Account" value={data.accountName} icon="account_balance" />
+        <StatTile label="Opening balance" value={formatMoney(data.openingBalance, company?.currency)} icon="north_east" />
+        <StatTile label="Closing balance" value={formatMoney(data.closingBalance, company?.currency)} icon="south_west" />
       </div>
       <ReportTable
         columns={['Date', 'Voucher #', 'Type', 'Narration', 'Debit', 'Credit', 'Balance']}
@@ -318,7 +345,7 @@ function CashBankBookView({ data }) {
   );
 }
 
-/** Cash/bank book needs an account picker before it can load — unlike the other
+/** Cash/bank book needs an account picker before it can load, unlike the other
  * date-range reports, `cashBankBook` requires an `accountId` param. Pulls the
  * account list from /account-settings (same endpoint the Default Accounts
  * settings page uses), defaults to the first account once loaded. */
@@ -339,7 +366,7 @@ function CashBankBookReport() {
 
   return (
     <div>
-      <div className="mb-4">
+      <div className="card p-4 mb-5 max-w-xs">
         <label className="field-label">Account</label>
         <select className="field-input" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
           {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
@@ -355,17 +382,17 @@ function CashBankBookReport() {
 function ReportTable({ columns, rows }) {
   if (rows.length === 0) return <p className="text-sm text-ink-muted">No data for this period.</p>;
   return (
-    <div className="card overflow-hidden">
+    <div className="card overflow-hidden overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-            {columns.map((c, i) => <th key={c} className={`px-3 py-2 font-medium ${i > 0 ? 'text-right' : ''}`}>{c}</th>)}
+          <tr className="bg-surface-sunken border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
+            {columns.map((c, i) => <th key={c} className={`px-4 py-3 font-semibold whitespace-nowrap ${i > 0 ? 'text-right' : ''}`}>{c}</th>)}
           </tr>
         </thead>
         <tbody>
           {rows.map((row, i) => (
-            <tr key={i} className="border-b border-rule last:border-0">
-              {row.map((cell, j) => <td key={j} className={`px-3 py-2 ${j > 0 ? 'num text-right' : ''}`}>{cell}</td>)}
+            <tr key={i} className="border-b border-rule last:border-0 hover:bg-surface-sunken/60 transition-colors">
+              {row.map((cell, j) => <td key={j} className={`px-4 py-3 whitespace-nowrap ${j > 0 ? 'num text-right' : ''}`}>{cell}</td>)}
             </tr>
           ))}
         </tbody>

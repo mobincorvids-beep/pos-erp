@@ -6,6 +6,7 @@ const leaveRequestSchema = new Schema({
   fromDate: { type: Date, required: true },
   toDate: { type: Date, required: true },
   type: { type: String, default: 'annual', enum: ['annual', 'sick', 'unpaid', 'other'] },
+  leavePolicyId: { type: Schema.Types.ObjectId, ref: 'LeavePolicy', default: null },
   reason: String,
   status: { type: String, default: 'pending', enum: ['pending', 'approved', 'rejected'] },
   approvedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },

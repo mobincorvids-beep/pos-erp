@@ -8,6 +8,16 @@ import { formatDate } from '../lib/format';
 
 const STATUS_CHIP = { open: 'chip-accent', closed: 'chip-danger' };
 
+function StatusChip({ status }) {
+  const cls = STATUS_CHIP[status] || 'chip-neutral';
+  return (
+    <span className={`${cls} gap-1.5 capitalize`}>
+      <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
+      {status}
+    </span>
+  );
+}
+
 export function PeriodsPage() {
   const { can } = useAuth();
   const toast = useToast();
@@ -38,14 +48,19 @@ export function PeriodsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <p className="page-title">Fiscal years &amp; periods</p>
+      <div className="flex justify-between items-end flex-wrap gap-4 mb-6">
+        <div>
+          <p className="page-title">Fiscal Years &amp; Periods</p>
+          <p className="text-sm text-ink-muted mt-1 max-w-2xl">Closing a period is a real accounting control, once closed, no voucher can be posted with a date inside it, anywhere in the system, until it's reopened.</p>
+        </div>
         <div className="flex gap-2">
           <button className="btn-secondary" onClick={() => setShowFyForm(true)}>New fiscal year</button>
-          <button className="btn-primary" onClick={() => setShowPeriodForm(true)} disabled={fiscalYears.length === 0}>New period</button>
+          <button className="btn-primary" onClick={() => setShowPeriodForm(true)} disabled={fiscalYears.length === 0}>
+            <span className="material-symbols-outlined text-sm">add</span>
+            New period
+          </button>
         </div>
       </div>
-      <p className="text-sm text-ink-muted mb-5 max-w-2xl">Closing a period is a real accounting control — once closed, no voucher can be posted with a date inside it, anywhere in the system, until it's reopened.</p>
 
       {loading && <Loading />}
       {!loading && periods.length === 0 && (
@@ -53,34 +68,40 @@ export function PeriodsPage() {
       )}
       {!loading && periods.length > 0 && (
         <div className="card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                <th className="px-3 py-2 font-medium">Period</th>
-                <th className="px-3 py-2 font-medium">Fiscal year</th>
-                <th className="px-3 py-2 font-medium">Dates</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-                <th className="px-3 py-2 font-medium"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {periods.map((p) => (
-                <tr key={p._id} className="border-b border-rule last:border-0">
-                  <td className="px-3 py-2">{p.name}</td>
-                  <td className="px-3 py-2 text-ink-muted">{p.fiscalYearId?.name || '—'}</td>
-                  <td className="px-3 py-2 text-ink-muted">{formatDate(p.startDate)} – {formatDate(p.endDate)}</td>
-                  <td className="px-3 py-2"><span className={STATUS_CHIP[p.status]}>{p.status}</span></td>
-                  <td className="px-3 py-2 text-right">
-                    {can('reports.financial') && (
-                      p.status === 'open'
-                        ? <button className="btn-ghost !text-danger" onClick={() => toggle(p._id, 'close')}>Close</button>
-                        : <button className="btn-ghost !text-accent" onClick={() => toggle(p._id, 'reopen')}>Reopen</button>
-                    )}
-                  </td>
+          <div className="px-5 py-4 border-b border-rule flex justify-between items-center bg-surface-sunken/40">
+            <p className="font-display text-lg font-semibold text-ink">Periods</p>
+            <span className="eyebrow">{periods.length} periods</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[720px]">
+              <thead>
+                <tr className="border-b border-rule bg-surface-sunken/60">
+                  <th className="py-3 px-5 eyebrow font-medium">Period</th>
+                  <th className="py-3 px-5 eyebrow font-medium">Fiscal Year</th>
+                  <th className="py-3 px-5 eyebrow font-medium">Dates</th>
+                  <th className="py-3 px-5 eyebrow font-medium">Status</th>
+                  <th className="py-3 px-5 eyebrow font-medium text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-rule">
+                {periods.map((p) => (
+                  <tr key={p._id} className="hover:bg-accent-soft/30 transition-colors">
+                    <td className="py-3 px-5 text-sm font-semibold text-ink">{p.name}</td>
+                    <td className="py-3 px-5 text-sm text-ink-muted">{p.fiscalYearId?.name || '-'}</td>
+                    <td className="py-3 px-5 text-sm text-ink-muted num">{formatDate(p.startDate)} – {formatDate(p.endDate)}</td>
+                    <td className="py-3 px-5"><StatusChip status={p.status} /></td>
+                    <td className="py-3 px-5 text-right">
+                      {can('reports.financial') && (
+                        p.status === 'open'
+                          ? <button className="btn-ghost !text-danger !px-0 text-xs" onClick={() => toggle(p._id, 'close')}>Close</button>
+                          : <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => toggle(p._id, 'reopen')}>Reopen</button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -112,7 +133,7 @@ function FiscalYearForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">New fiscal year</p>
+        <p className="font-display text-lg font-semibold text-accent mb-4">New fiscal year</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Name</label>
@@ -160,7 +181,7 @@ function PeriodForm({ fiscalYears, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">New period</p>
+        <p className="font-display text-lg font-semibold text-accent mb-4">New period</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Fiscal year</label>

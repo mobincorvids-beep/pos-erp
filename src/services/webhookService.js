@@ -78,7 +78,7 @@ async function fire(companyId, eventType, payload) {
   return results;
 }
 
-/** For a receiver to verify a delivery genuinely came from here and wasn't tampered with — recomputes the same HMAC and compares using a timing-safe comparison, not a plain === (which would leak timing information about how many leading bytes matched). */
+/** For a receiver to verify a delivery genuinely came from here and wasn't tampered with: recomputes the same HMAC and compares using a timing-safe comparison, not a plain === (which would leak timing information about how many leading bytes matched). */
 function verifySignature(body, signature, secret) {
   const expected = crypto.createHmac('sha256', secret).update(body).digest('hex');
   const expectedBuffer = Buffer.from(expected, 'hex');

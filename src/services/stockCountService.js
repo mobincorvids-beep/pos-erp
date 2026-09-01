@@ -30,7 +30,7 @@ async function startCount({ companyId, warehouseId, variantIds, userId }) {
   });
 }
 
-/** Records counted quantities for one or more lines — can be called multiple times as staff progress through the count. */
+/** Records counted quantities for one or more lines, can be called multiple times as staff progress through the count. */
 async function recordCounts(stockCountId, counts) {
   const stockCount = await StockCount.findById(stockCountId);
   if (!stockCount) throw new Error('Stock count not found.');
@@ -89,4 +89,42 @@ async function submitCount(stockCountId, userId) {
   }
 }
 
-module.exports = { startCount, recordCounts, submitCount };
+/**
+ * Deletes a stocktake outright, but only while it's still in_progress — no
+ * adjustment movements have been posted yet at that point, so nothing in
+ * the stock ledger references it. A submitted count has already posted
+ * ledger-traceable adjustments (see submitCount above); deleting it would
+ * silently orphan those movements' referenceId, so that's blocked here
+ * rather than attempted as a reversal.
+ */
+async function deleteCount(stockCountId, companyId, userId) {
+  const stockCount = await StockCount.findOne({ _id: stockCountId, companyId });
+  if (!stockCount) throw new Error('Stock count not found.');
+  if (stockCount.status !== 'in_progress') {
+    throw new Error('This stock count has already been submitted and posted stock adjustments, so it cannot be deleted.');
+  }
+
+  await StockCount.deleteOne({ _id: stockCount._id });
+
+  await auditService.record({
+    companyId, userId, action: 'stock_count.deleted',
+    entityType: 'StockCount', entityId: stockCount._id,
+    metadata: { countNumber: stockCount.countNumber, itemCount: stockCount.items.length },
+  });
+}
+
+/** Removes a single not-yet-counted line from an in_progress count (e.g. a variant that shouldn't be part of this stocktake). */
+async function removeItem(stockCountId, itemId, companyId) {
+  const stockCount = await StockCount.findOne({ _id: stockCountId, companyId });
+  if (!stockCount) throw new Error('Stock count not found.');
+  if (stockCount.status !== 'in_progress') throw new Error('This stock count has already been submitted.');
+
+  const item = stockCount.items.id(itemId);
+  if (!item) throw new Error(`Stock count item ${itemId} not found.`);
+  item.deleteOne();
+
+  await stockCount.save();
+  return stockCount;
+}
+
+module.exports = { startCount, recordCounts, submitCount, deleteCount, removeItem };

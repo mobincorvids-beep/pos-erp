@@ -45,7 +45,7 @@ app.use(cors({
 }));
 
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
-app.use(express.json({ limit: '2mb' })); // explicit rather than relying on express's default — generous enough for any real payload here (largest is a GRN/PO with many line items), small enough to blunt a body-based DoS attempt
+app.use(express.json({ limit: '8mb' })); // explicit rather than relying on express's default — generous enough for any real payload here (largest is a GRN/PO with many line items, or up to 4 product images at ~1.5MB base64 each), small enough to blunt a body-based DoS attempt
 
 // Strips any request key starting with `$` or containing `.` from
 // body/query/params before it ever reaches a controller — the standard

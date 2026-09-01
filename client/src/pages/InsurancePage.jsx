@@ -12,10 +12,13 @@ export function InsurancePage() {
   const [tab, setTab] = useState('policies');
   return (
     <div>
-      <p className="page-title mb-4">Insurance</p>
-      <div className="flex gap-1 border-b border-rule mb-5">
+      <div className="mb-5">
+        <p className="page-title">Insurance &amp; Underwriting</p>
+        <p className="text-sm text-ink-muted mt-1">Policies, claims, and underwriting decisions.</p>
+      </div>
+      <div className="flex gap-2 mb-5">
         {[['policies', 'Policies'], ['claims', 'Claims']].map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} className={`px-3 py-2 text-sm -mb-px border-b-2 ${tab === key ? 'border-accent text-accent-strong font-medium' : 'border-transparent text-ink-muted hover:text-ink'}`}>
+          <button key={key} onClick={() => setTab(key)} className={tab === key ? 'pill-active' : 'pill'}>
             {label}
           </button>
         ))}
@@ -50,24 +53,24 @@ function PoliciesTab() {
         <div className="card overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                <th className="px-3 py-2 font-medium">Customer</th>
-                <th className="px-3 py-2 font-medium">Type</th>
-                <th className="px-3 py-2 font-medium text-right">Coverage</th>
-                <th className="px-3 py-2 font-medium text-right">Premium</th>
-                <th className="px-3 py-2 font-medium">Period</th>
-                <th className="px-3 py-2 font-medium"></th>
+              <tr className="border-b border-rule text-left">
+                <th className="px-3 py-2.5 eyebrow font-medium">Customer</th>
+                <th className="px-3 py-2.5 eyebrow font-medium">Type</th>
+                <th className="px-3 py-2.5 eyebrow font-medium text-right">Coverage</th>
+                <th className="px-3 py-2.5 eyebrow font-medium text-right">Premium</th>
+                <th className="px-3 py-2.5 eyebrow font-medium">Period</th>
+                <th className="px-3 py-2.5 eyebrow font-medium"></th>
               </tr>
             </thead>
             <tbody>
               {policies.map((p) => (
-                <tr key={p._id} className="border-b border-rule last:border-0">
-                  <td className="px-3 py-2">{p.customerId?.name || '—'}</td>
-                  <td className="px-3 py-2 text-ink-muted">{p.policyType}</td>
-                  <td className="px-3 py-2 num text-right">{formatMoney(p.coverageAmount, company?.currency)}</td>
-                  <td className="px-3 py-2 num text-right">{formatMoney(p.premiumAmount, company?.currency)}</td>
-                  <td className="px-3 py-2 text-ink-muted">{formatDate(p.startDate)} – {formatDate(p.endDate)}</td>
-                  <td className="px-3 py-2 text-right">
+                <tr key={p._id} className="border-b border-rule last:border-0 hover:bg-surface-sunken/50">
+                  <td className="px-3 py-2.5">{p.customerId?.name || '-'}</td>
+                  <td className="px-3 py-2.5 text-ink-muted">{p.policyType}</td>
+                  <td className="px-3 py-2.5 num text-right">{formatMoney(p.coverageAmount, company?.currency)}</td>
+                  <td className="px-3 py-2.5 num text-right">{formatMoney(p.premiumAmount, company?.currency)}</td>
+                  <td className="px-3 py-2.5 text-ink-muted">{formatDate(p.startDate)} – {formatDate(p.endDate)}</td>
+                  <td className="px-3 py-2.5 text-right">
                     <button className="btn-ghost !text-accent" onClick={() => setClaiming(p)}>File a claim</button>
                   </td>
                 </tr>
@@ -105,7 +108,7 @@ function PolicyForm({ onClose, onSaved }) {
     setSaving(true);
     try {
       const product = products.find((p) => p._id === form.billingProductId);
-      if (!product) throw new Error('Select a billing product — it must have trackingMode "service".');
+      if (!product) throw new Error('Select a billing product: it must have trackingMode "service".');
       await api.post('/insurance/policies', { ...form, coverageAmount: Number(form.coverageAmount), premiumAmount: Number(form.premiumAmount), billingVariantId: product.variants[0]?._id });
       toast('Policy sold.', 'success');
       onSaved();
@@ -119,7 +122,7 @@ function PolicyForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm max-h-[85vh] overflow-y-auto">
-        <p className="font-display text-lg mb-4">Sell a policy</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">Sell a policy</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Branch</label>
@@ -198,7 +201,7 @@ function ClaimForm({ policy, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-1">File a claim</p>
+        <p className="font-display text-lg font-bold text-ink mb-1">File a claim</p>
         <p className="text-sm text-ink-muted mb-4">Coverage ceiling: {formatMoney(policy.coverageAmount, company?.currency)}</p>
         <div className="space-y-3">
           <div><label className="field-label">Claim amount</label><input type="number" required max={policy.coverageAmount} className="field-input num" value={form.claimAmount} onChange={(e) => setForm({ ...form, claimAmount: e.target.value })} /></div>
@@ -234,20 +237,20 @@ function ClaimsTab() {
         <div className="card overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                <th className="px-3 py-2 font-medium">Description</th>
-                <th className="px-3 py-2 font-medium text-right">Amount</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-                <th className="px-3 py-2 font-medium"></th>
+              <tr className="border-b border-rule text-left">
+                <th className="px-3 py-2.5 eyebrow font-medium">Description</th>
+                <th className="px-3 py-2.5 eyebrow font-medium text-right">Amount</th>
+                <th className="px-3 py-2.5 eyebrow font-medium">Status</th>
+                <th className="px-3 py-2.5 eyebrow font-medium"></th>
               </tr>
             </thead>
             <tbody>
               {claims.map((c) => (
-                <tr key={c._id} className="border-b border-rule last:border-0">
-                  <td className="px-3 py-2">{c.description}</td>
-                  <td className="px-3 py-2 num text-right">{formatMoney(c.claimAmount, company?.currency)}</td>
-                  <td className="px-3 py-2"><span className={CLAIM_CHIP[c.status]}>{c.status}</span></td>
-                  <td className="px-3 py-2 text-right">
+                <tr key={c._id} className="border-b border-rule last:border-0 hover:bg-surface-sunken/50">
+                  <td className="px-3 py-2.5">{c.description}</td>
+                  <td className="px-3 py-2.5 num text-right">{formatMoney(c.claimAmount, company?.currency)}</td>
+                  <td className="px-3 py-2.5"><span className={CLAIM_CHIP[c.status]}>{c.status}</span></td>
+                  <td className="px-3 py-2.5 text-right">
                     <button className="btn-ghost !text-accent" onClick={() => setDeciding(c)}>Decide</button>
                   </td>
                 </tr>
@@ -289,10 +292,10 @@ function DecideForm({ claim, onClose, onDecided }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Decide claim</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">Decide claim</p>
         <div className="flex gap-2 mb-3">
           <button type="button" onClick={() => setApprove(true)} className={approve ? 'btn-primary flex-1' : 'btn-secondary flex-1'}>Approve</button>
-          <button type="button" onClick={() => setApprove(false)} className={!approve ? 'btn-primary !bg-danger flex-1' : 'btn-secondary flex-1'}>Reject</button>
+          <button type="button" onClick={() => setApprove(false)} className={!approve ? 'btn-danger flex-1' : 'btn-secondary flex-1'}>Reject</button>
         </div>
         <div className="space-y-3">
           <div><label className="field-label">Decision note</label><input className="field-input" value={decisionNote} onChange={(e) => setDecisionNote(e.target.value)} /></div>

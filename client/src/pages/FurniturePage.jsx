@@ -26,15 +26,18 @@ export function FurniturePage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <p className="page-title">Custom Orders</p>
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+        <div>
+          <p className="eyebrow mb-1">Furniture</p>
+          <p className="page-title">Custom orders</p>
+        </div>
         <button className="btn-primary" onClick={() => setShowForm(true)}>New custom order</button>
       </div>
       {rate && rate.totalDelivered > 0 && (
-        <div className="card p-3 mb-4 inline-block">
-          <p className="text-xs text-ink-muted uppercase tracking-wide">On-time delivery rate</p>
-          <p className="font-display text-2xl num">{rate.onTimeRate}%</p>
-          <p className="text-xs text-ink-muted">{rate.onTimeCount} on time / {rate.lateCount} late of {rate.totalDelivered}</p>
+        <div className="card p-4 mb-5 inline-block">
+          <p className="eyebrow mb-1">On-time delivery rate</p>
+          <p className="font-display text-3xl num text-ink">{rate.onTimeRate}%</p>
+          <p className="text-xs text-ink-muted mt-1">{rate.onTimeCount} on time / {rate.lateCount} late of {rate.totalDelivered}</p>
         </div>
       )}
       <div className="flex flex-col lg:flex-row gap-6">
@@ -43,19 +46,28 @@ export function FurniturePage() {
           {!loading && orders.length === 0 && <EmptyState title="No custom orders yet" />}
           {!loading && orders.length > 0 && (
             <div className="card overflow-hidden">
-              <table className="w-full text-sm">
-                <thead><tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide"><th className="px-3 py-2 font-medium">Description</th><th className="px-3 py-2 font-medium">Customer</th><th className="px-3 py-2 font-medium">Promised</th><th className="px-3 py-2 font-medium">Status</th></tr></thead>
-                <tbody>
-                  {orders.map((o) => (
-                    <tr key={o._id} onClick={() => setSelected(o)} className={`border-b border-rule last:border-0 cursor-pointer hover:bg-paper ${selected?._id === o._id ? 'bg-accent-soft/40' : ''}`}>
-                      <td className="px-3 py-2">{o.description}</td>
-                      <td className="px-3 py-2 text-ink-muted">{o.customerId?.name}</td>
-                      <td className="px-3 py-2 text-ink-muted">{formatDate(o.promisedDeliveryDate)}</td>
-                      <td className="px-3 py-2"><span className={STATUS_CHIP[o.status]}>{o.status.replace('_', ' ')}</span></td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken/60">
+                      <th className="px-4 py-3 font-semibold">Description</th>
+                      <th className="px-4 py-3 font-semibold">Customer</th>
+                      <th className="px-4 py-3 font-semibold">Promised</th>
+                      <th className="px-4 py-3 font-semibold">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {orders.map((o) => (
+                      <tr key={o._id} onClick={() => setSelected(o)} className={`border-b border-rule last:border-0 cursor-pointer hover:bg-paper ${selected?._id === o._id ? 'bg-accent-soft/40' : ''}`}>
+                        <td className="px-4 py-3 text-ink">{o.description}</td>
+                        <td className="px-4 py-3 text-ink-muted">{o.customerId?.name}</td>
+                        <td className="px-4 py-3 text-ink-muted num">{formatDate(o.promisedDeliveryDate)}</td>
+                        <td className="px-4 py-3"><span className={STATUS_CHIP[o.status]}>{o.status.replace('_', ' ')}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>
@@ -89,7 +101,7 @@ function OrderForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">New custom order</p>
+        <p className="font-display text-lg text-ink mb-4">New custom order</p>
         <div className="space-y-3">
           <div><label className="field-label">Branch</label><select required className="field-input" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value })}><option value="">Select…</option>{branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}</select></div>
           <div><label className="field-label">Customer</label><select required className="field-input" value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })}><option value="">Select…</option>{customers.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}</select></div>
@@ -145,11 +157,17 @@ function OrderPanel({ order, onClose, onChanged }) {
   }
 
   return (
-    <div className="w-full lg:w-96 shrink-0 card p-4 h-fit">
-      <div className="flex items-center justify-between mb-3"><p className="font-display text-lg">{order.description}</p><button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button></div>
+    <div className="w-full lg:w-96 shrink-0 card p-5 h-fit">
+      <div className="flex items-center justify-between mb-4">
+        <p className="font-display text-lg text-ink">{order.description}</p>
+        <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button>
+      </div>
+      <div className="mb-4"><span className={STATUS_CHIP[order.status]}>{order.status.replace('_', ' ')}</span></div>
       {order.status === 'ordered' && (
         <>
+          <label className="field-label">Bill of materials</label>
           <select className="field-input mb-2" value={bomId} onChange={(e) => setBomId(e.target.value)}><option value="">BOM…</option>{boms.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}</select>
+          <label className="field-label">Warehouse</label>
           <select className="field-input mb-3" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}><option value="">Warehouse…</option>{warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}</select>
           <button className="btn-primary w-full" disabled={!bomId || !warehouseId || busy} onClick={startProduction}>Start production</button>
         </>
@@ -157,6 +175,7 @@ function OrderPanel({ order, onClose, onChanged }) {
       {order.status === 'in_production' && <button className="btn-primary w-full" disabled={busy} onClick={markReady}>Mark ready (requires production completed via Manufacturing page)</button>}
       {order.status === 'ready' && (
         <>
+          <label className="field-label">Warehouse</label>
           <select className="field-input mb-3" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}><option value="">Warehouse…</option>{warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}</select>
           <button className="btn-primary w-full" disabled={!warehouseId || busy} onClick={deliver}>Deliver & bill</button>
         </>

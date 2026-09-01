@@ -27,11 +27,16 @@ export function UnitsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <p className="page-title">Units</p>
-        <button className="btn-primary" onClick={() => setShowForm(true)}>New unit</button>
+      <div className="flex justify-between items-end flex-wrap gap-4 mb-6">
+        <div>
+          <p className="page-title">Units</p>
+          <p className="text-sm text-ink-muted mt-1 max-w-2xl">A base unit stands alone (Piece, Kilogram). An alternate unit converts to a base unit (a Carton of 288 Pieces) so you can buy in cartons while everything is tracked and costed in pieces underneath.</p>
+        </div>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>
+          <span className="material-symbols-outlined text-[18px]">add</span>
+          New unit
+        </button>
       </div>
-      <p className="text-sm text-ink-muted mb-5 max-w-2xl">A base unit stands alone (Piece, Kilogram). An alternate unit converts to a base unit — a Carton of 288 Pieces — so you can buy in cartons while everything is tracked and costed in pieces underneath.</p>
 
       {loading && <Loading />}
       {!loading && units.length === 0 && (
@@ -39,28 +44,34 @@ export function UnitsPage() {
       )}
       {!loading && units.length > 0 && (
         <div className="card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                <th className="px-3 py-2 font-medium">Name</th>
-                <th className="px-3 py-2 font-medium">Code</th>
-                <th className="px-3 py-2 font-medium">Converts to</th>
-                <th className="px-3 py-2 font-medium text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {units.map((u) => (
-                <tr key={u._id} className="border-b border-rule last:border-0">
-                  <td className="px-3 py-2">{u.name}</td>
-                  <td className="px-3 py-2 text-ink-muted">{u.shortCode}</td>
-                  <td className="px-3 py-2 text-ink-muted">
-                    {u.baseUnitId ? `1 ${u.name} = ${u.conversionFactor} ${u.baseUnitId.name}` : <span className="chip-neutral">Base unit</span>}
-                  </td>
-                  <td className="px-3 py-2 text-right"><button className="btn-ghost !text-danger !px-2 text-xs" onClick={() => handleRemove(u)}>Remove</button></td>
+          <div className="px-5 py-4 border-b border-rule flex justify-between items-center bg-surface-sunken/40">
+            <p className="font-display text-lg font-semibold text-ink">Unit Register</p>
+            <span className="eyebrow">{units.length} units</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[560px]">
+              <thead>
+                <tr className="border-b border-rule bg-surface-sunken/60">
+                  <th className="py-3 px-5 eyebrow font-medium">Name</th>
+                  <th className="py-3 px-5 eyebrow font-medium">Code</th>
+                  <th className="py-3 px-5 eyebrow font-medium">Converts to</th>
+                  <th className="py-3 px-5 eyebrow font-medium text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-rule">
+                {units.map((u) => (
+                  <tr key={u._id} className="hover:bg-accent-soft/30 transition-colors">
+                    <td className="py-3 px-5 text-sm font-semibold text-ink">{u.name}</td>
+                    <td className="py-3 px-5 text-sm text-ink-muted num">{u.shortCode}</td>
+                    <td className="py-3 px-5 text-sm text-ink-muted">
+                      {u.baseUnitId ? <span className="num">1 {u.name} = {u.conversionFactor} {u.baseUnitId.name}</span> : <span className="chip-neutral">Base unit</span>}
+                    </td>
+                    <td className="py-3 px-5 text-right"><button className="btn-ghost !text-danger text-xs" onClick={() => handleRemove(u)}>Remove</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -95,7 +106,7 @@ function UnitForm({ units, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">New unit</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">New unit</p>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -108,7 +119,7 @@ function UnitForm({ units, onClose, onSaved }) {
             </div>
           </div>
           <div>
-            <label className="field-label">Converts to (optional — leave blank for a base unit)</label>
+            <label className="field-label">Converts to (optional: leave blank for a base unit)</label>
             <select className="field-input" value={form.baseUnitId} onChange={(e) => setForm({ ...form, baseUnitId: e.target.value })}>
               <option value="">This is a base unit</option>
               {units.filter((u) => !u.baseUnitId).map((u) => <option key={u._id} value={u._id}>{u.name}</option>)}

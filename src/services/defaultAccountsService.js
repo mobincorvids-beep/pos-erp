@@ -41,7 +41,7 @@ async function resolve(companyId, key, session) {
   return account?._id || null;
 }
 
-/** Bulk-resolve several keys in one call — convenience for services that need more than one (e.g. purchaseService needs inventory + payable). */
+/** Bulk-resolve several keys in one call, convenience for services that need more than one (e.g. purchaseService needs inventory + payable). */
 async function resolveMany(companyId, keys, session) {
   const results = {};
   for (const key of keys) {

@@ -31,19 +31,27 @@ export function GymPage() {
   return (
     <div className="flex flex-col lg:flex-row gap-6">
       <div className="flex-1 min-w-0">
-        <div className="flex justify-end mb-3"><button className="btn-primary" onClick={() => setEditing({})}>New class</button></div>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="eyebrow">Gym</p>
+            <h1 className="page-title">Classes</h1>
+          </div>
+          <button className="btn-primary" onClick={() => setEditing({})}>New class</button>
+        </div>
         {loading && <Loading />}
         {!loading && classes.length === 0 && <EmptyState title="No classes yet" action={<button className="btn-primary" onClick={() => setEditing({})}>Add a class</button>} />}
         {!loading && classes.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {classes.map((c) => (
-              <div key={c._id} className="card p-3">
-                <p className="text-sm font-medium">{c.name}</p>
-                <p className="text-xs text-ink-muted">Capacity {c.capacity}</p>
-                <div className="flex items-center gap-3 mt-2">
-                  <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => setScheduling(c)}>Schedule session</button>
-                  <button className="btn-ghost !text-ink-muted !px-0 text-xs" onClick={() => setEditing(c)}>Edit</button>
-                  <button className="btn-ghost !text-danger !px-0 text-xs" onClick={() => handleRemove(c)}>Remove</button>
+              <div key={c._id} className="card p-4 flex flex-col gap-2">
+                <div>
+                  <p className="text-sm font-semibold text-ink">{c.name}</p>
+                  <span className="chip-neutral mt-1 num">Capacity {c.capacity}</span>
+                </div>
+                <div className="flex items-center gap-3 mt-1 pt-2 border-t border-rule">
+                  <button className="text-xs font-semibold text-accent hover:text-accent-strong" onClick={() => setScheduling(c)}>Schedule session</button>
+                  <button className="text-xs font-semibold text-ink-muted hover:text-ink" onClick={() => setEditing(c)}>Edit</button>
+                  <button className="text-xs font-semibold text-danger hover:opacity-80" onClick={() => handleRemove(c)}>Remove</button>
                 </div>
               </div>
             ))}
@@ -83,7 +91,7 @@ function ClassForm({ gymClass, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-xs">
-        <p className="font-display text-lg mb-4">{isNew ? 'New class' : 'Edit class'}</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">{isNew ? 'New class' : 'Edit class'}</p>
         <div className="space-y-3">
           {isNew && <div><label className="field-label">Branch</label><select required className="field-input" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value })}><option value="">Select…</option>{branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}</select></div>}
           <div><label className="field-label">Name</label><input required className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Morning Yoga" /></div>
@@ -113,7 +121,7 @@ function SessionScheduler({ gymClass, onClose, onScheduled }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-xs">
-        <p className="font-display text-lg mb-1">Schedule session</p>
+        <p className="font-display text-lg font-bold text-ink mb-1">Schedule session</p>
         <p className="text-sm text-ink-muted mb-4">{gymClass.name}</p>
         <label className="field-label">Start time</label>
         <input type="datetime-local" required className="field-input" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
@@ -156,17 +164,17 @@ function RosterPanel({ sessionId, onClose }) {
   if (!roster) return null;
   return (
     <div className="w-full lg:w-96 shrink-0 card p-4 h-fit">
-      <div className="flex items-center justify-between mb-3"><p className="font-display text-lg">Roster</p><button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button></div>
+      <div className="flex items-center justify-between mb-3"><p className="font-display text-lg font-bold text-ink">Roster</p><button className="btn-ghost !px-2 !py-1 text-sm" onClick={onClose}>Close</button></div>
       <div className="flex gap-2 mb-4">
         <select className="field-input" value={customerId} onChange={(e) => setCustomerId(e.target.value)}><option value="">Select customer…</option>{customers.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}</select>
         <button className="btn-primary shrink-0" disabled={!customerId || busy} onClick={enroll}>Enroll</button>
       </div>
-      <p className="text-xs text-ink-muted uppercase tracking-wide mb-1">Enrolled ({roster.enrolledCustomerIds.length}/{roster.capacity})</p>
-      {roster.enrolledCustomerIds.map((c) => <div key={c._id} className="text-sm py-1 border-b border-rule">{c.name}</div>)}
+      <p className="eyebrow mb-1">Enrolled (<span className="num">{roster.enrolledCustomerIds.length}/{roster.capacity}</span>)</p>
+      {roster.enrolledCustomerIds.map((c) => <div key={c._id} className="text-sm text-ink py-1.5 border-b border-rule">{c.name}</div>)}
       {roster.waitlistCustomerIds.length > 0 && (
         <>
-          <p className="text-xs text-ink-muted uppercase tracking-wide mt-3 mb-1">Waitlist</p>
-          {roster.waitlistCustomerIds.map((c, i) => <div key={c._id} className="text-sm py-1 border-b border-rule">{i + 1}. {c.name}</div>)}
+          <p className="eyebrow mt-3 mb-1">Waitlist</p>
+          {roster.waitlistCustomerIds.map((c, i) => <div key={c._id} className="text-sm text-ink py-1.5 border-b border-rule"><span className="num">{i + 1}.</span> {c.name}</div>)}
         </>
       )}
       <button className="btn-secondary w-full mt-4" onClick={cancelSession}>Cancel this session</button>

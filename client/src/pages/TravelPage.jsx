@@ -22,38 +22,78 @@ export function TravelPage() {
   }
   useEffect(load, []);
 
+  const total = bookings.length;
+  const completed = bookings.filter((b) => b.status === 'completed').length;
+  const nextUpcoming = bookings
+    .filter((b) => b.status === 'booked')
+    .sort((a, b) => new Date(a.travelDate) - new Date(b.travelDate))[0];
+
   return (
     <div>
-      <p className="page-title mb-4">Travel</p>
+      <div className="flex justify-between items-end mb-6 flex-wrap gap-3">
+        <div>
+          <p className="eyebrow mb-1">Travel</p>
+          <p className="page-title">Bookings &amp; packages</p>
+        </div>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>Book a package</button>
+      </div>
+
+      {!loading && total > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="card p-5">
+            <p className="eyebrow">Total bookings</p>
+            <p className="font-display text-3xl font-bold text-ink mt-3 num">{total}</p>
+          </div>
+          <div className="card p-5">
+            <p className="eyebrow">Completed</p>
+            <div className="flex items-baseline gap-2 mt-3">
+              <p className="font-display text-3xl font-bold text-ink num">{completed}</p>
+              <span className="text-sm text-ink-muted num">/ {total}</span>
+            </div>
+            <div className="w-full bg-surface-sunken rounded-full h-2 mt-3">
+              <div className="bg-accent h-2 rounded-full" style={{ width: `${total ? (completed / total) * 100 : 0}%` }} />
+            </div>
+          </div>
+          <div className="rounded-xl bg-accent text-white p-5 flex flex-col justify-between">
+            <p className="eyebrow !text-white/70">Next departure</p>
+            {nextUpcoming ? (
+              <div className="mt-3">
+                <p className="font-display text-xl font-bold">{nextUpcoming.packageName}</p>
+                <p className="text-sm text-white/80 mt-1">{formatDate(nextUpcoming.travelDate)} · {nextUpcoming.destination}</p>
+              </div>
+            ) : (
+              <p className="text-sm text-white/80 mt-3">No upcoming departures</p>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col lg:flex-row gap-6">
         <div className="flex-1 min-w-0">
-          <div className="flex justify-end mb-3">
-            <button className="btn-primary" onClick={() => setShowForm(true)}>Book a package</button>
-          </div>
           {loading && <Loading />}
           {!loading && bookings.length === 0 && (
-            <EmptyState title="No bookings yet" description="Book with an optional deposit — bill the remainder when the trip is finalized." action={<button className="btn-primary" onClick={() => setShowForm(true)}>Book one</button>} />
+            <EmptyState title="No bookings yet" description="Book with an optional deposit: bill the remainder when the trip is finalized." action={<button className="btn-primary" onClick={() => setShowForm(true)}>Book one</button>} />
           )}
           {!loading && bookings.length > 0 && (
             <div className="card overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                    <th className="px-3 py-2 font-medium">Package</th>
-                    <th className="px-3 py-2 font-medium">Customer</th>
-                    <th className="px-3 py-2 font-medium">Travel date</th>
-                    <th className="px-3 py-2 font-medium text-right">Price</th>
-                    <th className="px-3 py-2 font-medium">Status</th>
+                    <th className="px-4 py-3 font-medium">Package</th>
+                    <th className="px-4 py-3 font-medium">Customer</th>
+                    <th className="px-4 py-3 font-medium">Travel date</th>
+                    <th className="px-4 py-3 font-medium text-right">Price</th>
+                    <th className="px-4 py-3 font-medium">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {bookings.map((b) => (
-                    <tr key={b._id} onClick={() => setSelected(b)} className={`border-b border-rule last:border-0 cursor-pointer hover:bg-paper ${selected?._id === b._id ? 'bg-accent-soft/40' : ''}`}>
-                      <td className="px-3 py-2">{b.packageName} <span className="text-ink-muted text-xs">{b.destination}</span></td>
-                      <td className="px-3 py-2">{b.customerId?.name || '—'}</td>
-                      <td className="px-3 py-2 text-ink-muted">{formatDate(b.travelDate)}</td>
-                      <td className="px-3 py-2 num text-right">{formatMoney(b.price, company?.currency)}</td>
-                      <td className="px-3 py-2"><span className={STATUS_CHIP[b.status]}>{b.status}</span></td>
+                    <tr key={b._id} onClick={() => setSelected(b)} className={`border-b border-rule last:border-0 cursor-pointer hover:bg-paper transition-colors ${selected?._id === b._id ? 'bg-accent-soft/40' : ''}`}>
+                      <td className="px-4 py-3">{b.packageName} <span className="text-ink-muted text-xs">{b.destination}</span></td>
+                      <td className="px-4 py-3">{b.customerId?.name || '-'}</td>
+                      <td className="px-4 py-3 text-ink-muted">{formatDate(b.travelDate)}</td>
+                      <td className="px-4 py-3 num text-right">{formatMoney(b.price, company?.currency)}</td>
+                      <td className="px-4 py-3"><span className={STATUS_CHIP[b.status]}>{b.status}</span></td>
                     </tr>
                   ))}
                 </tbody>
@@ -89,7 +129,7 @@ function BookingForm({ onClose, onSaved }) {
     setSaving(true);
     try {
       const product = products.find((p) => p._id === form.billingProductId);
-      if (!product) throw new Error('Select a billing product — it must have trackingMode "service".');
+      if (!product) throw new Error('Select a billing product: it must have trackingMode "service".');
       const payload = { ...form, price: Number(form.price), billingVariantId: product.variants[0]?._id };
       if (form.depositAmount) {
         payload.depositAmount = Number(form.depositAmount);
@@ -111,8 +151,8 @@ function BookingForm({ onClose, onSaved }) {
 
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
-      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm max-h-[85vh] overflow-y-auto">
-        <p className="font-display text-lg mb-4">Book a package</p>
+      <form onSubmit={handleSubmit} className="card p-6 w-full max-w-sm max-h-[85vh] overflow-y-auto">
+        <p className="font-display text-lg font-bold text-ink mb-4">Book a package</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Branch</label>
@@ -143,7 +183,7 @@ function BookingForm({ onClose, onSaved }) {
           </div>
 
           <div className="tear-line" />
-          <p className="text-xs text-ink-muted">Optional advance deposit — posts as a liability until the trip is finalized.</p>
+          <p className="text-xs text-ink-muted">Optional advance deposit: posts as a liability until the trip is finalized.</p>
           <div><label className="field-label">Deposit amount</label><input type="number" className="field-input num" value={form.depositAmount} onChange={(e) => setForm({ ...form, depositAmount: e.target.value })} placeholder="Leave blank for none" /></div>
           {form.depositAmount && (
             <div className="grid grid-cols-2 gap-2">
@@ -224,9 +264,9 @@ function BookingPanel({ booking, onClose, onChanged }) {
   }
 
   return (
-    <div className="w-full lg:w-96 shrink-0 card p-4 h-fit">
+    <div className="w-full lg:w-96 shrink-0 card p-5 h-fit">
       <div className="flex items-center justify-between mb-3">
-        <p className="font-display text-lg">{booking.packageName}</p>
+        <p className="font-display text-lg font-bold text-ink">{booking.packageName}</p>
         <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button>
       </div>
       <p className="text-sm text-ink-muted mb-1">{booking.destination}</p>
@@ -255,7 +295,7 @@ function BookingPanel({ booking, onClose, onChanged }) {
           <div>
             <label className="field-label">Price</label>
             <input type="number" required disabled={booking.depositAmount > 0} className="field-input num" value={editForm.price} onChange={(e) => setEditForm({ ...editForm, price: e.target.value })} />
-            {booking.depositAmount > 0 && <p className="text-xs text-ink-muted mt-1">Price is locked — a deposit has already been posted against it.</p>}
+            {booking.depositAmount > 0 && <p className="text-xs text-ink-muted mt-1">Price is locked, a deposit has already been posted against it.</p>}
           </div>
           <div className="flex gap-2 pt-1">
             <button type="button" className="btn-secondary flex-1" onClick={() => setShowEditForm(false)}>Back</button>
@@ -266,7 +306,7 @@ function BookingPanel({ booking, onClose, onChanged }) {
 
       {booking.status === 'booked' && showCancelForm && (
         <form onSubmit={cancel} className="space-y-2">
-          <p className="text-sm text-ink-muted">This deposit was already received — decide how much to refund vs. keep as forfeited revenue.</p>
+          <p className="text-sm text-ink-muted">This deposit was already received, decide how much to refund vs. keep as forfeited revenue.</p>
           <div>
             <label className="field-label">Refund %</label>
             <input type="number" min="0" max="100" className="field-input num" value={refundPercent} onChange={(e) => setRefundPercent(e.target.value)} />

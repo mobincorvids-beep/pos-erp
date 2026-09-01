@@ -21,8 +21,11 @@ export function AdminCompaniesPage() {
   return (
     <div className="flex gap-6">
       <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between mb-4">
-          <p className="page-title">Companies</p>
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <p className="page-title">Companies</p>
+            <p className="text-sm text-ink-muted mt-0.5">Every tenant on the platform, and their onboarding status.</p>
+          </div>
           <button className="btn-primary" onClick={() => setShowForm(true)}>Onboard a company</button>
         </div>
 
@@ -32,30 +35,32 @@ export function AdminCompaniesPage() {
         )}
         {!loading && companies.length > 0 && (
           <div className="card overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                  <th className="px-3 py-2 font-medium">Name</th>
-                  <th className="px-3 py-2 font-medium">Industry</th>
-                  <th className="px-3 py-2 font-medium">Status</th>
-                  <th className="px-3 py-2 font-medium text-right">Branches</th>
-                  <th className="px-3 py-2 font-medium text-right">Users</th>
-                  <th className="px-3 py-2 font-medium">Onboarded</th>
-                </tr>
-              </thead>
-              <tbody>
-                {companies.map((c) => (
-                  <tr key={c._id} onClick={() => setSelectedId(c._id)} className={`border-b border-rule last:border-0 cursor-pointer hover:bg-paper ${selectedId === c._id ? 'bg-accent-soft/40' : ''}`}>
-                    <td className="px-3 py-2">{c.name}</td>
-                    <td className="px-3 py-2 capitalize text-ink-muted">{c.industryType}</td>
-                    <td className="px-3 py-2"><span className={c.isActive ? 'chip-accent' : 'chip-danger'}>{c.isActive ? 'active' : 'suspended'}</span></td>
-                    <td className="px-3 py-2 num text-right">{c.branchCount}</td>
-                    <td className="px-3 py-2 num text-right">{c.userCount}</td>
-                    <td className="px-3 py-2 text-ink-muted">{formatDate(c.createdAt)}</td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-surface-sunken border-b border-rule text-left">
+                    <th className="px-4 py-3 eyebrow">Name</th>
+                    <th className="px-4 py-3 eyebrow">Industry</th>
+                    <th className="px-4 py-3 eyebrow">Status</th>
+                    <th className="px-4 py-3 eyebrow text-right">Branches</th>
+                    <th className="px-4 py-3 eyebrow text-right">Users</th>
+                    <th className="px-4 py-3 eyebrow">Onboarded</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {companies.map((c) => (
+                    <tr key={c._id} onClick={() => setSelectedId(c._id)} className={`border-b border-rule last:border-0 cursor-pointer transition-colors hover:bg-surface-sunken ${selectedId === c._id ? 'bg-accent-soft' : ''}`}>
+                      <td className="px-4 py-3 font-medium text-ink">{c.name}</td>
+                      <td className="px-4 py-3 capitalize text-ink-muted">{c.industryType}</td>
+                      <td className="px-4 py-3"><span className={c.isActive ? 'chip-accent' : 'chip-danger'}>{c.isActive ? 'active' : 'suspended'}</span></td>
+                      <td className="px-4 py-3 num text-right">{c.branchCount}</td>
+                      <td className="px-4 py-3 num text-right">{c.userCount}</td>
+                      <td className="px-4 py-3 text-ink-muted">{formatDate(c.createdAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
@@ -99,40 +104,40 @@ function CompanyDetailPanel({ companyId, onClose, onChanged }) {
     } catch (err) { toast(err.message, 'error'); }
   }
 
-  if (!detail) return <div className="w-96 shrink-0 card p-4 h-fit"><Loading /></div>;
+  if (!detail) return <div className="w-96 shrink-0 card p-5 h-fit"><Loading /></div>;
 
   return (
-    <div className="w-96 shrink-0 card p-4 h-fit">
-      <div className="flex items-center justify-between mb-3">
-        <p className="font-display text-lg">{detail.company.name}</p>
+    <div className="w-96 shrink-0 card p-5 h-fit">
+      <div className="flex items-center justify-between mb-1">
+        <p className="font-display text-lg font-bold text-ink">{detail.company.name}</p>
         <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button>
       </div>
 
       {salesVolume && (
-        <p className="text-sm text-ink-muted mb-3">
+        <p className="text-sm text-ink-muted mb-4">
           {formatMoney(salesVolume.netSales, detail.company.currency)} net sales, {salesVolume.invoiceCount} invoices (30d)
         </p>
       )}
 
-      <button className={detail.company.isActive ? 'btn-danger w-full mb-4' : 'btn-primary w-full mb-4'} disabled={busy} onClick={toggleActive}>
+      <button className={detail.company.isActive ? 'btn-danger w-full mb-5' : 'btn-primary w-full mb-5'} disabled={busy} onClick={toggleActive}>
         {detail.company.isActive ? 'Suspend company' : 'Reactivate company'}
       </button>
 
-      <p className="text-sm font-medium mb-2">Optional modules</p>
-      <div className="space-y-1.5 mb-4">
+      <p className="eyebrow mb-2">Optional modules</p>
+      <div className="space-y-1.5 mb-5">
         {catalog?.optionalModules.map((m) => (
-          <label key={m.key} className="flex items-center gap-2 text-sm">
+          <label key={m.key} className="flex items-center gap-2 text-sm text-ink">
             <input type="checkbox" checked={(detail.company.activeModules || []).includes(m.key)} onChange={() => toggleModule(m.key)} />
             {m.label}
           </label>
         ))}
       </div>
 
-      <p className="text-sm font-medium mb-2">Users ({detail.users.length})</p>
-      <div className="space-y-1 text-sm max-h-40 overflow-y-auto">
+      <p className="eyebrow mb-2">Users ({detail.users.length})</p>
+      <div className="space-y-1.5 text-sm max-h-40 overflow-y-auto">
         {detail.users.map((u) => (
-          <div key={u._id} className="flex justify-between">
-            <span className="truncate">{u.name}</span>
+          <div key={u._id} className="flex items-center justify-between">
+            <span className="truncate text-ink">{u.name}</span>
             <span className={u.isActive ? 'chip-accent' : 'chip-danger'}>{u.isActive ? 'active' : 'suspended'}</span>
           </div>
         ))}
@@ -167,11 +172,11 @@ function OnboardForm({ onClose, onSaved }) {
   if (result) {
     return (
       <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
-        <div className="card p-5 w-full max-w-sm">
-          <p className="font-display text-lg mb-3">{result.company.name} is ready</p>
+        <div className="card p-6 w-full max-w-sm">
+          <p className="font-display text-lg font-bold text-ink mb-3">{result.company.name} is ready</p>
           <div className="tear-line mb-3" />
-          <p className="text-sm mb-1"><span className="text-ink-muted">Login email:</span> {result.admin.email}</p>
-          <p className="text-sm mb-3"><span className="text-ink-muted">Temporary password:</span> <span className="num">{result.generatedPassword}</span></p>
+          <p className="text-sm mb-1 text-ink"><span className="text-ink-muted">Login email:</span> {result.admin.email}</p>
+          <p className="text-sm mb-3 text-ink"><span className="text-ink-muted">Temporary password:</span> <span className="num">{result.generatedPassword}</span></p>
           <p className="text-xs text-ink-muted mb-4">This password is shown once — copy it now. The owner should change it after first login.</p>
           <button className="btn-primary w-full" onClick={() => { onSaved(); }}>Done</button>
         </div>
@@ -181,8 +186,8 @@ function OnboardForm({ onClose, onSaved }) {
 
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
-      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-md">
-        <p className="font-display text-lg mb-4">Onboard a company</p>
+      <form onSubmit={handleSubmit} className="card p-6 w-full max-w-md">
+        <p className="font-display text-lg font-bold text-ink mb-4">Onboard a company</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Business name</label>

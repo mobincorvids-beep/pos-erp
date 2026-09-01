@@ -27,33 +27,60 @@ export function GroceryPage() {
 
   return (
     <div>
-      <p className="page-title mb-4">FEFO Pick Order</p>
-      <form onSubmit={search} className="card p-4 mb-4 max-w-sm">
-        <div className="space-y-3">
-          <div><label className="field-label">Warehouse</label><select required className="field-input" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}><option value="">Select…</option>{warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}</select></div>
-          <div>
-            <label className="field-label">Product</label>
-            <select required className="field-input" value={variantId} onChange={(e) => setVariantId(e.target.value)}>
-              <option value="">Select…</option>
-              {products.map((p) => p.variants.map((v) => <option key={v._id} value={v._id}>{p.name}</option>))}
-            </select>
-          </div>
-          <div><label className="field-label">Quantity needed</label><input type="number" required className="field-input num" value={quantity} onChange={(e) => setQuantity(e.target.value)} /></div>
-        </div>
-        <button type="submit" className="btn-primary w-full mt-4">Get pick order</button>
-      </form>
-      {result && (
-        <div className="card p-4 max-w-sm">
-          <p className={result.fullyCovered ? 'chip-accent' : 'chip-warning'}>{result.fullyCovered ? 'Fully covered' : `Shortfall: ${result.shortfall}`}</p>
-          <p className="text-sm text-ink-muted mt-2 mb-2">Take in this order:</p>
-          {result.allocations.map((a, i) => (
-            <div key={i} className="flex justify-between text-sm border-b border-rule py-1.5">
-              <span>{a.batchNumber || 'No batch'} {a.expiryDate && <span className="text-ink-muted">(exp. {formatDate(a.expiryDate)})</span>}</span>
-              <span className="num">{a.quantity}</span>
+      <p className="eyebrow mb-1">Grocery</p>
+      <p className="page-title mb-6">FEFO Pick Order</p>
+
+      <div className="flex flex-wrap items-start gap-4">
+        <form onSubmit={search} className="card p-5 w-full max-w-sm">
+          <div className="space-y-3">
+            <div>
+              <label className="field-label">Warehouse</label>
+              <select required className="field-input" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
+                <option value="">Select…</option>
+                {warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
+              </select>
             </div>
-          ))}
-        </div>
-      )}
+            <div>
+              <label className="field-label">Product</label>
+              <select required className="field-input" value={variantId} onChange={(e) => setVariantId(e.target.value)}>
+                <option value="">Select…</option>
+                {products.map((p) => p.variants.map((v) => <option key={v._id} value={v._id}>{p.name}</option>))}
+              </select>
+            </div>
+            <div>
+              <label className="field-label">Quantity needed</label>
+              <input type="number" required className="field-input num" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+            </div>
+          </div>
+          <button type="submit" className="btn-primary w-full mt-5">
+            <span className="font-icon text-base leading-none">search</span>
+            Get pick order
+          </button>
+        </form>
+
+        {result && (
+          <div className="card p-5 w-full max-w-sm">
+            <div className="flex items-center justify-between mb-3">
+              <p className="eyebrow">Result</p>
+              <span className={result.fullyCovered ? 'chip-accent' : 'chip-warning'}>
+                {result.fullyCovered ? 'Fully covered' : `Shortfall: ${result.shortfall}`}
+              </span>
+            </div>
+            <p className="text-sm text-ink-muted mb-2">Take in this order:</p>
+            <div className="rounded-lg border border-rule divide-y divide-rule overflow-hidden">
+              {result.allocations.map((a, i) => (
+                <div key={i} className="flex justify-between items-center text-sm px-3 py-2 bg-surface">
+                  <span className="text-ink">
+                    {a.batchNumber || 'No batch'}
+                    {a.expiryDate && <span className="text-ink-muted"> (exp. {formatDate(a.expiryDate)})</span>}
+                  </span>
+                  <span className="num font-semibold">{a.quantity}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

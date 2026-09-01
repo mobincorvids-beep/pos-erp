@@ -8,12 +8,16 @@ import { formatMoney } from '../lib/format';
 
 export function SalonPage() {
   const [tab, setTab] = useState('services');
+  const tabs = [['services', 'Services & billing'], ['packages', 'Membership packages'], ['commissions', 'Commissions']];
   return (
     <div>
-      <p className="page-title mb-4">Salon</p>
-      <div className="flex gap-1 border-b border-rule mb-5">
-        {[['services', 'Services & billing'], ['packages', 'Membership packages'], ['commissions', 'Commissions']].map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} className={`px-3 py-2 text-sm -mb-px border-b-2 ${tab === key ? 'border-accent text-accent-strong font-medium' : 'border-transparent text-ink-muted hover:text-ink'}`}>
+      <div className="mb-5">
+        <p className="eyebrow">Salon</p>
+        <h1 className="page-title">Manage salon</h1>
+      </div>
+      <div className="flex flex-wrap gap-2 mb-5">
+        {tabs.map(([key, label]) => (
+          <button key={key} onClick={() => setTab(key)} className={tab === key ? 'pill-active' : 'pill'}>
             {label}
           </button>
         ))}
@@ -49,7 +53,8 @@ function ServicesTab() {
 
   return (
     <div>
-      <div className="flex justify-end mb-3">
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm text-ink-muted">Services on the menu and what they bill against.</p>
         <button className="btn-primary" onClick={() => setEditing({})}>New service</button>
       </div>
       {loading && <Loading />}
@@ -57,14 +62,16 @@ function ServicesTab() {
       {!loading && services.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {services.map((s) => (
-            <div key={s._id} className="card p-3">
-              <p className="text-sm font-medium">{s.name}</p>
-              <p className="num text-sm text-accent-strong mt-1">{formatMoney(s.price)}</p>
-              <p className="text-xs text-ink-muted mt-1">{s.commissionRate}{s.commissionType === 'percentage' ? '%' : ''} commission</p>
-              <div className="flex items-center gap-3 mt-2">
-                <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => setBilling(s)}>Bill this service</button>
-                <button className="btn-ghost !text-ink-muted !px-0 text-xs" onClick={() => setEditing(s)}>Edit</button>
-                <button className="btn-ghost !text-danger !px-0 text-xs" onClick={() => handleDeactivate(s)}>Remove</button>
+            <div key={s._id} className="card p-4 flex flex-col gap-2">
+              <div>
+                <p className="text-sm font-semibold text-ink">{s.name}</p>
+                <p className="num text-sm text-accent-strong mt-1">{formatMoney(s.price)}</p>
+                <span className="chip-neutral mt-1">{s.commissionRate}{s.commissionType === 'percentage' ? '%' : ''} commission</span>
+              </div>
+              <div className="flex items-center gap-3 mt-1 pt-2 border-t border-rule">
+                <button className="text-xs font-semibold text-accent hover:text-accent-strong" onClick={() => setBilling(s)}>Bill this service</button>
+                <button className="text-xs font-semibold text-ink-muted hover:text-ink" onClick={() => setEditing(s)}>Edit</button>
+                <button className="text-xs font-semibold text-danger hover:opacity-80" onClick={() => handleDeactivate(s)}>Remove</button>
               </div>
             </div>
           ))}
@@ -114,7 +121,7 @@ function ServiceForm({ service, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">{isNew ? 'New service' : 'Edit service'}</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">{isNew ? 'New service' : 'Edit service'}</p>
         <div className="space-y-3">
           <div><label className="field-label">Name</label><input required autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Haircut" /></div>
           {isNew && (
@@ -172,7 +179,7 @@ function BillServiceForm({ service, onClose }) {
     setSaving(true);
     try {
       const result = await api.post('/salon/services/bill', { ...form, salonServiceId: service._id });
-      toast(`Billed ${formatMoney(result.sale.totalAmount, company?.currency)} — commission recorded.`, 'success');
+      toast(`Billed ${formatMoney(result.sale.totalAmount, company?.currency)}: commission recorded.`, 'success');
       onClose();
     } catch (err) {
       toast(err.message, 'error');
@@ -184,7 +191,7 @@ function BillServiceForm({ service, onClose }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-1">Bill {service.name}</p>
+        <p className="font-display text-lg font-bold text-ink mb-1">Bill {service.name}</p>
         <p className="text-sm text-ink-muted mb-4 num">{formatMoney(service.price, company?.currency)}</p>
         <div className="space-y-3">
           <div>
@@ -215,7 +222,7 @@ function BillServiceForm({ service, onClose }) {
               {customers.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
             </select>
           </div>
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex items-center gap-2 text-sm text-ink">
             <input type="checkbox" checked={form.useMembership} onChange={(e) => setForm({ ...form, useMembership: e.target.checked })} />
             Redeem from an active membership (no charge)
           </label>
@@ -265,7 +272,8 @@ function PackagesTab() {
 
   return (
     <div>
-      <div className="flex justify-end mb-3">
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm text-ink-muted">Bundled sessions customers can buy and redeem over time.</p>
         <button className="btn-primary" onClick={() => setEditing({})}>New package</button>
       </div>
       {loading && <Loading />}
@@ -273,14 +281,16 @@ function PackagesTab() {
       {!loading && packages.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {packages.map((p) => (
-            <div key={p._id} className="card p-3">
-              <p className="text-sm font-medium">{p.name}</p>
-              <p className="text-xs text-ink-muted mt-1">{p.totalSessions} sessions · {p.validityDays} days</p>
-              <p className="num text-sm text-accent-strong mt-1">{formatMoney(p.price)}</p>
-              <div className="flex items-center gap-3 mt-2">
-                <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => setSelling(p)}>Sell to a customer</button>
-                <button className="btn-ghost !text-ink-muted !px-0 text-xs" onClick={() => setEditing(p)}>Edit</button>
-                <button className="btn-ghost !text-danger !px-0 text-xs" onClick={() => handleDeactivate(p)}>Remove</button>
+            <div key={p._id} className="card p-4 flex flex-col gap-2">
+              <div>
+                <p className="text-sm font-semibold text-ink">{p.name}</p>
+                <span className="chip-neutral mt-1 num">{p.totalSessions} sessions · {p.validityDays}d</span>
+                <p className="num text-sm text-accent-strong mt-1">{formatMoney(p.price)}</p>
+              </div>
+              <div className="flex items-center gap-3 mt-1 pt-2 border-t border-rule">
+                <button className="text-xs font-semibold text-accent hover:text-accent-strong" onClick={() => setSelling(p)}>Sell to a customer</button>
+                <button className="text-xs font-semibold text-ink-muted hover:text-ink" onClick={() => setEditing(p)}>Edit</button>
+                <button className="text-xs font-semibold text-danger hover:opacity-80" onClick={() => handleDeactivate(p)}>Remove</button>
               </div>
             </div>
           ))}
@@ -330,7 +340,7 @@ function PackageForm({ services, pkg, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">{isNew ? 'New membership package' : 'Edit membership package'}</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">{isNew ? 'New membership package' : 'Edit membership package'}</p>
         <div className="space-y-3">
           <div><label className="field-label">Name</label><input required autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
           {isNew && (
@@ -400,7 +410,7 @@ function SellPackageForm({ pkg, onClose }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-1">Sell {pkg.name}</p>
+        <p className="font-display text-lg font-bold text-ink mb-1">Sell {pkg.name}</p>
         <p className="text-sm text-ink-muted mb-4 num">{formatMoney(pkg.price, company?.currency)}</p>
         <div className="space-y-3">
           <div>
@@ -457,23 +467,25 @@ function CommissionsTab() {
 
   return (
     <div className="card overflow-hidden">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-            <th className="px-3 py-2 font-medium">Amount</th>
-            <th className="px-3 py-2 font-medium">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((c) => (
-            <tr key={c._id} className="border-b border-rule last:border-0">
-              <td className="px-3 py-2 num">{formatMoney(c.amount, company?.currency)}</td>
-              <td className="px-3 py-2"><span className={c.status === 'paid' ? 'chip-accent' : 'chip-warning'}>{c.status}</span></td>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
+              <th className="px-3 py-2 font-semibold">Amount</th>
+              <th className="px-3 py-2 font-semibold">Status</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-      <p className="text-xs text-ink-muted p-3">Unpaid commissions get folded into the next payroll run automatically — see HR &amp; Payroll.</p>
+          </thead>
+          <tbody>
+            {rows.map((c) => (
+              <tr key={c._id} className="border-b border-rule last:border-0">
+                <td className="px-3 py-2 num">{formatMoney(c.amount, company?.currency)}</td>
+                <td className="px-3 py-2"><span className={c.status === 'paid' ? 'chip-accent' : 'chip-warning'}>{c.status}</span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-xs text-ink-muted p-3 border-t border-rule">Unpaid commissions get folded into the next payroll run automatically, see HR &amp; Payroll.</p>
     </div>
   );
 }

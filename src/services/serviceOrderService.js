@@ -103,7 +103,7 @@ async function billServiceOrder(serviceOrderId, { laborProductId, laborVariantId
     }
     items.push({ productId: laborProductId, variantId: laborVariantId, quantity: 1, unitPrice: serviceOrder.laborCharge });
   }
-  if (items.length === 0) throw new Error('Nothing to bill — no parts used and no labor charge set.');
+  if (items.length === 0) throw new Error('Nothing to bill: no parts used and no labor charge set.');
 
   const session = await mongoose.startSession();
   try {

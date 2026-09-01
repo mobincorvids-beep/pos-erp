@@ -15,7 +15,7 @@ function createFiscalYear(input) {
   return FiscalYear.create({ companyId, name, startDate, endDate });
 }
 
-/** A real, genuinely missing read endpoint — createFiscalYear() existed with no way to list what had already been created, which a period-creation form needs to let someone pick which fiscal year a new period belongs to. */
+/** A real, genuinely missing read endpoint, createFiscalYear() existed with no way to list what had already been created, which a period-creation form needs to let someone pick which fiscal year a new period belongs to. */
 function listFiscalYears(companyId) {
   return FiscalYear.find({ companyId }).sort({ startDate: -1 });
 }
@@ -55,7 +55,7 @@ async function reopenPeriod(periodId) {
 async function assertPeriodOpen(companyId, date) {
   const closedPeriod = await AccountingPeriod.findOne({ companyId, status: 'closed', startDate: { $lte: date }, endDate: { $gte: date } });
   if (closedPeriod) {
-    throw new Error(`Cannot post a voucher dated ${new Date(date).toDateString()} — the accounting period "${closedPeriod.name}" covering this date is closed.`);
+    throw new Error(`Cannot post a voucher dated ${new Date(date).toDateString()}, the accounting period "${closedPeriod.name}" covering this date is closed.`);
   }
 }
 

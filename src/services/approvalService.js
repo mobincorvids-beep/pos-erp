@@ -25,7 +25,7 @@ async function request({ companyId, entityType, entityId, requestedBy, amount, n
   if (definition) {
     const applicable = definition.steps.filter((s) => amount === undefined || amount === null || amount >= s.minAmount);
     if (applicable.length === 0) {
-      throw new Error(`No configured workflow step applies to an amount of ${amount} for "${entityType}" — check the WorkflowDefinition's step thresholds.`);
+      throw new Error(`No configured workflow step applies to an amount of ${amount} for "${entityType}": check the WorkflowDefinition's step thresholds.`);
     }
     steps = applicable.map((s) => ({ stepOrder: s.order, roleId: s.roleId, decision: null }));
   } else {
@@ -78,7 +78,7 @@ async function decide(approvalId, { approve, userId, note }) {
       await notificationService.notify({
         companyId: approval.companyId, roleId: nextStep.roleId, type: 'approval_needed',
         title: `Approval needed: ${approval.entityType}`,
-        message: `Step ${approval.currentStepIndex + 1} of ${approval.steps.length} — the previous step was approved.`,
+        message: `Step ${approval.currentStepIndex + 1} of ${approval.steps.length}, the previous step was approved.`,
         entityType: approval.entityType, entityId: approval.entityId,
       });
     }

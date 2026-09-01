@@ -85,7 +85,7 @@ async function billAppointment(appointmentId, saleInput) {
   return { sale, appointment };
 }
 
-/** Staff schedule for a date range — the calendar view. */
+/** Staff schedule for a date range, the calendar view. */
 async function staffSchedule(staffUserId, from, to) {
   return Appointment.find({
     staffUserId, startTime: { $gte: new Date(from) }, endTime: { $lte: endOfDay(to) },

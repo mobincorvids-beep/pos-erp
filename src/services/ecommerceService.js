@@ -14,7 +14,7 @@ const Role = require('../models/Role');
 const posSaleService = require('./posSaleService');
 const { nanoid } = require('nanoid');
 
-/** Enables the integration and generates a webhook token — called once per store, or again to rotate the token. */
+/** Enables the integration and generates a webhook token, called once per store, or again to rotate the token. */
 function enableAndRotateToken(company, { defaultBranchId, defaultWarehouseId, defaultPaymentAccountId }) {
   company.ecommerceConfig = {
     enabled: true,

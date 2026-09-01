@@ -12,10 +12,11 @@ export function SportsPage() {
   const [tab, setTab] = useState('bookings');
   return (
     <div>
-      <p className="page-title mb-4">Sports facilities</p>
-      <div className="flex gap-1 border-b border-rule mb-5">
+      <p className="eyebrow mb-1">Sports & facilities</p>
+      <p className="page-title mb-5">Bookings & courts</p>
+      <div className="flex gap-2 mb-5">
         {[['bookings', 'Bookings'], ['facilities', 'Facilities']].map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} className={`px-3 py-2 text-sm -mb-px border-b-2 ${tab === key ? 'border-accent text-accent-strong font-medium' : 'border-transparent text-ink-muted hover:text-ink'}`}>
+          <button key={key} onClick={() => setTab(key)} className={tab === key ? 'pill-active' : 'pill'}>
             {label}
           </button>
         ))}
@@ -49,7 +50,7 @@ function BookingsTab() {
   return (
     <div>
       <div className="flex justify-end mb-3">
-        <button className="btn-primary" onClick={() => setShowForm(true)}>Book a slot</button>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>+ Book a slot</button>
       </div>
       {loading && <Loading />}
       {!loading && bookings.length === 0 && <EmptyState title="No bookings yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Book one</button>} />}
@@ -57,22 +58,22 @@ function BookingsTab() {
         <div className="card overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                <th className="px-3 py-2 font-medium">Customer</th>
-                <th className="px-3 py-2 font-medium">From</th>
-                <th className="px-3 py-2 font-medium">To</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-                <th className="px-3 py-2 font-medium"></th>
+              <tr className="border-b border-rule text-left bg-surface-sunken">
+                <th className="px-4 py-2.5 eyebrow font-medium">Customer</th>
+                <th className="px-4 py-2.5 eyebrow font-medium">From</th>
+                <th className="px-4 py-2.5 eyebrow font-medium">To</th>
+                <th className="px-4 py-2.5 eyebrow font-medium">Status</th>
+                <th className="px-4 py-2.5 eyebrow font-medium"></th>
               </tr>
             </thead>
             <tbody>
               {bookings.map((b) => (
-                <tr key={b._id} className="border-b border-rule last:border-0">
-                  <td className="px-3 py-2">{b.customerId?.name || '—'}</td>
-                  <td className="px-3 py-2 text-ink-muted">{new Date(b.startTime).toLocaleString()}</td>
-                  <td className="px-3 py-2 text-ink-muted">{new Date(b.endTime).toLocaleString()}</td>
-                  <td className="px-3 py-2"><span className={STATUS_CHIP[b.status]}>{b.status}</span></td>
-                  <td className="px-3 py-2 text-right">
+                <tr key={b._id} className="border-b border-rule last:border-0 hover:bg-surface-sunken/60">
+                  <td className="px-4 py-2.5 font-medium text-ink">{b.customerId?.name || '-'}</td>
+                  <td className="px-4 py-2.5 num text-ink-muted">{new Date(b.startTime).toLocaleString()}</td>
+                  <td className="px-4 py-2.5 num text-ink-muted">{new Date(b.endTime).toLocaleString()}</td>
+                  <td className="px-4 py-2.5"><span className={STATUS_CHIP[b.status]}>{b.status}</span></td>
+                  <td className="px-4 py-2.5 text-right">
                     {b.status === 'booked' && <button className="btn-ghost !text-danger" onClick={() => cancel(b._id)}>Cancel</button>}
                   </td>
                 </tr>
@@ -111,7 +112,7 @@ function BookingForm({ onClose, onSaved }) {
     setSaving(true);
     try {
       const product = products.find((p) => p._id === form.billingProductId);
-      if (!product) throw new Error('Select a billing product — it must have trackingMode "service".');
+      if (!product) throw new Error('Select a billing product: it must have trackingMode "service".');
       const { facilityId, ...rest } = form;
       await api.post(`/sports/facilities/${facilityId}/book`, { ...rest, billingVariantId: product.variants[0]?._id });
       toast('Slot booked.', 'success');
@@ -127,15 +128,16 @@ function BookingForm({ onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
+    <div className="fixed inset-0 bg-ink/20 backdrop-blur-[1px] flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm max-h-[85vh] overflow-y-auto">
-        <p className="font-display text-lg mb-4">Book a slot</p>
+        <p className="eyebrow mb-1">Sports & facilities</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">Book a slot</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Facility</label>
             <select required className="field-input" value={form.facilityId} onChange={(e) => setForm({ ...form, facilityId: e.target.value })}>
               <option value="">Select…</option>
-              {facilities.map((f) => <option key={f._id} value={f._id}>{f.name} — {formatMoney(f.hourlyRate)}/hr</option>)}
+              {facilities.map((f) => <option key={f._id} value={f._id}>{f.name}: {formatMoney(f.hourlyRate)}/hr</option>)}
             </select>
           </div>
           <div>
@@ -195,15 +197,18 @@ function FacilitiesTab() {
   return (
     <div>
       <div className="flex justify-end mb-3">
-        <button className="btn-primary" onClick={() => setShowForm(true)}>Add facility</button>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>+ Add facility</button>
       </div>
       {loading && <Loading />}
       {!loading && facilities.length === 0 && <EmptyState title="No facilities yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Add one</button>} />}
       {!loading && facilities.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {facilities.map((f) => (
-            <div key={f._id} className="card p-3">
-              <p className="text-sm font-medium">{f.name}</p>
+            <div key={f._id} className="card p-4">
+              <div className="w-9 h-9 rounded-lg bg-accent-soft text-accent-strong flex items-center justify-center text-sm font-semibold mb-3">
+                {f.name.slice(0, 1).toUpperCase()}
+              </div>
+              <p className="text-sm font-semibold text-ink">{f.name}</p>
               <p className="num text-sm text-ink-muted mt-1">{formatMoney(f.hourlyRate)}/hr</p>
             </div>
           ))}
@@ -237,9 +242,10 @@ function FacilityForm({ onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
+    <div className="fixed inset-0 bg-ink/20 backdrop-blur-[1px] flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Add facility</p>
+        <p className="eyebrow mb-1">Sports & facilities</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">Add facility</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Branch</label>

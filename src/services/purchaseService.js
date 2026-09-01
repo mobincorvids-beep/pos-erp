@@ -124,7 +124,7 @@ async function receiveGoods(input) {
       const po = await PurchaseOrder.findById(purchaseOrderId).session(session);
       if (!po) throw new Error('Purchase order not found.');
       if (!['ordered', 'partially_received'].includes(po.status)) {
-        throw new Error(`Cannot receive goods against a PO with status "${po.status}" — it must be approved (status "ordered") first.`);
+        throw new Error(`Cannot receive goods against a PO with status "${po.status}": it must be approved (status "ordered") first.`);
       }
       if (!items || items.length === 0) throw new Error('GRN must contain at least one item.');
 
@@ -159,7 +159,7 @@ async function receiveGoods(input) {
           serialNumbers = item.serialNumbers.map((s) => s.trim()).filter(Boolean);
           if (serialNumbers.length !== item.quantity) {
             throw new Error(
-              `Line for product ${item.productId}: ${serialNumbers.length} serial number(s) provided but quantity is ${item.quantity} — exactly one serial per unit is required.`
+              `Line for product ${item.productId}: ${serialNumbers.length} serial number(s) provided but quantity is ${item.quantity}, exactly one serial per unit is required.`
             );
           }
           const withinLineDuplicates = serialNumbers.filter((s, i) => serialNumbers.indexOf(s) !== i);
@@ -216,7 +216,7 @@ async function receiveGoods(input) {
         if (!line) throw new Error(`Purchase order line ${item.purchaseOrderItemId} not found on this PO.`);
         const remaining = line.quantityOrdered - line.quantityReceived;
         if (item.quantity > remaining) {
-          throw new Error(`Cannot receive ${item.quantity} — only ${remaining} remain outstanding on this line (ordered ${line.quantityOrdered}, already received ${line.quantityReceived}).`);
+          throw new Error(`Cannot receive ${item.quantity}: only ${remaining} remain outstanding on this line (ordered ${line.quantityOrdered}, already received ${line.quantityReceived}).`);
         }
 
         await inventoryService.recordMovement({
@@ -294,6 +294,18 @@ async function receiveGoods(input) {
       // above (source of truth) — set up an "Inventory Asset" and "Accounts
       // Payable" account per company to get the ledger posting too.
     });
+
+    // Developer Platform outbound webhook — fire-and-forget, outside the
+    // transaction (same rule as posSaleService's sale.created hook: an
+    // external HTTP call must never hold a DB transaction open or affect
+    // a GRN that already committed successfully).
+    try {
+      await require('./webhookSubscriptionService').triggerWebhook(String(grn.companyId), 'purchase_order.received', {
+        grnId: grn._id, grnNumber: grn.grnNumber, purchaseOrderId: grn.purchaseOrderId, warehouseId: grn.warehouseId,
+      });
+    } catch (err) {
+      console.error('Developer Platform webhook delivery for purchase_order.received failed (GRN itself still succeeded):', err.message);
+    }
 
     return grn;
   } finally {

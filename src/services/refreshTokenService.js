@@ -27,7 +27,7 @@ function generateToken() {
   return crypto.randomBytes(48).toString('hex');
 }
 
-/** @returns {Promise<string>} the raw refresh token — only ever returned once, never stored in plaintext.
+/** @returns {Promise<string>} the raw refresh token: only ever returned once, never stored in plaintext.
  * `deviceContext` is optional and additive — every existing call site that
  * doesn't pass it (admin login, and the two pre-existing user login paths)
  * behaves exactly as before; only NEW callers that want a real session
@@ -61,10 +61,10 @@ async function rotate(rawToken) {
       { subjectType: record.subjectType, subjectId: record.subjectId, revokedAt: null },
       { revokedAt: new Date() }
     );
-    throw new Error('This refresh token has already been used or revoked. All sessions for this account have been signed out as a precaution — please log in again.');
+    throw new Error('This refresh token has already been used or revoked. All sessions for this account have been signed out as a precaution, please log in again.');
   }
 
-  if (record.expiresAt < new Date()) throw new Error('Refresh token has expired — please log in again.');
+  if (record.expiresAt < new Date()) throw new Error('Refresh token has expired, please log in again.');
 
   const newToken = generateToken();
   const newHash = hash(newToken);
@@ -80,14 +80,14 @@ async function rotate(rawToken) {
   return { subjectType: record.subjectType, subjectId: record.subjectId, newToken };
 }
 
-/** Lists a subject's real, currently-live sessions — safe fields only, never the token hash itself. */
+/** Lists a subject's real, currently-live sessions: safe fields only, never the token hash itself. */
 function listActiveSessions(subjectType, subjectId) {
   return RefreshToken.find({ subjectType, subjectId, revokedAt: null, expiresAt: { $gt: new Date() } })
     .select('ipAddress userAgent lastUsedAt createdAt')
     .sort({ lastUsedAt: -1 });
 }
 
-/** Revokes exactly ONE session by its own record id — checked to actually belong to the requesting subject first, so a user can never revoke someone else's session by guessing an id. */
+/** Revokes exactly ONE session by its own record id, checked to actually belong to the requesting subject first, so a user can never revoke someone else's session by guessing an id. */
 async function revokeById(sessionId, subjectType, subjectId) {
   const record = await RefreshToken.findOne({ _id: sessionId, subjectType, subjectId });
   if (!record) throw new Error('Session not found.');
@@ -96,12 +96,12 @@ async function revokeById(sessionId, subjectType, subjectId) {
   return record;
 }
 
-/** Revokes one refresh token — call on logout. */
+/** Revokes one refresh token: call on logout. */
 async function revoke(rawToken) {
   await RefreshToken.updateOne({ tokenHash: hash(rawToken) }, { revokedAt: new Date() });
 }
 
-/** Revokes every live token for a subject — e.g. when suspending a user/admin. */
+/** Revokes every live token for a subject, e.g. when suspending a user/admin. */
 async function revokeAllForSubject(subjectType, subjectId) {
   await RefreshToken.updateMany(
     { subjectType, subjectId, revokedAt: null },

@@ -61,7 +61,7 @@ async function processReturn(saleId, input) {
         const soldQty = original.quantity;
         const alreadyQty = alreadyReturned.get(key) || 0;
         if (alreadyQty + reqItem.quantity > soldQty) {
-          throw new Error(`Cannot return ${reqItem.quantity} — only ${soldQty - alreadyQty} of this item remain returnable.`);
+          throw new Error(`Cannot return ${reqItem.quantity}: only ${soldQty - alreadyQty} of this item remain returnable.`);
         }
 
         // Serial-tracked line: the returned serials must actually have been
@@ -70,7 +70,7 @@ async function processReturn(saleId, input) {
         if (original.serialNumbers && original.serialNumbers.length > 0) {
           const requestedSerials = reqItem.serialNumbers || [];
           if (requestedSerials.length !== reqItem.quantity) {
-            throw new Error(`This line is serial-tracked — provide exactly ${reqItem.quantity} serial number(s) being returned.`);
+            throw new Error(`This line is serial-tracked, provide exactly ${reqItem.quantity} serial number(s) being returned.`);
           }
           for (const serial of requestedSerials) {
             if (!original.serialNumbers.includes(serial)) throw new Error(`Serial ${serial} was not part of this sale's line for this product.`);
@@ -166,7 +166,7 @@ async function voidSale(saleId, { userId, reason }) {
       if (sale.status !== 'completed') throw new Error(`Cannot void a sale with status "${sale.status}".`);
 
       const hasReturns = await SaleReturn.exists({ saleId }).session(session);
-      if (hasReturns) throw new Error('Cannot void a sale that already has returns against it — process a full return instead.');
+      if (hasReturns) throw new Error('Cannot void a sale that already has returns against it, process a full return instead.');
 
       for (const item of sale.items) {
         await inventoryService.recordMovement({

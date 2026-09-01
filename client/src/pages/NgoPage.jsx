@@ -20,38 +20,58 @@ export function NgoPage() {
   useEffect(load, []);
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between mb-4">
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <p className="eyebrow mb-1">NGO &amp; Grant Management</p>
           <p className="page-title">Funds</p>
-          <button className="btn-primary" onClick={() => setShowForm(true)}>New fund</button>
         </div>
-        {loading && <Loading />}
-        {!loading && funds.length === 0 && <EmptyState title="No funds yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Create one</button>} />}
-        {!loading && funds.length > 0 && (
-          <div className="card overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                  <th className="px-3 py-2 font-medium">Name</th>
-                  <th className="px-3 py-2 font-medium">Type</th>
-                  <th className="px-3 py-2 font-medium"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {funds.map((f) => (
-                  <tr key={f._id} onClick={() => setSelected(f)} className={`border-b border-rule last:border-0 cursor-pointer hover:bg-paper ${selected?._id === f._id ? 'bg-accent-soft/40' : ''}`}>
-                    <td className="px-3 py-2">{f.name}</td>
-                    <td className="px-3 py-2"><span className={f.type === 'restricted' ? 'chip-warning' : 'chip-neutral'}>{f.type}</span></td>
-                    <td className="px-3 py-2 text-right"><span className="text-accent-strong text-xs">View ledger</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <button className="btn-primary" onClick={() => setShowForm(true)}>
+          <span className="material-symbols-outlined text-base leading-none">add</span>
+          New fund
+        </button>
       </div>
-      {selected && <FundPanel fund={selected} onClose={() => setSelected(null)} />}
+
+      <div className="flex flex-col lg:flex-row gap-6">
+        <div className="flex-1 min-w-0">
+          {loading && <Loading />}
+          {!loading && funds.length === 0 && <EmptyState title="No funds yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Create one</button>} />}
+          {!loading && funds.length > 0 && (
+            <div className="card overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-widest">
+                      <th className="px-4 py-3 font-semibold">Name</th>
+                      <th className="px-4 py-3 font-semibold">Type</th>
+                      <th className="px-4 py-3 font-semibold"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {funds.map((f) => (
+                      <tr
+                        key={f._id}
+                        onClick={() => setSelected(f)}
+                        className={`border-b border-rule last:border-0 cursor-pointer hover:bg-surface-sunken transition-colors ${selected?._id === f._id ? 'bg-accent-soft' : ''}`}
+                      >
+                        <td className="px-4 py-3 font-medium text-ink">{f.name}</td>
+                        <td className="px-4 py-3">
+                          <span className={f.type === 'restricted' ? 'chip-warning' : 'chip-neutral'}>{f.type}</span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <span className="text-accent text-xs font-semibold">View ledger →</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+        {selected && <FundPanel fund={selected} onClose={() => setSelected(null)} />}
+      </div>
+
       {showForm && <FundForm onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
     </div>
   );
@@ -80,13 +100,19 @@ function FundForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">New fund</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">New fund</p>
         <div className="space-y-3">
-          <input required className="field-input" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
-          <select className="field-input" value={type} onChange={(e) => setType(e.target.value)}>
-            <option value="unrestricted">Unrestricted</option>
-            <option value="restricted">Restricted</option>
-          </select>
+          <div>
+            <p className="field-label">Name</p>
+            <input required className="field-input" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div>
+            <p className="field-label">Type</p>
+            <select className="field-input" value={type} onChange={(e) => setType(e.target.value)}>
+              <option value="unrestricted">Unrestricted</option>
+              <option value="restricted">Restricted</option>
+            </select>
+          </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
@@ -112,31 +138,36 @@ function FundPanel({ fund, onClose }) {
   const balance = ledger?.reduce((sum, t) => sum + (t.type === 'donation' ? t.amount : -t.amount), 0) || 0;
 
   return (
-    <div className="w-full lg:w-96 shrink-0 card p-4 h-fit">
-      <div className="flex items-center justify-between mb-3">
-        <p className="font-display text-lg">{fund.name}</p>
-        <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button>
+    <div className="w-full lg:w-96 shrink-0 card p-5 h-fit">
+      <div className="flex items-center justify-between mb-4">
+        <p className="font-display text-lg font-bold text-ink">{fund.name}</p>
+        <button className="btn-ghost !px-2 !py-1 text-xs" onClick={onClose}>Close</button>
       </div>
-      <p className="text-sm text-ink-muted mb-1">Balance</p>
-      <p className="font-display text-2xl num mb-4">{formatMoney(balance, company?.currency)}</p>
 
-      <div className="flex gap-2 mb-4">
+      <div className="rounded-lg bg-accent-strong text-white p-4 mb-4">
+        <p className="eyebrow text-white/70 mb-1">Balance</p>
+        <p className="font-display text-2xl font-bold num">{formatMoney(balance, company?.currency)}</p>
+      </div>
+
+      <div className="flex gap-2 mb-5">
         <button className="btn-secondary flex-1" onClick={() => setShowDonate(true)}>Record donation</button>
         <button className="btn-secondary flex-1" onClick={() => setShowDisburse(true)}>Disburse</button>
       </div>
 
-      <p className="text-sm font-medium mb-2">Transactions</p>
+      <p className="eyebrow mb-2">Transactions</p>
       {!ledger && <Loading />}
       {ledger?.length === 0 && <p className="text-sm text-ink-muted">No transactions yet.</p>}
-      {ledger?.map((t) => (
-        <div key={t._id} className="flex items-center justify-between py-1.5 border-b border-rule last:border-0 text-sm">
-          <div>
-            <p>{t.type === 'donation' ? (t.donorCustomerId?.name || 'Donation') : t.description}</p>
-            <p className="text-xs text-ink-muted">{formatDate(t.createdAt)}</p>
+      <div className="divide-y divide-rule">
+        {ledger?.map((t) => (
+          <div key={t._id} className="flex items-center justify-between py-2.5 text-sm">
+            <div>
+              <p className="text-ink">{t.type === 'donation' ? (t.donorCustomerId?.name || 'Donation') : t.description}</p>
+              <p className="text-xs text-ink-muted">{formatDate(t.createdAt)}</p>
+            </div>
+            <span className={`num font-semibold ${t.type === 'donation' ? 'text-accent' : 'text-danger'}`}>{t.type === 'donation' ? '+' : '-'}{formatMoney(t.amount, company?.currency)}</span>
           </div>
-          <span className={`num ${t.type === 'donation' ? 'text-accent-strong' : 'text-danger'}`}>{t.type === 'donation' ? '+' : '-'}{formatMoney(t.amount, company?.currency)}</span>
-        </div>
-      ))}
+        ))}
+      </div>
 
       {showDonate && <DonateForm fund={fund} onClose={() => setShowDonate(false)} onSaved={() => { setShowDonate(false); load(); }} />}
       {showDisburse && <DisburseForm fund={fund} onClose={() => setShowDisburse(false)} onSaved={() => { setShowDisburse(false); load(); }} />}
@@ -175,7 +206,7 @@ function DonateForm({ fund, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/30 flex items-center justify-center z-50 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Record donation</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">Record donation</p>
         <div className="space-y-3">
           <select required className="field-input" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value })}>
             <option value="">Branch…</option>
@@ -234,7 +265,7 @@ function DisburseForm({ fund, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/30 flex items-center justify-center z-50 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Disburse</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">Disburse</p>
         <div className="space-y-3">
           <select required className="field-input" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value })}>
             <option value="">Branch…</option>

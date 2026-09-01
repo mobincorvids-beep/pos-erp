@@ -29,7 +29,7 @@ function requireConfig() {
   const password = process.env.JAZZCASH_PASSWORD;
   const integritySalt = process.env.JAZZCASH_INTEGRITY_SALT;
   if (!merchantId || !password || !integritySalt) {
-    throw new Error('JazzCash is not configured — set JAZZCASH_MERCHANT_ID, JAZZCASH_PASSWORD and JAZZCASH_INTEGRITY_SALT.');
+    throw new Error('JazzCash is not configured, set JAZZCASH_MERCHANT_ID, JAZZCASH_PASSWORD and JAZZCASH_INTEGRITY_SALT.');
   }
   return { merchantId, password, integritySalt };
 }

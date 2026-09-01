@@ -7,12 +7,16 @@ import { formatMoney } from '../lib/format';
 
 export function AutoPartsPage() {
   const [tab, setTab] = useState('lookup');
+  const tabs = [['lookup', 'What fits my car'], ['fitments', 'Add fitment']];
   return (
     <div>
-      <p className="page-title mb-4">Auto Parts</p>
-      <div className="flex gap-1 border-b border-rule mb-5">
-        {[['lookup', 'What fits my car'], ['fitments', 'Add fitment']].map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} className={`px-3 py-2 text-sm -mb-px border-b-2 ${tab === key ? 'border-accent text-accent-strong font-medium' : 'border-transparent text-ink-muted hover:text-ink'}`}>{label}</button>
+      <div className="mb-5">
+        <p className="eyebrow mb-1">Auto Parts</p>
+        <p className="page-title">Fitment desk</p>
+      </div>
+      <div className="flex flex-wrap gap-2 mb-6">
+        {tabs.map(([key, label]) => (
+          <button key={key} onClick={() => setTab(key)} className={tab === key ? 'pill-active' : 'pill'}>{label}</button>
         ))}
       </div>
       {tab === 'lookup' && <LookupTab />}
@@ -43,11 +47,11 @@ function LookupTab() {
 
   return (
     <div>
-      <form onSubmit={search} className="card p-4 mb-4">
-        <div className="grid grid-cols-3 gap-2 mb-3">
-          <input placeholder="Make" className="field-input" value={make} onChange={(e) => setMake(e.target.value)} />
-          <input placeholder="Model" className="field-input" value={model} onChange={(e) => setModel(e.target.value)} />
-          <input type="number" placeholder="Year" required className="field-input num" value={year} onChange={(e) => setYear(e.target.value)} />
+      <form onSubmit={search} className="card p-5 mb-5">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+          <div><label className="field-label">Make</label><input placeholder="Make" className="field-input" value={make} onChange={(e) => setMake(e.target.value)} /></div>
+          <div><label className="field-label">Model</label><input placeholder="Model" className="field-input" value={model} onChange={(e) => setModel(e.target.value)} /></div>
+          <div><label className="field-label">Year</label><input type="number" placeholder="Year" required className="field-input num" value={year} onChange={(e) => setYear(e.target.value)} /></div>
         </div>
         <button type="submit" disabled={loading} className="btn-primary">{loading ? 'Searching…' : 'Find parts'}</button>
       </form>
@@ -55,10 +59,10 @@ function LookupTab() {
       {results && results.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {results.map((r) => (
-            <div key={r.fitmentId} className="card p-3">
-              <p className="text-sm font-medium">{r.productName}</p>
-              <p className="text-xs text-ink-muted">SKU {r.sku}</p>
-              <p className="num text-sm text-accent-strong mt-1">{formatMoney(r.sellingPrice)}</p>
+            <div key={r.fitmentId} className="card p-4">
+              <p className="text-sm font-semibold text-ink">{r.productName}</p>
+              <p className="text-xs text-ink-muted mt-0.5">SKU {r.sku}</p>
+              <p className="num text-sm font-semibold text-accent-strong mt-2">{formatMoney(r.sellingPrice)}</p>
             </div>
           ))}
         </div>
@@ -85,14 +89,20 @@ function FitmentTab() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="card p-4 max-w-sm">
-      <p className="text-sm font-medium mb-3">Register which vehicles a part fits</p>
+    <form onSubmit={handleSubmit} className="card p-5 max-w-sm">
+      <p className="font-display text-lg text-ink mb-4">Register which vehicles a part fits</p>
       <div className="space-y-3">
         <div><label className="field-label">Product</label><select required className="field-input" value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })}><option value="">Select…</option>{products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}</select></div>
-        <div className="grid grid-cols-2 gap-2"><input placeholder="Make" required className="field-input" value={form.make} onChange={(e) => setForm({ ...form, make: e.target.value })} /><input placeholder="Model" required className="field-input" value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} /></div>
-        <div className="grid grid-cols-2 gap-2"><input type="number" placeholder="Year from" required className="field-input num" value={form.yearFrom} onChange={(e) => setForm({ ...form, yearFrom: e.target.value })} /><input type="number" placeholder="Year to" required className="field-input num" value={form.yearTo} onChange={(e) => setForm({ ...form, yearTo: e.target.value })} /></div>
+        <div className="grid grid-cols-2 gap-2">
+          <div><label className="field-label">Make</label><input placeholder="Make" required className="field-input" value={form.make} onChange={(e) => setForm({ ...form, make: e.target.value })} /></div>
+          <div><label className="field-label">Model</label><input placeholder="Model" required className="field-input" value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} /></div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div><label className="field-label">Year from</label><input type="number" placeholder="Year from" required className="field-input num" value={form.yearFrom} onChange={(e) => setForm({ ...form, yearFrom: e.target.value })} /></div>
+          <div><label className="field-label">Year to</label><input type="number" placeholder="Year to" required className="field-input num" value={form.yearTo} onChange={(e) => setForm({ ...form, yearTo: e.target.value })} /></div>
+        </div>
       </div>
-      <button type="submit" disabled={saving} className="btn-primary w-full mt-4">{saving ? 'Saving…' : 'Add fitment'}</button>
+      <button type="submit" disabled={saving} className="btn-primary w-full mt-5">{saving ? 'Saving…' : 'Add fitment'}</button>
     </form>
   );
 }

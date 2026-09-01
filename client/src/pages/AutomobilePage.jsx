@@ -9,6 +9,7 @@ import { formatMoney } from '../lib/format';
 export function AutomobilePage() {
   return (
     <div>
+      <p className="eyebrow mb-1">Dealership</p>
       <p className="page-title mb-4">Automobile</p>
       <TradeInsTab />
     </div>
@@ -31,8 +32,12 @@ function TradeInsTab() {
 
   return (
     <div>
-      <div className="flex justify-end mb-3">
-        <button className="btn-primary" onClick={() => setShowForm(true)}>New trade-in</button>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm text-ink-muted">Trade-in appraisals and credits applied against sales.</p>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>
+          <span className="font-icon text-base leading-none">add</span>
+          New trade-in
+        </button>
       </div>
       {loading && <Loading />}
       {!loading && credits.length === 0 && (
@@ -42,24 +47,26 @@ function TradeInsTab() {
         <div className="card overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                <th className="px-3 py-2 font-medium">Customer</th>
-                <th className="px-3 py-2 font-medium">Vehicle</th>
-                <th className="px-3 py-2 font-medium">Appraised value</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-                <th className="px-3 py-2 font-medium"></th>
+              <tr className="bg-surface-sunken text-left text-xs text-ink-muted uppercase tracking-wide">
+                <th className="px-4 py-2.5 font-semibold">Customer</th>
+                <th className="px-4 py-2.5 font-semibold">Vehicle</th>
+                <th className="px-4 py-2.5 font-semibold">Appraised value</th>
+                <th className="px-4 py-2.5 font-semibold">Status</th>
+                <th className="px-4 py-2.5 font-semibold"></th>
               </tr>
             </thead>
             <tbody>
               {credits.map((c) => (
-                <tr key={c._id} className="border-b border-rule last:border-0">
-                  <td className="px-3 py-2">{c.customerId?.name || '—'}</td>
-                  <td className="px-3 py-2 text-ink-muted">{c.vehicleDescription || '—'}</td>
-                  <td className="px-3 py-2 num">{formatMoney(c.appraisedValue, company?.currency)}</td>
-                  <td className="px-3 py-2"><span className={c.status === 'applied' ? 'chip-accent' : c.status === 'cancelled' ? 'chip-warning' : 'chip-warning'}>{c.status}</span></td>
-                  <td className="px-3 py-2 text-right">
+                <tr key={c._id} className="border-t border-rule hover:bg-surface-sunken/50 transition-colors">
+                  <td className="px-4 py-2.5 font-medium text-ink">{c.customerId?.name || '-'}</td>
+                  <td className="px-4 py-2.5 text-ink-muted">{c.vehicleDescription || '-'}</td>
+                  <td className="px-4 py-2.5 num">{formatMoney(c.appraisedValue, company?.currency)}</td>
+                  <td className="px-4 py-2.5">
+                    <span className={c.status === 'applied' ? 'chip-accent' : c.status === 'cancelled' ? 'chip-danger' : 'chip-warning'}>{c.status}</span>
+                  </td>
+                  <td className="px-4 py-2.5 text-right">
                     {c.status === 'pending' && (
-                      <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => setApplying(c)}>Apply to sale</button>
+                      <button className="btn-ghost !text-accent !px-0 text-xs font-semibold" onClick={() => setApplying(c)}>Apply to sale</button>
                     )}
                   </td>
                 </tr>
@@ -101,9 +108,9 @@ function TradeInForm({ onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
-      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">New trade-in</p>
+    <div className="fixed inset-0 bg-ink/30 backdrop-blur-sm flex items-center justify-center z-40 px-4">
+      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm shadow-lg">
+        <p className="page-title text-lg mb-4">New trade-in</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Customer</label>
@@ -151,10 +158,10 @@ function ApplyForm({ credit, onClose, onApplied }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
-      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-1">Apply trade-in credit</p>
-        <p className="text-sm text-ink-muted mb-4 num">{formatMoney(credit.appraisedValue, company?.currency)} — {credit.customerId?.name}</p>
+    <div className="fixed inset-0 bg-ink/30 backdrop-blur-sm flex items-center justify-center z-40 px-4">
+      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm shadow-lg">
+        <p className="page-title text-lg mb-1">Apply trade-in credit</p>
+        <p className="text-sm text-ink-muted mb-4 num">{formatMoney(credit.appraisedValue, company?.currency)}: {credit.customerId?.name}</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Sale ID</label>

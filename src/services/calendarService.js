@@ -24,14 +24,14 @@ async function createEvent({ companyId, title, description, organizerId, attende
   for (const userId of uniqueAttendees) {
     await notificationService.notify({
       companyId, userId, type: 'calendar_invite', title: 'Meeting invite',
-      message: `${title} — ${new Date(startTime).toLocaleString()}`, entityType: 'CalendarEvent', entityId: event._id,
+      message: `${title}: ${new Date(startTime).toLocaleString()}`, entityType: 'CalendarEvent', entityId: event._id,
     });
   }
 
   return event;
 }
 
-/** Every event a user is either organizing or invited to, within an optional date range — the merged view a personal calendar needs. */
+/** Every event a user is either organizing or invited to, within an optional date range, the merged view a personal calendar needs. */
 function listEventsForUser(companyId, userId, { from, to } = {}) {
   const filter = {
     companyId, status: 'scheduled',
@@ -45,7 +45,7 @@ function listEventsForUser(companyId, userId, { from, to } = {}) {
   return CalendarEvent.find(filter).populate('organizerId', 'name').populate('attendeeResponses.userId', 'name').sort({ startTime: 1 });
 }
 
-/** Corrects a meeting's details — only the organizer may edit, and re-notifies attendees since the time/place they were told about may no longer be right. */
+/** Corrects a meeting's details: only the organizer may edit, and re-notifies attendees since the time/place they were told about may no longer be right. */
 async function updateEvent(eventId, updates, userId) {
   const event = await CalendarEvent.findById(eventId);
   if (!event) throw new Error('Event not found.');
@@ -67,14 +67,14 @@ async function updateEvent(eventId, updates, userId) {
   for (const a of event.attendeeResponses) {
     await notificationService.notify({
       companyId: event.companyId, userId: a.userId, type: 'calendar_update', title: 'Meeting updated',
-      message: `${event.title} was updated — ${new Date(event.startTime).toLocaleString()}`, entityType: 'CalendarEvent', entityId: event._id,
+      message: `${event.title} was updated, ${new Date(event.startTime).toLocaleString()}`, entityType: 'CalendarEvent', entityId: event._id,
     });
   }
 
   return event;
 }
 
-/** RSVP — any invited attendee (not the organizer, who's implicitly attending) can accept/decline. */
+/** RSVP: any invited attendee (not the organizer, who's implicitly attending) can accept/decline. */
 async function respondToEvent(eventId, userId, response) {
   if (!['accepted', 'declined'].includes(response)) throw new Error('response must be "accepted" or "declined".');
   const event = await CalendarEvent.findById(eventId);
@@ -86,7 +86,7 @@ async function respondToEvent(eventId, userId, response) {
   return event;
 }
 
-/** Cancels a meeting — only the organizer, and only while still scheduled. Attendees are notified rather than the event just silently vanishing off their calendars. */
+/** Cancels a meeting: only the organizer, and only while still scheduled. Attendees are notified rather than the event just silently vanishing off their calendars. */
 async function cancelEvent(eventId, userId) {
   const event = await CalendarEvent.findById(eventId);
   if (!event) throw new Error('Event not found.');

@@ -342,7 +342,7 @@ async function lowStockReport(companyId, warehouseId = null) {
     .sort((a, b) => a.quantityOnHand - b.quantityOnHand);
 }
 
-/** Best-selling products by revenue in a date range — driven straight off completed Sale line items. */
+/** Best-selling products by revenue in a date range, driven straight off completed Sale line items. */
 async function topProductsReport(companyId, from, to, limit = 20) {
   const rows = await Sale.aggregate([
     { $match: { companyId: new mongoose.Types.ObjectId(companyId), status: 'completed', createdAt: { $gte: new Date(from), $lte: endOfDay(to) } } },
@@ -377,7 +377,7 @@ async function topCustomersReport(companyId, from, to, limit = 20) {
   }));
 }
 
-/** Sales performance by cashier/salesperson — who rang up how much. */
+/** Sales performance by cashier/salesperson: who rang up how much. */
 async function salespersonPerformanceReport(companyId, from, to) {
   const rows = await Sale.aggregate([
     { $match: { companyId: new mongoose.Types.ObjectId(companyId), status: 'completed', createdAt: { $gte: new Date(from), $lte: endOfDay(to) } } },
@@ -412,7 +412,7 @@ async function expenseReport(companyId, from, to) {
   return { from, to, rows: rowsOut, grandTotal: Math.round(rowsOut.reduce((s, r) => s + r.total, 0) * 100) / 100 };
 }
 
-/** Sales compared across branches — the "Branch profitability/comparison" the proposal called out under Multi-Branch. */
+/** Sales compared across branches: the "Branch profitability/comparison" the proposal called out under Multi-Branch. */
 async function branchComparisonReport(companyId, from, to) {
   const [branches, sales] = await Promise.all([
     Branch.find({ companyId }),
@@ -432,7 +432,7 @@ async function branchComparisonReport(companyId, from, to) {
   }).sort((a, b) => b.netSales - a.netSales);
 }
 
-/** Raw stock movement ledger for a warehouse/date range — the audit trail behind every other inventory number. */
+/** Raw stock movement ledger for a warehouse/date range, the audit trail behind every other inventory number. */
 async function stockMovementReport(companyId, warehouseId, from, to) {
   const filter = { companyId, createdAt: { $gte: new Date(from), $lte: endOfDay(to) } };
   if (warehouseId) filter.warehouseId = warehouseId;

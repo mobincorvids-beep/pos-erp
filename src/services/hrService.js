@@ -9,6 +9,9 @@
 const Employee = require('../models/Employee');
 const Attendance = require('../models/Attendance');
 const LeaveRequest = require('../models/LeaveRequest');
+const Shift = require('../models/Shift');
+const LeavePolicy = require('../models/LeavePolicy');
+const LeaveBalance = require('../models/LeaveBalance');
 const PayrollRun = require('../models/PayrollRun');
 const Account = require('../models/Account');
 const accountingService = require('./accountingService');
@@ -52,11 +55,70 @@ function attendanceForMonth(employeeId, month, year) {
   return Attendance.find({ employeeId, date: { $gte: from, $lte: to } }).sort({ date: 1 });
 }
 
+// --- Shifts ------------------------------------------------------------------
+
+function createShift({ companyId, branchId, name, startTime, endTime, daysOfWeek, active }) {
+  if (!name) throw new Error('Shift name is required.');
+  if (!startTime || !endTime) throw new Error('startTime and endTime are required.');
+  return Shift.create({ companyId, branchId, name, startTime, endTime, daysOfWeek, active });
+}
+
+function listShifts(companyId) {
+  return Shift.find({ companyId }).sort({ name: 1 });
+}
+
+async function assignShiftToEmployee(employeeId, shiftId) {
+  const employee = await Employee.findByIdAndUpdate(employeeId, { shiftId: shiftId || null }, { new: true });
+  if (!employee) throw new Error('Employee not found.');
+  return employee;
+}
+
+// --- Leave policies & balances ------------------------------------------------
+
+function createLeavePolicy({ companyId, name, annualEntitlementDays, carryForwardAllowed, maxCarryForwardDays, active }) {
+  if (!name) throw new Error('Leave policy name is required.');
+  return LeavePolicy.create({ companyId, name, annualEntitlementDays, carryForwardAllowed, maxCarryForwardDays, active });
+}
+
+function listLeavePolicies(companyId) {
+  return LeavePolicy.find({ companyId }).sort({ name: 1 });
+}
+
+/** Creates (or returns, if already present) the balance record for an employee/policy/year. */
+async function initializeLeaveBalance(employeeId, leavePolicyId, year, entitledDays) {
+  const policy = await LeavePolicy.findById(leavePolicyId);
+  if (!policy) throw new Error('Leave policy not found.');
+  const employee = await Employee.findById(employeeId);
+  if (!employee) throw new Error('Employee not found.');
+
+  const existing = await LeaveBalance.findOne({ employeeId, leavePolicyId, year });
+  if (existing) return existing;
+
+  return LeaveBalance.create({
+    companyId: policy.companyId,
+    employeeId, leavePolicyId, year,
+    entitledDays: entitledDays != null ? entitledDays : policy.annualEntitlementDays,
+    usedDays: 0,
+  });
+}
+
+function getLeaveBalances(employeeId) {
+  return LeaveBalance.find({ employeeId }).populate('leavePolicyId', 'name annualEntitlementDays').sort({ year: -1 });
+}
+
 // --- Leave ------------------------------------------------------------------
 
-function requestLeave({ companyId, employeeId, fromDate, toDate, type, reason }) {
+function requestLeave({ companyId, employeeId, fromDate, toDate, type, reason, leavePolicyId }) {
   if (new Date(fromDate) > new Date(toDate)) throw new Error('fromDate must be before toDate.');
-  return LeaveRequest.create({ companyId, employeeId, fromDate, toDate, type, reason });
+  return LeaveRequest.create({ companyId, employeeId, fromDate, toDate, type, reason, leavePolicyId: leavePolicyId || null });
+}
+
+/** Number of calendar days a leave request spans, inclusive of both ends. */
+function leaveDaySpan(leave) {
+  const from = new Date(leave.fromDate);
+  const to = new Date(leave.toDate);
+  const ms = to.setHours(0, 0, 0, 0) - from.setHours(0, 0, 0, 0);
+  return Math.round(ms / 86400000) + 1;
 }
 
 async function decideLeave(leaveRequestId, { approve, userId }) {
@@ -79,6 +141,18 @@ async function decideLeave(leaveRequestId, { approve, userId }) {
     }
     for (const day of days) {
       await markAttendance({ companyId: leave.companyId, employeeId: leave.employeeId, date: day, status: 'leave', note: `Leave: ${leave.type}` });
+    }
+
+    // If this request references a leave policy, deduct the days from that
+    // employee's balance for the request's year — creating the balance
+    // record on the fly (using the policy's default entitlement) if this is
+    // the employee's first leave against this policy in that year, so an
+    // approval never fails just because nobody ran a setup step first.
+    if (leave.leavePolicyId) {
+      const year = new Date(leave.fromDate).getFullYear();
+      const balance = await initializeLeaveBalance(leave.employeeId, leave.leavePolicyId, year, null);
+      balance.usedDays = Math.round(((balance.usedDays || 0) + leaveDaySpan(leave)) * 100) / 100;
+      await balance.save();
     }
   }
 
@@ -152,7 +226,7 @@ async function generatePayroll({ companyId, month, year, userId }) {
 async function addBonusToDraftPayroll(payrollRunId, employeeId, amount, note) {
   const run = await PayrollRun.findById(payrollRunId);
   if (!run) throw new Error('Payroll run not found.');
-  if (run.status !== 'draft') throw new Error(`Cannot add pay to a payroll run with status "${run.status}" — only a draft can still be adjusted.`);
+  if (run.status !== 'draft') throw new Error(`Cannot add pay to a payroll run with status "${run.status}": only a draft can still be adjusted.`);
 
   const entry = run.entries.find((e) => String(e.employeeId) === String(employeeId));
   if (!entry) throw new Error('This employee is not on this payroll run (are they active and were they when it was generated?).');
@@ -180,7 +254,7 @@ async function postPayroll(payrollRunId, { paymentAccountId, userId }) {
       const salariesExpense = await defaultAccountsService.resolve(run.companyId, 'salariesExpenseId', session);
 
       if (!salariesExpense) {
-        throw new Error('No Salaries Expense account configured for this company — set one in Settings, or create an account named like "Salaries" before posting payroll.');
+        throw new Error('No Salaries Expense account configured for this company, set one in Settings, or create an account named like "Salaries" before posting payroll.');
       }
 
       const voucher = await accountingService.postVoucher({
@@ -213,6 +287,8 @@ async function postPayroll(payrollRunId, { paymentAccountId, userId }) {
 module.exports = {
   createEmployee, terminateEmployee,
   markAttendance, attendanceForMonth,
+  createShift, listShifts, assignShiftToEmployee,
+  createLeavePolicy, listLeavePolicies, initializeLeaveBalance, getLeaveBalances,
   requestLeave, decideLeave,
   generatePayroll, addBonusToDraftPayroll, postPayroll,
 };

@@ -15,10 +15,11 @@ export function DairyPage() {
 
   return (
     <div>
-      <p className="page-title mb-4">Dairy</p>
-      <div className="flex gap-1 border-b border-rule mb-5">
+      <p className="eyebrow mb-1">Agriculture &amp; Dairy</p>
+      <p className="page-title mb-5">Dairy management</p>
+      <div className="flex gap-2 mb-5">
         {[['collections', 'Collections'], ['schedules', 'Quality schedules']].map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} className={`px-3 py-2 text-sm -mb-px border-b-2 ${tab === key ? 'border-accent text-accent-strong font-medium' : 'border-transparent text-ink-muted hover:text-ink'}`}>
+          <button key={key} onClick={() => setTab(key)} className={tab === key ? 'pill-active' : 'pill'}>
             {label}
           </button>
         ))}
@@ -54,8 +55,8 @@ function SchedulesTab({ schedules, setSchedules }) {
       {schedules.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
           {schedules.map((s) => (
-            <div key={s._id} className="card p-3">
-              <p className="text-sm font-medium mb-2">{s.name}</p>
+            <div key={s._id} className="card p-4">
+              <p className="text-sm font-semibold text-ink mb-3">{s.name}</p>
               <table className="w-full text-xs">
                 <thead>
                   <tr className="text-left text-ink-muted uppercase tracking-wide">
@@ -66,8 +67,8 @@ function SchedulesTab({ schedules, setSchedules }) {
                 <tbody>
                   {s.bands.map((b, i) => (
                     <tr key={i} className="border-t border-rule">
-                      <td className="pr-2 py-1 num">{b.minFatPercent}%</td>
-                      <td className="py-1 num">{formatMoney(b.pricePerLitre)}</td>
+                      <td className="pr-2 py-1.5 num">{b.minFatPercent}%</td>
+                      <td className="py-1.5 num">{formatMoney(b.pricePerLitre)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -117,7 +118,7 @@ function ScheduleForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-md">
-        <p className="font-display text-lg mb-4">New quality schedule</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">New quality schedule</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Name</label>
@@ -172,7 +173,7 @@ function CollectionsTab({ schedules }) {
         <div className="card overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
+              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken">
                 <th className="px-3 py-2 font-medium">Supplier</th>
                 <th className="px-3 py-2 font-medium">Litres</th>
                 <th className="px-3 py-2 font-medium">Fat %</th>
@@ -183,12 +184,12 @@ function CollectionsTab({ schedules }) {
             </thead>
             <tbody>
               {collections.map((c) => (
-                <tr key={c._id} className="border-b border-rule last:border-0">
-                  <td className="px-3 py-2">{c.supplierId?.name || '—'}</td>
+                <tr key={c._id} className="border-b border-rule last:border-0 hover:bg-surface-sunken/50 transition-colors">
+                  <td className="px-3 py-2 text-ink">{c.supplierId?.name || '-'}</td>
                   <td className="px-3 py-2 num">{c.litres}</td>
                   <td className="px-3 py-2 num">{c.fatPercent}%</td>
-                  <td className="px-3 py-2 num">{c.pricePerLitre != null ? formatMoney(c.pricePerLitre, company?.currency) : '—'}</td>
-                  <td className="px-3 py-2 num">{c.totalPayable != null ? formatMoney(c.totalPayable, company?.currency) : '—'}</td>
+                  <td className="px-3 py-2 num">{c.pricePerLitre != null ? formatMoney(c.pricePerLitre, company?.currency) : '-'}</td>
+                  <td className="px-3 py-2 num">{c.totalPayable != null ? formatMoney(c.totalPayable, company?.currency) : '-'}</td>
                   <td className="px-3 py-2"><span className={c.paid ? 'chip-accent' : 'chip-warning'}>{c.paid ? 'paid' : 'unpaid'}</span></td>
                 </tr>
               ))}
@@ -234,7 +235,7 @@ function CollectionForm({ schedules, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Record collection</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">Record collection</p>
         <div className="space-y-3">
           <div>
             <label className="field-label">Branch</label>
