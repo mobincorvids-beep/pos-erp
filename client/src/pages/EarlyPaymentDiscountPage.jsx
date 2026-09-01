@@ -75,21 +75,45 @@ function PoDiscountPanel({ po, onChanged, onClose }) {
   const { company } = useAuth();
   const toast = useToast();
   const hasTerms = po.earlyPaymentDiscountPercent > 0;
-  const [terms, setTerms] = useState({ paymentTermsDays: 30, earlyPaymentDiscountPercent: 2, earlyPaymentDiscountDays: 10 });
+  const [editing, setEditing] = useState(!hasTerms);
+  const [terms, setTerms] = useState({
+    paymentTermsDays: po.paymentTermsDays || 30,
+    earlyPaymentDiscountPercent: hasTerms ? po.earlyPaymentDiscountPercent : 2,
+    earlyPaymentDiscountDays: hasTerms ? po.earlyPaymentDiscountDays : 10,
+  });
   const [check, setCheck] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [removing, setRemoving] = useState(false);
 
   async function saveTerms(e) {
     e.preventDefault();
     setSaving(true);
     try {
       await api.post(`/purchase-orders/early-payment/${po._id}/terms`, terms);
-      toast('Discount terms set.', 'success');
+      toast('Discount terms saved.', 'success');
       onChanged();
     } catch (err) {
       toast(err.message, 'error');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function removeTerms() {
+    if (!window.confirm('Remove the early payment discount terms from this purchase order?')) return;
+    setRemoving(true);
+    try {
+      await api.post(`/purchase-orders/early-payment/${po._id}/terms`, {
+        paymentTermsDays: po.paymentTermsDays || 30,
+        earlyPaymentDiscountPercent: 0,
+        earlyPaymentDiscountDays: 0,
+      });
+      toast('Discount terms removed.', 'success');
+      onChanged();
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setRemoving(false);
     }
   }
 
@@ -114,9 +138,9 @@ function PoDiscountPanel({ po, onChanged, onClose }) {
           <button className="btn-ghost text-xs" onClick={onClose}>Close</button>
         </div>
 
-        {!hasTerms && (
+        {editing && (
           <form onSubmit={saveTerms} className="space-y-3">
-            <p className="text-sm text-ink-muted">No discount terms set yet.</p>
+            {!hasTerms && <p className="text-sm text-ink-muted">No discount terms set yet.</p>}
             <div>
               <label className="field-label">Discount %</label>
               <input type="number" step="0.1" min="0" max="100" className="field-input num" value={terms.earlyPaymentDiscountPercent} onChange={(e) => setTerms({ ...terms, earlyPaymentDiscountPercent: Number(e.target.value) })} />
@@ -125,21 +149,28 @@ function PoDiscountPanel({ po, onChanged, onClose }) {
               <label className="field-label">Within how many days</label>
               <input type="number" min="0" className="field-input num" value={terms.earlyPaymentDiscountDays} onChange={(e) => setTerms({ ...terms, earlyPaymentDiscountDays: Number(e.target.value) })} />
             </div>
-            <button type="submit" disabled={saving} className="btn-primary w-full">{saving ? 'Saving…' : 'Set terms'}</button>
+            <div className="flex gap-2">
+              {hasTerms && <button type="button" className="btn-secondary flex-1" onClick={() => setEditing(false)}>Cancel</button>}
+              <button type="submit" disabled={saving} className="btn-primary flex-1">{saving ? 'Saving…' : hasTerms ? 'Save changes' : 'Set terms'}</button>
+            </div>
           </form>
         )}
 
-        {hasTerms && check && (
+        {!editing && hasTerms && (
           <div>
             <p className="text-sm text-ink mb-3">{po.earlyPaymentDiscountPercent}% off if paid within {po.earlyPaymentDiscountDays} days.</p>
-            {check.eligible ? (
+            <div className="flex gap-2 mb-4">
+              <button type="button" className="btn-secondary flex-1 text-xs" onClick={() => setEditing(true)}>Edit terms</button>
+              <button type="button" disabled={removing} className="btn-danger flex-1 text-xs" onClick={removeTerms}>{removing ? 'Removing…' : 'Remove terms'}</button>
+            </div>
+            {check && (check.eligible ? (
               <>
                 <div className="chip-accent mb-4">Eligible today: {formatMoney(check.discountAmount, company?.currency)} discount</div>
                 <PayForm po={po} onPaid={onChanged} />
               </>
             ) : (
               <p className="text-sm text-danger">{check.reason}</p>
-            )}
+            ))}
           </div>
         )}
       </div>

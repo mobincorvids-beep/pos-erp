@@ -360,12 +360,12 @@ function ProductForm({ product, onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
-      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-md">
-        <p className="font-display text-lg mb-4">{isNew ? t('products.newProduct') : t('products.editProduct')}</p>
-        {error && <p className="chip-danger !inline-block w-full !rounded px-3 py-2 text-sm mb-3">{error}</p>}
+    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4 py-6">
+      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-md max-h-full flex flex-col">
+        <p className="font-display text-lg mb-4 shrink-0">{isNew ? t('products.newProduct') : t('products.editProduct')}</p>
+        {error && <p className="chip-danger !inline-block w-full !rounded px-3 py-2 text-sm mb-3 shrink-0">{error}</p>}
 
-        <div className="space-y-3">
+        <div className="space-y-3 overflow-y-auto min-h-0 pr-1 -mr-1">
           <div>
             <label className="field-label">{t('products.fieldName')}</label>
             <input
@@ -524,7 +524,7 @@ function ProductForm({ product, onClose, onSaved }) {
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 mt-5">
+        <div className="flex justify-end gap-2 mt-5 shrink-0 pt-3 border-t border-rule">
           <button type="button" className="btn-secondary" onClick={onClose}>{t('common.cancel')}</button>
           <button type="submit" disabled={saving || hasErrors(errors)} className="btn-primary">{saving ? t('common.saving') : t('products.saveProduct')}</button>
         </div>
