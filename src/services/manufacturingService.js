@@ -12,11 +12,14 @@
 const mongoose = require('mongoose');
 const BillOfMaterials = require('../models/BillOfMaterials');
 const WorkOrder = require('../models/WorkOrder');
+const WorkCenter = require('../models/WorkCenter');
+const Routing = require('../models/Routing');
 const Account = require('../models/Account');
 const inventoryService = require('./inventoryService');
 const accountingService = require('./accountingService');
 const auditService = require('./auditService');
 const defaultAccountsService = require('./defaultAccountsService');
+const schedulingService = require('./schedulingService');
 const { nextDocumentNumber } = require('./numberingService');
 
 function createBOM(input) {
@@ -28,15 +31,56 @@ function createBOM(input) {
   });
 }
 
+function createWorkCenter(input) {
+  const { companyId, name, description, capacityHoursPerDay } = input;
+  if (!name) throw new Error('Work center name is required.');
+  return WorkCenter.create({ companyId, name, description, capacityHoursPerDay: capacityHoursPerDay || 8 });
+}
+
+function listWorkCenters(companyId) {
+  return WorkCenter.find({ companyId, isActive: true });
+}
+
+async function updateWorkCenter(id, companyId, patch) {
+  const workCenter = await WorkCenter.findOne({ _id: id, companyId });
+  if (!workCenter) throw new Error('Work center not found.');
+  ['name', 'description', 'capacityHoursPerDay', 'isActive'].forEach((field) => {
+    if (patch[field] !== undefined) workCenter[field] = patch[field];
+  });
+  await workCenter.save();
+  return workCenter;
+}
+
+async function createRouting(input) {
+  const { companyId, bomId, name, operations } = input;
+  if (!operations || operations.length === 0) throw new Error('Routing must have at least one operation.');
+  const bom = await BillOfMaterials.findOne({ _id: bomId, companyId });
+  if (!bom) throw new Error('BOM not found.');
+  const sorted = [...operations].sort((a, b) => a.sequence - b.sequence);
+  return Routing.create({ companyId, bomId, name, operations: sorted });
+}
+
+function listRoutings(companyId, bomId) {
+  const filter = { companyId, isActive: true };
+  if (bomId) filter.bomId = bomId;
+  return Routing.find(filter);
+}
+
 async function createWorkOrder(input) {
-  const { companyId, branchId, warehouseId, bomId, quantityToProduce, userId } = input;
+  const { companyId, branchId, warehouseId, bomId, routingId, quantityToProduce, userId } = input;
   if (!quantityToProduce || quantityToProduce <= 0) throw new Error('quantityToProduce must be greater than zero.');
 
   const bom = await BillOfMaterials.findOne({ _id: bomId, companyId, isActive: true });
   if (!bom) throw new Error('Active BOM not found.');
 
+  let routing = null;
+  if (routingId) {
+    routing = await Routing.findOne({ _id: routingId, companyId, bomId, isActive: true });
+    if (!routing) throw new Error('Routing not found for this BOM.');
+  }
+
   return WorkOrder.create({
-    companyId, branchId, warehouseId, bomId,
+    companyId, branchId, warehouseId, bomId, routingId: routing ? routing._id : null,
     workOrderNumber: nextDocumentNumber('WO'),
     quantityToProduce, status: 'planned', userId,
   });
@@ -71,6 +115,18 @@ async function startProduction(workOrderId, userId) {
         }, session);
       }
 
+      if (workOrder.routingId) {
+        const routing = await Routing.findById(workOrder.routingId).session(session);
+        if (routing) {
+          const workCenterIds = [...new Set(routing.operations.map((o) => String(o.workCenterId)))];
+          const workCenters = await WorkCenter.find({ _id: { $in: workCenterIds } }).session(session);
+          const workCentersById = new Map(workCenters.map((wc) => [String(wc._id), wc.capacityHoursPerDay]));
+          workOrder.schedule = await schedulingService.scheduleWorkOrder({
+            companyId: workOrder.companyId, workOrderId: workOrder._id, routing, workCentersById, startFrom: new Date(),
+          });
+        }
+      }
+
       workOrder.status = 'in_progress';
       workOrder.startedAt = new Date();
       await workOrder.save({ session });
@@ -94,7 +150,7 @@ async function startProduction(workOrderId, userId) {
  * correctly makes each finished unit more expensive rather than silently
  * absorbed.
  */
-async function completeProduction(workOrderId, { quantityProduced, actualLaborCost, actualOverheadCost, wastageNote, userId }) {
+async function completeProduction(workOrderId, { quantityProduced, actualLaborCost, actualOverheadCost, wastageNote, scrapQuantity, userId }) {
   const session = await mongoose.startSession();
   try {
     let workOrder;
@@ -134,6 +190,10 @@ async function completeProduction(workOrderId, { quantityProduced, actualLaborCo
       workOrder.actualLaborCost = laborCost;
       workOrder.actualOverheadCost = overheadCost;
       workOrder.wastageNote = wastageNote || null;
+      workOrder.scrapQuantity = scrapQuantity || 0;
+      if (workOrder.schedule && workOrder.schedule.length) {
+        workOrder.schedule.forEach((op) => { if (op.status !== 'completed') op.status = 'completed'; });
+      }
       workOrder.status = 'completed';
       workOrder.completedAt = new Date();
       await workOrder.save({ session });
@@ -174,4 +234,73 @@ async function completeProduction(workOrderId, { quantityProduced, actualLaborCo
   }
 }
 
-module.exports = { createBOM, createWorkOrder, startProduction, completeProduction };
+/** Records actual hours taken for one scheduled operation (vs. its estimate) — the raw input to the efficiency report. */
+async function recordOperationActuals(workOrderId, operationId, { actualHours, status, userId }) {
+  const workOrder = await WorkOrder.findById(workOrderId);
+  if (!workOrder) throw new Error('Work order not found.');
+  const op = workOrder.schedule.id(operationId);
+  if (!op) throw new Error('Scheduled operation not found.');
+  if (actualHours !== undefined) op.actualHours = actualHours;
+  if (status) op.status = status;
+  await workOrder.save();
+  await auditService.record({
+    companyId: workOrder.companyId, userId, action: 'work_order.operation_recorded',
+    entityType: 'WorkOrder', entityId: workOrder._id, metadata: { operationId, actualHours, status },
+  });
+  return workOrder;
+}
+
+/**
+ * Basic OEE-adjacent efficiency report for completed (or in-progress) work
+ * orders: planned vs. actual hours per operation, and quantity produced vs.
+ * planned (including scrap) per work order. This is deliberately not a full
+ * availability x performance x quality OEE waterfall — the app has no
+ * machine-uptime/downtime tracking to support "availability" cleanly — but
+ * performance (hours) and quality (scrap rate) are both real, stored data.
+ */
+async function getEfficiencyReport(companyId, { warehouseId, from, to } = {}) {
+  const filter = { companyId, status: { $in: ['in_progress', 'completed'] } };
+  if (warehouseId) filter.warehouseId = warehouseId;
+  if (from || to) {
+    filter.startedAt = {};
+    if (from) filter.startedAt.$gte = new Date(from);
+    if (to) filter.startedAt.$lte = new Date(to);
+  }
+
+  const workOrders = await WorkOrder.find(filter).sort({ startedAt: -1 }).limit(200);
+
+  return workOrders.map((wo) => {
+    const plannedHours = wo.schedule.reduce((sum, op) => sum + (op.estimatedHours || 0), 0);
+    const actualHours = wo.schedule.reduce((sum, op) => sum + (op.actualHours ?? op.estimatedHours ?? 0), 0);
+    const performanceRatio = actualHours > 0 ? plannedHours / actualHours : null; // >1 means faster than planned
+    const goodQty = wo.quantityProduced || 0;
+    const totalAttempted = goodQty + (wo.scrapQuantity || 0);
+    const qualityRatio = totalAttempted > 0 ? goodQty / totalAttempted : null;
+    const yieldRatio = wo.quantityToProduce > 0 ? goodQty / wo.quantityToProduce : null;
+    return {
+      workOrderId: wo._id,
+      workOrderNumber: wo.workOrderNumber,
+      status: wo.status,
+      quantityToProduce: wo.quantityToProduce,
+      quantityProduced: wo.quantityProduced,
+      scrapQuantity: wo.scrapQuantity || 0,
+      plannedHours, actualHours,
+      performanceRatio, qualityRatio, yieldRatio,
+      // Simple composite: performance x quality, when both are known — the closest
+      // this data can honestly get to an OEE-style efficiency number without a
+      // separate availability/downtime source.
+      efficiency: (performanceRatio != null && qualityRatio != null) ? performanceRatio * qualityRatio : null,
+      operations: wo.schedule.map((op) => ({
+        operationName: op.operationName, sequence: op.sequence, workCenterId: op.workCenterId,
+        estimatedHours: op.estimatedHours, actualHours: op.actualHours, status: op.status,
+      })),
+    };
+  });
+}
+
+module.exports = {
+  createBOM, createWorkOrder, startProduction, completeProduction,
+  createWorkCenter, listWorkCenters, updateWorkCenter,
+  createRouting, listRoutings,
+  recordOperationActuals, getEfficiencyReport,
+};

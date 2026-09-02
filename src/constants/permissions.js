@@ -77,6 +77,7 @@ const KEYS = {
   TIMESHEETS_LOG: 'timesheets.log',
   TIMESHEETS_APPROVE: 'timesheets.approve',
   FUNNELS_MANAGE: 'funnels.manage',
+  MARKETING_MANAGE: 'marketing.manage',
   DEVELOPER_PLATFORM_MANAGE: 'developer_platform.manage',
 
   PROJECT_TASKS_MANAGE: 'project_tasks.manage',
@@ -84,6 +85,11 @@ const KEYS = {
   TAX_PAYMENTS_VIEW: 'tax_payments.view',
   TAX_PAYMENTS_CREATE: 'tax_payments.create',
   TAX_PAYMENTS_PAY: 'tax_payments.pay',
+
+  // Viewing/searching/voting on Knowledge Base articles is open to any
+  // authenticated user regardless of role (same split as DOCUMENTS_VIEW
+  // vs DOCUMENTS_MANAGE) — this key only gates authoring/publishing/delete.
+  KNOWLEDGE_BASE_MANAGE: 'knowledge_base.manage',
 };
 
 // Human-readable catalog for the role-editor UI — grouped so checkboxes
@@ -212,9 +218,16 @@ const CATALOG = [
     ],
   },
   {
+    group: 'Knowledge base',
+    items: [
+      { key: KEYS.KNOWLEDGE_BASE_MANAGE, label: 'Author, edit, publish, and delete Knowledge Base / SOP articles' },
+    ],
+  },
+  {
     group: 'Marketing',
     items: [
       { key: KEYS.FUNNELS_MANAGE, label: 'Create, publish, and edit lead-capture landing pages' },
+      { key: KEYS.MARKETING_MANAGE, label: 'Build audience segments and marketing automation journeys' },
     ],
   },
   {

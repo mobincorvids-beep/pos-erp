@@ -1,6 +1,7 @@
 const router = require('express').Router();
 
 router.use('/auth', require('./authRoutes'));
+router.use('/auth', require('./oauthRoutes')); // Google/Microsoft SSO — see src/config/passport.js for env-var-gated setup
 router.use('/products', require('./productRoutes'));
 router.use('/categories', require('./categoryRoutes'));
 router.use('/sales', require('./saleRoutes'));
@@ -44,6 +45,7 @@ router.use('/dashboard', require('./dashboardRoutes'));
 router.use('/currency', require('./currencyRoutes'));
 router.use('/documents', require('./documentRoutes'));
 router.use('/tickets', require('./ticketRoutes'));
+router.use('/knowledge-base', require('./knowledgeBaseRoutes'));
 router.use('/notifications', require('./notificationRoutes'));
 router.use('/chat', require('./chatRoutes'));
 router.use('/calendar', require('./calendarRoutes'));
@@ -75,6 +77,7 @@ router.use('/recruitment', require('./recruitmentRoutes'));
 router.use('/performance', require('./performanceRoutes'));
 router.use('/funnels', require('./funnelRoutes'));
 router.use('/public/funnels', require('./publicFunnelRoutes')); // public, no JWT — mirrors ecommerceWebhookRoutes.js
+router.use('/marketing', require('./marketingRoutes')); // audience segments + drip/journey automation
 router.use('/developer/api-keys', require('./apiKeyRoutes'));
 router.use('/developer/webhooks', require('./webhookSubscriptionRoutes'));
 router.use('/public-api/v1', require('./publicApiRoutes')); // public, apiKeyAuth only — no JWT

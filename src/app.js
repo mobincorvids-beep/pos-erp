@@ -11,6 +11,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const mongoSanitize = require('express-mongo-sanitize');
 const hpp = require('hpp');
+const { passport } = require('./config/passport'); // Google/Microsoft SSO strategies — no-op when their env vars aren't set
 const routes = require('./routes');
 const { generalLimiter } = require('./middleware/rateLimit');
 
@@ -59,6 +60,11 @@ app.use(mongoSanitize());
 // query string) from producing an array/object where a controller expects
 // a plain string, which could otherwise slip past a naive filter.
 app.use(hpp());
+
+// Stateless only (session:false is passed at every passport.authenticate()
+// call site) — this app's sessions are JWTs, never cookies/server
+// sessions, so we intentionally never call passport.session().
+app.use(passport.initialize());
 
 app.use('/api/v1', generalLimiter);
 

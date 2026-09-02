@@ -4,12 +4,20 @@ validateEnv(); // refuses to start rather than run with a missing/insecure JWT_S
 
 const app = require('./app');
 const connectDB = require('./config/db');
+const marketingJourneyCron = require('./jobs/marketingJourneyCron');
 
 const PORT = process.env.PORT || 4000;
 
 let server;
 connectDB()
-  .then(() => { server = app.listen(PORT, () => console.log(`POS/ERP API running on port ${PORT}`)); })
+  .then(() => {
+    server = app.listen(PORT, () => console.log(`POS/ERP API running on port ${PORT}`));
+    // Started here, not app.js — app.js is required by tests/scripts and
+    // the Vercel serverless entrypoint (api/index.js), which must NOT get
+    // a background timer that outlives a single request/process. See
+    // marketingJourneyCron.js's header comment for the full reasoning.
+    marketingJourneyCron.start();
+  })
   .catch((err) => {
     console.error('Failed to connect to MongoDB:', err.message);
     process.exit(1);
@@ -22,6 +30,7 @@ connectDB()
 // lets existing ones complete, then closes the DB connection cleanly.
 function gracefulShutdown(signal) {
   console.log(`\n${signal} received — shutting down gracefully.`);
+  marketingJourneyCron.stop();
   if (!server) return process.exit(0);
   server.close(() => {
     require('mongoose').connection.close(false).then(() => {

@@ -28,6 +28,17 @@ function signPreAuthToken(user) {
   return jwt.sign({ userId: user._id, pending2FA: true }, process.env.JWT_SECRET, { expiresIn: '5m' });
 }
 
+// The single place that mints a real access+refresh token pair for an
+// already-authenticated user — shared by every path that completes a
+// login (local email/password below, and the OAuth/SSO callback in
+// oauthController.js) so there is exactly one implementation of "what a
+// successful login issues", never a second copy that could drift.
+async function issueTokensForUser(user, ctx = {}) {
+  const token = signAccessToken(user);
+  const refreshToken = await refreshTokenService.issue('user', user._id, ctx);
+  return { token, refreshToken };
+}
+
 async function login(req, res) {
   const { email, password } = req.body;
   const ctx = deviceContext(req);
@@ -52,8 +63,7 @@ async function login(req, res) {
   // nothing that worked before this round behaves any differently now.
   if (!user.twoFactorEnabled) {
     await securityService.recordAttempt({ email, userId: user._id, companyId: user.companyId, success: true, ...ctx });
-    const token = signAccessToken(user);
-    const refreshToken = await refreshTokenService.issue('user', user._id, ctx);
+    const { token, refreshToken } = await issueTokensForUser(user, ctx);
     return res.json({
       token, refreshToken,
       user: { id: user._id, name: user.name, email: user.email, companyId: user.companyId, branchId: user.branchId, twoFactorEnabled: user.twoFactorEnabled },
@@ -92,8 +102,7 @@ async function register(req, res) {
 
     const ctx = deviceContext(req);
     await securityService.recordAttempt({ email: admin.email, userId: admin._id, companyId: admin.companyId, success: true, ...ctx });
-    const token = signAccessToken(admin);
-    const refreshToken = await refreshTokenService.issue('user', admin._id, ctx);
+    const { token, refreshToken } = await issueTokensForUser(admin, ctx);
     res.status(201).json({
       token, refreshToken,
       user: { id: admin._id, name: admin.name, email: admin.email, companyId: admin.companyId, branchId: admin.branchId, twoFactorEnabled: false },
@@ -131,8 +140,7 @@ async function verifyTwoFactor(req, res) {
     if (!user.isActive) return res.status(403).json({ error: 'This account is disabled.' });
 
     await securityService.recordAttempt({ email: user.email, userId: user._id, companyId: user.companyId, success: true, ...ctx });
-    const accessToken = signAccessToken(user);
-    const refreshToken = await refreshTokenService.issue('user', user._id, ctx);
+    const { token: accessToken, refreshToken } = await issueTokensForUser(user, ctx);
     res.json({
       token: accessToken, refreshToken,
       user: { id: user._id, name: user.name, email: user.email, companyId: user.companyId, branchId: user.branchId, twoFactorEnabled: user.twoFactorEnabled },
@@ -181,7 +189,7 @@ async function me(req, res) {
   });
 }
 
-module.exports = { login, register, verifyTwoFactor, refresh, logout, me, setupTwoFactor, confirmTwoFactor, disableTwoFactor, listSessions, revokeSession, listLoginHistory };
+module.exports = { login, register, verifyTwoFactor, refresh, logout, me, setupTwoFactor, confirmTwoFactor, disableTwoFactor, listSessions, revokeSession, listLoginHistory, issueTokensForUser, deviceContext };
 
 async function setupTwoFactor(req, res) {
   try { res.json(await twoFactorService.setup(req.auth.userId)); }

@@ -223,6 +223,22 @@ function TicketForm({ onClose, onSaved }) {
 
   useEffect(() => { api.get('/org/branches').then(setBranches).catch(() => {}); }, []);
 
+  // Suggested Knowledge Base articles for ticket deflection — additive,
+  // debounced lookup against the subject as the requester types, so
+  // agents/customers can see a relevant SOP before the ticket is even
+  // submitted. Purely informational: does not block or alter submission.
+  const [suggestedArticles, setSuggestedArticles] = useState([]);
+  useEffect(() => {
+    const subject = form.subject.trim();
+    if (subject.length < 3) { setSuggestedArticles([]); return; }
+    const timer = setTimeout(() => {
+      api.get(`/knowledge-base/suggest?query=${encodeURIComponent(subject)}`)
+        .then(setSuggestedArticles)
+        .catch(() => {});
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [form.subject]);
+
   async function handleSubmit(e) {
     e.preventDefault();
     setSaving(true);
@@ -257,6 +273,18 @@ function TicketForm({ onClose, onSaved }) {
             <label className="field-label">Subject</label>
             <input required className="field-input" value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} />
           </div>
+          {suggestedArticles.length > 0 && (
+            <div className="rounded-lg bg-surface-sunken/60 border border-rule p-2.5">
+              <p className="text-xs font-semibold text-ink-muted mb-1.5">Suggested Knowledge Base articles</p>
+              <ul className="space-y-1">
+                {suggestedArticles.map((a) => (
+                  <li key={a._id} className="text-xs">
+                    <a href="/knowledge-base" className="text-accent hover:underline">{a.title}</a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <div>
             <label className="field-label">Description</label>
             <textarea required rows={3} className="field-input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />

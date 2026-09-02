@@ -5,6 +5,7 @@ import { AppLayout } from './components/AppLayout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 import { LoginPage } from './pages/LoginPage';
+import { OAuthCompletePage } from './pages/OAuthCompletePage';
 import { SignupPage } from './pages/SignupPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { HomeDashboardPage } from './pages/HomeDashboardPage';
@@ -18,6 +19,7 @@ import { StockTransfersPage } from './pages/StockTransfersPage';
 import { StockCountsPage } from './pages/StockCountsPage';
 import { ExpensesPage } from './pages/ExpensesPage';
 import { TicketsPage } from './pages/TicketsPage';
+import { KnowledgeBasePage } from './pages/KnowledgeBasePage';
 import { ChatPage } from './pages/ChatPage';
 import { CalendarPage } from './pages/CalendarPage';
 import { MaintenancePage } from './pages/MaintenancePage';
@@ -61,6 +63,7 @@ import { WarehouseZonesPage } from './pages/WarehouseZonesPage';
 import { RecruitmentPage } from './pages/RecruitmentPage';
 import { PerformancePage } from './pages/PerformancePage';
 import { FunnelsPage } from './pages/FunnelsPage';
+import { MarketingAutomationPage } from './pages/MarketingAutomationPage';
 import { FunnelLandingPage } from './public/FunnelLandingPage';
 import { DeveloperPlatformPage } from './pages/DeveloperPlatformPage';
 import { EcommerceHubPage } from './pages/EcommerceHubPage';
@@ -117,6 +120,7 @@ export default function App() {
             }
           >
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/oauth-complete" element={<OAuthCompletePage />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route
               element={
@@ -138,6 +142,7 @@ export default function App() {
               <Route path="/stock-counts" element={<StockCountsPage />} />
               <Route path="/expenses" element={<ExpensesPage />} />
               <Route path="/tickets" element={<TicketsPage />} />
+              <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
               <Route path="/chat" element={<ChatPage />} />
               <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/maintenance" element={<MaintenancePage />} />
@@ -178,6 +183,7 @@ export default function App() {
               <Route path="/recruitment" element={<RecruitmentPage />} />
               <Route path="/performance" element={<PerformancePage />} />
               <Route path="/funnels" element={<FunnelsPage />} />
+              <Route path="/marketing-automation" element={<MarketingAutomationPage />} />
               <Route path="/developer-platform" element={<DeveloperPlatformPage />} />
               <Route path="/ecommerce-hub" element={<EcommerceHubPage />} />
               {INDUSTRY_MODULES.map(({ key, path, label, component: Component }) => (
