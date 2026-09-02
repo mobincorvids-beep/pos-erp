@@ -9,6 +9,7 @@ import {
   Ticket, Shield, FileSearch, TrendingUp, HandCoins, Repeat, Hourglass, Lock, Layers, Ruler, Percent, X,
   LayoutDashboard, Settings, Car, MapPin, ShieldAlert, FileSignature,
   PackageCheck, Warehouse, UserPlus, Target, Rocket, KeyRound, Radio, Timer, SlidersHorizontal, Pin, PinOff,
+  Paperclip,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { INDUSTRY_MODULES } from '../industryModuleRegistry';
@@ -29,7 +30,7 @@ const ITEM_ICONS = {
   '/customers': Contact, '/suppliers': Truck, '/team': UserCog, '/hr': Users, '/employee-loans': HandCoins, '/timesheets': Timer,
   '/crm': HeartHandshake, '/loyalty': Gift,
   '/ai-insights': Sparkles, '/ecommerce': Store, '/tickets': Ticket, '/security': Shield,
-  '/fleet': Car, '/field-service': MapPin, '/quality': ShieldAlert, '/contracts': FileSignature,
+  '/fleet': Car, '/field-service': MapPin, '/quality': ShieldAlert, '/contracts': FileSignature, '/documents': Paperclip,
   '/logistics-core': PackageCheck, '/warehouse': Warehouse, '/recruitment': UserPlus,
   '/performance': Target, '/funnels': Rocket, '/developer-platform': KeyRound, '/ecommerce-hub': Radio,
 };
@@ -87,6 +88,7 @@ const SECTIONS = [
       { to: '/periods', labelKey: 'nav.items.fiscalYearsPeriods' },
       { to: '/fixed-assets', labelKey: 'nav.items.fixedAssets' },
       { to: '/contracts', labelKey: 'nav.items.contractsLegal' },
+      { to: '/documents', labelKey: 'nav.items.documents' },
     ],
   },
   {

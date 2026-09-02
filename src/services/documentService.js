@@ -10,33 +10,38 @@
  *     alerts — checkExpiringDocuments() fires real notifications the
  *     exact same way inventoryService's low-stock check already does.
  *
- * Binary file upload/storage (multer, S3, presigned URLs) is deliberately
- * OUT of scope here — that's a standard, separate Express infrastructure
- * concern this service doesn't try to solve. uploadVersion() takes a
- * fileUrl as already-uploaded-somewhere, the same pattern a presigned-URL
- * upload flow would produce in a real deployment.
+ * Binary file storage: this app has no cloud storage (no multer-to-disk/
+ * S3/presigned-URL infra for Documents). Files arrive already validated
+ * (size cap, mimeType) by documentController and are stored inline as a
+ * base64 data-URI on `fileData` — the same approach product images
+ * already use, generalized to any file type. `fileUrl` remains supported
+ * for a version that instead points at an already-hosted external file
+ * (e.g. a presigned URL from a future real deployment) — a version needs
+ * EITHER one, not both.
  */
 const Document = require('../models/Document');
 const Role = require('../models/Role');
 const approvalService = require('./approvalService');
 const notificationService = require('./notificationService');
 
-function createDocument({ companyId, entityType, entityId, category, fileUrl, fileName, expiryDate, tags, userId, note }) {
-  if (!fileUrl || !fileName) throw new Error('fileUrl and fileName are required.');
+function createDocument({ companyId, entityType, entityId, category, fileUrl, fileData, fileName, mimeType, fileSizeBytes, expiryDate, tags, userId, note }) {
+  if (!fileName) throw new Error('fileName is required.');
+  if (!fileUrl && !fileData) throw new Error('Either fileUrl or fileData is required.');
   return Document.create({
     companyId, entityType, entityId, category, expiryDate: expiryDate || null, tags: tags || [],
-    versions: [{ versionNumber: 1, fileUrl, fileName, uploadedBy: userId, note }],
+    versions: [{ versionNumber: 1, fileUrl: fileUrl || null, fileData: fileData || null, fileName, mimeType: mimeType || null, fileSizeBytes: fileSizeBytes || null, uploadedBy: userId, note }],
   });
 }
 
 /** Appends a NEW version: never overwrites an existing one, so the full history stays intact. */
-async function uploadVersion(documentId, { fileUrl, fileName, userId, note }) {
-  if (!fileUrl || !fileName) throw new Error('fileUrl and fileName are required.');
+async function uploadVersion(documentId, { fileUrl, fileData, fileName, mimeType, fileSizeBytes, userId, note }) {
+  if (!fileName) throw new Error('fileName is required.');
+  if (!fileUrl && !fileData) throw new Error('Either fileUrl or fileData is required.');
   const doc = await Document.findById(documentId);
   if (!doc) throw new Error('Document not found.');
 
   const nextVersionNumber = doc.versions.length + 1;
-  doc.versions.push({ versionNumber: nextVersionNumber, fileUrl, fileName, uploadedBy: userId, note });
+  doc.versions.push({ versionNumber: nextVersionNumber, fileUrl: fileUrl || null, fileData: fileData || null, fileName, mimeType: mimeType || null, fileSizeBytes: fileSizeBytes || null, uploadedBy: userId, note });
   await doc.save();
   return doc;
 }

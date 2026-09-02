@@ -123,7 +123,8 @@
       "ecommerce": "برقی سوداگری",
       "ecommerceHub": "برقی سوداگری ئے مرکز",
       "developerPlatform": "دراست کنوکی پلیٹ فارم",
-      "categories": "اقسام"
+      "categories": "اقسام",
+      "documents": "اسناد"
     },
     "settings": "تنظیمات",
     "signOut": "درکپتگ"
@@ -665,7 +666,21 @@
     "setFullyReceived": "{{name}} کاملاں گیریں ({{qty}}) نشان بوت۔",
     "item": "توکی",
     "enterQuantityError": "کم ترکم یک لائن واستا مقدار درج کن۔",
-    "exactSerialError": "{{name}}: کاملاں {{count}} سیریل نمبر درج کن، ہر گیریں بوتگین یونٹ واستا یک ({{got}} گیریں بوت)۔"
+    "exactSerialError": "{{name}}: کاملاں {{count}} سیریل نمبر درج کن، ہر گیریں بوتگین یونٹ واستا یک ({{got}} گیریں بوت)۔",
+    "landedCosts": "رسیدگ لگتان",
+    "landedCostsHint": "د بار کشی، ګمرګی محصول، بیمه او هندلینګ فیس د قلمونو تر مینځ ویشل کیږي چې هر محصول ریښتنی فی واحد لګت خپله برخه ولري.",
+    "addLandedCost": "+ رسیدگ لگت زیات کن",
+    "descriptionPlaceholder": "تشریح (مثلاً بار کشی)",
+    "amountPlaceholder": "مقدار",
+    "allocateByValue": "د ارزښت مطابق (متناسب)",
+    "allocateByQuantity": "د مقدار مطابق (هر واحد براورد)",
+    "noLandedCosts": "تاهنون هیچ رسیدگ لگت زیات نه بوته.",
+    "totalLandedCost": "کل رسیدگ لگت",
+    "landedCostAdded": "رسیدگ لگت زیات بوته.",
+    "landedCostRemoved": "رسیدگ لگت لاهت بوته.",
+    "landedCostSaveError": "یک تشریح او غیر منفی مقدار دننه کن.",
+    "adjustedUnitCost": "سمون بوته فی واحد لگت",
+    "perUnit": "/واحد"
   },
   "banking": {
     "title": "بینکداری",
@@ -685,7 +700,37 @@
     "compareToBookBalance": "کتابی بیلنس ءَ مقابلہ کن",
     "reconciliationCompleted": "برابری پوره بوت۔",
     "bookBalance": "کتابی بیلنس",
-    "difference": "فرق"
+    "difference": "فرق",
+    "statementImport": {
+      "title": "د بانک بیان وارد کن",
+      "subtitle": "د خپل بانک CSV صادرات بار کن او آئی ثبت بوته راکړ ورکړ سرا په خودکار توګه سرجم کن.",
+      "started": "موافقت شروع بوته. هنون د بیان CSV وارد کن.",
+      "starting": "شروع بیت…",
+      "startButton": "موافقت شروع کن",
+      "csvHint": "کالمان: تاریخ، تشریح، او یا مقدار، یا ډېبت/کریډیت.",
+      "orPaste": "یا لاندی CSV متن پیست کن",
+      "parsing": "تجزیه بیت…",
+      "previewButton": "مخکتنه",
+      "importing": "وارد بیت…",
+      "importButton": "وارد کن او {{count}} کرښان خودکار سرجم کن",
+      "previewErrors": "{{count}} کرښان تجزیه نه بوتنت.",
+      "imported": "بیان وارد او خودکار سرجم بوته.",
+      "colDate": "تاریخ",
+      "colDescription": "تشریح",
+      "colAmount": "مقدار",
+      "colStatus": "حالت",
+      "colAction": "کړن",
+      "rowError": "کرښ {{row}}: {{error}}",
+      "statementTotal": "د بیان کل",
+      "matchedTotal": "سرجم بوته کل",
+      "needsReview": "بیاکتنی گوں اهتیاج",
+      "statusAutoMatched": "خودکار سرجم بوته",
+      "statusManualMatched": "سرجم بوته",
+      "statusNoMatch": "هیچ سرجم بوته راکړ ورکړ نیست",
+      "statusUnmatched": "بیاکتنی گوں اهتیاج",
+      "linkToVoucher": "راکړ ورکړ گوں وصل کن…",
+      "noMatch": "هیچ سرجمی نیست"
+    }
   },
   "aiInsights": {
     "title": "بصیرت",

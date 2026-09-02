@@ -98,6 +98,10 @@ function PurchaseOrderPanel({ po: initialPo, onClose, onChanged }) {
     api.get(`/purchase-orders/${po._id}`).then(setPo).catch(() => {});
   }
   useEffect(loadGrns, [po._id]);
+  // The list view's row doesn't carry the computed landed-cost allocation
+  // (allocatedLandedCost/adjustedUnitCost per item) — fetch the full detail
+  // once so that shows up immediately, not just after the first add/remove.
+  useEffect(reloadPo, [po._id]);
 
   async function decide(approve) {
     setBusy(true);
@@ -138,8 +142,15 @@ function PurchaseOrderPanel({ po: initialPo, onClose, onChanged }) {
 
       <div className="space-y-1.5 text-sm mb-3 bg-surface-sunken/50 rounded-lg p-3">
         {po.items.map((item, i) => (
-          <div key={i} className="flex justify-between">
-            <span className="text-ink-muted">{formatMoney(item.unitCost, company?.currency)} × {item.quantityOrdered}</span>
+          <div key={i} className="flex justify-between items-baseline">
+            <span className="text-ink-muted">
+              {formatMoney(item.unitCost, company?.currency)} × {item.quantityOrdered}
+              {item.adjustedUnitCost != null && item.adjustedUnitCost !== item.unitCost && (
+                <span className="num text-accent-strong ml-1.5" title={t('purchases.adjustedUnitCost')}>
+                  → {formatMoney(item.adjustedUnitCost, company?.currency)}{t('purchases.perUnit')}
+                </span>
+              )}
+            </span>
             <span className="num text-ink-muted">{t('purchases.recv', { received: item.quantityReceived, ordered: item.quantityOrdered })}</span>
           </div>
         ))}
@@ -148,6 +159,8 @@ function PurchaseOrderPanel({ po: initialPo, onClose, onChanged }) {
       <div className="flex justify-between text-base font-medium mb-4">
         <span>{t('purchases.total')}</span><span className="num">{formatMoney(po.totalAmount, company?.currency)}</span>
       </div>
+
+      <LandedCostsSection po={po} onChanged={reloadPo} />
 
       {po.status === 'draft' && (
         <div className="flex gap-2 mb-4">
@@ -196,6 +209,121 @@ function PurchaseOrderPanel({ po: initialPo, onClose, onChanged }) {
           onReceived={() => { setShowReceiveForm(false); reloadPo(); loadGrns(); onChanged(); }}
         />
       )}
+    </div>
+  );
+}
+
+/**
+ * Freight, customs duty, insurance, handling fees, etc. incurred on the PO
+ * as a whole — allocated across line items server-side (see
+ * purchaseService.computeLandedCostAllocation) so each product's true
+ * per-unit cost (used for COGS/inventory valuation on receipt) includes its
+ * fair share, not just the vendor's unit price. Available while the PO
+ * isn't cancelled, same as the backend guard.
+ */
+function LandedCostsSection({ po, onChanged }) {
+  const { t } = useTranslation();
+  const { company } = useAuth();
+  const toast = useToast();
+  const [showAdd, setShowAdd] = useState(false);
+  const [description, setDescription] = useState('');
+  const [amount, setAmount] = useState('');
+  const [allocationMethod, setAllocationMethod] = useState('by_value');
+  const [saving, setSaving] = useState(false);
+  const [removingId, setRemovingId] = useState(null);
+
+  const landedCosts = po.landedCosts || [];
+  const totalLandedCost = po.totalLandedCost ?? landedCosts.reduce((sum, c) => sum + c.amount, 0);
+
+  async function submitAdd(e) {
+    e.preventDefault();
+    const amt = Number(amount);
+    if (!description.trim() || Number.isNaN(amt) || amt < 0) {
+      toast(t('purchases.landedCostSaveError'), 'error');
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.post(`/purchase-orders/${po._id}/landed-costs`, { description: description.trim(), amount: amt, allocationMethod });
+      toast(t('purchases.landedCostAdded'), 'success');
+      setDescription(''); setAmount(''); setAllocationMethod('by_value'); setShowAdd(false);
+      onChanged();
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function remove(costId) {
+    setRemovingId(costId);
+    try {
+      await api.del(`/purchase-orders/${po._id}/landed-costs/${costId}`);
+      toast(t('purchases.landedCostRemoved'), 'success');
+      onChanged();
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setRemovingId(null);
+    }
+  }
+
+  if (po.status === 'cancelled') return null;
+
+  return (
+    <div className="mb-4">
+      <div className="flex items-center justify-between mb-1">
+        <p className="eyebrow">{t('purchases.landedCosts')}</p>
+        {!showAdd && (
+          <button type="button" className="btn-ghost !px-0 !py-0 text-xs" onClick={() => setShowAdd(true)}>{t('purchases.addLandedCost')}</button>
+        )}
+      </div>
+      <p className="text-xs text-ink-muted mb-2">{t('purchases.landedCostsHint')}</p>
+
+      {landedCosts.length === 0 && !showAdd && (
+        <p className="text-xs text-ink-muted mb-2">{t('purchases.noLandedCosts')}</p>
+      )}
+
+      {landedCosts.length > 0 && (
+        <div className="space-y-1 mb-2">
+          {landedCosts.map((cost) => (
+            <div key={cost._id} className="flex items-center justify-between text-xs bg-surface-sunken/50 rounded-lg px-2.5 py-1.5">
+              <div className="min-w-0">
+                <span className="font-medium">{cost.description}</span>
+                <span className="text-ink-muted ml-1.5">{cost.allocationMethod === 'by_quantity' ? t('purchases.allocateByQuantity') : t('purchases.allocateByValue')}</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="num">{formatMoney(cost.amount, company?.currency)}</span>
+                <button type="button" disabled={removingId === cost._id} className="text-ink-muted hover:text-danger" onClick={() => remove(cost._id)}>
+                  <span className="material-symbols-outlined text-[16px] leading-none">close</span>
+                </button>
+              </div>
+            </div>
+          ))}
+          <div className="flex justify-between text-xs font-medium pt-0.5">
+            <span>{t('purchases.totalLandedCost')}</span>
+            <span className="num">{formatMoney(totalLandedCost, company?.currency)}</span>
+          </div>
+        </div>
+      )}
+
+      {showAdd && (
+        <form onSubmit={submitAdd} className="border border-rule rounded-lg p-2.5 bg-surface-sunken/30 space-y-2">
+          <input className="field-input" value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t('purchases.descriptionPlaceholder')} />
+          <div className="grid grid-cols-2 gap-2">
+            <input type="number" step="0.01" min="0" className="field-input num" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder={t('purchases.amountPlaceholder')} />
+            <select className="field-input" value={allocationMethod} onChange={(e) => setAllocationMethod(e.target.value)}>
+              <option value="by_value">{t('purchases.allocateByValue')}</option>
+              <option value="by_quantity">{t('purchases.allocateByQuantity')}</option>
+            </select>
+          </div>
+          <div className="flex justify-end gap-2">
+            <button type="button" className="btn-secondary !text-xs" onClick={() => setShowAdd(false)}>{t('common.cancel')}</button>
+            <button type="submit" disabled={saving} className="btn-primary !text-xs">{saving ? t('common.saving') : t('purchases.addLandedCost')}</button>
+          </div>
+        </form>
+      )}
+      <div className="tear-line my-2" />
     </div>
   );
 }

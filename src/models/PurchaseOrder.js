@@ -8,6 +8,23 @@ const poItemSchema = new Schema({
   unitCost: { type: Number, required: true },
 }, { timestamps: true });
 
+// Extra costs incurred on the PO as a whole (freight/shipping, customs duty,
+// insurance, handling fees, ...) that don't belong to any single line item
+// but still form part of the TRUE per-unit cost of the goods for COGS /
+// inventory valuation. Each entry is allocated across the PO's line items
+// independently by its own allocationMethod (see
+// purchaseService.computeLandedCostAllocation), then summed per line — so a
+// PO with freight allocated by value and a customs duty allocated by
+// quantity is handled correctly rather than forcing one method for
+// everything. An empty array (the default) allocates nothing: existing
+// behaviour for every PO created before this feature is completely
+// unaffected.
+const landedCostSchema = new Schema({
+  description: { type: String, required: true },
+  amount: { type: Number, required: true, min: 0 },
+  allocationMethod: { type: String, enum: ['by_value', 'by_quantity'], default: 'by_value' },
+}, { timestamps: true });
+
 const purchaseOrderSchema = new Schema({
   companyId: { type: Schema.Types.ObjectId, ref: 'Company', required: true, index: true },
   branchId: { type: Schema.Types.ObjectId, ref: 'Branch', required: true },
@@ -23,6 +40,7 @@ const purchaseOrderSchema = new Schema({
   orderDate: { type: Date, default: Date.now },
   status: { type: String, default: 'draft' }, // draft, ordered, partially_received, received, cancelled
   items: [poItemSchema],
+  landedCosts: [landedCostSchema],
   subtotal: { type: Number, default: 0 },
   taxAmount: { type: Number, default: 0 },
   totalAmount: { type: Number, default: 0 },

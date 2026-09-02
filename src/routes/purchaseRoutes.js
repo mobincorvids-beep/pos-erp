@@ -43,4 +43,23 @@ router.post('/:id/receive', requirePermission(PURCHASE_RECEIVE), receiveValidati
 router.get('/:id/grns', requirePermission(PURCHASE_RECEIVE), controller.listGRNs);
 router.post('/grn/:grnId/items/:itemId/qc', requirePermission(PURCHASE_RECEIVE), body('passed').isBoolean().withMessage('passed must be true or false.'), validate, controller.recordQC);
 
+const landedCostValidation = [
+  body('description').isString().trim().notEmpty().withMessage('description is required.'),
+  body('amount').isFloat({ min: 0 }).withMessage('amount cannot be negative.'),
+  body('allocationMethod').optional().isIn(['by_value', 'by_quantity']).withMessage('allocationMethod must be "by_value" or "by_quantity".'),
+];
+const landedCostUpdateValidation = [
+  body('description').optional().isString().trim().notEmpty().withMessage('description cannot be empty.'),
+  body('amount').optional().isFloat({ min: 0 }).withMessage('amount cannot be negative.'),
+  body('allocationMethod').optional().isIn(['by_value', 'by_quantity']).withMessage('allocationMethod must be "by_value" or "by_quantity".'),
+];
+// Landed costs (freight/customs/insurance/handling) are PO-level cost
+// configuration, not the physical act of receiving goods — gated behind
+// PURCHASE_CREATE, same as the rest of a PO's editable content, and usable
+// any time before the PO is cancelled (see purchaseService for the exact
+// status guard).
+router.post('/:id/landed-costs', requirePermission(PURCHASE_CREATE), landedCostValidation, validate, controller.addLandedCost);
+router.put('/:id/landed-costs/:costId', requirePermission(PURCHASE_CREATE), landedCostUpdateValidation, validate, controller.updateLandedCost);
+router.delete('/:id/landed-costs/:costId', requirePermission(PURCHASE_CREATE), controller.removeLandedCost);
+
 module.exports = router;

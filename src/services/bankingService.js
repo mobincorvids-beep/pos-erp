@@ -88,22 +88,27 @@ async function markCleared(reconciliationId, voucherIds) {
   return reconciliation;
 }
 
+/** Opening balance + every voucher entry on `accountId` up to (and including) `asOfDate` — the "what the books say the balance is" figure reconciliation checks against the bank's own number. Shared by completeReconciliation and the statement-import summary. */
+async function computeBookBalance(companyId, accountId, asOfDate) {
+  const account = await Account.findById(accountId);
+  if (!account) throw new Error('Account not found.');
+
+  const totals = await Voucher.aggregate([
+    { $match: { companyId: new mongoose.Types.ObjectId(companyId), date: { $lte: asOfDate } } },
+    { $unwind: '$entries' },
+    { $match: { 'entries.accountId': new mongoose.Types.ObjectId(accountId) } },
+    { $group: { _id: null, debit: { $sum: '$entries.debit' }, credit: { $sum: '$entries.credit' } } },
+  ]);
+  return account.openingBalance + (totals[0]?.debit || 0) - (totals[0]?.credit || 0);
+}
+
 /** Completes the reconciliation, computing the book balance (opening + all vouchers on the account up to statementDate) vs the entered statement balance. */
 async function completeReconciliation(reconciliationId) {
   const reconciliation = await BankReconciliation.findById(reconciliationId);
   if (!reconciliation) throw new Error('Reconciliation not found.');
   if (reconciliation.status === 'completed') throw new Error('Already completed.');
 
-  const account = await Account.findById(reconciliation.accountId);
-  if (!account) throw new Error('Account not found.');
-
-  const totals = await Voucher.aggregate([
-    { $match: { companyId: new mongoose.Types.ObjectId(reconciliation.companyId), date: { $lte: reconciliation.statementDate } } },
-    { $unwind: '$entries' },
-    { $match: { 'entries.accountId': reconciliation.accountId } },
-    { $group: { _id: null, debit: { $sum: '$entries.debit' }, credit: { $sum: '$entries.credit' } } },
-  ]);
-  const bookBalance = account.openingBalance + (totals[0]?.debit || 0) - (totals[0]?.credit || 0);
+  const bookBalance = await computeBookBalance(reconciliation.companyId, reconciliation.accountId, reconciliation.statementDate);
 
   reconciliation.status = 'completed';
   reconciliation.bookBalanceAtCompletion = Math.round(bookBalance * 100) / 100;
@@ -138,4 +143,5 @@ async function reconciliationDetail(reconciliationId) {
 module.exports = {
   transferBetweenAccounts, reverseVoucher,
   startReconciliation, markCleared, completeReconciliation, reconciliationDetail,
+  computeBookBalance,
 };

@@ -123,7 +123,8 @@
       "ecommerce": "ای کامرس",
       "ecommerceHub": "ای کامرس مرکز",
       "developerPlatform": "ڈویلپر پلیٹ فارم",
-      "categories": "اقسام"
+      "categories": "اقسام",
+      "documents": "دستاویزات"
     },
     "settings": "ترتیبات",
     "signOut": "سائن آؤٹ"
@@ -665,7 +666,21 @@
     "setFullyReceived": "{{name}} مکمل طور پر وصول شدہ ({{qty}}) نشان زد کر دیا گیا۔",
     "item": "آئٹم",
     "enterQuantityError": "کم از کم ایک لائن کے لیے تعداد درج کریں۔",
-    "exactSerialError": "{{name}}: بالکل {{count}} سیریل نمبر درج کریں، ہر وصول شدہ یونٹ کے لیے ایک ({{got}} موصول ہوا)۔"
+    "exactSerialError": "{{name}}: بالکل {{count}} سیریل نمبر درج کریں، ہر وصول شدہ یونٹ کے لیے ایک ({{got}} موصول ہوا)۔",
+    "landedCosts": "لینڈڈ لاگت",
+    "landedCostsHint": "مال برداری، کسٹم ڈیوٹی، بیمہ اور ہینڈلنگ فیس لائن آئٹمز میں تقسیم کی جاتی ہیں تاکہ ہر پروڈکٹ کی اصل فی یونٹ لاگت میں اس کا حصہ شامل ہو۔",
+    "addLandedCost": "+ لینڈڈ لاگت شامل کریں",
+    "descriptionPlaceholder": "تفصیل (مثلاً مال برداری)",
+    "amountPlaceholder": "رقم",
+    "allocateByValue": "قدر کے مطابق (متناسب)",
+    "allocateByQuantity": "مقدار کے مطابق (فی یونٹ برابر)",
+    "noLandedCosts": "ابھی تک کوئی لینڈڈ لاگت شامل نہیں کی گئی۔",
+    "totalLandedCost": "کل لینڈڈ لاگت",
+    "landedCostAdded": "لینڈڈ لاگت شامل کر دی گئی۔",
+    "landedCostRemoved": "لینڈڈ لاگت حذف کر دی گئی۔",
+    "landedCostSaveError": "ایک تفصیل اور غیر منفی رقم درج کریں۔",
+    "adjustedUnitCost": "ایڈجسٹڈ فی یونٹ لاگت",
+    "perUnit": "/یونٹ"
   },
   "banking": {
     "title": "بینکنگ",
@@ -685,7 +700,37 @@
     "compareToBookBalance": "بہی کھاتہ بیلنس سے موازنہ کریں",
     "reconciliationCompleted": "مصالحت مکمل ہو گئی۔",
     "bookBalance": "بہی کھاتہ بیلنس",
-    "difference": "فرق"
+    "difference": "فرق",
+    "statementImport": {
+      "title": "بینک اسٹیٹمنٹ درآمد کریں",
+      "subtitle": "اپنے بینک کی CSV ایکسپورٹ اپلوڈ کریں اور اسے ریکارڈ شدہ لین دین کے ساتھ خودکار طور پر ملائیں۔",
+      "started": "مصالحت شروع ہو گئی۔ اب اسٹیٹمنٹ CSV درآمد کریں۔",
+      "starting": "شروع ہو رہا ہے…",
+      "startButton": "مصالحت شروع کریں",
+      "csvHint": "کالمز: تاریخ، تفصیل، اور یا تو رقم، یا ڈیبٹ/کریڈٹ۔",
+      "orPaste": "یا نیچے CSV متن چسپاں کریں",
+      "parsing": "پارس ہو رہا ہے…",
+      "previewButton": "پیش منظر",
+      "importing": "درآمد ہو رہا ہے…",
+      "importButton": "درآمد کریں اور {{count}} قطاریں خودکار ملائیں",
+      "previewErrors": "{{count}} قطاریں پارس نہیں ہو سکیں۔",
+      "imported": "اسٹیٹمنٹ درآمد اور خودکار ملا دی گئی۔",
+      "colDate": "تاریخ",
+      "colDescription": "تفصیل",
+      "colAmount": "رقم",
+      "colStatus": "حیثیت",
+      "colAction": "عمل",
+      "rowError": "قطار {{row}}: {{error}}",
+      "statementTotal": "اسٹیٹمنٹ کل",
+      "matchedTotal": "ملایا گیا کل",
+      "needsReview": "جائزے کی ضرورت ہے",
+      "statusAutoMatched": "خودکار ملایا گیا",
+      "statusManualMatched": "ملایا گیا",
+      "statusNoMatch": "کوئی مماثل لین دین نہیں",
+      "statusUnmatched": "جائزے کی ضرورت ہے",
+      "linkToVoucher": "لین دین سے منسلک کریں…",
+      "noMatch": "کوئی مماثلت نہیں"
+    }
   },
   "aiInsights": {
     "title": "بصیرت",

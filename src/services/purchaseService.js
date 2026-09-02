@@ -91,6 +91,119 @@ async function decidePurchaseOrder(poId, { approve, userId, note }) {
 }
 
 /**
+ * Computes, for every line item on a PO, how much of the PO's landedCosts
+ * (freight, customs duty, insurance, handling, ...) it should absorb, and
+ * the resulting effective (landed) per-unit cost.
+ *
+ * Each landedCosts entry is allocated independently across ALL of the PO's
+ * line items (by quantityOrdered, not quantityReceived — a line's fair
+ * share of freight doesn't change depending on how many GRNs it takes to
+ * receive it), using its own allocationMethod, then the per-line shares
+ * from every entry are summed. by_value splits an entry proportionally to
+ * each line's subtotal (unitCost * quantityOrdered); by_quantity splits it
+ * evenly per unit across all ordered units.
+ *
+ * Returns a Map keyed by the line's _id (string) to
+ * { allocatedAmount, perUnitLandedCost, adjustedUnitCost }. With no
+ * landedCosts (the default for every existing PO) every line gets
+ * allocatedAmount 0 and adjustedUnitCost === unitCost — zero change to
+ * existing behaviour.
+ */
+function computeLandedCostAllocation(po) {
+  const result = new Map();
+  for (const line of po.items) {
+    result.set(String(line._id), { allocatedAmount: 0, perUnitLandedCost: 0, adjustedUnitCost: line.unitCost });
+  }
+
+  const landedCosts = po.landedCosts || [];
+  if (landedCosts.length === 0 || po.items.length === 0) return result;
+
+  const totalValue = po.items.reduce((sum, l) => sum + l.unitCost * l.quantityOrdered, 0);
+  const totalQuantity = po.items.reduce((sum, l) => sum + l.quantityOrdered, 0);
+
+  for (const cost of landedCosts) {
+    for (const line of po.items) {
+      const key = String(line._id);
+      let share = 0;
+      if (cost.allocationMethod === 'by_quantity') {
+        share = totalQuantity > 0 ? (cost.amount * line.quantityOrdered) / totalQuantity : 0;
+      } else { // by_value (also the default/fallback)
+        const lineValue = line.unitCost * line.quantityOrdered;
+        share = totalValue > 0 ? (cost.amount * lineValue) / totalValue : 0;
+      }
+      const entry = result.get(key);
+      entry.allocatedAmount += share;
+    }
+  }
+
+  for (const line of po.items) {
+    const entry = result.get(String(line._id));
+    entry.perUnitLandedCost = line.quantityOrdered > 0 ? entry.allocatedAmount / line.quantityOrdered : 0;
+    entry.adjustedUnitCost = line.unitCost + entry.perUnitLandedCost;
+  }
+
+  return result;
+}
+
+/** Adds a landed cost entry (freight/duty/insurance/handling/...) to a PO. Allowed any time before the PO is cancelled — landed costs are typically known before or around receiving, and can be corrected up until the goods are fully accounted for. */
+async function addLandedCost(poId, { description, amount, allocationMethod, userId }) {
+  const po = await PurchaseOrder.findById(poId);
+  if (!po) throw new Error('Purchase order not found.');
+  if (po.status === 'cancelled') throw new Error('Cannot add landed costs to a cancelled purchase order.');
+
+  po.landedCosts.push({ description, amount, allocationMethod: allocationMethod || 'by_value' });
+  await po.save();
+
+  await auditService.record({
+    companyId: po.companyId, userId, action: 'purchase_order.landed_cost_added',
+    entityType: 'PurchaseOrder', entityId: po._id, metadata: { description, amount, allocationMethod },
+  });
+
+  return po;
+}
+
+/** Edits an existing landed cost entry on a PO. */
+async function updateLandedCost(poId, landedCostId, { description, amount, allocationMethod, userId }) {
+  const po = await PurchaseOrder.findById(poId);
+  if (!po) throw new Error('Purchase order not found.');
+  if (po.status === 'cancelled') throw new Error('Cannot edit landed costs on a cancelled purchase order.');
+
+  const entry = po.landedCosts.id(landedCostId);
+  if (!entry) throw new Error('Landed cost entry not found on this purchase order.');
+
+  if (description !== undefined) entry.description = description;
+  if (amount !== undefined) entry.amount = amount;
+  if (allocationMethod !== undefined) entry.allocationMethod = allocationMethod;
+  await po.save();
+
+  await auditService.record({
+    companyId: po.companyId, userId, action: 'purchase_order.landed_cost_updated',
+    entityType: 'PurchaseOrder', entityId: po._id, metadata: { landedCostId },
+  });
+
+  return po;
+}
+
+/** Removes a landed cost entry from a PO. */
+async function removeLandedCost(poId, landedCostId, { userId }) {
+  const po = await PurchaseOrder.findById(poId);
+  if (!po) throw new Error('Purchase order not found.');
+  if (po.status === 'cancelled') throw new Error('Cannot remove landed costs from a cancelled purchase order.');
+
+  const entry = po.landedCosts.id(landedCostId);
+  if (!entry) throw new Error('Landed cost entry not found on this purchase order.');
+  entry.deleteOne();
+  await po.save();
+
+  await auditService.record({
+    companyId: po.companyId, userId, action: 'purchase_order.landed_cost_removed',
+    entityType: 'PurchaseOrder', entityId: po._id, metadata: { landedCostId },
+  });
+
+  return po;
+}
+
+/**
  * Receive some or all of a PO's items. Supports partial receiving — a PO can
  * have several GRNs until quantityReceived reaches quantityOrdered on every line.
  *
@@ -189,6 +302,14 @@ async function receiveGoods(input) {
 
       let receivedTotal = 0;
 
+      // Landed costs (freight/customs/insurance/handling on the PO as a
+      // whole) are allocated across the PO's ordered lines up front — see
+      // computeLandedCostAllocation. A PO with no landedCosts (the default)
+      // returns perUnitLandedCost 0 for every line, so effectiveUnitCost
+      // below is exactly item.unitCost and every existing PO/GRN behaves
+      // identically to before this feature.
+      const allocation = computeLandedCostAllocation(po);
+
       [grn] = await GoodsReceivedNote.create(
         [{
           companyId: po.companyId,
@@ -196,15 +317,20 @@ async function receiveGoods(input) {
           warehouseId,
           grnNumber: nextDocumentNumber('GRN'),
           receivedDate: new Date(),
-          items: resolvedItems.map((i) => ({
-            purchaseOrderItemId: i.purchaseOrderItemId,
-            productId: i.productId,
-            variantId: i.variantId,
-            batchId: i.batchId,
-            quantity: i.quantity,
-            unitCost: i.unitCost,
-            serialNumbers: i.serialNumbers,
-          })),
+          items: resolvedItems.map((i) => {
+            const perUnitLandedCost = allocation.get(String(i.purchaseOrderItemId))?.perUnitLandedCost || 0;
+            return {
+              purchaseOrderItemId: i.purchaseOrderItemId,
+              productId: i.productId,
+              variantId: i.variantId,
+              batchId: i.batchId,
+              quantity: i.quantity,
+              unitCost: i.unitCost,
+              landedCostPerUnit: perUnitLandedCost,
+              effectiveUnitCost: i.unitCost + perUnitLandedCost,
+              serialNumbers: i.serialNumbers,
+            };
+          }),
           userId,
         }],
         { session }
@@ -219,6 +345,13 @@ async function receiveGoods(input) {
           throw new Error(`Cannot receive ${item.quantity}: only ${remaining} remain outstanding on this line (ordered ${line.quantityOrdered}, already received ${line.quantityReceived}).`);
         }
 
+        const perUnitLandedCost = allocation.get(String(item.purchaseOrderItemId))?.perUnitLandedCost || 0;
+        // The landed-cost-adjusted unit cost is what flows into stock
+        // valuation/weighted-average cost and COGS — not the raw vendor
+        // unit price — so freight/duty/insurance/handling genuinely become
+        // part of the product's cost basis.
+        const effectiveUnitCost = item.unitCost + perUnitLandedCost;
+
         await inventoryService.recordMovement({
           companyId: po.companyId,
           warehouseId,
@@ -227,13 +360,18 @@ async function receiveGoods(input) {
           batchId: item.batchId || null,
           type: 'purchase',
           quantity: item.quantity, // stock in
-          unitCost: item.unitCost,
+          unitCost: effectiveUnitCost,
           referenceType: 'GoodsReceivedNote',
           referenceId: grn._id,
           userId,
           note: `GRN ${grn.grnNumber}`,
         }, session);
 
+        // The payable/AP posting and job-costing below still reflect what's
+        // actually owed to the supplier (vendor unit price only) — landed
+        // costs like freight are typically owed to a different party and
+        // accounted for separately; only the inventory valuation above
+        // absorbs them into per-unit cost.
         receivedTotal += item.quantity * item.unitCost;
 
         // 2. Update the PO line's received quantity and roll up PO status.
@@ -370,4 +508,7 @@ async function recordQC(grnId, itemId, { passed, note, userId }) {
   }
 }
 
-module.exports = { createPurchaseOrder, decidePurchaseOrder, receiveGoods, recordQC };
+module.exports = {
+  createPurchaseOrder, decidePurchaseOrder, receiveGoods, recordQC,
+  computeLandedCostAllocation, addLandedCost, updateLandedCost, removeLandedCost,
+};

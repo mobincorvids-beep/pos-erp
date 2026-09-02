@@ -123,7 +123,8 @@
       "ecommerce": "برېښنایی سوداګري",
       "ecommerceHub": "برېښنایی سوداګرۍ مرکز",
       "developerPlatform": "پرمختیا پلیټ فارم",
-      "categories": "وېشنيزې"
+      "categories": "وېشنيزې",
+      "documents": "اسناد"
     },
     "settings": "تنظیمات",
     "signOut": "وتل"
@@ -665,7 +666,21 @@
     "setFullyReceived": "{{name}} په بشپړه توګه ترلاسه شوی ({{qty}}) ټاکل شو۔",
     "item": "توکی",
     "enterQuantityError": "لږترلږه د یوې کرښې لپاره اندازه ولیکئ۔",
-    "exactSerialError": "{{name}}: بالکل {{count}} سیریلي شمیرې ولیکئ، د هر ترلاسه شوي واحد لپاره یوه ({{got}} ترلاسه شوه)۔"
+    "exactSerialError": "{{name}}: بالکل {{count}} سیریلي شمیرې ولیکئ، د هر ترلاسه شوي واحد لپاره یوه ({{got}} ترلاسه شوه)۔",
+    "landedCosts": "رسېدلې لګښتونه",
+    "landedCostsHint": "د لېږد لګښت، ګمرکي محصول، بیمه او د اداره کولو فیس د قلمونو ترمنځ وېشل کیږي ترڅو د هر محصول ریښتینی فی واحد لګښت خپل برخه ولري.",
+    "addLandedCost": "+ رسېدلی لګښت اضافه کړئ",
+    "descriptionPlaceholder": "توضیح (لکه لېږد)",
+    "amountPlaceholder": "مقدار",
+    "allocateByValue": "د ارزښت له مخې (متناسب)",
+    "allocateByQuantity": "د مقدار له مخې (هر واحد سره برابر)",
+    "noLandedCosts": "تر اوسه هیڅ رسېدلی لګښت نه دی اضافه شوی.",
+    "totalLandedCost": "ټول رسېدلی لګښت",
+    "landedCostAdded": "رسېدلی لګښت اضافه شو.",
+    "landedCostRemoved": "رسېدلی لګښت لرې شو.",
+    "landedCostSaveError": "یو توضیح او غیر منفي مقدار دننه کړئ.",
+    "adjustedUnitCost": "سمون شوی فی واحد لګښت",
+    "perUnit": "/واحد"
   },
   "banking": {
     "title": "بانکداري",
@@ -685,7 +700,37 @@
     "compareToBookBalance": "د کتاب بیلانس سره پرتله کړئ",
     "reconciliationCompleted": "سمون بشپړ شو.",
     "bookBalance": "د کتاب بیلانس",
-    "difference": "توپیر"
+    "difference": "توپیر",
+    "statementImport": {
+      "title": "د بانک بیان وارد کړئ",
+      "subtitle": "د خپل بانک CSV صادرات پورته کړئ او د ثبت شویو راکړو ورکړو سره یې په خپلکارې توګه سره برابر کړئ.",
+      "started": "موافقت پیل شوه. اوس د بیان CSV وارد کړئ.",
+      "starting": "پیل کیږي…",
+      "startButton": "موافقت پیل کړئ",
+      "csvHint": "کالمونه: نېټه، توضیح، او یا مقدار، یا ډېبټ/کرېډیټ.",
+      "orPaste": "یا لاندې CSV متن پیسته کړئ",
+      "parsing": "تحلیلېږي…",
+      "previewButton": "مخکتنه",
+      "importing": "واردېږي…",
+      "importButton": "وارد کړئ او {{count}} پاڼې په خپلکارې سره برابرې کړئ",
+      "previewErrors": "{{count}} پاڼې و نه تحلیل شوې.",
+      "imported": "بیان وارد او په خپلکارې سره برابر شو.",
+      "colDate": "نېټه",
+      "colDescription": "توضیح",
+      "colAmount": "مقدار",
+      "colStatus": "حالت",
+      "colAction": "کړنه",
+      "rowError": "پاڼه {{row}}: {{error}}",
+      "statementTotal": "د بیان ټول",
+      "matchedTotal": "برابر شوی ټول",
+      "needsReview": "بیاکتنې ته اړتیا لري",
+      "statusAutoMatched": "په خپلکارې سره برابر شوی",
+      "statusManualMatched": "برابر شوی",
+      "statusNoMatch": "هیڅ سمون لرونکې راکړه ورکړه نشته",
+      "statusUnmatched": "بیاکتنې ته اړتیا لري",
+      "linkToVoucher": "له راکړې ورکړې سره وصل کړئ…",
+      "noMatch": "هیڅ سمون نشته"
+    }
   },
   "aiInsights": {
     "title": "لیدونه",

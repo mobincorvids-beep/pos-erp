@@ -123,7 +123,8 @@
       "ecommerce": "اي ڪامرس",
       "ecommerceHub": "اي ڪامرس مرڪز",
       "developerPlatform": "ڊويلپر پليٽ فارم",
-      "categories": "اقسام"
+      "categories": "اقسام",
+      "documents": "دستاویز"
     },
     "settings": "ترتيبون",
     "signOut": "سائن آئوٽ"
@@ -665,7 +666,21 @@
     "setFullyReceived": "{{name}} مڪمل وصول ٿيل ({{qty}}) نشان لڳايو ويو۔",
     "item": "شيءِ",
     "enterQuantityError": "گهٽ ۾ گهٽ هڪ لائن لاءِ تعداد داخل ڪريو۔",
-    "exactSerialError": "{{name}}: بلڪل {{count}} سيريل نمبر داخل ڪريو، هر وصول ٿيل يونٽ لاءِ هڪ ({{got}} مليو)۔"
+    "exactSerialError": "{{name}}: بلڪل {{count}} سيريل نمبر داخل ڪريو، هر وصول ٿيل يونٽ لاءِ هڪ ({{got}} مليو)۔",
+    "landedCosts": "لينڊيڊ لاڳت",
+    "landedCostsHint": "ڀاڙو، ڪسٽم ڊیوٽي، بيمو ۽ هينڊلنگ فيس لائن آئٽمن ۾ ورهائجن ٿيون ته هر پراڊڪٽ جي حقيقي في يونٽ لاڳت ۾ ان جو حصو شامل هجي.",
+    "addLandedCost": "+ لينڊيڊ لاڳت شامل ڪريو",
+    "descriptionPlaceholder": "وضاحت (مثال طور ڀاڙو)",
+    "amountPlaceholder": "رقم",
+    "allocateByValue": "قدر مطابق (متناسب)",
+    "allocateByQuantity": "مقدار مطابق (في يونٽ برابر)",
+    "noLandedCosts": "اڃا تائين ڪا لينڊيڊ لاڳت شامل نه ڪئي وئي آهي.",
+    "totalLandedCost": "ڪل لينڊيڊ لاڳت",
+    "landedCostAdded": "لينڊيڊ لاڳت شامل ڪئي وئي.",
+    "landedCostRemoved": "لينڊيڊ لاڳت ڪڍي وئي.",
+    "landedCostSaveError": "هڪ وضاحت ۽ منفي نه رقم داخل ڪريو.",
+    "adjustedUnitCost": "ترتيب ٿيل في يونٽ لاڳت",
+    "perUnit": "/يونٽ"
   },
   "banking": {
     "title": "بينڪنگ",
@@ -685,7 +700,37 @@
     "compareToBookBalance": "بهي کاته بيلنس سان مقابلو ڪريو",
     "reconciliationCompleted": "ملاپ مڪمل ٿي ويو.",
     "bookBalance": "بهي کاته بيلنس",
-    "difference": "فرق"
+    "difference": "فرق",
+    "statementImport": {
+      "title": "بئنڪ اسٽيٽمينٽ درآمد ڪريو",
+      "subtitle": "پنهنجي بئنڪ جو CSV ايڪسپورٽ اپلوڊ ڪريو ۽ ان کي رڪارڊ ٿيل ليڻ ڏيڻ سان خودڪار طور ملايو.",
+      "started": "مصالحت شروع ٿي وئي. ھاڻي اسٽيٽمينٽ CSV درآمد ڪريو.",
+      "starting": "شروع ٿي رهيو آهي…",
+      "startButton": "مصالحت شروع ڪريو",
+      "csvHint": "ڪالم: تاريخ، وضاحت، ۽ يا ته رقم، يا ڊيبٽ/ڪريڊٽ.",
+      "orPaste": "يا هيٺ CSV متن پيسٽ ڪريو",
+      "parsing": "پارس ٿي رهيو آهي…",
+      "previewButton": "اڳوڻو نظارو",
+      "importing": "درآمد ٿي رهيو آهي…",
+      "importButton": "درآمد ڪريو ۽ {{count}} قطارون خودڪار ملايو",
+      "previewErrors": "{{count}} قطارون پارس نه ٿي سگهيون.",
+      "imported": "اسٽيٽمينٽ درآمد ۽ خودڪار ملائي وئي.",
+      "colDate": "تاريخ",
+      "colDescription": "وضاحت",
+      "colAmount": "رقم",
+      "colStatus": "حالت",
+      "colAction": "عمل",
+      "rowError": "قطار {{row}}: {{error}}",
+      "statementTotal": "اسٽيٽمينٽ ڪل",
+      "matchedTotal": "ملايل ڪل",
+      "needsReview": "جائزي جي ضرورت آهي",
+      "statusAutoMatched": "خودڪار ملايل",
+      "statusManualMatched": "ملايل",
+      "statusNoMatch": "ڪا به ملندڙ ليڻ ڏيڻ ناهي",
+      "statusUnmatched": "جائزي جي ضرورت آهي",
+      "linkToVoucher": "ليڻ ڏيڻ سان ڳنڍيو…",
+      "noMatch": "ڪا به مماثلت ناهي"
+    }
   },
   "aiInsights": {
     "title": "بصيرت",

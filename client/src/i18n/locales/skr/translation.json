@@ -123,7 +123,8 @@
       "ecommerce": "ای کامرس",
       "ecommerceHub": "ای کامرس مرکز",
       "developerPlatform": "ڈویلپر پلیٹ فارم",
-      "categories": "اقسام"
+      "categories": "اقسام",
+      "documents": "دستاویز"
     },
     "settings": "ترتیباں",
     "signOut": "سائن آؤٹ"
@@ -665,7 +666,21 @@
     "setFullyReceived": "{{name}} مکمل وصول شدہ ({{qty}}) نشان زد کر ڈتا ڳیا۔",
     "item": "شے",
     "enterQuantityError": "گھٹوں گھٹ اک لائن کیتے تعداد درج کرو۔",
-    "exactSerialError": "{{name}}: بالکل {{count}} سیریل نمبر درج کرو، ہر وصول شدہ یونٹ کیتے اک ({{got}} ملیا)۔"
+    "exactSerialError": "{{name}}: بالکل {{count}} سیریل نمبر درج کرو، ہر وصول شدہ یونٹ کیتے اک ({{got}} ملیا)۔",
+    "landedCosts": "لینڈڈ لاگت",
+    "landedCostsHint": "مال برداری، کسٹم ڈیوٹی، بیمہ تے ہینڈلنگ فیس لائن آئٹماں وچ ونڈی ویندی ہے تاں جو ہر پروڈکٹ دی اصل فی یونٹ لاگت وچ اوندا حصہ شامل ہووے۔",
+    "addLandedCost": "+ لینڈڈ لاگت شامل کرو",
+    "descriptionPlaceholder": "وضاحت (مثلاً مال برداری)",
+    "amountPlaceholder": "رقم",
+    "allocateByValue": "قدر دے مطابق (متناسب)",
+    "allocateByQuantity": "مقدار دے مطابق (فی یونٹ برابر)",
+    "noLandedCosts": "ہالے تک کوئی لینڈڈ لاگت شامل نئیں کیتی گئی۔",
+    "totalLandedCost": "کل لینڈڈ لاگت",
+    "landedCostAdded": "لینڈڈ لاگت شامل کر ڈتی گئی۔",
+    "landedCostRemoved": "لینڈڈ لاگت ہٹا ڈتی گئی۔",
+    "landedCostSaveError": "اک وضاحت تے غیر منفی رقم درج کرو۔",
+    "adjustedUnitCost": "ایڈجسٹڈ فی یونٹ لاگت",
+    "perUnit": "/یونٹ"
   },
   "banking": {
     "title": "بینکنگ",
@@ -685,7 +700,37 @@
     "compareToBookBalance": "بہی کھاتہ بیلنس نال مقابلہ کرو",
     "reconciliationCompleted": "مصالحت مکمل تھی ڳئی۔",
     "bookBalance": "بہی کھاتہ بیلنس",
-    "difference": "فرق"
+    "difference": "فرق",
+    "statementImport": {
+      "title": "بینک اسٹیٹمنٹ درآمد کرو",
+      "subtitle": "آپݨے بینک دی CSV ایکسپورٹ اپلوڈ کرو تے اوہنوں ریکارڈ کیتے لین دین نال خودکار ملاؤ۔",
+      "started": "مصالحت شروع ہو گئی۔ ہݨ اسٹیٹمنٹ CSV درآمد کرو۔",
+      "starting": "شروع تھی ریا اے…",
+      "startButton": "مصالحت شروع کرو",
+      "csvHint": "کالم: تریخ، وضاحت، تے یا رقم، یا ڈیبٹ/کریڈٹ۔",
+      "orPaste": "یا تھلے CSV متن چسپاں کرو",
+      "parsing": "پارس تھی ریا اے…",
+      "previewButton": "پیش منظر",
+      "importing": "درآمد تھی ریا اے…",
+      "importButton": "درآمد کرو تے {{count}} قطاراں خودکار ملاؤ",
+      "previewErrors": "{{count}} قطاراں پارس نئیں تھی سکیاں۔",
+      "imported": "اسٹیٹمنٹ درآمد تے خودکار ملا ڈتی گئی۔",
+      "colDate": "تریخ",
+      "colDescription": "وضاحت",
+      "colAmount": "رقم",
+      "colStatus": "حیثیت",
+      "colAction": "عمل",
+      "rowError": "قطار {{row}}: {{error}}",
+      "statementTotal": "اسٹیٹمنٹ کل",
+      "matchedTotal": "ملایا گیا کل",
+      "needsReview": "جائزے دی ضرورت ہے",
+      "statusAutoMatched": "خودکار ملایا گیا",
+      "statusManualMatched": "ملایا گیا",
+      "statusNoMatch": "کوئی ملدا لین دین نئیں",
+      "statusUnmatched": "جائزے دی ضرورت ہے",
+      "linkToVoucher": "لین دین نال جوڑو…",
+      "noMatch": "کوئی مماثلت نئیں"
+    }
   },
   "aiInsights": {
     "title": "بصیرت",

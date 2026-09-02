@@ -55,7 +55,47 @@ async function list(req, res) {
 async function get(req, res) {
   const po = await PurchaseOrder.findOne({ _id: req.params.id, companyId: req.companyId });
   if (!po) return res.status(404).json({ error: 'Purchase order not found.' });
-  res.json(po);
+
+  // Enrich with the computed per-line landed cost allocation so the
+  // frontend can show each line's adjusted (landed) unit cost without
+  // reimplementing the allocation math — a PO with no landedCosts gets
+  // allocatedAmount 0 / adjustedUnitCost === unitCost for every line.
+  const allocation = purchaseService.computeLandedCostAllocation(po);
+  const totalLandedCost = (po.landedCosts || []).reduce((sum, c) => sum + c.amount, 0);
+  const payload = po.toObject();
+  payload.totalLandedCost = totalLandedCost;
+  payload.items = payload.items.map((item, i) => {
+    const entry = allocation.get(String(po.items[i]._id)) || { allocatedAmount: 0, perUnitLandedCost: 0, adjustedUnitCost: item.unitCost };
+    return { ...item, allocatedLandedCost: entry.allocatedAmount, perUnitLandedCost: entry.perUnitLandedCost, adjustedUnitCost: entry.adjustedUnitCost };
+  });
+  res.json(payload);
+}
+
+async function addLandedCost(req, res) {
+  try {
+    const po = await purchaseService.addLandedCost(req.params.id, { ...req.body, userId: req.auth.userId });
+    res.status(201).json(po);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function updateLandedCost(req, res) {
+  try {
+    const po = await purchaseService.updateLandedCost(req.params.id, req.params.costId, { ...req.body, userId: req.auth.userId });
+    res.json(po);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function removeLandedCost(req, res) {
+  try {
+    const po = await purchaseService.removeLandedCost(req.params.id, req.params.costId, { userId: req.auth.userId });
+    res.json(po);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 }
 
 async function decide(req, res) {
@@ -89,4 +129,7 @@ async function recordQC(req, res) {
   }
 }
 
-module.exports = { createOrder, createOrderFromAlternateUnits, receive, list, get, decide, listGRNs, recordQC };
+module.exports = {
+  createOrder, createOrderFromAlternateUnits, receive, list, get, decide, listGRNs, recordQC,
+  addLandedCost, updateLandedCost, removeLandedCost,
+};

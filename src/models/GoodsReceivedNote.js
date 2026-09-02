@@ -7,6 +7,15 @@ const grnItemSchema = new Schema({
   batchId: { type: Schema.Types.ObjectId, ref: 'ProductBatch', default: null },
   quantity: { type: Number, required: true },
   unitCost: { type: Number, required: true },
+  // Per-unit share of the PO's landedCosts allocated to this line (0 when
+  // the PO has no landed costs, or none applicable to this line — existing
+  // GRNs and any PO without landed costs are unaffected). effectiveUnitCost
+  // = unitCost + landedCostPerUnit is what actually gets written to
+  // inventory valuation (see purchaseService.receiveGoods) so COGS and
+  // stock value reflect the true landed cost of the goods, not just the
+  // vendor's line price.
+  landedCostPerUnit: { type: Number, default: 0 },
+  effectiveUnitCost: { type: Number, default: 0 },
   // For serial/IMEI-tracked products: one entry per unit received on this
   // line (length must equal quantity — enforced in purchaseService, not
   // here, since that check needs the sibling `quantity` field and Mongoose
