@@ -273,6 +273,7 @@ function CustomerLedgerPanel({ customer, onClose }) {
   const [accounts, setAccounts] = useState([]);
   const [busy, setBusy] = useState(false);
   const [creditNotes, setCreditNotes] = useState([]);
+  const [showTimeline, setShowTimeline] = useState(false);
 
   function load() {
     setLoading(true);
@@ -348,8 +349,75 @@ function CustomerLedgerPanel({ customer, onClose }) {
 
           <div className="tear-line my-3" />
           <CreditNoteHistory creditNotes={creditNotes} onVoided={load} />
+
+          <div className="tear-line my-3" />
+          <CallLogPanel customer={customer} />
+
+          <div className="tear-line my-3" />
+          <button className="btn-secondary w-full" onClick={() => setShowTimeline(true)}>View activity timeline</button>
         </>
       )}
+      {showTimeline && <ContactTimelineModal customer={customer} onClose={() => setShowTimeline(false)} />}
+    </div>
+  );
+}
+
+// --- Contact activity timeline ------------------------------------------------
+
+const TIMELINE_ICONS = { sale: '🧾', ticket: '🎫', follow_up: '📅', feedback: '⭐' };
+const TIMELINE_LABELS = { sale: 'Sale', ticket: 'Support ticket', follow_up: 'Follow-up', feedback: 'Feedback' };
+
+/**
+ * Unified chronological activity timeline: sales, support tickets,
+ * follow-ups and feedback for this customer, assembled server-side by
+ * /crm/customers/:id/timeline (one fetch, already merge-sorted by date)
+ * and rendered here as a simple vertical list with an icon per event type.
+ */
+function ContactTimelineModal({ customer, onClose }) {
+  const toast = useToast();
+  const [events, setEvents] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    api.get(`/crm/customers/${customer._id}/timeline`)
+      .then((data) => setEvents(data.events))
+      .catch((err) => toast(err.message, 'error'))
+      .finally(() => setLoading(false));
+  }, [customer._id]);
+
+  return (
+    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
+      <div className="card p-5 w-full max-w-lg max-h-[80vh] flex flex-col">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="eyebrow mb-0.5">Activity timeline</p>
+            <p className="font-display text-lg font-semibold">{customer.name}</p>
+          </div>
+          <button className="btn-ghost !px-2 text-xs" onClick={onClose}>Close</button>
+        </div>
+        {loading && <Loading />}
+        {!loading && events?.length === 0 && <EmptyState title="No activity yet" description="Sales, tickets, follow-ups and feedback for this customer will show up here." />}
+        {!loading && events?.length > 0 && (
+          <div className="overflow-y-auto space-y-0">
+            {events.map((e, i) => (
+              <div key={i} className="flex gap-3 pb-4 relative">
+                {i < events.length - 1 && <span className="absolute left-[15px] top-8 bottom-0 w-px bg-rule" />}
+                <span className="shrink-0 w-8 h-8 rounded-full bg-accent-soft flex items-center justify-center text-sm z-10" aria-hidden="true">
+                  {TIMELINE_ICONS[e.type] || '•'}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="text-sm font-medium truncate">{e.title}</p>
+                    <span className="text-xs text-ink-muted shrink-0">{formatDate(e.date)}</span>
+                  </div>
+                  <p className="text-xs text-ink-muted">{TIMELINE_LABELS[e.type]}{e.description ? ` · ${e.description}` : ''}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -433,6 +501,82 @@ function LoyaltyRedeem({ customer }) {
       </div>
       {quote && (
         <p className="text-sm mt-2">{t('customers.discountValueFor', { value: quote.discountValue, points: quote.points })}</p>
+      )}
+    </div>
+  );
+}
+
+// Manual call log — NOT a real telephony/click-to-call integration, just
+// a "click Log a call, fill in notes" record (see src/models/CallLog.js).
+function CallLogPanel({ customer }) {
+  const { t } = useTranslation();
+  const toast = useToast();
+  const [logs, setLogs] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ phoneNumber: customer.phone || '', direction: 'outbound', notes: '', durationSeconds: '' });
+  const [saving, setSaving] = useState(false);
+
+  function load() {
+    api.get(`/call-logs?customerId=${customer._id}`).then(setLogs).catch(() => setLogs([]));
+  }
+  useEffect(load, [customer._id]);
+
+  async function submit(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.post('/call-logs', {
+        customerId: customer._id, phoneNumber: form.phoneNumber, direction: form.direction,
+        notes: form.notes, durationSeconds: form.durationSeconds ? Number(form.durationSeconds) : undefined,
+      });
+      setForm({ phoneNumber: customer.phone || '', direction: 'outbound', notes: '', durationSeconds: '' });
+      setShowForm(false);
+      load();
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-sm font-semibold">Call log</p>
+        <button className="text-xs text-accent font-semibold hover:underline" onClick={() => setShowForm((s) => !s)}>
+          {showForm ? t('common.cancel') : 'Log a call'}
+        </button>
+      </div>
+
+      {showForm && (
+        <form onSubmit={submit} className="space-y-2 mb-3 bg-surface-sunken border border-rule rounded-lg p-2">
+          <div className="grid grid-cols-2 gap-2">
+            <input className="field-input" placeholder="Phone number" value={form.phoneNumber} onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })} />
+            <select className="field-input" value={form.direction} onChange={(e) => setForm({ ...form, direction: e.target.value })}>
+              <option value="outbound">Outbound</option>
+              <option value="inbound">Inbound</option>
+            </select>
+          </div>
+          <textarea className="field-input w-full" rows={2} placeholder="Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+          <input className="field-input" type="number" min="0" placeholder="Duration (seconds, optional)" value={form.durationSeconds} onChange={(e) => setForm({ ...form, durationSeconds: e.target.value })} />
+          <button type="submit" disabled={saving} className="btn-primary w-full">{saving ? t('common.saving') : 'Save call'}</button>
+        </form>
+      )}
+
+      {logs === null && <p className="text-xs text-ink-muted">Loading…</p>}
+      {logs && logs.length === 0 && <p className="text-xs text-ink-muted">No calls logged yet.</p>}
+      {logs && logs.length > 0 && (
+        <div className="space-y-1.5 text-sm max-h-56 overflow-y-auto">
+          {logs.map((l) => (
+            <div key={l._id} className="flex justify-between gap-2">
+              <div className="min-w-0">
+                <span className={l.direction === 'inbound' ? 'chip-info !py-0.5' : 'chip-neutral !py-0.5'}>{l.direction}</span>
+                {l.notes && <p className="text-xs text-ink-muted mt-0.5 truncate">{l.notes}</p>}
+              </div>
+              <span className="text-xs text-ink-muted num shrink-0">{formatDate(l.notedAt)}</span>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );

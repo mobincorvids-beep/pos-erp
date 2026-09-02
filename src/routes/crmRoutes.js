@@ -9,6 +9,7 @@ const pipelineController = require('../controllers/crmPipelineController');
 router.use(requireAuth, scopeToCompany);
 
 router.get('/segments', controller.segment); // ?tags=VIP,Wholesale
+router.get('/customers/:customerId/timeline', controller.contactTimeline); // unified activity timeline
 router.post('/customers/:customerId/tags', body('tags').isArray({ min: 1 }).withMessage('tags must be a non-empty array.'), validate, controller.addTags);
 router.delete('/customers/:customerId/tags', body('tags').isArray({ min: 1 }).withMessage('tags must be a non-empty array.'), validate, controller.removeTags);
 
@@ -64,5 +65,21 @@ router.get('/opportunities/:id', pipelineController.getOpportunity);
 router.post('/opportunities/:id/stage', requirePermission(CRM_MANAGE),
   body('stage').isIn(['new', 'contacted', 'proposal', 'negotiation', 'won', 'lost']).withMessage('Invalid stage.'),
   validate, pipelineController.updateOpportunityStage);
+router.post('/opportunities/:id/quote', requirePermission(CRM_MANAGE),
+  body('branchId').isString().notEmpty().withMessage('branchId is required.'),
+  body('warehouseId').isString().notEmpty().withMessage('warehouseId is required.'),
+  body('items').isArray({ min: 1 }).withMessage('items must be a non-empty array.'),
+  validate, pipelineController.generateQuote);
+
+// --- Sales automation rules ---------------------------------------------------
+router.get('/automation-rules', requirePermission(CRM_MANAGE), pipelineController.listAutomationRules);
+router.post('/automation-rules', requirePermission(CRM_MANAGE),
+  body('name').isString().trim().notEmpty().withMessage('name is required.'),
+  body('trigger.type').equals('stage_changed').withMessage('trigger.type must be "stage_changed".'),
+  body('trigger.toStage').isIn(['new', 'contacted', 'proposal', 'negotiation', 'won', 'lost']).withMessage('Invalid trigger.toStage.'),
+  body('action.type').isIn(['send_email', 'create_task']).withMessage('action.type must be "send_email" or "create_task".'),
+  validate, pipelineController.createAutomationRule);
+router.put('/automation-rules/:id', requirePermission(CRM_MANAGE), pipelineController.updateAutomationRule);
+router.delete('/automation-rules/:id', requirePermission(CRM_MANAGE), pipelineController.deleteAutomationRule);
 
 module.exports = router;

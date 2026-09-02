@@ -10,6 +10,8 @@ router.use(requireAuth, scopeToCompany);
 router.get('/employees', controller.listEmployees);
 router.post('/employees', requirePermission(HR_MANAGE), body('name').isString().trim().notEmpty().withMessage('Name is required.'), validate, controller.createEmployee);
 router.post('/employees/:id/terminate', requirePermission(HR_MANAGE), controller.terminateEmployee);
+router.post('/employees/:id/manager', requirePermission(HR_MANAGE), controller.setManager); // { managerId } — managerId: null clears it
+router.get('/org-chart', controller.orgChart);
 
 router.post('/attendance', requirePermission(HR_MANAGE), controller.markAttendance); // { employeeId, date, status, checkIn?, checkOut?, note? }
 router.get('/attendance/:employeeId', controller.attendanceForMonth); // ?month=&year=

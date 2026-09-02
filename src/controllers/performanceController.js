@@ -85,8 +85,40 @@ async function listReviews(req, res) {
       employeeId: req.query.employeeId,
       status: req.query.status,
       period: req.query.period,
+      cycleId: req.query.cycleId,
     });
     res.json(rows);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+// --- Appraisal cycles ---------------------------------------------------------
+
+async function startAppraisalCycle(req, res) {
+  try {
+    const result = await performanceService.startAppraisalCycle({
+      ...req.body, companyId: req.companyId, userId: req.auth.userId,
+    });
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function listAppraisalCycles(req, res) {
+  try {
+    const cycles = await performanceService.listAppraisalCycles(req.companyId);
+    res.json(cycles);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function closeAppraisalCycle(req, res) {
+  try {
+    const cycle = await performanceService.closeAppraisalCycle(req.params.id, req.companyId);
+    res.json(cycle);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -105,4 +137,5 @@ module.exports = {
   createGoal, updateGoalProgress, updateGoalStatus, listGoals,
   createReview, submitReview, acknowledgeReview, listReviews,
   employeeScorecard,
+  startAppraisalCycle, listAppraisalCycles, closeAppraisalCycle,
 };

@@ -1,6 +1,7 @@
 const Lead = require('../models/Lead');
 const Opportunity = require('../models/Opportunity');
 const crmPipelineService = require('../services/crmPipelineService');
+const crmAutomationService = require('../services/crmAutomationService');
 
 // --- Leads ------------------------------------------------------------------
 
@@ -92,8 +93,56 @@ async function pipelineSummary(req, res) {
   res.json(summary);
 }
 
+async function generateQuote(req, res) {
+  try {
+    const result = await crmPipelineService.generateQuoteForOpportunity(req.params.id, req.companyId, {
+      ...req.body, userId: req.auth.userId,
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+// --- Automation rules --------------------------------------------------------
+
+async function createAutomationRule(req, res) {
+  try {
+    const rule = await crmAutomationService.createRule({
+      ...req.body, companyId: req.companyId, createdByUserId: req.auth.userId,
+    });
+    res.status(201).json(rule);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function listAutomationRules(req, res) {
+  const rows = await crmAutomationService.listRules(req.companyId);
+  res.json(rows);
+}
+
+async function updateAutomationRule(req, res) {
+  try {
+    const rule = await crmAutomationService.updateRule(req.params.id, req.companyId, req.body);
+    res.json(rule);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function deleteAutomationRule(req, res) {
+  try {
+    await crmAutomationService.deleteRule(req.params.id, req.companyId);
+    res.status(204).end();
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
 module.exports = {
   createLead, listLeads, getLead, updateLeadStatus, convertLead,
   createOpportunity, listOpportunities, getOpportunity, updateOpportunityStage,
-  pipeline, pipelineSummary,
+  pipeline, pipelineSummary, generateQuote,
+  createAutomationRule, listAutomationRules, updateAutomationRule, deleteAutomationRule,
 };

@@ -30,7 +30,7 @@ export function CrmPage() {
         <p className="text-sm text-ink-muted mt-1">Overview of pipeline and performance</p>
       </div>
       <div className="flex gap-1 border-b border-rule mb-5">
-        {[['pipeline', 'Pipeline'], ['leads', 'Leads'], ['campaigns', 'Campaigns'], ['feedback', 'Feedback'], ['follow-ups', 'Follow-ups'], ['tags', 'Customer tags']].map(([key, label]) => (
+        {[['pipeline', 'Pipeline'], ['leads', 'Leads'], ['campaigns', 'Campaigns'], ['automation', 'Automation'], ['feedback', 'Feedback'], ['follow-ups', 'Follow-ups'], ['tags', 'Customer tags']].map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)} className={`px-3 py-2 text-sm -mb-px border-b-2 ${tab === key ? 'border-accent text-accent-strong font-medium' : 'border-transparent text-ink-muted hover:text-ink'}`}>
             {label}
           </button>
@@ -39,6 +39,7 @@ export function CrmPage() {
       {tab === 'pipeline' && <PipelineTab />}
       {tab === 'leads' && <LeadsTab />}
       {tab === 'campaigns' && <CampaignsTab />}
+      {tab === 'automation' && <AutomationTab />}
       {tab === 'feedback' && <FeedbackTab />}
       {tab === 'follow-ups' && <FollowUpsTab />}
       {tab === 'tags' && <TagsTab />}
@@ -510,6 +511,8 @@ function PipelineTab() {
   const [loading, setLoading] = useState(true);
   const [showNewOpp, setShowNewOpp] = useState(false);
   const [stageTarget, setStageTarget] = useState(null); // { opportunity, stage }
+  const [quoting, setQuoting] = useState(null); // opportunity
+  const [dragOverStage, setDragOverStage] = useState(null);
 
   function load() {
     setLoading(true);
@@ -521,15 +524,31 @@ function PipelineTab() {
   useEffect(load, []);
 
   async function moveStage(opportunity, stage) {
+    if (stage === opportunity.stage) return;
     if (stage === 'won' || stage === 'lost') {
       setStageTarget({ opportunity, stage });
       return;
     }
     try {
+      // Cheap endpoint: just POSTs the new stage, same one the "Move to…"
+      // dropdown used before — drag-and-drop is a different interaction on
+      // the same call.
       await api.post(`/crm/opportunities/${opportunity._id}/stage`, { stage });
       toast(`Moved to ${STAGE_LABELS[stage]}.`, 'success');
       load();
     } catch (err) { toast(err.message, 'error'); }
+  }
+
+  function handleDragStart(e, opp) {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', opp._id);
+  }
+  function handleDrop(e, stage) {
+    e.preventDefault();
+    setDragOverStage(null);
+    const oppId = e.dataTransfer.getData('text/plain');
+    const opp = STAGES.flatMap((s) => board[s] || []).find((o) => o._id === oppId);
+    if (opp) moveStage(opp, stage);
   }
 
   if (loading) return <Loading />;
@@ -551,34 +570,59 @@ function PipelineTab() {
 
       <div className="overflow-x-auto">
         <div className="flex gap-4 min-w-max pb-2">
-          {STAGES.map((stage) => (
-            <div key={stage} className="w-64 shrink-0 bg-surface-sunken rounded-xl p-2.5">
-              <p className="eyebrow mb-2 px-1 flex items-baseline gap-1.5">
-                {STAGE_LABELS[stage]} <span className="text-ink-muted normal-case tracking-normal font-medium">({board[stage]?.length || 0})</span>
-              </p>
-              <div className="space-y-2">
-                {(board[stage] || []).map((opp) => (
-                  <div key={opp._id} className="card p-3">
-                    <p className="text-sm font-medium mb-1">{opp.title}</p>
-                    <p className="text-xs text-ink-muted mb-1">{opp.customerId?.name || opp.leadId?.name || 'Unassigned'}</p>
-                    <p className="text-sm num mb-2 text-accent-strong font-semibold">{formatMoney(opp.estimatedValue, company?.currency)}</p>
-                    {stage !== 'won' && stage !== 'lost' && can('crm.manage') && (
-                      <select
-                        className="field-input !py-1 !text-xs"
-                        value=""
-                        onChange={(e) => e.target.value && moveStage(opp, e.target.value)}
-                      >
-                        <option value="">Move to…</option>
-                        {STAGES.filter((s) => s !== stage).map((s) => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}
-                      </select>
-                    )}
-                    {stage === 'lost' && opp.lostReason && <p className="text-xs text-danger mt-1">{opp.lostReason}</p>}
-                  </div>
-                ))}
-                {(board[stage] || []).length === 0 && <p className="text-xs text-ink-muted px-1 py-2">No deals here.</p>}
+          {STAGES.map((stage) => {
+            const deals = board[stage] || [];
+            const columnTotal = deals.reduce((sum, o) => sum + (o.estimatedValue || 0), 0);
+            return (
+              <div
+                key={stage}
+                className={`w-64 shrink-0 rounded-xl p-2.5 transition-colors ${dragOverStage === stage ? 'bg-accent-soft ring-2 ring-accent' : 'bg-surface-sunken'}`}
+                onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (dragOverStage !== stage) setDragOverStage(stage); }}
+                onDragLeave={() => setDragOverStage((s) => (s === stage ? null : s))}
+                onDrop={(e) => handleDrop(e, stage)}
+              >
+                <div className="flex items-baseline justify-between px-1 mb-0.5">
+                  <p className="eyebrow flex items-baseline gap-1.5">
+                    {STAGE_LABELS[stage]} <span className="text-ink-muted normal-case tracking-normal font-medium">({deals.length})</span>
+                  </p>
+                </div>
+                <p className="px-1 mb-2 text-xs num text-ink-muted">{formatMoney(columnTotal, company?.currency)} total</p>
+                <div className="space-y-2 min-h-[2rem]">
+                  {deals.map((opp) => (
+                    <div
+                      key={opp._id}
+                      className={`card p-3 ${can('crm.manage') && stage !== 'won' && stage !== 'lost' ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                      draggable={can('crm.manage') && stage !== 'won' && stage !== 'lost'}
+                      onDragStart={(e) => handleDragStart(e, opp)}
+                    >
+                      <p className="text-sm font-medium mb-1">{opp.title}</p>
+                      <p className="text-xs text-ink-muted mb-1">{opp.customerId?.name || opp.leadId?.name || 'Unassigned'}</p>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm num text-accent-strong font-semibold">{formatMoney(opp.estimatedValue, company?.currency)}</p>
+                        {opp.expectedCloseDate && <p className="text-xs text-ink-muted">{formatDate(opp.expectedCloseDate)}</p>}
+                      </div>
+                      {stage !== 'won' && stage !== 'lost' && can('crm.manage') && (
+                        <div className="flex gap-1">
+                          <select
+                            className="field-input !py-1 !text-xs flex-1"
+                            value=""
+                            onChange={(e) => e.target.value && moveStage(opp, e.target.value)}
+                          >
+                            <option value="">Move to…</option>
+                            {STAGES.filter((s) => s !== stage).map((s) => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}
+                          </select>
+                          <button className="btn-ghost !text-accent !text-xs !px-1.5" title="Generate quote" onClick={() => setQuoting(opp)}>Quote</button>
+                        </div>
+                      )}
+                      {opp.quoteSaleId && stage !== 'won' && <p className="text-xs text-ink-muted mt-1">Quote generated</p>}
+                      {stage === 'lost' && opp.lostReason && <p className="text-xs text-danger mt-1">{opp.lostReason}</p>}
+                    </div>
+                  ))}
+                  {deals.length === 0 && <p className="text-xs text-ink-muted px-1 py-2">No deals here — drop a card to move it in.</p>}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -589,6 +633,251 @@ function PipelineTab() {
       {stageTarget?.stage === 'won' && (
         <WinOpportunityModal opportunity={stageTarget.opportunity} onClose={() => setStageTarget(null)} onDone={() => { setStageTarget(null); load(); }} />
       )}
+      {quoting && <GenerateQuoteModal opportunity={quoting} onClose={() => setQuoting(null)} onDone={() => { setQuoting(null); load(); }} />}
+    </div>
+  );
+}
+
+/**
+ * "Generate quote" — reuses the exact same items/branch/warehouse UI as
+ * WinOpportunityModal (and the same createQuotation pathway server-side)
+ * but creates a standalone quote without changing the opportunity's stage.
+ */
+function GenerateQuoteModal({ opportunity, onClose, onDone }) {
+  const toast = useToast();
+  const [branches, setBranches] = useState([]);
+  const [warehouses, setWarehouses] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [branchId, setBranchId] = useState('');
+  const [warehouseId, setWarehouseId] = useState('');
+  const [lines, setLines] = useState([{ productId: '', quantity: 1, unitPrice: '' }]);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    Promise.all([api.get('/org/branches'), api.get('/org/warehouses'), api.get('/products')]).then(([b, w, p]) => {
+      setBranches(b); setWarehouses(w); setProducts(p);
+      if (b.length) setBranchId(b[0]._id);
+      if (w.length) setWarehouseId(w[0]._id);
+    }).catch((err) => toast(err.message, 'error'));
+  }, []);
+
+  function updateLine(i, patch) { setLines(lines.map((l, idx) => (idx === i ? { ...l, ...patch } : l))); }
+  function addLine() { setLines([...lines, { productId: '', quantity: 1, unitPrice: '' }]); }
+  function removeLine(i) { setLines(lines.filter((_, idx) => idx !== i)); }
+
+  async function submit() {
+    if (!branchId || !warehouseId) return toast('Choose a branch and warehouse.', 'error');
+    const items = lines
+      .filter((l) => l.productId && Number(l.quantity) > 0)
+      .map((l) => {
+        const product = products.find((p) => p._id === l.productId);
+        const variant = product?.variants?.[0];
+        return {
+          productId: l.productId, variantId: variant?._id,
+          quantity: Number(l.quantity),
+          unitPrice: l.unitPrice !== '' ? Number(l.unitPrice) : (variant?.sellingPrice || 0),
+        };
+      })
+      .filter((l) => l.variantId);
+    if (items.length === 0) return toast('Add at least one product line for the quote.', 'error');
+
+    setSaving(true);
+    try {
+      await api.post(`/crm/opportunities/${opportunity._id}/quote`, { branchId, warehouseId, items });
+      toast('Quote generated for this opportunity.', 'success');
+      onDone();
+    } catch (err) { toast(err.message, 'error'); } finally { setSaving(false); }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
+      <div className="card p-5 w-full max-w-lg">
+        <p className="font-display text-lg mb-1">Generate quote for "{opportunity.title}"</p>
+        <p className="text-xs text-ink-muted mb-4">Pre-filled from this deal's customer — pick branch, warehouse, and products, this creates a real quotation without changing the deal's stage.</p>
+
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div>
+            <label className="field-label">Branch</label>
+            <select className="field-input" value={branchId} onChange={(e) => setBranchId(e.target.value)}>
+              <option value="">Select...</option>
+              {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="field-label">Warehouse</label>
+            <select className="field-input" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
+              <option value="">Select...</option>
+              {warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <label className="field-label">Items</label>
+        <div className="space-y-2 mb-3">
+          {lines.map((line, i) => (
+            <div key={i} className="flex gap-2">
+              <select className="field-input flex-1" value={line.productId} onChange={(e) => updateLine(i, { productId: e.target.value })}>
+                <option value="">Select product...</option>
+                {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
+              </select>
+              <input type="number" min="1" className="field-input w-20" placeholder="Qty" value={line.quantity} onChange={(e) => updateLine(i, { quantity: e.target.value })} />
+              <input type="number" min="0" className="field-input w-28" placeholder="Unit price" value={line.unitPrice} onChange={(e) => updateLine(i, { unitPrice: e.target.value })} />
+              {lines.length > 1 && <button className="btn-ghost !text-danger" onClick={() => removeLine(i)}>&times;</button>}
+            </div>
+          ))}
+        </div>
+        <button className="btn-ghost !text-accent mb-4" onClick={addLine}>+ Add another item</button>
+
+        <div className="flex justify-end gap-2">
+          <button className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn-primary" disabled={saving} onClick={submit}>{saving ? 'Generating…' : 'Generate quote'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Sales automation rules ----------------------------------------------------
+
+const TRIGGER_STAGE_OPTIONS = STAGES;
+const ACTION_TYPES = [['send_email', 'Send an email'], ['create_task', 'Create a follow-up task']];
+
+function AutomationTab() {
+  const { can } = useAuth();
+  const toast = useToast();
+  const [rules, setRules] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+
+  function load() {
+    setLoading(true);
+    api.get('/crm/automation-rules').then(setRules).catch((err) => toast(err.message, 'error')).finally(() => setLoading(false));
+  }
+  useEffect(load, []);
+
+  async function toggleActive(rule) {
+    try {
+      await api.put(`/crm/automation-rules/${rule._id}`, { active: !rule.active });
+      load();
+    } catch (err) { toast(err.message, 'error'); }
+  }
+
+  async function remove(id) {
+    try {
+      await api.del(`/crm/automation-rules/${id}`);
+      toast('Rule deleted.', 'success');
+      load();
+    } catch (err) { toast(err.message, 'error'); }
+  }
+
+  return (
+    <div>
+      <p className="text-sm text-ink-muted mb-3">When a deal moves to a stage, automatically send an email or create a follow-up task — simple trigger-and-action rules, evaluated the moment a stage change happens.</p>
+      {can('crm.manage') && (
+        <div className="flex justify-end mb-3">
+          <button className="btn-primary" onClick={() => setShowForm(true)}>New rule</button>
+        </div>
+      )}
+      {loading && <Loading />}
+      {!loading && rules.length === 0 && <EmptyState title="No automation rules yet" description="Automatically email or task your team when a deal changes stage." />}
+      {!loading && rules.length > 0 && (
+        <div className="card overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken/50">
+                <th className="px-3 py-2 font-medium">Name</th>
+                <th className="px-3 py-2 font-medium">When stage becomes</th>
+                <th className="px-3 py-2 font-medium">Then</th>
+                <th className="px-3 py-2 font-medium">Active</th>
+                <th className="px-3 py-2 font-medium"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {rules.map((r) => (
+                <tr key={r._id} className="border-b border-rule last:border-0 hover:bg-accent-soft/30 transition-colors">
+                  <td className="px-3 py-2">{r.name}</td>
+                  <td className="px-3 py-2"><span className="chip-neutral">{STAGE_LABELS[r.trigger?.toStage] || r.trigger?.toStage}</span></td>
+                  <td className="px-3 py-2 text-ink-muted">{r.action?.type === 'send_email' ? `Email: ${r.action.subject || '(no subject)'}` : `Task: ${r.action?.taskNote || '(no note)'}`}</td>
+                  <td className="px-3 py-2">
+                    {can('crm.manage')
+                      ? <button className={r.active ? 'chip-accent' : 'chip-neutral'} onClick={() => toggleActive(r)}>{r.active ? 'Active' : 'Paused'}</button>
+                      : <span className={r.active ? 'chip-accent' : 'chip-neutral'}>{r.active ? 'Active' : 'Paused'}</span>}
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    {can('crm.manage') && <button className="btn-ghost !text-danger" onClick={() => remove(r._id)}>Delete</button>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {showForm && <AutomationRuleForm onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
+    </div>
+  );
+}
+
+function AutomationRuleForm({ onClose, onSaved }) {
+  const toast = useToast();
+  const [form, setForm] = useState({
+    name: '', toStage: 'proposal', actionType: 'send_email',
+    subject: '', message: '', taskNote: '', taskDueInDays: 3,
+  });
+  const [saving, setSaving] = useState(false);
+
+  async function submit() {
+    if (!form.name.trim()) return toast('Rule name is required.', 'error');
+    setSaving(true);
+    try {
+      const action = form.actionType === 'send_email'
+        ? { type: 'send_email', subject: form.subject, message: form.message }
+        : { type: 'create_task', taskNote: form.taskNote, taskDueInDays: Number(form.taskDueInDays) || 3 };
+      await api.post('/crm/automation-rules', {
+        name: form.name,
+        trigger: { type: 'stage_changed', toStage: form.toStage },
+        action,
+      });
+      toast('Automation rule created.', 'success');
+      onSaved();
+    } catch (err) { toast(err.message, 'error'); } finally { setSaving(false); }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
+      <div className="card p-5 w-full max-w-sm">
+        <p className="font-display text-lg mb-4">New automation rule</p>
+        <div className="space-y-3">
+          <div><label className="field-label">Rule name</label><input autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Thank proposal-stage deals" /></div>
+          <div>
+            <label className="field-label">When a deal's stage becomes</label>
+            <select className="field-input" value={form.toStage} onChange={(e) => setForm({ ...form, toStage: e.target.value })}>
+              {TRIGGER_STAGE_OPTIONS.map((s) => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="field-label">Then</label>
+            <select className="field-input" value={form.actionType} onChange={(e) => setForm({ ...form, actionType: e.target.value })}>
+              {ACTION_TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          </div>
+          {form.actionType === 'send_email' ? (
+            <>
+              <div><label className="field-label">Email subject</label><input className="field-input" value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} placeholder="Thanks for considering {{title}}" /></div>
+              <div><label className="field-label">Email message</label><textarea rows={3} className="field-input" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} placeholder="Hi {{customerName}}, ..." /></div>
+              <p className="text-xs text-ink-muted">Placeholders: {'{{title}}'}, {'{{customerName}}'}, {'{{estimatedValue}}'}, {'{{stage}}'}.</p>
+            </>
+          ) : (
+            <>
+              <div><label className="field-label">Task note</label><input className="field-input" value={form.taskNote} onChange={(e) => setForm({ ...form, taskNote: e.target.value })} placeholder="Follow up on {{title}}" /></div>
+              <div><label className="field-label">Due in (days)</label><input type="number" min="0" className="field-input" value={form.taskDueInDays} onChange={(e) => setForm({ ...form, taskDueInDays: e.target.value })} /></div>
+            </>
+          )}
+        </div>
+        <div className="flex justify-end gap-2 mt-4">
+          <button className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn-primary" disabled={saving} onClick={submit}>{saving ? 'Saving…' : 'Create rule'}</button>
+        </div>
+      </div>
     </div>
   );
 }

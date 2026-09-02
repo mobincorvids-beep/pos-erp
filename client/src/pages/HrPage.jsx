@@ -17,13 +17,14 @@ export function HrPage() {
         </div>
       </div>
       <div className="flex gap-2 mb-5 flex-wrap">
-        {[['employees', 'Employees'], ['leave', 'Leave requests'], ['shifts', 'Shifts'], ['leave-policies', 'Leave policies'], ['payroll', 'Payroll']].map(([key, label]) => (
+        {[['employees', 'Employees'], ['org-chart', 'Org chart'], ['leave', 'Leave requests'], ['shifts', 'Shifts'], ['leave-policies', 'Leave policies'], ['payroll', 'Payroll']].map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)} className={tab === key ? 'pill-active' : 'pill'}>
             {label}
           </button>
         ))}
       </div>
       {tab === 'employees' && <EmployeesTab />}
+      {tab === 'org-chart' && <OrgChartTab />}
       {tab === 'leave' && <LeaveTab />}
       {tab === 'shifts' && <ShiftsTab />}
       {tab === 'leave-policies' && <LeavePoliciesTab />}
@@ -44,6 +45,54 @@ function Avatar({ name, active }) {
   );
 }
 
+/** Simple recursive tree view of the reporting hierarchy — indented, nested boxes, no charting library needed for this. */
+function OrgChartTab() {
+  const [roots, setRoots] = useState(null);
+
+  function load() {
+    api.get('/hr/org-chart').then(setRoots).catch(() => setRoots([]));
+  }
+  useEffect(load, []);
+
+  if (roots === null) return <Loading />;
+  if (roots.length === 0) return <EmptyState title="No employees yet" description="Add employees under the Employees tab, then set each one's manager to build the org chart." />;
+
+  return (
+    <div className="card p-5">
+      <p className="text-sm text-ink-muted mb-4">Each employee's manager is set from their edit form on the Employees tab.</p>
+      <div className="space-y-2">
+        {roots.map((node) => <OrgChartNode key={node._id} node={node} />)}
+      </div>
+    </div>
+  );
+}
+
+function OrgChartNode({ node }) {
+  const [expanded, setExpanded] = useState(true);
+  const hasChildren = node.children && node.children.length > 0;
+  return (
+    <div>
+      <div className="flex items-center gap-2 border border-line-muted rounded-lg px-3 py-2 bg-surface w-fit min-w-[220px]">
+        {hasChildren ? (
+          <button type="button" className="text-ink-muted hover:text-ink text-xs w-4" onClick={() => setExpanded((e) => !e)}>
+            {expanded ? '▾' : '▸'}
+          </button>
+        ) : <span className="w-4" />}
+        <Avatar name={node.name} active={node.status === 'active'} />
+        <div>
+          <p className="text-sm font-semibold text-ink leading-tight">{node.name}</p>
+          <p className="text-xs text-ink-muted leading-tight">{node.designation || '—'}{node.status !== 'active' ? ` · ${node.status}` : ''}</p>
+        </div>
+      </div>
+      {hasChildren && expanded && (
+        <div className="mt-2 space-y-2 border-l border-line-muted pl-2 ml-4">
+          {node.children.map((child) => <OrgChartNode key={child._id} node={child} />)}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function EmployeesTab() {
   const toast = useToast();
   const [employees, setEmployees] = useState([]);
@@ -53,6 +102,7 @@ function EmployeesTab() {
   const [inviteFor, setInviteFor] = useState(null);
   const [shiftFor, setShiftFor] = useState(null);
   const [balancesFor, setBalancesFor] = useState(null);
+  const [managerFor, setManagerFor] = useState(null);
 
   function load() {
     setLoading(true);
@@ -117,6 +167,7 @@ function EmployeesTab() {
                       <div className="flex gap-1 justify-end">
                         <button className="btn-ghost !text-accent" onClick={() => setAttendanceFor(e)}>Attendance</button>
                         <button className="btn-ghost !text-accent" onClick={() => setShiftFor(e)}>Shift</button>
+                        <button className="btn-ghost !text-accent" onClick={() => setManagerFor(e)}>Manager</button>
                         <button className="btn-ghost !text-accent" onClick={() => setBalancesFor(e)}>Leave balance</button>
                         <button className="btn-ghost !text-accent" onClick={() => setInviteFor(e)}>Invite to portal</button>
                         {e.status !== 'terminated' && <button className="btn-ghost !text-danger" onClick={() => terminate(e._id)}>Terminate</button>}
@@ -134,6 +185,7 @@ function EmployeesTab() {
       {attendanceFor && <AttendancePanel employee={attendanceFor} onClose={() => setAttendanceFor(null)} />}
       {inviteFor && <InviteEmployeePortalModal employee={inviteFor} onClose={() => setInviteFor(null)} />}
       {shiftFor && <AssignShiftModal employee={shiftFor} onClose={() => setShiftFor(null)} onSaved={() => { setShiftFor(null); load(); }} />}
+      {managerFor && <AssignManagerModal employee={managerFor} onClose={() => setManagerFor(null)} onSaved={() => { setManagerFor(null); load(); }} />}
       {balancesFor && <LeaveBalancesModal employee={balancesFor} onClose={() => setBalancesFor(null)} />}
     </div>
   );
@@ -167,6 +219,44 @@ function AssignShiftModal({ employee, onClose, onSaved }) {
         <select className="field-input mb-4" value={shiftId} onChange={(e) => setShiftId(e.target.value)}>
           <option value="">Unassigned</option>
           {shifts.map((s) => <option key={s._id} value={s._id}>{s.name} ({s.startTime}–{s.endTime})</option>)}
+        </select>
+        <div className="flex justify-end gap-2">
+          <button className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn-primary" disabled={saving} onClick={assign}>{saving ? 'Saving…' : 'Save'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AssignManagerModal({ employee, onClose, onSaved }) {
+  const toast = useToast();
+  const [employees, setEmployees] = useState([]);
+  const [managerId, setManagerId] = useState(employee.managerId?._id || employee.managerId || '');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { api.get('/hr/employees').then(setEmployees).catch(() => {}); }, []);
+
+  async function assign() {
+    setSaving(true);
+    try {
+      await api.post(`/hr/employees/${employee._id}/manager`, { managerId: managerId || null });
+      toast('Manager updated.', 'success');
+      onSaved();
+    } catch (err) { toast(err.message, 'error'); } finally { setSaving(false); }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
+      <div className="card p-5 w-full max-w-sm">
+        <div className="flex items-center justify-between mb-4">
+          <p className="font-display text-lg">{employee.name}: manager</p>
+          <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button>
+        </div>
+        <label className="field-label">Reports to</label>
+        <select className="field-input mb-4" value={managerId} onChange={(e) => setManagerId(e.target.value)}>
+          <option value="">No manager (top of the org chart)</option>
+          {employees.filter((e) => e._id !== employee._id).map((e) => <option key={e._id} value={e._id}>{e.name}</option>)}
         </select>
         <div className="flex justify-end gap-2">
           <button className="btn-secondary" onClick={onClose}>Cancel</button>

@@ -12,5 +12,7 @@ const controller = require('../controllers/funnelController');
 // what slug is guessed.
 router.get('/:slug', controller.publicGetFunnel);
 router.post('/:slug/submit', controller.publicSubmitFunnel);
+router.get('/:slug/appointment-slots', controller.publicAppointmentSlots); // ?pageOrder=&date=YYYY-MM-DD
+router.post('/:slug/book-appointment', controller.publicBookAppointment);  // { pageOrder, startTime, endTime, name, phone, email }
 
 module.exports = router;

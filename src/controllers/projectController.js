@@ -49,4 +49,26 @@ async function profitability(req, res) {
   }
 }
 
-module.exports = { list, create, updateStatus, logManualCost, listCosts, profitability };
+async function listDocs(req, res) {
+  try { res.json(await projectService.listDocs(req.companyId, req.params.id)); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+}
+
+async function createDoc(req, res) {
+  try {
+    const doc = await projectService.createDoc({ ...req.body, companyId: req.companyId, projectId: req.params.id, createdBy: req.auth.userId });
+    res.status(201).json(doc);
+  } catch (err) { res.status(400).json({ error: err.message }); }
+}
+
+async function updateDoc(req, res) {
+  try { res.json(await projectService.updateDoc(req.companyId, req.params.docId, req.body)); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+}
+
+async function deleteDoc(req, res) {
+  try { await projectService.deleteDoc(req.companyId, req.params.docId); res.status(204).end(); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+}
+
+module.exports = { list, create, updateStatus, logManualCost, listCosts, profitability, listDocs, createDoc, updateDoc, deleteDoc };

@@ -9,6 +9,8 @@ const Customer = require('../models/Customer');
 const CustomerFeedback = require('../models/CustomerFeedback');
 const CustomerFollowUp = require('../models/CustomerFollowUp');
 const Campaign = require('../models/Campaign');
+const Sale = require('../models/Sale');
+const Ticket = require('../models/Ticket');
 const messagingService = require('./messaging/messagingService');
 
 // --- Segmentation -----------------------------------------------------
@@ -119,9 +121,69 @@ async function sendCampaign(campaignId) {
   return { campaign, results };
 }
 
+// --- Contact activity timeline ------------------------------------------
+
+/**
+ * Assembles one unified, chronological activity timeline for a customer
+ * out of four existing collections (sales, support tickets, follow-ups,
+ * feedback) — server-side, so the frontend does one fetch instead of four.
+ * Each collection is queried independently (they're small, per-customer
+ * result sets) then merge-sorted by date, newest first.
+ */
+async function getContactTimeline(companyId, customerId) {
+  const customer = await Customer.findOne({ _id: customerId, companyId });
+  if (!customer) throw new Error('Customer not found.');
+
+  const [sales, tickets, followUps, feedback] = await Promise.all([
+    Sale.find({ companyId, customerId }).sort({ invoiceDate: -1 }).limit(100)
+      .select('documentNumber invoiceNumber status saleType totalAmount invoiceDate createdAt'),
+    Ticket.find({ companyId, customerId }).sort({ createdAt: -1 }).limit(100)
+      .select('subject category priority status createdAt resolvedAt'),
+    CustomerFollowUp.find({ companyId, customerId }).sort({ createdAt: -1 }).limit(100)
+      .select('note status dueDate completedAt createdAt'),
+    CustomerFeedback.find({ companyId, customerId }).sort({ createdAt: -1 }).limit(100)
+      .select('rating comment category status createdAt'),
+  ]);
+
+  const events = [
+    ...sales.map((s) => ({
+      type: 'sale',
+      date: s.invoiceDate || s.createdAt,
+      title: `${s.saleType === 'quotation' ? 'Quotation' : s.saleType === 'sales_order' ? 'Sales order' : 'Sale'} ${s.invoiceNumber || s.documentNumber}`,
+      description: `${s.status} · ${s.totalAmount}`,
+      refId: s._id,
+    })),
+    ...tickets.map((t) => ({
+      type: 'ticket',
+      date: t.createdAt,
+      title: `Ticket: ${t.subject}`,
+      description: `${t.category} · ${t.priority} priority · ${t.status}`,
+      refId: t._id,
+    })),
+    ...followUps.map((f) => ({
+      type: 'follow_up',
+      date: f.createdAt,
+      title: f.status === 'done' ? 'Follow-up completed' : 'Follow-up scheduled',
+      description: f.note,
+      refId: f._id,
+    })),
+    ...feedback.map((f) => ({
+      type: 'feedback',
+      date: f.createdAt,
+      title: `Feedback: ${f.rating}/5 (${f.category})`,
+      description: f.comment || '',
+      refId: f._id,
+    })),
+  ];
+
+  events.sort((a, b) => new Date(b.date) - new Date(a.date));
+  return { customer, events };
+}
+
 module.exports = {
   addTags, removeTags, findBySegment,
   submitFeedback, resolveFeedback,
   scheduleFollowUp, completeFollowUp, pendingFollowUps,
   createCampaign, sendCampaign,
+  getContactTimeline,
 };

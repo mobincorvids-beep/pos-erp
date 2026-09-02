@@ -30,6 +30,24 @@ async function terminateEmployee(req, res) {
   }
 }
 
+async function setManager(req, res) {
+  try {
+    const employee = await hrService.setManager(req.params.id, req.body.managerId);
+    res.json(employee);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function orgChart(req, res) {
+  try {
+    const tree = await hrService.orgChart(req.companyId);
+    res.json(tree);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
 async function markAttendance(req, res) {
   try {
     const attendance = await hrService.markAttendance({ ...req.body, companyId: req.companyId });
@@ -149,7 +167,7 @@ async function postPayroll(req, res) {
 }
 
 module.exports = {
-  listEmployees, createEmployee, terminateEmployee,
+  listEmployees, createEmployee, terminateEmployee, setManager, orgChart,
   markAttendance, attendanceForMonth,
   listShifts, createShift, assignShift,
   listLeavePolicies, createLeavePolicy, getLeaveBalances,

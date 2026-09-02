@@ -497,6 +497,7 @@ function ReceiveGoodsForm({ po, onClose, onReceived }) {
 
 function PurchaseOrderForm({ onClose, onSaved }) {
   const { t } = useTranslation();
+  const { company } = useAuth();
   const toast = useToast();
   const [branches, setBranches] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
@@ -508,12 +509,35 @@ function PurchaseOrderForm({ onClose, onSaved }) {
   const [lines, setLines] = useState([{ productId: '', variantId: '', quantityOrdered: 1, unitCost: 0 }]);
   const [saving, setSaving] = useState(false);
 
+  // Optional foreign-currency denomination — collapsed by default so the
+  // common (base-currency) case stays exactly as simple as before. When
+  // set, this only drives the display-only converted total below; every
+  // unitCost above is still entered/stored in the company's base currency.
+  const [showCurrency, setShowCurrency] = useState(false);
+  const [currency, setCurrency] = useState('');
+  const [rate, setRate] = useState(null);
+  const [rateLoading, setRateLoading] = useState(false);
+
   useEffect(() => {
     api.get('/org/branches').then(setBranches).catch(() => {});
     api.get('/suppliers').then(setSuppliers).catch(() => {});
     api.get('/products').then(setProducts).catch(() => {});
   }, []);
   useEffect(() => { if (branchId) api.get(`/org/warehouses?branchId=${branchId}`).then(setWarehouses).catch(() => {}); }, [branchId]);
+
+  useEffect(() => {
+    if (!currency || !company?.currency || currency.toUpperCase() === company.currency.toUpperCase()) {
+      setRate(null);
+      return;
+    }
+    setRateLoading(true);
+    api.get(`/currency/rate?from=${company.currency}&to=${currency}`)
+      .then((r) => setRate(r.rate))
+      .catch(() => setRate(null))
+      .finally(() => setRateLoading(false));
+  }, [currency, company?.currency]);
+
+  const subtotal = lines.reduce((sum, l) => sum + (Number(l.quantityOrdered) || 0) * (Number(l.unitCost) || 0), 0);
 
   function updateLine(i, patch) {
     setLines((prev) => prev.map((l, idx) => idx === i ? { ...l, ...patch } : l));
@@ -530,6 +554,7 @@ function PurchaseOrderForm({ onClose, onSaved }) {
       await api.post('/purchase-orders', {
         branchId, warehouseId, supplierId,
         items: lines.filter((l) => l.productId).map((l) => ({ productId: l.productId, variantId: l.variantId, quantityOrdered: Number(l.quantityOrdered), unitCost: Number(l.unitCost) })),
+        ...(showCurrency && currency ? { currency } : {}),
       });
       toast(t('purchases.poCreated'), 'success');
       onSaved();
@@ -576,6 +601,32 @@ function PurchaseOrderForm({ onClose, onSaved }) {
         <button type="button" className="btn-ghost !px-0 text-xs mb-4" onClick={() => setLines([...lines, { productId: '', variantId: '', quantityOrdered: 1, unitCost: 0 }])}>
           {t('purchases.addLine')}
         </button>
+
+        {!showCurrency ? (
+          <button type="button" className="btn-ghost !px-0 text-xs mb-4 block" onClick={() => setShowCurrency(true)}>
+            Bill in a foreign currency (optional)
+          </button>
+        ) : (
+          <div className="mb-4 rounded-lg border border-line-muted p-3">
+            <div className="flex items-center justify-between mb-2">
+              <p className="field-label mb-0">Supplier currency</p>
+              <button type="button" className="btn-ghost !px-0 text-xs" onClick={() => { setShowCurrency(false); setCurrency(''); }}>
+                Use {company?.currency || 'base currency'} instead
+              </button>
+            </div>
+            <select className="field-input" value={currency} onChange={(e) => setCurrency(e.target.value)}>
+              <option value="">{company?.currency || 'Base currency'}</option>
+              {['USD', 'EUR', 'GBP', 'AED', 'SAR'].filter((c) => c !== company?.currency).map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+            {currency && (
+              <p className="text-xs text-ink-muted mt-2">
+                {rateLoading ? 'Fetching rate…' : rate
+                  ? `Total ≈ ${formatMoney(subtotal * rate, currency)} (1 ${company?.currency} = ${rate} ${currency})`
+                  : 'No rate available yet, enter a manual rate under Settings → Currency first.'}
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="flex justify-end gap-2">
           <button type="button" className="btn-secondary" onClick={onClose}>{t('common.cancel')}</button>

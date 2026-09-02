@@ -16,6 +16,12 @@ const performanceReviewSchema = new Schema({
   reviewerUserId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
 
   period: { type: String, required: true }, // e.g. "2026-Q1"
+  // Links this review to the AppraisalCycle that bulk-created it (via
+  // performanceService.startAppraisalCycle()), so a manager can pull up
+  // "every review in the Q1 2026 cycle" instead of hand-filtering by
+  // period text. Optional and defaults to null — a review created the
+  // old, one-off way (still fully supported) simply has no cycle.
+  cycleId: { type: Schema.Types.ObjectId, ref: 'AppraisalCycle', default: null, index: true },
 
   overallRating: { type: Number, min: 1, max: 5 },
   strengths: String,

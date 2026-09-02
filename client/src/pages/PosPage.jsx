@@ -31,6 +31,15 @@ export function PosPage() {
   const [couponResult, setCouponResult] = useState(null); // null | { coupon, discountAmount } | { error }
   const [couponChecking, setCouponChecking] = useState(false);
   const [gatewayPhoneTouched, setGatewayPhoneTouched] = useState(false);
+  // Optional foreign-currency invoicing — collapsed by default so the
+  // common case (invoicing in the company's own base currency) stays
+  // exactly as simple as before. Backend already supports this fully
+  // (Sale.currency/exchangeRate/foreignTotalAmount, see posSaleService) —
+  // this only exposes it on the checkout screen.
+  const [showCurrency, setShowCurrency] = useState(false);
+  const [saleCurrency, setSaleCurrency] = useState('');
+  const [saleRate, setSaleRate] = useState(null);
+  const [saleRateLoading, setSaleRateLoading] = useState(false);
   const [context, setContext] = useState(() => {
     try {
       const stored = localStorage.getItem('pos_erp_checkout_context');
@@ -151,6 +160,18 @@ export function PosPage() {
     return amounts.slice(0, 2);
   }, [total]);
 
+  useEffect(() => {
+    if (!showCurrency || !saleCurrency || !company?.currency || saleCurrency.toUpperCase() === company.currency.toUpperCase()) {
+      setSaleRate(null);
+      return;
+    }
+    setSaleRateLoading(true);
+    api.get(`/currency/rate?from=${company.currency}&to=${saleCurrency}`)
+      .then((r) => setSaleRate(r.rate))
+      .catch(() => setSaleRate(null))
+      .finally(() => setSaleRateLoading(false));
+  }, [showCurrency, saleCurrency, company?.currency]);
+
   async function finalizeSale() {
     const sale = await api.post('/sales/checkout', {
       branchId: context.branchId,
@@ -159,6 +180,7 @@ export function PosPage() {
       items: cart.map((l) => ({ productId: l.productId, variantId: l.variantId, quantity: l.quantity, unitPrice: l.unitPrice, taxRate: l.taxRate })),
       payments: [{ paymentAccountId: context.cashAccountId, method: paymentMethod, amount: total }],
       couponCode: couponResult ? couponCode.toUpperCase().trim() : undefined,
+      ...(showCurrency && saleCurrency ? { currency: saleCurrency } : {}),
     });
 
     // Gift card is redeemed AFTER the sale exists, so the redemption's
@@ -417,6 +439,32 @@ export function PosPage() {
               </div>
             )}
           </div>
+
+          {!showCurrency ? (
+            <button type="button" className="btn-ghost !px-0 text-xs mb-2 block" onClick={() => setShowCurrency(true)}>
+              Bill in a foreign currency (optional)
+            </button>
+          ) : (
+            <div className="mb-3 rounded-lg border border-line-muted p-2">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="field-label mb-0">Invoice currency</span>
+                <button type="button" className="btn-ghost !px-0 text-xs" onClick={() => { setShowCurrency(false); setSaleCurrency(''); }}>
+                  Use {company?.currency || 'base currency'}
+                </button>
+              </div>
+              <select className="field-input" value={saleCurrency} onChange={(e) => setSaleCurrency(e.target.value)}>
+                <option value="">{company?.currency || 'Base currency'}</option>
+                {['USD', 'EUR', 'GBP', 'AED', 'SAR'].filter((c) => c !== company?.currency).map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              {saleCurrency && (
+                <p className="text-xs text-ink-muted mt-1.5">
+                  {saleRateLoading ? 'Fetching rate…' : saleRate
+                    ? `≈ ${formatMoney(total * saleRate, saleCurrency)} at 1 ${company?.currency} = ${saleRate} ${saleCurrency}`
+                    : 'No rate available yet, enter a manual rate under Settings → Currency first.'}
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="flex flex-col gap-1.5 text-sm text-ink-muted mb-3">
             <div className="flex justify-between"><span>{t('pos.subtotal', { count: itemCount })}</span><span className="num">{formatMoney(subtotal, company?.currency)}</span></div>

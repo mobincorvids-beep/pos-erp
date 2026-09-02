@@ -101,9 +101,19 @@ async function sendCampaign(req, res) {
   }
 }
 
+async function contactTimeline(req, res) {
+  try {
+    const timeline = await crmService.getContactTimeline(req.companyId, req.params.customerId);
+    res.json(timeline);
+  } catch (err) {
+    res.status(404).json({ error: err.message });
+  }
+}
+
 module.exports = {
   addTags, removeTags, segment,
   submitFeedback, listFeedback, resolveFeedback,
   scheduleFollowUp, completeFollowUp, pendingFollowUps,
   createCampaign, listCampaigns, sendCampaign,
+  contactTimeline,
 };

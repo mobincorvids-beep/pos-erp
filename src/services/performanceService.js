@@ -10,6 +10,8 @@
  */
 const Goal = require('../models/Goal');
 const PerformanceReview = require('../models/PerformanceReview');
+const AppraisalCycle = require('../models/AppraisalCycle');
+const Employee = require('../models/Employee');
 
 // --- Goals -----------------------------------------------------------------
 
@@ -60,15 +62,56 @@ function listGoals({ companyId, employeeId, status, category } = {}) {
 
 // --- Reviews -----------------------------------------------------------------
 
-function createReview({ companyId, employeeId, reviewerUserId, period, overallRating, strengths, areasForImprovement, goals }) {
+function createReview({ companyId, employeeId, reviewerUserId, period, overallRating, strengths, areasForImprovement, goals, cycleId }) {
   if (!employeeId) throw new Error('employeeId is required.');
   if (!reviewerUserId) throw new Error('reviewerUserId is required.');
   if (!period) throw new Error('period is required.');
   return PerformanceReview.create({
     companyId, employeeId, reviewerUserId, period,
     overallRating, strengths, areasForImprovement,
-    goals: goals || [], status: 'draft',
+    goals: goals || [], status: 'draft', cycleId: cycleId || null,
   });
+}
+
+// --- Appraisal cycles ---------------------------------------------------------
+
+/**
+ * Starts a new appraisal cycle and bulk-creates one draft PerformanceReview
+ * per active employee against it — the real "quarter-end appraisal" quick
+ * win: a manager doesn't have to create 30 individual reviews by hand.
+ * Each review starts in 'draft' exactly like one created the one-off way,
+ * so the existing submit/acknowledge flow works unchanged per employee.
+ */
+async function startAppraisalCycle({ companyId, name, periodStart, periodEnd, reviewerUserId, userId }) {
+  if (!name) throw new Error('Appraisal cycle name is required.');
+  if (!periodStart || !periodEnd) throw new Error('periodStart and periodEnd are required.');
+  if (new Date(periodStart) > new Date(periodEnd)) throw new Error('periodStart must be before periodEnd.');
+
+  const cycle = await AppraisalCycle.create({
+    companyId, name, periodStart, periodEnd, status: 'open', createdBy: userId || null,
+  });
+
+  const employees = await Employee.find({ companyId, status: 'active' });
+  const reviews = await PerformanceReview.insertMany(
+    employees.map((emp) => ({
+      companyId, employeeId: emp._id, reviewerUserId: reviewerUserId || userId,
+      period: name, cycleId: cycle._id, status: 'draft',
+    }))
+  );
+
+  return { cycle, reviewsCreated: reviews.length };
+}
+
+function listAppraisalCycles(companyId) {
+  return AppraisalCycle.find({ companyId }).sort({ createdAt: -1 });
+}
+
+async function closeAppraisalCycle(cycleId, companyId) {
+  const cycle = await AppraisalCycle.findOneAndUpdate(
+    { _id: cycleId, companyId }, { status: 'closed' }, { new: true }
+  );
+  if (!cycle) throw new Error('Appraisal cycle not found.');
+  return cycle;
 }
 
 async function submitReview(reviewId) {
@@ -100,15 +143,17 @@ async function acknowledgeReview(reviewId, employeeId) {
   return review;
 }
 
-function listReviews({ companyId, employeeId, status, period } = {}) {
+function listReviews({ companyId, employeeId, status, period, cycleId } = {}) {
   const filter = {};
   if (companyId) filter.companyId = companyId;
   if (employeeId) filter.employeeId = employeeId;
   if (status) filter.status = status;
   if (period) filter.period = period;
+  if (cycleId) filter.cycleId = cycleId;
   return PerformanceReview.find(filter)
     .populate('employeeId', 'name designation')
     .populate('reviewerUserId', 'name email')
+    .populate('cycleId', 'name status')
     .sort({ createdAt: -1 });
 }
 
@@ -161,4 +206,5 @@ module.exports = {
   createGoal, updateGoalProgress, updateGoalStatus, listGoals,
   createReview, submitReview, acknowledgeReview, listReviews,
   employeeScorecard,
+  startAppraisalCycle, listAppraisalCycles, closeAppraisalCycle,
 };

@@ -62,6 +62,11 @@ async function publicGetFunnel(req, res) {
     headline: funnel.headline,
     bodyContent: funnel.bodyContent,
     formFields: funnel.formFields,
+    // Multi-step pages (falls back to a single implicit page for legacy
+    // funnels — see funnelService.effectivePages). appointmentConfig's
+    // staffUserId/branchId are internal ids the widget needs to pass back
+    // on booking, not sensitive.
+    pages: funnelService.effectivePages(funnel),
   });
 }
 
@@ -76,7 +81,25 @@ async function publicSubmitFunnel(req, res) {
   }
 }
 
+async function publicAppointmentSlots(req, res) {
+  try {
+    const slots = await funnelService.availableAppointmentSlots(req.params.slug, req.query.pageOrder, req.query.date);
+    res.json(slots);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function publicBookAppointment(req, res) {
+  try {
+    const appointment = await funnelService.bookAppointmentFromFunnel(req.params.slug, req.body.pageOrder, req.body);
+    res.status(201).json({ ok: true, appointmentId: appointment._id, startTime: appointment.startTime, endTime: appointment.endTime });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
 module.exports = {
   createFunnel, listFunnels, getFunnel, updateFunnel, publishFunnel, analytics,
-  publicGetFunnel, publicSubmitFunnel,
+  publicGetFunnel, publicSubmitFunnel, publicAppointmentSlots, publicBookAppointment,
 };

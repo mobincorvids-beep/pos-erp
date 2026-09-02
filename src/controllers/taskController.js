@@ -12,6 +12,11 @@ async function list(req, res) {
   catch (err) { res.status(400).json({ error: err.message }); }
 }
 
+async function listSubtasks(req, res) {
+  try { res.json(await taskService.listSubtasks(req.companyId, req.params.id)); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+}
+
 async function updateStatus(req, res) {
   try { res.json(await taskService.updateTaskStatus(req.companyId, req.params.id, req.body.status)); }
   catch (err) { res.status(400).json({ error: err.message }); }
@@ -27,4 +32,4 @@ async function remove(req, res) {
   catch (err) { res.status(400).json({ error: err.message }); }
 }
 
-module.exports = { create, list, updateStatus, update, remove };
+module.exports = { create, list, listSubtasks, updateStatus, update, remove };

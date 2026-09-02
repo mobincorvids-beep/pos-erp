@@ -18,6 +18,7 @@ const ProjectCost = require('../models/ProjectCost');
 const Account = require('../models/Account');
 const inventoryService = require('./inventoryService');
 const accountingService = require('./accountingService');
+const currencyService = require('./currencyService');
 const approvalService = require('./approvalService');
 const auditService = require('./auditService');
 const defaultAccountsService = require('./defaultAccountsService');
@@ -32,12 +33,27 @@ const { nextDocumentNumber } = require('./numberingService');
  * @param {Array} input.items - [{ productId, variantId, quantityOrdered, unitCost }]
  * @param {String} [input.requisitionId] - links back to the PurchaseRequisition this PO fulfills, if any
  * @param {String} [input.userId]
+ * @param {String} [input.currency] - optional foreign currency this PO is being raised/agreed in (e.g. "USD" for a company whose base currency is PKR); items[].unitCost is always entered/stored in the company's BASE currency, same as Sale — this only drives the display-only foreignTotalAmount snapshot below.
+ * @param {String} [input.currencyDate] - date to resolve the rate for, defaults to today
  */
 async function createPurchaseOrder(input) {
   const { companyId, branchId, warehouseId, supplierId, items, requisitionId, projectId, userId } = input;
   if (!items || items.length === 0) throw new Error('Purchase order must contain at least one item.');
 
   const subtotal = items.reduce((sum, i) => sum + i.unitCost * i.quantityOrdered, 0);
+
+  // Resolved once, up front, using the STORED rate (never a live lookup
+  // later) so a historical PO's foreign total never drifts — same
+  // "resolve before any write, snapshot the number" rule posSaleService
+  // already follows for Sale.
+  let resolvedExchangeRate = null;
+  if (input.currency) {
+    const Company = require('../models/Company');
+    const company = await Company.findById(companyId);
+    if (company && company.currency && company.currency.toUpperCase() !== input.currency.toUpperCase()) {
+      resolvedExchangeRate = await currencyService.getRate(companyId, company.currency, input.currency, input.currencyDate);
+    }
+  }
 
   const po = await PurchaseOrder.create({
     companyId, branchId, warehouseId, supplierId, requisitionId: requisitionId || null, projectId: projectId || null,
@@ -53,6 +69,9 @@ async function createPurchaseOrder(input) {
     subtotal,
     taxAmount: 0,
     totalAmount: subtotal,
+    currency: resolvedExchangeRate ? input.currency.toUpperCase() : null,
+    exchangeRate: resolvedExchangeRate || 1,
+    foreignTotalAmount: resolvedExchangeRate ? Math.round(subtotal * resolvedExchangeRate * 100) / 100 : null,
     userId,
   });
 

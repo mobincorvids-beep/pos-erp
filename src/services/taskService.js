@@ -5,11 +5,14 @@
  */
 const Task = require('../models/Task');
 
-const VALID_STATUSES = ['todo', 'in_progress', 'done'];
+const VALID_STATUSES = ['todo', 'in_progress', 'review', 'done'];
 const VALID_PRIORITIES = ['low', 'medium', 'high'];
 
 async function createTask(input) {
-  const { companyId, projectId, title, description, assigneeId, dueDate, priority, createdBy } = input;
+  const {
+    companyId, projectId, title, description, assigneeId, dueDate, priority, createdBy,
+    parentTaskId, customFields, blockedByTaskIds,
+  } = input;
   // Thrown as rejections (async function), not synchronously — callers
   // (controllers, and the test suite's `.rejects.toThrow(...)` assertions)
   // uniformly `await`/promise-chain these services, so a validation error
@@ -20,12 +23,24 @@ async function createTask(input) {
   return Task.create({
     companyId, projectId, title, description, assigneeId: assigneeId || null,
     dueDate: dueDate || null, priority: priority || 'medium', createdBy: createdBy || null,
+    parentTaskId: parentTaskId || null,
+    customFields: customFields || [],
+    blockedByTaskIds: blockedByTaskIds || [],
   });
 }
 
 async function listTasks(companyId, projectId) {
   if (!projectId) throw new Error('projectId is required.');
-  return Task.find({ companyId, projectId }).populate('assigneeId', 'name').sort({ createdAt: -1 });
+  return Task.find({ companyId, projectId })
+    .populate('assigneeId', 'name')
+    .populate('blockedByTaskIds', 'title status')
+    .sort({ createdAt: -1 });
+}
+
+/** Subtasks (checklist items) of a task — plain top-level Tasks with parentTaskId set. */
+async function listSubtasks(companyId, parentTaskId) {
+  if (!parentTaskId) throw new Error('parentTaskId is required.');
+  return Task.find({ companyId, parentTaskId }).sort({ createdAt: 1 });
 }
 
 async function updateTaskStatus(companyId, taskId, status) {
@@ -36,7 +51,7 @@ async function updateTaskStatus(companyId, taskId, status) {
 }
 
 async function updateTask(companyId, taskId, patch) {
-  const { title, description, assigneeId, dueDate, priority } = patch;
+  const { title, description, assigneeId, dueDate, priority, customFields, blockedByTaskIds } = patch;
   if (priority && !VALID_PRIORITIES.includes(priority)) throw new Error(`Invalid priority "${priority}".`);
   const update = {};
   if (title !== undefined) update.title = title;
@@ -44,6 +59,8 @@ async function updateTask(companyId, taskId, patch) {
   if (assigneeId !== undefined) update.assigneeId = assigneeId || null;
   if (dueDate !== undefined) update.dueDate = dueDate || null;
   if (priority !== undefined) update.priority = priority;
+  if (customFields !== undefined) update.customFields = customFields;
+  if (blockedByTaskIds !== undefined) update.blockedByTaskIds = blockedByTaskIds;
 
   const task = await Task.findOneAndUpdate({ _id: taskId, companyId }, update, { new: true });
   if (!task) throw new Error('Task not found.');
@@ -53,7 +70,10 @@ async function updateTask(companyId, taskId, patch) {
 async function deleteTask(companyId, taskId) {
   const task = await Task.findOneAndDelete({ _id: taskId, companyId });
   if (!task) throw new Error('Task not found.');
+  // Subtasks lose their parent rather than cascading — keeps deletes cheap
+  // and avoids surprising bulk-deletes of a whole checklist.
+  await Task.updateMany({ companyId, parentTaskId: taskId }, { parentTaskId: null });
   return task;
 }
 
-module.exports = { createTask, listTasks, updateTaskStatus, updateTask, deleteTask };
+module.exports = { createTask, listTasks, listSubtasks, updateTaskStatus, updateTask, deleteTask, VALID_STATUSES };

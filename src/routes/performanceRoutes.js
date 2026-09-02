@@ -23,7 +23,7 @@ router.post('/goals/:id/status', requirePermission(PERFORMANCE_MANAGE),
 
 // --- Reviews -----------------------------------------------------------------
 
-router.get('/reviews', controller.listReviews); // ?employeeId=&status=&period=
+router.get('/reviews', controller.listReviews); // ?employeeId=&status=&period=&cycleId=
 router.post('/reviews', requirePermission(PERFORMANCE_MANAGE),
   body('employeeId').isString().notEmpty().withMessage('employeeId is required.'),
   body('period').isString().trim().notEmpty().withMessage('period is required.'),
@@ -33,6 +33,16 @@ router.post('/reviews/:id/submit', requirePermission(PERFORMANCE_MANAGE), contro
 // submission in hrRoutes, not gated by PERFORMANCE_MANAGE, since the
 // employee acknowledging their own review is not a manager action.
 router.post('/reviews/:id/acknowledge', controller.acknowledgeReview);
+
+// --- Appraisal cycles ------------------------------------------------------
+
+router.get('/cycles', controller.listAppraisalCycles);
+router.post('/cycles', requirePermission(PERFORMANCE_MANAGE),
+  body('name').isString().trim().notEmpty().withMessage('name is required.'),
+  body('periodStart').isISO8601().withMessage('periodStart must be a valid date.'),
+  body('periodEnd').isISO8601().withMessage('periodEnd must be a valid date.'),
+  validate, controller.startAppraisalCycle); // bulk-creates one draft review per active employee
+router.post('/cycles/:id/close', requirePermission(PERFORMANCE_MANAGE), controller.closeAppraisalCycle);
 
 // --- Scorecard -----------------------------------------------------------------
 

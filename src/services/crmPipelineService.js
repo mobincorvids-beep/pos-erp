@@ -11,6 +11,7 @@ const Lead = require('../models/Lead');
 const Opportunity = require('../models/Opportunity');
 const Customer = require('../models/Customer');
 const salesOrderService = require('./salesOrderService');
+const crmAutomationService = require('./crmAutomationService');
 
 const STAGES = ['new', 'contacted', 'proposal', 'negotiation', 'won', 'lost'];
 
@@ -145,6 +146,7 @@ async function updateOpportunityStage(opportunityId, stage, extra = {}) {
     opportunity.lostReason = extra.lostReason.trim();
     opportunity.probability = STAGE_PROBABILITY.lost;
     await opportunity.save();
+    await crmAutomationService.fireForStageChange(opportunity, 'lost');
     return opportunity;
   }
 
@@ -181,6 +183,7 @@ async function updateOpportunityStage(opportunityId, stage, extra = {}) {
     opportunity.customerId = customerId;
     opportunity.wonSaleId = sale._id;
     await opportunity.save();
+    await crmAutomationService.fireForStageChange(opportunity, 'won');
     return opportunity;
   }
 
@@ -188,7 +191,48 @@ async function updateOpportunityStage(opportunityId, stage, extra = {}) {
   opportunity.stage = stage;
   opportunity.probability = extra.probability !== undefined ? extra.probability : STAGE_PROBABILITY[stage];
   await opportunity.save();
+  await crmAutomationService.fireForStageChange(opportunity, stage);
   return opportunity;
+}
+
+/**
+ * Generates a standalone quote (a quotation-status Sale) directly from an
+ * opportunity, reusing the exact same salesOrderService.createQuotation()
+ * pathway the "win" flow and the manual Sales/Quotations screens use — no
+ * duplicated document-creation logic. Pre-fills from the opportunity's
+ * customer; the caller still supplies real product lines (an opportunity
+ * has no line items of its own to draw from).
+ */
+async function generateQuoteForOpportunity(opportunityId, companyId, extra = {}) {
+  const opportunity = await Opportunity.findOne({ _id: opportunityId, companyId });
+  if (!opportunity) throw new Error('Opportunity not found.');
+
+  let customerId = opportunity.customerId;
+  if (!customerId) {
+    if (!opportunity.leadId) throw new Error('This opportunity has no customer or lead to quote against.');
+    const { customer } = await convertLeadToCustomer(opportunity.leadId, extra.customerData || {});
+    customerId = customer._id;
+    opportunity.customerId = customerId;
+  }
+
+  if (!extra.branchId) throw new Error('branchId is required to generate a quote.');
+  if (!extra.warehouseId) throw new Error('warehouseId is required to generate a quote.');
+  if (!extra.items || extra.items.length === 0) throw new Error('items are required to generate a quote.');
+  if (!extra.userId) throw new Error('userId is required to generate a quote.');
+
+  const sale = await salesOrderService.createQuotation({
+    companyId: opportunity.companyId,
+    branchId: extra.branchId,
+    warehouseId: extra.warehouseId,
+    customerId,
+    userId: extra.userId,
+    items: extra.items,
+    validUntil: extra.validUntil || null,
+  });
+
+  opportunity.quoteSaleId = sale._id;
+  await opportunity.save();
+  return { opportunity, sale };
 }
 
 /** Opportunities grouped by stage: the shape a kanban board needs directly. */
@@ -271,5 +315,5 @@ function listLeads(companyId, filters = {}) {
 module.exports = {
   STAGES,
   createLead, updateLeadStatus, convertLeadToCustomer, listLeads,
-  createOpportunity, updateOpportunityStage, listPipeline, pipelineSummary,
+  createOpportunity, updateOpportunityStage, generateQuoteForOpportunity, listPipeline, pipelineSummary,
 };

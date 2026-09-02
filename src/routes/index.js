@@ -72,12 +72,16 @@ router.use('/employee-portal', require('./employeePortalRoutes'));
 router.use('/employee-portal-session', require('./employeePortalSessionRoutes'));
 router.use('/logistics', require('./logisticsRoutes'));
 router.use('/warehouse', require('./warehouseZoneRoutes'));
+router.use('/warehouse', require('./reorderRuleRoutes'));
 router.use('/pick-waves', require('./pickWaveRoutes'));
 router.use('/recruitment', require('./recruitmentRoutes'));
 router.use('/performance', require('./performanceRoutes'));
 router.use('/funnels', require('./funnelRoutes'));
 router.use('/public/funnels', require('./publicFunnelRoutes')); // public, no JWT — mirrors ecommerceWebhookRoutes.js
 router.use('/marketing', require('./marketingRoutes')); // audience segments + drip/journey automation
+router.use('/review-requests', require('./reviewRequestRoutes'));
+router.use('/public/reviews', require('./publicReviewRoutes')); // public, no JWT — mirrors publicFunnelRoutes.js
+router.use('/call-logs', require('./callLogRoutes'));
 router.use('/developer/api-keys', require('./apiKeyRoutes'));
 router.use('/developer/webhooks', require('./webhookSubscriptionRoutes'));
 router.use('/public-api/v1', require('./publicApiRoutes')); // public, apiKeyAuth only — no JWT

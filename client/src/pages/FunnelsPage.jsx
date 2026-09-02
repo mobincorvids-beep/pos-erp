@@ -1,11 +1,21 @@
 import { useEffect, useState } from 'react';
-import { Plus, Trash2, ExternalLink, BarChart3 } from 'lucide-react';
+import { Plus, Trash2, ExternalLink, BarChart3, ChevronUp, ChevronDown } from 'lucide-react';
 import { api } from '../api/client';
 import { useToast } from '../components/Toast';
 import { Loading } from '../components/Loading';
 import { EmptyState } from '../components/EmptyState';
 
 const FIELD_TYPES = ['text', 'email', 'phone', 'textarea'];
+const CTA_ACTIONS = [
+  { value: 'next_step', label: 'Go to next step' },
+  { value: 'submit_form', label: 'Submit the form' },
+  { value: 'external_url', label: 'Link out to a URL' },
+  { value: 'book_appointment', label: 'Book an appointment' },
+];
+
+function newPage(order) {
+  return { order, headline: '', bodyContent: '', ctaText: 'Continue', ctaAction: 'next_step', externalUrl: '', appointmentConfig: { branchId: '', staffUserId: '', serviceName: '', durationMinutes: 30 } };
+}
 
 // The public landing page lives at /f/:slug — see client/src/App.jsx and
 // client/src/public/FunnelLandingPage.jsx. This page only manages the
@@ -154,8 +164,38 @@ function FunnelEditor({ funnel, onClose, onSaved }) {
       { key: 'email', label: 'Email', type: 'email', required: true },
     ]
   );
+  const [pages, setPages] = useState(funnel?.pages?.length ? funnel.pages : []);
+  const [branches, setBranches] = useState([]);
+  const [staff, setStaff] = useState([]);
   const [saving, setSaving] = useState(false);
   const toast = useToast();
+
+  useEffect(() => {
+    api.get('/org/branches').then(setBranches).catch(() => {});
+    api.get('/users').then(setStaff).catch(() => {});
+  }, []);
+
+  function addPage() {
+    setPages((ps) => [...ps, newPage(ps.length)]);
+  }
+  function updatePage(idx, patch) {
+    setPages((ps) => ps.map((p, i) => (i === idx ? { ...p, ...patch } : p)));
+  }
+  function updatePageAppointmentConfig(idx, patch) {
+    setPages((ps) => ps.map((p, i) => (i === idx ? { ...p, appointmentConfig: { ...p.appointmentConfig, ...patch } } : p)));
+  }
+  function removePage(idx) {
+    setPages((ps) => ps.filter((_, i) => i !== idx).map((p, i) => ({ ...p, order: i })));
+  }
+  function movePage(idx, dir) {
+    setPages((ps) => {
+      const next = ps.slice();
+      const swapIdx = idx + dir;
+      if (swapIdx < 0 || swapIdx >= next.length) return ps;
+      [next[idx], next[swapIdx]] = [next[swapIdx], next[idx]];
+      return next.map((p, i) => ({ ...p, order: i }));
+    });
+  }
 
   function updateField(idx, patch) {
     setFormFields((fields) => fields.map((f, i) => (i === idx ? { ...f, ...patch } : f)));
@@ -170,7 +210,7 @@ function FunnelEditor({ funnel, onClose, onSaved }) {
   async function save() {
     setSaving(true);
     try {
-      const payload = { name, headline, bodyContent, formFields };
+      const payload = { name, headline, bodyContent, formFields, pages };
       if (isNew) {
         if (slug) payload.slug = slug;
         await api.post('/funnels', payload);
@@ -217,7 +257,7 @@ function FunnelEditor({ funnel, onClose, onSaved }) {
         )}
 
         <div>
-          <label className="field-label">Headline</label>
+          <label className="field-label">Headline {pages.length > 0 && <span className="text-ink-muted font-normal">(unused — this funnel has steps below)</span>}</label>
           <input className="field-input" value={headline} onChange={(e) => setHeadline(e.target.value)} placeholder="Get 20% off your first order" />
         </div>
 
@@ -249,6 +289,60 @@ function FunnelEditor({ funnel, onClose, onSaved }) {
                 <button className="text-danger hover:opacity-70" onClick={() => removeField(idx)}><Trash2 size={15} /></button>
               </div>
             ))}
+          </div>
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <label className="field-label mb-0">Steps (multi-page funnel)</label>
+              <p className="text-xs text-ink-muted mt-0.5">Leave empty for a single-page funnel using the headline/body above. Add steps to build a quiz-to-offer-to-checkout flow.</p>
+            </div>
+            <button className="text-xs text-accent font-semibold flex items-center gap-1 hover:text-accent-strong" onClick={addPage}><Plus size={13} /> Add step</button>
+          </div>
+          <div className="grid gap-3">
+            {pages.map((p, idx) => (
+              <div key={idx} className="bg-surface-sunken border border-rule rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-semibold text-ink-muted">Step {idx + 1}</p>
+                  <div className="flex items-center gap-1">
+                    <button className="btn-ghost !px-1.5 !py-1" disabled={idx === 0} onClick={() => movePage(idx, -1)}><ChevronUp size={14} /></button>
+                    <button className="btn-ghost !px-1.5 !py-1" disabled={idx === pages.length - 1} onClick={() => movePage(idx, 1)}><ChevronDown size={14} /></button>
+                    <button className="text-danger hover:opacity-70 ml-1" onClick={() => removePage(idx)}><Trash2 size={15} /></button>
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <input className="field-input" placeholder="Headline" value={p.headline} onChange={(e) => updatePage(idx, { headline: e.target.value })} />
+                  <textarea className="field-input" rows={2} placeholder="Body content" value={p.bodyContent} onChange={(e) => updatePage(idx, { bodyContent: e.target.value })} />
+                  <div className="flex gap-2">
+                    <input className="field-input flex-1" placeholder="CTA button text" value={p.ctaText} onChange={(e) => updatePage(idx, { ctaText: e.target.value })} />
+                    <select className="field-input flex-1" value={p.ctaAction} onChange={(e) => updatePage(idx, { ctaAction: e.target.value })}>
+                      {CTA_ACTIONS.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
+                    </select>
+                  </div>
+
+                  {p.ctaAction === 'external_url' && (
+                    <input className="field-input" placeholder="https://…" value={p.externalUrl} onChange={(e) => updatePage(idx, { externalUrl: e.target.value })} />
+                  )}
+
+                  {p.ctaAction === 'book_appointment' && (
+                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-rule">
+                      <select className="field-input" value={p.appointmentConfig?.branchId || ''} onChange={(e) => updatePageAppointmentConfig(idx, { branchId: e.target.value })}>
+                        <option value="">Branch…</option>
+                        {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
+                      </select>
+                      <select className="field-input" value={p.appointmentConfig?.staffUserId || ''} onChange={(e) => updatePageAppointmentConfig(idx, { staffUserId: e.target.value })}>
+                        <option value="">Staff member…</option>
+                        {staff.map((u) => <option key={u._id} value={u._id}>{u.name}</option>)}
+                      </select>
+                      <input className="field-input" placeholder="Service name (e.g. Consultation)" value={p.appointmentConfig?.serviceName || ''} onChange={(e) => updatePageAppointmentConfig(idx, { serviceName: e.target.value })} />
+                      <input type="number" min="5" step="5" className="field-input" placeholder="Duration (minutes)" value={p.appointmentConfig?.durationMinutes || 30} onChange={(e) => updatePageAppointmentConfig(idx, { durationMinutes: Number(e.target.value) })} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+            {pages.length === 0 && <p className="text-xs text-ink-muted">No steps yet — this funnel renders as a single page.</p>}
           </div>
         </div>
       </div>

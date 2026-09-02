@@ -256,19 +256,25 @@ function ReviewsTab() {
   const toast = useToast();
   const [rows, setRows] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [cycles, setCycles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [employeeId, setEmployeeId] = useState('');
+  const [cycleId, setCycleId] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [showCycleForm, setShowCycleForm] = useState(false);
 
   useEffect(() => { api.get('/hr/employees').then(setEmployees).catch(() => {}); }, []);
+  function loadCycles() { api.get('/performance/cycles').then(setCycles).catch(() => {}); }
+  useEffect(loadCycles, []);
 
   function load() {
     setLoading(true);
     const params = new URLSearchParams();
     if (employeeId) params.set('employeeId', employeeId);
+    if (cycleId) params.set('cycleId', cycleId);
     api.get(`/performance/reviews?${params.toString()}`).then(setRows).catch((err) => toast(err.message, 'error')).finally(() => setLoading(false));
   }
-  useEffect(load, [employeeId]);
+  useEffect(load, [employeeId, cycleId]);
 
   async function submit(id) {
     try {
@@ -289,11 +295,22 @@ function ReviewsTab() {
   return (
     <div>
       <div className="flex flex-wrap gap-2 justify-between mb-3">
-        <select className="field-input !w-auto" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)}>
-          <option value="">All employees</option>
-          {employees.map((e) => <option key={e._id} value={e._id}>{e.name}</option>)}
-        </select>
-        {can('performance.manage') && <button className="btn-primary" onClick={() => setShowForm(true)}>New review</button>}
+        <div className="flex flex-wrap gap-2">
+          <select className="field-input !w-auto" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)}>
+            <option value="">All employees</option>
+            {employees.map((e) => <option key={e._id} value={e._id}>{e.name}</option>)}
+          </select>
+          <select className="field-input !w-auto" value={cycleId} onChange={(e) => setCycleId(e.target.value)}>
+            <option value="">All cycles</option>
+            {cycles.map((c) => <option key={c._id} value={c._id}>{c.name} ({c.status})</option>)}
+          </select>
+        </div>
+        {can('performance.manage') && (
+          <div className="flex gap-2">
+            <button className="btn-secondary" onClick={() => setShowCycleForm(true)}>Start appraisal cycle</button>
+            <button className="btn-primary" onClick={() => setShowForm(true)}>New review</button>
+          </div>
+        )}
       </div>
 
       {loading && <Loading />}
@@ -308,6 +325,7 @@ function ReviewsTab() {
               <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken/50">
                 <th className="px-4 py-2.5 font-medium">Employee</th>
                 <th className="px-4 py-2.5 font-medium">Period</th>
+                <th className="px-4 py-2.5 font-medium">Cycle</th>
                 <th className="px-4 py-2.5 font-medium">Rating</th>
                 <th className="px-4 py-2.5 font-medium">Reviewer</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
@@ -319,6 +337,7 @@ function ReviewsTab() {
                 <tr key={r._id} className="border-b border-rule last:border-0 hover:bg-accent-soft/30 transition-colors">
                   <td className="px-4 py-2.5 font-medium">{r.employeeId?.name || '-'}</td>
                   <td className="px-4 py-2.5 text-ink-muted">{r.period}</td>
+                  <td className="px-4 py-2.5 text-ink-muted">{r.cycleId?.name || '—'}</td>
                   <td className="px-4 py-2.5 num">{r.overallRating ? `${r.overallRating}/5` : '-'}</td>
                   <td className="px-4 py-2.5 text-ink-muted">{r.reviewerUserId?.name || r.reviewerUserId?.email || '-'}</td>
                   <td className="px-4 py-2.5"><span className={REVIEW_STATUS_CHIP[r.status] || 'chip-neutral'}>{r.status}</span></td>
@@ -340,6 +359,52 @@ function ReviewsTab() {
       )}
 
       {showForm && <ReviewForm employees={employees} onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
+      {showCycleForm && <StartCycleForm onClose={() => setShowCycleForm(false)} onSaved={() => { setShowCycleForm(false); loadCycles(); load(); }} />}
+    </div>
+  );
+}
+
+function StartCycleForm({ onClose, onSaved }) {
+  const toast = useToast();
+  const [form, setForm] = useState({ name: '', periodStart: '', periodEnd: '' });
+  const [saving, setSaving] = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const result = await api.post('/performance/cycles', form);
+      toast(`Cycle started — ${result.reviewsCreated} draft review(s) created.`, 'success');
+      onSaved();
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
+      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
+        <p className="font-display text-lg font-semibold text-ink mb-1">Start an appraisal cycle</p>
+        <p className="text-xs text-ink-muted mb-4">Creates one draft review for every active employee — no need to create them one by one.</p>
+        <label className="field-label">Cycle name</label>
+        <input required className="field-input mb-3" placeholder="e.g. Q1 2026 Appraisal" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+        <div className="grid grid-cols-2 gap-2 mb-4">
+          <div>
+            <label className="field-label">Period start</label>
+            <input required type="date" className="field-input" value={form.periodStart} onChange={(e) => setForm({ ...form, periodStart: e.target.value })} />
+          </div>
+          <div>
+            <label className="field-label">Period end</label>
+            <input required type="date" className="field-input" value={form.periodEnd} onChange={(e) => setForm({ ...form, periodEnd: e.target.value })} />
+          </div>
+        </div>
+        <div className="flex justify-end gap-2">
+          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Starting…' : 'Start cycle'}</button>
+        </div>
+      </form>
     </div>
   );
 }

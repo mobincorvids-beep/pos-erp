@@ -13,6 +13,7 @@
 const Funnel = require('../models/Funnel');
 const FunnelSubmission = require('../models/FunnelSubmission');
 const crmPipelineService = require('./crmPipelineService');
+const appointmentService = require('./appointmentService');
 
 function slugify(input) {
   return String(input || '')
@@ -25,8 +26,18 @@ function slugify(input) {
 
 // --- CRUD -------------------------------------------------------------
 
+// Normalizes an incoming `pages` array: sorts by order and re-numbers
+// 0..n-1 so the client doesn't have to keep order values contiguous.
+function normalizePages(pages) {
+  if (!Array.isArray(pages)) return undefined;
+  return pages
+    .slice()
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    .map((p, i) => ({ ...p, order: i }));
+}
+
 async function createFunnel(input) {
-  const { companyId, name, headline, bodyContent, formFields, slug } = input;
+  const { companyId, name, headline, bodyContent, formFields, slug, pages } = input;
   if (!companyId) throw new Error('companyId is required.');
   if (!name) throw new Error('Funnel name is required.');
 
@@ -40,6 +51,7 @@ async function createFunnel(input) {
     companyId, name, slug: finalSlug,
     headline: headline || '', bodyContent: bodyContent || '',
     formFields: formFields && formFields.length ? formFields : undefined,
+    pages: normalizePages(pages),
   });
 }
 
@@ -47,7 +59,7 @@ async function updateFunnel(funnelId, companyId, updates) {
   const funnel = await Funnel.findOne({ _id: funnelId, companyId });
   if (!funnel) throw new Error('Funnel not found.');
 
-  const { name, headline, bodyContent, formFields, slug } = updates;
+  const { name, headline, bodyContent, formFields, slug, pages } = updates;
   if (slug && slugify(slug) !== funnel.slug) {
     const newSlug = slugify(slug);
     // Global check again, matching createFunnel — see comment there.
@@ -59,6 +71,7 @@ async function updateFunnel(funnelId, companyId, updates) {
   if (headline !== undefined) funnel.headline = headline;
   if (bodyContent !== undefined) funnel.bodyContent = bodyContent;
   if (formFields !== undefined) funnel.formFields = formFields;
+  if (pages !== undefined) funnel.pages = normalizePages(pages) || [];
 
   await funnel.save();
   return funnel;
@@ -79,6 +92,27 @@ function listFunnels(companyId) {
 
 function getFunnel(funnelId, companyId) {
   return Funnel.findOne({ _id: funnelId, companyId });
+}
+
+/**
+ * The ordered list of pages a visitor actually walks through. A funnel
+ * with a non-empty `pages` array uses it as-is (sorted); a legacy/simple
+ * funnel with no pages falls back to a single implicit page built from
+ * the funnel's top-level headline/bodyContent — this is what keeps
+ * existing single-page funnels rendering unchanged after this feature
+ * shipped (see the model comment on `pages`).
+ */
+function effectivePages(funnel) {
+  if (funnel.pages && funnel.pages.length) {
+    return funnel.pages.slice().sort((a, b) => a.order - b.order);
+  }
+  return [{
+    order: 0,
+    headline: funnel.headline || '',
+    bodyContent: funnel.bodyContent || '',
+    ctaText: 'Submit',
+    ctaAction: 'submit_form',
+  }];
 }
 
 // --- Public ---------------------------------------------------------------
@@ -142,6 +176,83 @@ async function submitFunnel(funnelId, formData = {}) {
   return { submission, lead };
 }
 
+// --- Appointment booking widget (embedded on a 'book_appointment' page) ---
+//
+// Reuses appointmentService.isStaffAvailable/book directly — no separate
+// slot-generation engine. Candidate slots are a plain business-hours grid
+// (09:00-17:00 UTC, stepped by the page's durationMinutes) filtered down
+// to ones the configured staff member is actually free for; this is
+// deliberately simple (no per-branch business-hours configuration exists
+// in this codebase to read from).
+const BUSINESS_START_HOUR = 9;
+const BUSINESS_END_HOUR = 17;
+
+function findAppointmentPage(funnel, pageOrder) {
+  const pages = effectivePages(funnel);
+  const page = pages.find((p) => p.order === Number(pageOrder));
+  if (!page || page.ctaAction !== 'book_appointment') {
+    throw new Error('This page does not offer appointment booking.');
+  }
+  if (!page.appointmentConfig || !page.appointmentConfig.staffUserId || !page.appointmentConfig.branchId) {
+    throw new Error('This funnel page has no appointment booking configured yet.');
+  }
+  return page;
+}
+
+/** Candidate slots for the given date (YYYY-MM-DD, interpreted UTC) that the configured staff member is free for. */
+async function availableAppointmentSlots(slug, pageOrder, dateStr) {
+  const funnel = await getFunnelByPublicSlug(slug);
+  if (!funnel) throw new Error('This page is not available.');
+  const page = findAppointmentPage(funnel, pageOrder);
+  const duration = page.appointmentConfig.durationMinutes || 30;
+
+  const day = new Date(`${dateStr}T00:00:00.000Z`);
+  if (Number.isNaN(day.getTime())) throw new Error('Invalid date.');
+
+  const slots = [];
+  for (let h = BUSINESS_START_HOUR * 60; h + duration <= BUSINESS_END_HOUR * 60; h += duration) {
+    const start = new Date(day.getTime() + h * 60000);
+    const end = new Date(start.getTime() + duration * 60000);
+    if (start < new Date()) continue; // don't offer past slots
+    // eslint-disable-next-line no-await-in-loop -- small, bounded grid (business hours / duration), sequential is fine
+    const free = await appointmentService.isStaffAvailable(page.appointmentConfig.staffUserId, start, end);
+    if (free) slots.push({ startTime: start, endTime: end });
+  }
+  return slots;
+}
+
+/**
+ * Books the visitor into a slot on a 'book_appointment' funnel page,
+ * straight through appointmentService.book — no parallel booking logic.
+ * Contact details go into `notes` since an anonymous funnel visitor isn't
+ * necessarily an existing Customer record (kept intentionally simple,
+ * matching submitFunnel's approach of not requiring a pre-existing contact).
+ */
+async function bookAppointmentFromFunnel(slug, pageOrder, { startTime, endTime, name, phone, email } = {}) {
+  const funnel = await getFunnelByPublicSlug(slug);
+  if (!funnel) throw new Error('This page is not available.');
+  const page = findAppointmentPage(funnel, pageOrder);
+  if (!startTime || !endTime) throw new Error('startTime and endTime are required.');
+
+  const contactLines = [
+    name ? `Name: ${name}` : null,
+    phone ? `Phone: ${phone}` : null,
+    email ? `Email: ${email}` : null,
+    `Booked via funnel "${funnel.name}" (/f/${funnel.slug}).`,
+  ].filter(Boolean).join('\n');
+
+  const appointment = await appointmentService.book({
+    companyId: funnel.companyId,
+    branchId: page.appointmentConfig.branchId,
+    staffUserId: page.appointmentConfig.staffUserId,
+    serviceName: page.appointmentConfig.serviceName || page.headline || 'Appointment',
+    startTime, endTime,
+    notes: contactLines,
+  });
+
+  return appointment;
+}
+
 // --- Analytics --------------------------------------------------------
 
 /** Submission count over time (per day) and conversion rate to Lead. */
@@ -171,5 +282,5 @@ async function funnelAnalytics(funnelId, companyId) {
 module.exports = {
   createFunnel, updateFunnel, publishFunnel, listFunnels, getFunnel,
   getFunnelBySlug, getFunnelByPublicSlug, submitFunnel, funnelAnalytics,
-  slugify,
+  slugify, effectivePages, availableAppointmentSlots, bookAppointmentFromFunnel,
 };

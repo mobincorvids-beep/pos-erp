@@ -9,7 +9,7 @@ import {
   Ticket, Shield, FileSearch, TrendingUp, HandCoins, Repeat, Hourglass, Lock, Layers, Ruler, Percent, X,
   LayoutDashboard, Settings, Car, MapPin, ShieldAlert, FileSignature,
   PackageCheck, Warehouse, UserPlus, Target, Rocket, KeyRound, Radio, Timer, SlidersHorizontal, Pin, PinOff,
-  Paperclip, BookOpen, Workflow,
+  Paperclip, BookOpen, Workflow, Star,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { INDUSTRY_MODULES } from '../industryModuleRegistry';
@@ -32,7 +32,7 @@ const ITEM_ICONS = {
   '/ai-insights': Sparkles, '/ecommerce': Store, '/tickets': Ticket, '/security': Shield,
   '/fleet': Car, '/field-service': MapPin, '/quality': ShieldAlert, '/contracts': FileSignature, '/documents': Paperclip,
   '/logistics-core': PackageCheck, '/warehouse': Warehouse, '/recruitment': UserPlus,
-  '/performance': Target, '/funnels': Rocket, '/marketing-automation': Workflow, '/developer-platform': KeyRound, '/ecommerce-hub': Radio,
+  '/performance': Target, '/funnels': Rocket, '/reputation': Star, '/marketing-automation': Workflow, '/developer-platform': KeyRound, '/ecommerce-hub': Radio,
   '/knowledge-base': BookOpen,
 };
 
@@ -107,6 +107,7 @@ const SECTIONS = [
       { to: '/performance', labelKey: 'nav.items.performanceGoals' },
       { to: '/crm', labelKey: 'nav.items.crm' },
       { to: '/funnels', labelKey: 'nav.items.funnels' },
+      { to: '/reputation', labelKey: 'nav.items.reputation' },
       { to: '/marketing-automation', labelKey: 'nav.items.marketingAutomation' },
       { to: '/loyalty', labelKey: 'nav.items.loyalty' },
       { to: '/tickets', labelKey: 'nav.items.helpdesk' },

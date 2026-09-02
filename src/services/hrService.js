@@ -23,9 +23,9 @@ const mongoose = require('mongoose');
 // --- Employees -----------------------------------------------------------
 
 function createEmployee(input) {
-  const { companyId, branchId, departmentId, userId, name, designation, phone, joiningDate, salaryStructure } = input;
+  const { companyId, branchId, departmentId, userId, name, designation, phone, joiningDate, salaryStructure, managerId } = input;
   if (!name) throw new Error('Employee name is required.');
-  return Employee.create({ companyId, branchId, departmentId, userId, name, designation, phone, joiningDate, salaryStructure });
+  return Employee.create({ companyId, branchId, departmentId, userId, name, designation, phone, joiningDate, salaryStructure, managerId: managerId || null });
 }
 
 async function terminateEmployee(employeeId) {
@@ -34,6 +34,31 @@ async function terminateEmployee(employeeId) {
   );
   if (!employee) throw new Error('Employee not found.');
   return employee;
+}
+
+/** Sets (or clears, with managerId: null) an employee's manager — the edge the org-chart tree is built from. Rejects setting an employee as their own manager, the one cycle trivially cheap to catch here. */
+async function setManager(employeeId, managerId) {
+  if (managerId && String(managerId) === String(employeeId)) {
+    throw new Error('An employee cannot be their own manager.');
+  }
+  const employee = await Employee.findByIdAndUpdate(employeeId, { managerId: managerId || null }, { new: true });
+  if (!employee) throw new Error('Employee not found.');
+  return employee;
+}
+
+/** Builds the reporting-hierarchy tree for a company: every employee nested under their manager, with employees who have no manager (or whose manager reference doesn't resolve) as roots. */
+async function orgChart(companyId) {
+  const employees = await Employee.find({ companyId }).select('name designation managerId status').lean();
+  const byId = new Map(employees.map((e) => [String(e._id), { ...e, children: [] }]));
+  const roots = [];
+  for (const emp of byId.values()) {
+    if (emp.managerId && byId.has(String(emp.managerId))) {
+      byId.get(String(emp.managerId)).children.push(emp);
+    } else {
+      roots.push(emp);
+    }
+  }
+  return roots;
 }
 
 // --- Attendance ------------------------------------------------------------
@@ -285,7 +310,7 @@ async function postPayroll(payrollRunId, { paymentAccountId, userId }) {
 }
 
 module.exports = {
-  createEmployee, terminateEmployee,
+  createEmployee, terminateEmployee, setManager, orgChart,
   markAttendance, attendanceForMonth,
   createShift, listShifts, assignShiftToEmployee,
   createLeavePolicy, listLeavePolicies, initializeLeaveBalance, getLeaveBalances,

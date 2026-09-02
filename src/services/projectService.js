@@ -9,6 +9,7 @@
 const mongoose = require('mongoose');
 const Project = require('../models/Project');
 const ProjectCost = require('../models/ProjectCost');
+const ProjectDoc = require('../models/ProjectDoc');
 const Sale = require('../models/Sale');
 const { nextDocumentNumber } = require('./numberingService');
 
@@ -78,4 +79,35 @@ function listCosts(projectId) {
   return ProjectCost.find({ projectId }).sort({ date: -1 });
 }
 
-module.exports = { createProject, updateStatus, logManualCost, profitability, listCosts };
+/** Project docs/wiki — simple free-text/markdown notes pages, multiple per project. */
+function listDocs(companyId, projectId) {
+  return ProjectDoc.find({ companyId, projectId }).sort({ updatedAt: -1 });
+}
+
+function createDoc(input) {
+  const { companyId, projectId, title, body, createdBy } = input;
+  if (!projectId) throw new Error('projectId is required.');
+  if (!title) throw new Error('title is required.');
+  return ProjectDoc.create({ companyId, projectId, title, body: body || '', createdBy: createdBy || null });
+}
+
+async function updateDoc(companyId, docId, patch) {
+  const { title, body } = patch;
+  const update = {};
+  if (title !== undefined) update.title = title;
+  if (body !== undefined) update.body = body;
+  const doc = await ProjectDoc.findOneAndUpdate({ _id: docId, companyId }, update, { new: true });
+  if (!doc) throw new Error('Doc not found.');
+  return doc;
+}
+
+async function deleteDoc(companyId, docId) {
+  const doc = await ProjectDoc.findOneAndDelete({ _id: docId, companyId });
+  if (!doc) throw new Error('Doc not found.');
+  return doc;
+}
+
+module.exports = {
+  createProject, updateStatus, logManualCost, profitability, listCosts,
+  listDocs, createDoc, updateDoc, deleteDoc,
+};

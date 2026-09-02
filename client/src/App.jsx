@@ -63,8 +63,10 @@ import { WarehouseZonesPage } from './pages/WarehouseZonesPage';
 import { RecruitmentPage } from './pages/RecruitmentPage';
 import { PerformancePage } from './pages/PerformancePage';
 import { FunnelsPage } from './pages/FunnelsPage';
+import { ReputationPage } from './pages/ReputationPage';
 import { MarketingAutomationPage } from './pages/MarketingAutomationPage';
 import { FunnelLandingPage } from './public/FunnelLandingPage';
+import { PublicReviewPage } from './public/PublicReviewPage';
 import { DeveloperPlatformPage } from './pages/DeveloperPlatformPage';
 import { EcommerceHubPage } from './pages/EcommerceHubPage';
 import { INDUSTRY_MODULES } from './industryModuleRegistry';
@@ -183,6 +185,7 @@ export default function App() {
               <Route path="/recruitment" element={<RecruitmentPage />} />
               <Route path="/performance" element={<PerformancePage />} />
               <Route path="/funnels" element={<FunnelsPage />} />
+              <Route path="/reputation" element={<ReputationPage />} />
               <Route path="/marketing-automation" element={<MarketingAutomationPage />} />
               <Route path="/developer-platform" element={<DeveloperPlatformPage />} />
               <Route path="/ecommerce-hub" element={<EcommerceHubPage />} />
@@ -202,6 +205,7 @@ export default function App() {
           <Route path="/supplier-portal/*" element={<SupplierPortalApp />} />
           <Route path="/employee-portal/*" element={<EmployeePortalApp />} />
           <Route path="/f/:slug" element={<FunnelLandingPage />} />
+          <Route path="/review/:token" element={<PublicReviewPage />} />
 
           {/* Platform-admin section — completely separate auth context/token
               (see admin/api.js), never mixed with the tenant app above. */}

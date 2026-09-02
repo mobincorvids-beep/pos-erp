@@ -11,6 +11,11 @@ const employeeSchema = new Schema({
   departmentId: { type: Schema.Types.ObjectId, ref: 'Department' },
   userId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   shiftId: { type: Schema.Types.ObjectId, ref: 'Shift', default: null },
+  // Self-referencing reporting line, same pattern as Category.parentId —
+  // null means "top of the org chart" (an owner/CEO with no manager).
+  // Optional and defaults to null, so every existing Employee document is
+  // unaffected until someone actually sets it.
+  managerId: { type: Schema.Types.ObjectId, ref: 'Employee', default: null },
 
   name: { type: String, required: true },
   designation: String, // Cashier, Waiter, Accountant...

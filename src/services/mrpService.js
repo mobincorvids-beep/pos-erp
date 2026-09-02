@@ -19,6 +19,7 @@ const StockLevel = require('../models/StockLevel');
 const MrpRun = require('../models/MrpRun');
 const purchaseService = require('./purchaseService');
 const manufacturingService = require('./manufacturingService');
+const reorderRuleService = require('./reorderRuleService');
 
 const MAX_BOM_DEPTH = 10; // guards against a circular BOM (product A's BOM containing product A, directly or indirectly)
 
@@ -64,14 +65,28 @@ async function runMrp({ companyId, branchId, warehouseId, demand, includeReorder
   const demandLines = [...(demand || [])].map((d) => ({ ...d, source: 'manual' }));
 
   if (includeReorderLevel) {
-    const lowStockProducts = await Product.find({ companyId, isActive: true, reorderLevel: { $gt: 0 } });
-    for (const product of lowStockProducts) {
+    // A ReorderRule specific to THIS warehouse wins over Product.reorderLevel
+    // (the global, one-per-product default) — see reorderRuleService for
+    // why. Still only scans products that have a global default set OR a
+    // rule at this warehouse, so a product with neither continues to be
+    // silently skipped exactly as before this feature existed.
+    const candidateProducts = await Product.find({ companyId, isActive: true }).select('name reorderLevel variants');
+    const rules = await require('../models/ReorderRule').find({ companyId, warehouseId, isActive: true });
+    const ruleByProduct = new Map(rules.map((r) => [String(r.productId), r]));
+
+    for (const product of candidateProducts) {
+      const rule = ruleByProduct.get(String(product._id));
+      const reorderPoint = rule ? rule.minQty : (product.reorderLevel || 0);
+      const targetLevel = rule ? (rule.maxQty ?? rule.minQty * 2) : product.reorderLevel;
+      if (!reorderPoint || reorderPoint <= 0) continue; // no threshold configured either way — nothing to check
+
       for (const variant of product.variants || []) {
         const onHand = await getOnHandQuantity(warehouseId, variant._id);
-        if (onHand <= product.reorderLevel) {
-          // Bring stock back up to reorderLevel (a simple, explicit reorder-point policy —
-          // not min/max or EOQ, which would need more inputs than this app currently tracks).
-          const targetQty = product.reorderLevel - onHand;
+        if (onHand <= reorderPoint) {
+          // Bring stock back up to the target level (rule's maxQty, or 2x
+          // the reorder point when only a bare minQty/reorderLevel is set —
+          // simple, explicit reorder-point policy, not EOQ).
+          const targetQty = targetLevel - onHand;
           if (targetQty > 0) {
             demandLines.push({ productId: product._id, variantId: variant._id, quantity: targetQty, source: 'reorder_level' });
           }

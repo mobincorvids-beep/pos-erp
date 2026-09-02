@@ -39,11 +39,16 @@ export function WarehouseZonesPage() {
           <span className="material-symbols-outlined text-sm mr-1 align-middle">route</span>
           Pick waves
         </button>
+        <button className={tab === 'reorder' ? 'pill-active' : 'pill'} onClick={() => setTab('reorder')}>
+          <span className="material-symbols-outlined text-sm mr-1 align-middle">inventory_2</span>
+          Reorder rules
+        </button>
       </div>
 
       {!warehouseId && <EmptyState title="No warehouse" description="Create a warehouse first to manage its locations." />}
       {warehouseId && tab === 'bins' && <BinsTab warehouseId={warehouseId} />}
       {warehouseId && tab === 'waves' && <WavesTab warehouseId={warehouseId} />}
+      {warehouseId && tab === 'reorder' && <ReorderRulesTab warehouseId={warehouseId} />}
     </div>
   );
 }
@@ -492,6 +497,149 @@ function WavePanel({ wave, onClose, onChanged }) {
       {!loading && lines.length > 0 && (
         <button className="btn-primary w-full mt-4" disabled={busy || wave.status === 'completed'} onClick={complete}>Complete wave</button>
       )}
+    </div>
+  );
+}
+
+function ReorderRulesTab({ warehouseId }) {
+  const toast = useToast();
+  const [rules, setRules] = useState([]);
+  const [belowPoint, setBelowPoint] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+
+  function load() {
+    setLoading(true);
+    Promise.all([
+      api.get(`/warehouse/rules?warehouseId=${warehouseId}`),
+      api.get(`/warehouse/below-reorder-point?warehouseId=${warehouseId}`),
+    ]).then(([r, b]) => { setRules(r); setBelowPoint(b); }).catch((err) => toast(err.message, 'error')).finally(() => setLoading(false));
+  }
+  useEffect(load, [warehouseId]);
+  useEffect(() => { api.get('/products').then(setProducts).catch(() => {}); }, []);
+
+  async function removeRule(id) {
+    try {
+      await api.del(`/warehouse/rules/${id}`);
+      toast('Reorder rule removed.', 'success');
+      load();
+    } catch (err) { toast(err.message, 'error'); }
+  }
+
+  if (loading) return <Loading />;
+
+  return (
+    <div className="space-y-6">
+      {belowPoint.length > 0 && (
+        <div className="card overflow-hidden border-warning/40">
+          <div className="px-4 py-3 border-b border-rule flex items-center justify-between">
+            <p className="font-display font-bold text-ink">Below reorder point at this warehouse</p>
+            <span className="chip-warning">{belowPoint.length}</span>
+          </div>
+          <div className="divide-y divide-rule">
+            {belowPoint.map((p) => (
+              <div key={p.productId} className="flex items-center justify-between px-4 py-2.5 text-sm">
+                <div>
+                  <p className="text-ink">{p.productName}{p.sku ? ` (${p.sku})` : ''}</p>
+                  <p className="text-xs text-ink-muted">{p.source === 'warehouse_rule' ? 'Per-warehouse rule' : 'Product default'}</p>
+                </div>
+                <span className="num text-ink-muted">{formatQty(p.onHand)} on hand · min {formatQty(p.minQty)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="card overflow-hidden">
+        <div className="px-4 py-3 border-b border-rule flex items-center justify-between">
+          <div>
+            <p className="font-display font-bold text-ink">Per-warehouse reorder rules</p>
+            <p className="text-xs text-ink-muted mt-0.5">Overrides the product's global reorder level, just for this warehouse.</p>
+          </div>
+          <button className="btn-primary" onClick={() => setShowForm(true)}>Add rule</button>
+        </div>
+        {rules.length === 0
+          ? <EmptyState title="No warehouse-specific rules" description="Products here fall back to their global reorder level." />
+          : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken/50">
+                  <th className="px-4 py-2.5 font-medium">Product</th>
+                  <th className="px-4 py-2.5 font-medium">Min qty</th>
+                  <th className="px-4 py-2.5 font-medium">Max qty</th>
+                  <th className="px-4 py-2.5 font-medium"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {rules.map((r) => (
+                  <tr key={r._id} className="border-b border-rule last:border-0">
+                    <td className="px-4 py-2.5">{r.productId?.name || r.productId}</td>
+                    <td className="px-4 py-2.5 num">{formatQty(r.minQty)}</td>
+                    <td className="px-4 py-2.5 num">{r.maxQty != null ? formatQty(r.maxQty) : '—'}</td>
+                    <td className="px-4 py-2.5 text-right">
+                      <button className="btn-ghost !text-danger" onClick={() => removeRule(r._id)}>Remove</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+      </div>
+
+      {showForm && <ReorderRuleForm warehouseId={warehouseId} products={products} onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
+    </div>
+  );
+}
+
+function ReorderRuleForm({ warehouseId, products, onClose, onSaved }) {
+  const toast = useToast();
+  const [productId, setProductId] = useState('');
+  const [minQty, setMinQty] = useState(0);
+  const [maxQty, setMaxQty] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.post('/warehouse/rules', {
+        warehouseId, productId, minQty: Number(minQty),
+        maxQty: maxQty === '' ? null : Number(maxQty),
+      });
+      toast('Reorder rule saved.', 'success');
+      onSaved();
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
+      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
+        <p className="font-display text-lg font-semibold text-ink mb-4">Add reorder rule</p>
+        <label className="field-label">Product</label>
+        <select required className="field-input mb-3" value={productId} onChange={(e) => setProductId(e.target.value)}>
+          <option value="">Select a product</option>
+          {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
+        </select>
+        <div className="grid grid-cols-2 gap-2 mb-4">
+          <div>
+            <label className="field-label">Min qty (reorder point)</label>
+            <input required type="number" min="0" className="field-input num" value={minQty} onChange={(e) => setMinQty(e.target.value)} />
+          </div>
+          <div>
+            <label className="field-label">Max qty (optional)</label>
+            <input type="number" min="0" className="field-input num" value={maxQty} onChange={(e) => setMaxQty(e.target.value)} placeholder="2x min if blank" />
+          </div>
+        </div>
+        <div className="flex justify-end gap-2">
+          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save'}</button>
+        </div>
+      </form>
     </div>
   );
 }

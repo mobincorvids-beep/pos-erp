@@ -54,6 +54,20 @@ const purchaseOrderSchema = new Schema({
   paymentTermsDays: { type: Number, default: null },
   earlyPaymentDiscountPercent: { type: Number, default: 0 },
   earlyPaymentDiscountDays: { type: Number, default: 0 },
+
+  // Real transaction-level foreign-currency denomination, same pattern as
+  // Sale.currency/exchangeRate/foreignTotalAmount: subtotal/totalAmount
+  // above (and items[].unitCost, which inventory valuation and every GL
+  // posting actually read from) stay in the company's BASE currency
+  // always — currency defaults to null (base currency, no conversion) and
+  // exchangeRate defaults to 1, so every existing PO is unaffected.
+  // foreignTotalAmount is display/printing only, snapshotted at the rate
+  // resolved when the PO was created (never a live lookup after the fact,
+  // so a historical PO's printed foreign total never silently drifts).
+  currency: { type: String, default: null }, // null = base currency, no conversion involved
+  exchangeRate: { type: Number, default: 1 }, // 1 unit of `currency` = this many units of the base currency
+  foreignTotalAmount: { type: Number, default: null }, // totalAmount expressed in `currency`, display only — never used for accounting math
+
   userId: { type: Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 

@@ -20,6 +20,10 @@ const opportunitySchema = new Schema({
   // for it via the existing sales-order pathway — this is the seam that
   // makes the pipeline connect to real Sales/Quotations, not a dead end.
   wonSaleId: { type: Schema.Types.ObjectId, ref: 'Sale', default: null },
+  // Set when a standalone quote is generated from this opportunity via the
+  // "Generate quote" action — independent of stage/winning, unlike
+  // wonSaleId which is only ever set the moment the deal is actually won.
+  quoteSaleId: { type: Schema.Types.ObjectId, ref: 'Sale', default: null },
 }, { timestamps: true });
 
 opportunitySchema.index({ companyId: 1, stage: 1 });
