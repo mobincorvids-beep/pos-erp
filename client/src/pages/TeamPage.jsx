@@ -189,6 +189,17 @@ function RolesTab({ canManage }) {
   useEffect(load, []);
   useEffect(() => { api.get('/roles/permissions-catalog').then(setCatalog).catch(() => {}); }, []);
 
+  async function deleteRole(role) {
+    if (!window.confirm(`Delete the "${role.name}" role? Staff assigned to it must be reassigned first.`)) return;
+    try {
+      await api.del(`/roles/${role._id}`);
+      toast('Role deleted.', 'success');
+      load();
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  }
+
   return (
     <div>
       <div className="card p-5">
@@ -204,16 +215,28 @@ function RolesTab({ canManage }) {
         {!loading && roles.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
             {roles.map((r) => (
-              <button key={r._id} onClick={() => canManage && setEditing(r)} className="p-5 rounded-xl border border-rule hover:border-accent/50 hover:shadow-sm transition-all bg-surface-sunken/40 text-left">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="w-10 h-10 rounded-lg bg-accent-soft flex items-center justify-center text-accent-strong">
-                    <span className="text-lg">◆</span>
+              <div key={r._id} className="relative p-5 rounded-xl border border-rule hover:border-accent/50 hover:shadow-sm transition-all bg-surface-sunken/40 text-left">
+                {canManage && (
+                  <button
+                    type="button"
+                    title="Delete role"
+                    onClick={(e) => { e.stopPropagation(); deleteRole(r); }}
+                    className="absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center text-ink-muted hover:text-danger hover:bg-danger-soft transition-colors"
+                  >
+                    ×
+                  </button>
+                )}
+                <button type="button" onClick={() => canManage && setEditing(r)} className="w-full text-left">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="w-10 h-10 rounded-lg bg-accent-soft flex items-center justify-center text-accent-strong">
+                      <span className="text-lg">◆</span>
+                    </div>
+                    <span className="chip-info uppercase tracking-wider text-[10px] mr-6">Role</span>
                   </div>
-                  <span className="chip-info uppercase tracking-wider text-[10px]">Role</span>
-                </div>
-                <h4 className="font-display text-base font-semibold text-ink mb-1">{r.name}</h4>
-                <p className="text-xs text-ink-muted">{r.permissions.length} permission{r.permissions.length === 1 ? '' : 's'} granted</p>
-              </button>
+                  <h4 className="font-display text-base font-semibold text-ink mb-1">{r.name}</h4>
+                  <p className="text-xs text-ink-muted">{r.permissions.length} permission{r.permissions.length === 1 ? '' : 's'} granted</p>
+                </button>
+              </div>
             ))}
             {canManage && (
               <button onClick={() => setShowForm(true)} className="p-5 rounded-xl border border-dashed border-rule-strong hover:border-accent/50 hover:bg-surface-sunken transition-all flex flex-col items-center justify-center text-center min-h-[160px]">

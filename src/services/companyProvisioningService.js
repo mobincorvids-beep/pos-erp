@@ -18,6 +18,7 @@ const Account = require('../models/Account');
 const User = require('../models/User');
 const { nanoid } = require('nanoid');
 const categoryService = require('./categoryService');
+const roleService = require('./roleService');
 
 // `key` maps each starter account to its Company.defaultAccounts slot, so
 // onboarding can wire that mapping automatically instead of leaving every
@@ -118,6 +119,17 @@ async function onboardCompany(input) {
       await categoryService.seedDefaultCategories(result.company._id, result.company.industryType);
     } catch (err) {
       console.error(`Default category seeding failed for company ${result.company._id} (onboarding still succeeded):`, err.message);
+    }
+
+    // Same best-effort reasoning as category seeding above: a starter role
+    // catalog (Admin/Manager/Accountant/Cashier/HR/Warehouse staff) isn't
+    // part of what makes a company usable — the owner account already has
+    // full access — it just saves them from building every role from a
+    // blank permission list the moment they add their first employee.
+    try {
+      await roleService.ensureStarterRoles(result.company._id);
+    } catch (err) {
+      console.error(`Starter role seeding failed for company ${result.company._id} (onboarding still succeeded):`, err.message);
     }
 
     return result;

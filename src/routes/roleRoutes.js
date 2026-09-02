@@ -8,5 +8,6 @@ router.get('/permissions-catalog', controller.permissionsCatalog); // must be be
 router.get('/', controller.list);
 router.post('/', requirePermission(ROLES_MANAGE), controller.create);
 router.patch('/:id', requirePermission(ROLES_MANAGE), controller.update);
+router.delete('/:id', requirePermission(ROLES_MANAGE), controller.remove);
 
 module.exports = router;
