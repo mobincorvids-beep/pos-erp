@@ -90,8 +90,13 @@ import { useAuth } from './context/AuthContext';
 // plan." Now a mismatched tenant sees a plain notice instead of a UI
 // that's guaranteed to fail on submit.
 function IndustryModuleGate({ industryKey, label, children }) {
-  const { company } = useAuth();
-  if (company?.industryType && company.industryType !== industryKey) {
+  const { company, permissions } = useAuth();
+  // null permissions is this app's super-admin convention (see
+  // AuthContext.can) — exempted the same way Sidebar.jsx exempts them
+  // from the industry-only nav filter, so following one of the sidebar's
+  // now-unfiltered industry links doesn't just land them on this "not
+  // part of your plan" notice.
+  if (permissions !== null && company?.industryType && company.industryType !== industryKey) {
     return (
       <div className="card p-6 max-w-lg">
         <p className="font-medium text-ink mb-1.5">{label} module isn't enabled</p>
