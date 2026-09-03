@@ -43,12 +43,27 @@ function notify({ companyId, userId, roleId, type, title, message, entityType, e
   return Notification.create({ companyId, userId, roleId, type, title, message, entityType, entityId });
 }
 
+// Builds the "{ userId } OR { roleId }" audience clause shared by
+// listForUser/markAllRead/unreadCount below — factored out because it's
+// easy to get wrong in a way that silently over-matches: a role-targeted
+// notification has userId: null (see notify() above), so unconditionally
+// including { userId } in the $or — even when the caller passed a falsy
+// userId (no specific user, "just show me this role's notifications") —
+// makes { userId: null } match EVERY role's notifications for the
+// company, not just the one role actually asked about. Each clause is
+// only included when its id is actually truthy, and if neither is given
+// this matches nothing (an impossible filter) rather than silently
+// returning every notification in the company.
+function audienceFilter(userId, roleId) {
+  const or = [];
+  if (userId) or.push({ userId });
+  if (roleId) or.push({ roleId });
+  return or.length ? { $or: or } : { _id: null };
+}
+
 /** A user sees notifications addressed to them directly, PLUS anything addressed to a role they hold, both audiences, not just one. */
 function listForUser(companyId, userId, roleId, { unreadOnly } = {}) {
-  const filter = {
-    companyId,
-    $or: [{ userId }, ...(roleId ? [{ roleId }] : [])],
-  };
+  const filter = { companyId, ...audienceFilter(userId, roleId) };
   if (unreadOnly) filter.read = false;
   return Notification.find(filter).sort({ createdAt: -1 }).limit(100);
 }
@@ -65,7 +80,7 @@ async function markRead(notificationId) {
 
 async function markAllRead(companyId, userId, roleId) {
   const result = await Notification.updateMany(
-    { companyId, $or: [{ userId }, ...(roleId ? [{ roleId }] : [])], read: false },
+    { companyId, read: false, ...audienceFilter(userId, roleId) },
     { read: true, readAt: new Date() }
   );
   return result.modifiedCount;
@@ -74,7 +89,7 @@ async function markAllRead(companyId, userId, roleId) {
 function unreadCount(companyId, userId, roleId) {
   return Notification.countDocuments({
     companyId, read: false,
-    $or: [{ userId }, ...(roleId ? [{ roleId }] : [])],
+    ...audienceFilter(userId, roleId),
   });
 }
 
