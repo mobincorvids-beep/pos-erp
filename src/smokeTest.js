@@ -2243,24 +2243,39 @@ async function run() {
       items: [{ productId: lowStockProduct._id, variantId: lowStockProduct.variants[0]._id, quantity: 1, unitPrice: 200 }],
       payments: [{ paymentAccountId: cash._id, method: 'cash', amount: 200 }],
     });
-    const notification = await Notification.findOne({ companyId: company._id, type: 'low_stock', entityId: lowStockProduct._id });
-    assert(notification, 'expected a real low-stock notification once stock reached exactly the reorderLevel of 5 — the boundary itself counts, same as every other threshold in this app');
-    assert(String(notification.roleId) === String(inventoryRole._id), 'expected the notification to be targeted at the role with inventory.adjust permission');
+    // Scoped to inventoryRole specifically, not just "any low_stock
+    // notification for this product". This company was onboarded via
+    // companyProvisioningService.onboardCompany, which auto-seeds starter
+    // roles (Admin, Manager, Warehouse staff, ...) — Admin ('*') and
+    // Manager/Warehouse staff (both hold inventory.adjust explicitly) ALL
+    // legitimately qualify for this alert too, alongside the dedicated
+    // inventoryRole created above. Every one of them getting their own
+    // notification is correct, intended behavior (a low-stock alert
+    // should reach every stakeholder who can act on it, not just one),
+    // so this step checks one specific stakeholder's copy rather than
+    // asserting a total across every role that happens to qualify.
+    const notification = await Notification.findOne({ companyId: company._id, type: 'low_stock', entityId: lowStockProduct._id, roleId: inventoryRole._id });
+    assert(notification, 'expected a real low-stock notification targeted at the inventory.adjust role once stock reached exactly the reorderLevel of 5 — the boundary itself counts, same as every other threshold in this app');
     assert(notification.message.includes('5'), `expected the message to state the actual current quantity (5), got "${notification.message}"`);
   });
 
-  await step('Selling ANOTHER unit while already at/below threshold does NOT create a second notification — deduped against the still-unread one', async () => {
+  await step('Selling ANOTHER unit while already at/below threshold does NOT create a second notification for this role — deduped against the still-unread one', async () => {
     await posSaleService.checkout({ userId: admin._id,
       companyId: company._id, branchId: branch._id, warehouseId: warehouse._id, customerId: customer._id,
       items: [{ productId: lowStockProduct._id, variantId: lowStockProduct.variants[0]._id, quantity: 1, unitPrice: 200 }],
       payments: [{ paymentAccountId: cash._id, method: 'cash', amount: 200 }],
     });
-    const count = await Notification.countDocuments({ companyId: company._id, type: 'low_stock', entityId: lowStockProduct._id });
-    assert(count === 1, `expected still exactly 1 low-stock notification (deduped, not spammed on every subsequent sale), got ${count}`);
+    // Scoped to inventoryRole (see the comment above) — every OTHER
+    // qualifying role (Admin/Manager/Warehouse staff) is independently
+    // and correctly deduped the same way; this checks it for the one
+    // role this test fully controls, not a total across stakeholders
+    // this test didn't create.
+    const count = await Notification.countDocuments({ companyId: company._id, type: 'low_stock', entityId: lowStockProduct._id, roleId: inventoryRole._id });
+    assert(count === 1, `expected still exactly 1 low-stock notification for this role (deduped, not spammed on every subsequent sale), got ${count}`);
   });
 
   await step('Marking the notification read allows a FUTURE drop to notify again — the dedup is against unread, not "ever notified"', async () => {
-    const notification = await Notification.findOne({ companyId: company._id, type: 'low_stock', entityId: lowStockProduct._id });
+    const notification = await Notification.findOne({ companyId: company._id, type: 'low_stock', entityId: lowStockProduct._id, roleId: inventoryRole._id });
     await notificationService.markRead(notification._id);
     const unread = await notificationService.unreadCount(company._id, null, inventoryRole._id);
     assert(unread === 0, `expected 0 unread notifications for this role after marking read, got ${unread}`);
