@@ -10,8 +10,36 @@
  */
 const Notification = require('../models/Notification');
 
+// 'low_stock' is constrained by a partial unique index (see Notification.js)
+// to at most one UNREAD row per companyId+entityType+entityId+userId+roleId
+// — every caller that fires one (inventoryService.checkLowStockAndNotify's
+// per-sale check, lowStockCron's hourly sweep) writes it OUTSIDE any DB
+// transaction on purpose, so a plain create() would duplicate whenever the
+// caller's own transaction gets silently retried by Mongoose's
+// session.withTransaction(), or whenever the per-sale check and the hourly
+// cron both fire for the same still-low product. Centralized here (rather
+// than reimplemented in each caller) as an upsert against that unique key:
+// a "duplicate" attempt becomes a no-op update of the existing unread row
+// instead of a second document — idempotent by construction, not by
+// convention. Every other notification type keeps simple create()
+// semantics; they're allowed multiple unread rows against the same entity
+// (e.g. two @mentions in the same chat channel before either is read).
 function notify({ companyId, userId, roleId, type, title, message, entityType, entityId }) {
   if (!userId && !roleId) throw new Error('A notification needs either a userId or a roleId to target.');
+  if (type === 'low_stock') {
+    const key = { companyId, entityType: entityType || null, entityId: entityId || null, userId: userId || null, roleId: roleId || null, read: false };
+    return Notification.findOneAndUpdate(
+      key,
+      { $setOnInsert: { ...key, type, title, message } },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    ).catch((err) => {
+      // A duplicate-key error means two concurrent attempts raced to
+      // create the same unread alert and one lost — the other one's row
+      // is exactly the alert that was wanted, so this is not a failure.
+      if (err.code === 11000) return Notification.findOne(key);
+      throw err;
+    });
+  }
   return Notification.create({ companyId, userId, roleId, type, title, message, entityType, entityId });
 }
 

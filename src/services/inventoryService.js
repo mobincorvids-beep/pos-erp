@@ -127,20 +127,26 @@ async function checkLowStockAndNotify({ companyId, warehouseId, productId, varia
   if (currentQuantity > product.reorderLevel) return; // still above threshold — nothing to notify about
 
   const variant = product.variants?.id(variantId);
-  const alreadyNotified = await require('../models/Notification').findOne({
-    companyId, type: 'low_stock', entityType: 'Product', entityId: productId, read: false,
-  });
-  if (alreadyNotified) return; // already have an unread alert out for this product — don't pile on more
 
   // Roles with inventory-write permission are the real audience — nobody
   // "owns" a product individually in this app's data model, so the
   // sensible target is whoever's actually able to act on a low-stock alert.
   const roles = await Role.find({ companyId, permissions: { $in: ['inventory.adjust', 'inventory.*', '*'] } });
+
+  // notificationService.notify() upserts (rather than plain-creates) any
+  // type: 'low_stock' notification against Notification's partial unique
+  // index — see that function's header comment for why: this write is
+  // deliberately outside the caller's DB transaction/session (a
+  // notification failure must never fail the sale/stock-movement it's
+  // attached to), which means session.withTransaction() retrying its
+  // callable several frames up can't roll this write back the way it
+  // rolls back the transaction's own writes. The upsert makes a retried
+  // attempt a no-op update of the same unread row instead of a duplicate.
+  const title = `Low stock: ${product.name}${variant?.sku ? ` (${variant.sku})` : ''}`;
+  const message = `Only ${currentQuantity} remaining, at or below the reorder level of ${product.reorderLevel}.`;
   for (const role of roles) {
     await notificationService.notify({
-      companyId, roleId: role._id, type: 'low_stock',
-      title: `Low stock: ${product.name}${variant?.sku ? ` (${variant.sku})` : ''}`,
-      message: `Only ${currentQuantity} remaining, at or below the reorder level of ${product.reorderLevel}.`,
+      companyId, roleId: role._id, type: 'low_stock', title, message,
       entityType: 'Product', entityId: productId,
     });
   }

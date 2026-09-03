@@ -26,4 +26,29 @@ const notificationSchema = new Schema({
 notificationSchema.index({ companyId: 1, userId: 1, read: 1, createdAt: -1 });
 notificationSchema.index({ companyId: 1, roleId: 1, read: 1, createdAt: -1 });
 
+// Enforces "at most one UNREAD low-stock notification per (company,
+// entity, audience)" at the database level, not just in application code.
+// This is what makes inventoryService.checkLowStockAndNotify's dedup safe
+// against session.withTransaction()'s automatic retries: that alert is
+// written without a DB session on purpose (so a notification failure can
+// never fail the real sale/stock-movement it's attached to), which means
+// a retried transaction attempt can't roll that write back — without this
+// index, a retry re-runs the alert code and creates a second document.
+// With it, a retry's write collides on the same unique key and simply
+// updates the existing unread row instead (see the $setOnInsert upsert
+// pattern in checkLowStockAndNotify) — idempotent no matter how many
+// times the surrounding transaction is retried.
+//
+// Scoped to type: 'low_stock' specifically (via the partial filter, not a
+// blanket rule for every notification type) — other types legitimately
+// create more than one unread row against the same entity+audience, e.g.
+// a second @mention notification for the same chat channel before the
+// first is read, or successive approval-workflow steps against the same
+// entityId. Only low-stock's "one active alert per product" semantics
+// call for this constraint.
+notificationSchema.index(
+  { companyId: 1, entityType: 1, entityId: 1, userId: 1, roleId: 1 },
+  { unique: true, partialFilterExpression: { read: false, type: 'low_stock' } }
+);
+
 module.exports = model('Notification', notificationSchema);
