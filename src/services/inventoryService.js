@@ -206,7 +206,32 @@ function listProductBatches(companyId, { productId } = {}) {
   return ProductBatch.find(filter).populate('productId', 'name').sort({ expiryDate: 1 });
 }
 
+/**
+ * FEFO (First-Expiry-First-Out) batch picker source: every batch for this
+ * variant that actually has sellable stock (quantity > 0) at the given
+ * warehouse, sorted earliest-expiry-first — batches with no expiryDate
+ * sort last, since there's nothing to prioritize them against. Used by the
+ * POS checkout batch/lot picker (client/src/pages/PosPage.jsx) so a
+ * cashier is never offered an empty or already-expired-by-policy batch.
+ */
+async function listAvailableBatches(warehouseId, variantId) {
+  const levels = await StockLevel.find({ warehouseId, variantId, quantity: { $gt: 0 }, batchId: { $ne: null } }).lean();
+  if (levels.length === 0) return [];
+
+  const qtyByBatch = new Map(levels.map((l) => [String(l.batchId), l.quantity]));
+  const batches = await ProductBatch.find({ _id: { $in: [...qtyByBatch.keys()] } }).lean();
+
+  return batches
+    .map((b) => ({ ...b, availableQuantity: qtyByBatch.get(String(b._id)) || 0 }))
+    .sort((a, b) => {
+      if (!a.expiryDate && !b.expiryDate) return 0;
+      if (!a.expiryDate) return 1;
+      if (!b.expiryDate) return -1;
+      return new Date(a.expiryDate) - new Date(b.expiryDate);
+    });
+}
+
 module.exports = {
   recordMovement, getStockLevel, getAvgCost, assertSufficientStock,
-  reserve, releaseReservation, listProductBatches,
+  reserve, releaseReservation, listProductBatches, listAvailableBatches,
 };

@@ -29,5 +29,6 @@ router.post('/:id/versions',
   validate, controller.uploadVersion);
 router.post('/:id/request-approval', controller.requestApproval);
 router.get('/expiring/check', controller.checkExpiring); // ?daysAhead= (default 30) — real trigger for the expiry-notification sweep
+router.delete('/:id', controller.deleteDocument);
 
 module.exports = router;

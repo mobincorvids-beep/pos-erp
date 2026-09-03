@@ -32,11 +32,23 @@ function registerAsset(input) {
   });
 }
 
-function listAssets(companyId, { status, category } = {}) {
+function listAssets(companyId, { status, category, assignedToEmployeeId } = {}) {
   const filter = { companyId };
   if (status) filter.status = status;
   if (category) filter.category = category;
-  return FixedAsset.find(filter).sort({ purchaseDate: -1 });
+  if (assignedToEmployeeId) filter.assignedToEmployeeId = assignedToEmployeeId;
+  return FixedAsset.find(filter).populate('assignedToEmployeeId', 'name designation').sort({ purchaseDate: -1 });
+}
+
+/** Assigns (or, with employeeId: null, unassigns) an asset to an employee — simple custody tracking, no accounting entry involved. */
+async function assignAsset(assetId, employeeId) {
+  const asset = await FixedAsset.findByIdAndUpdate(
+    assetId,
+    { assignedToEmployeeId: employeeId || null, assignedAt: employeeId ? new Date() : null },
+    { new: true }
+  ).populate('assignedToEmployeeId', 'name designation');
+  if (!asset) throw new Error('Fixed asset not found.');
+  return asset;
 }
 
 /**
@@ -121,4 +133,4 @@ async function disposeAsset(assetId, { disposalDate, disposalProceeds, gainLossA
   return { asset, bookValue, gainLoss, voucher };
 }
 
-module.exports = { registerAsset, listAssets, runDepreciation, disposeAsset };
+module.exports = { registerAsset, listAssets, runDepreciation, disposeAsset, assignAsset };

@@ -44,6 +44,7 @@ import { CustomersPage } from './pages/CustomersPage';
 import { SuppliersPage } from './pages/SuppliersPage';
 import { TeamPage } from './pages/TeamPage';
 import { HrPage } from './pages/HrPage';
+import { MyAttendancePage } from './pages/MyAttendancePage';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { ManufacturingPage } from './pages/ManufacturingPage';
 import { ServiceOrdersPage } from './pages/ServiceOrdersPage';
@@ -168,6 +169,7 @@ export default function App() {
               <Route path="/suppliers" element={<SuppliersPage />} />
               <Route path="/team" element={<TeamPage />} />
               <Route path="/hr" element={<HrPage />} />
+              <Route path="/my-attendance" element={<MyAttendancePage />} />
               <Route path="/projects" element={<ProjectsPage />} />
               <Route path="/manufacturing" element={<ManufacturingPage />} />
               <Route path="/service-orders" element={<ServiceOrdersPage />} />

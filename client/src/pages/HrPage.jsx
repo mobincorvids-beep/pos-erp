@@ -4,10 +4,25 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { Loading } from '../components/Loading';
 import { EmptyState } from '../components/EmptyState';
+import { DocumentsPanel } from '../components/DocumentsPanel';
 import { formatMoney, formatDate } from '../lib/format';
 
 export function HrPage() {
-  const [tab, setTab] = useState('employees');
+  const { can } = useAuth();
+  const canManageHr = can('hr.manage');
+  const [tab, setTab] = useState('my-hr');
+
+  // "My HR" is always first and open to everyone — the rest of the module
+  // (directory, org chart, payroll processing, etc.) stays HR-manager-only,
+  // matching the existing hr.manage gates elsewhere on this page.
+  const tabs = [
+    ['my-hr', 'My HR'],
+    ...(canManageHr ? [
+      ['employees', 'Employees'], ['org-chart', 'Org chart'], ['leave', 'Leave requests'],
+      ['shifts', 'Shifts'], ['leave-policies', 'Leave policies'], ['payroll', 'Payroll'],
+    ] : [['leave', 'Leave requests']]), // a non-HR-manager can still land here if they're a manager approving their team's leave
+  ];
+
   return (
     <div>
       <div className="flex flex-wrap justify-between items-end gap-3 mb-6">
@@ -17,18 +32,192 @@ export function HrPage() {
         </div>
       </div>
       <div className="flex gap-2 mb-5 flex-wrap">
-        {[['employees', 'Employees'], ['org-chart', 'Org chart'], ['leave', 'Leave requests'], ['shifts', 'Shifts'], ['leave-policies', 'Leave policies'], ['payroll', 'Payroll']].map(([key, label]) => (
+        {tabs.map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)} className={tab === key ? 'pill-active' : 'pill'}>
             {label}
           </button>
         ))}
       </div>
-      {tab === 'employees' && <EmployeesTab />}
-      {tab === 'org-chart' && <OrgChartTab />}
+      {tab === 'my-hr' && <MyHrTab />}
+      {tab === 'employees' && canManageHr && <EmployeesTab />}
+      {tab === 'org-chart' && canManageHr && <OrgChartTab />}
       {tab === 'leave' && <LeaveTab />}
-      {tab === 'shifts' && <ShiftsTab />}
-      {tab === 'leave-policies' && <LeavePoliciesTab />}
-      {tab === 'payroll' && <PayrollTab />}
+      {tab === 'shifts' && canManageHr && <ShiftsTab />}
+      {tab === 'leave-policies' && canManageHr && <LeavePoliciesTab />}
+      {tab === 'payroll' && canManageHr && <PayrollTab />}
+    </div>
+  );
+}
+
+/**
+ * Self-service view — reachable by any logged-in user, no hr.manage
+ * required. Resolves the caller's own Employee record from the server
+ * side (/hr/me and friends, see hrController's my* endpoints); a user
+ * with no linked Employee record gets a clean explanatory state instead
+ * of an error-y blank page.
+ */
+function MyHrTab() {
+  const toast = useToast();
+  const { company } = useAuth();
+  const [employee, setEmployee] = useState(undefined); // undefined = loading, null = no linked record
+  const [balances, setBalances] = useState([]);
+  const [leaveRequests, setLeaveRequests] = useState([]);
+  const [payslips, setPayslips] = useState([]);
+  const [attendance, setAttendance] = useState([]);
+  const today = new Date();
+  const [month, setMonth] = useState(today.getMonth() + 1);
+  const [year, setYear] = useState(today.getFullYear());
+  const [showLeaveForm, setShowLeaveForm] = useState(false);
+
+  function loadAll() {
+    api.get('/hr/me')
+      .then((e) => {
+        setEmployee(e);
+        api.get('/hr/me/leave-balances').then(setBalances).catch(() => {});
+        api.get('/hr/me/leave-requests').then(setLeaveRequests).catch(() => {});
+        api.get('/hr/me/payslips').then(setPayslips).catch(() => {});
+      })
+      .catch(() => setEmployee(null));
+  }
+  useEffect(loadAll, []);
+  useEffect(() => {
+    if (!employee) return;
+    api.get(`/hr/me/attendance?month=${month}&year=${year}`).then(setAttendance).catch(() => {});
+  }, [employee, month, year]);
+
+  if (employee === undefined) return <Loading />;
+  if (employee === null) {
+    return <EmptyState title="No employee record linked to your account" description="Ask HR to link your login to your Employee record before My HR can show your profile, leave, attendance, and payslips." />;
+  }
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-1 space-y-6">
+        <div className="card p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <Avatar name={employee.name} active={employee.status === 'active'} />
+            <div>
+              <p className="font-display text-lg font-semibold text-ink">{employee.name}</p>
+              <p className="text-sm text-ink-muted">{employee.designation || '—'}</p>
+            </div>
+          </div>
+          <div className="text-sm space-y-1.5 text-ink-muted">
+            <p>Status: <span className="chip-accent capitalize">{employee.status?.replace('_', ' ')}</span></p>
+            <p>Joined: {formatDate(employee.joiningDate)}</p>
+            {employee.phone && <p>Phone: {employee.phone}</p>}
+          </div>
+        </div>
+
+        <div className="card p-5">
+          <p className="font-display text-base font-semibold mb-3">My leave balance</p>
+          {balances.length === 0 && <p className="text-sm text-ink-muted">No leave balance records yet.</p>}
+          {balances.map((b) => (
+            <div key={b._id} className="flex justify-between text-sm border-b border-rule py-1.5 last:border-0">
+              <span>{b.leavePolicyId?.name || 'Policy'} <span className="text-xs text-ink-muted">({b.year})</span></span>
+              <span className="num">{b.remainingDays} / {b.entitledDays} days</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="lg:col-span-2 space-y-6">
+        <div className="card p-5">
+          <div className="flex justify-between items-center mb-3">
+            <p className="font-display text-base font-semibold">My leave requests</p>
+            <button className="btn-primary text-xs px-3 py-1.5" onClick={() => setShowLeaveForm(true)}>Request leave</button>
+          </div>
+          {leaveRequests.length === 0 && <p className="text-sm text-ink-muted">No leave requests yet.</p>}
+          <div className="space-y-1.5">
+            {leaveRequests.map((r) => (
+              <div key={r._id} className="flex justify-between items-center text-sm border-b border-rule py-1.5 last:border-0">
+                <span className="text-ink-muted">{formatDate(r.fromDate)} – {formatDate(r.toDate)} <span className="capitalize">({r.type})</span></span>
+                <span className={r.status === 'pending' ? 'chip-warning' : r.status === 'approved' ? 'chip-accent' : 'chip-danger'}>{r.status}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card p-5">
+          <div className="flex justify-between items-center mb-3">
+            <p className="font-display text-base font-semibold">My attendance</p>
+            <div className="flex gap-1">
+              <input type="number" className="field-input num !w-20 !py-1 text-xs" value={month} onChange={(e) => setMonth(Number(e.target.value))} />
+              <input type="number" className="field-input num !w-24 !py-1 text-xs" value={year} onChange={(e) => setYear(Number(e.target.value))} />
+            </div>
+          </div>
+          {attendance.length === 0 && <p className="text-sm text-ink-muted">No attendance recorded for {month}/{year}.</p>}
+          <div className="max-h-56 overflow-y-auto space-y-1">
+            {attendance.map((r) => (
+              <div key={r._id} className="flex justify-between text-sm border-b border-rule py-1 last:border-0">
+                <span className="text-ink-muted">{formatDate(r.date)}</span>
+                <span className={r.status === 'absent' ? 'chip-danger' : r.status === 'present' ? 'chip-accent' : 'chip-neutral'}>{r.status}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card p-5">
+          <p className="font-display text-base font-semibold mb-3">My payslips</p>
+          {payslips.length === 0 && <p className="text-sm text-ink-muted">No posted payslips yet.</p>}
+          <div className="space-y-1.5">
+            {payslips.map((p) => (
+              <div key={p.payrollRunId} className="flex justify-between text-sm border-b border-rule py-1.5 last:border-0">
+                <span className="text-ink-muted">{p.month}/{p.year}</span>
+                <span className="num font-semibold">{formatMoney(p.netPay, company?.currency)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {showLeaveForm && <MyLeaveRequestForm onClose={() => setShowLeaveForm(false)} onSaved={() => { setShowLeaveForm(false); loadAll(); }} toast={toast} />}
+    </div>
+  );
+}
+
+function MyLeaveRequestForm({ onClose, onSaved, toast }) {
+  const [form, setForm] = useState({ fromDate: '', toDate: '', type: 'annual', reason: '' });
+  const [saving, setSaving] = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.post('/hr/me/leave-requests', form);
+      toast('Leave request submitted.', 'success');
+      onSaved();
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
+      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
+        <p className="font-display text-lg mb-4">Request leave</p>
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            <div><label className="field-label">From</label><input required type="date" className="field-input" value={form.fromDate} onChange={(e) => setForm({ ...form, fromDate: e.target.value })} /></div>
+            <div><label className="field-label">To</label><input required type="date" className="field-input" value={form.toDate} onChange={(e) => setForm({ ...form, toDate: e.target.value })} /></div>
+          </div>
+          <div>
+            <label className="field-label">Type</label>
+            <select className="field-input" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
+              <option value="annual">Annual</option>
+              <option value="sick">Sick</option>
+              <option value="unpaid">Unpaid</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div><label className="field-label">Reason</label><input className="field-input" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} /></div>
+        </div>
+        <div className="flex justify-end gap-2 mt-5">
+          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Submitting…' : 'Submit'}</button>
+        </div>
+      </form>
     </div>
   );
 }
@@ -103,6 +292,7 @@ function EmployeesTab() {
   const [shiftFor, setShiftFor] = useState(null);
   const [balancesFor, setBalancesFor] = useState(null);
   const [managerFor, setManagerFor] = useState(null);
+  const [detailFor, setDetailFor] = useState(null);
 
   function load() {
     setLoading(true);
@@ -165,6 +355,7 @@ function EmployeesTab() {
                     <td className="px-5 py-3 num text-right">{formatMoney(e.salaryStructure?.basic)}</td>
                     <td className="px-5 py-3 text-right">
                       <div className="flex gap-1 justify-end">
+                        <button className="btn-ghost !text-accent" onClick={() => setDetailFor(e)}>Details</button>
                         <button className="btn-ghost !text-accent" onClick={() => setAttendanceFor(e)}>Attendance</button>
                         <button className="btn-ghost !text-accent" onClick={() => setShiftFor(e)}>Shift</button>
                         <button className="btn-ghost !text-accent" onClick={() => setManagerFor(e)}>Manager</button>
@@ -187,6 +378,168 @@ function EmployeesTab() {
       {shiftFor && <AssignShiftModal employee={shiftFor} onClose={() => setShiftFor(null)} onSaved={() => { setShiftFor(null); load(); }} />}
       {managerFor && <AssignManagerModal employee={managerFor} onClose={() => setManagerFor(null)} onSaved={() => { setManagerFor(null); load(); }} />}
       {balancesFor && <LeaveBalancesModal employee={balancesFor} onClose={() => setBalancesFor(null)} />}
+      {detailFor && <EmployeeDetailModal employee={detailFor} onClose={() => setDetailFor(null)} />}
+    </div>
+  );
+}
+
+/**
+ * Employee detail view — profile summary plus panels for documents,
+ * assigned fixed assets, and (HR-manager-only) disciplinary records. This
+ * is the HR-manager-facing counterpart to MyHrTab's self-service view;
+ * disciplinary records deliberately never appear there.
+ */
+function EmployeeDetailModal({ employee, onClose }) {
+  const [section, setSection] = useState('documents');
+  return (
+    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4 py-8 overflow-y-auto">
+      <div className="card p-5 w-full max-w-2xl max-h-[85vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <Avatar name={employee.name} active={employee.status === 'active'} />
+            <div>
+              <p className="font-display text-lg font-semibold text-ink">{employee.name}</p>
+              <p className="text-xs text-ink-muted">{employee.designation || '—'}</p>
+            </div>
+          </div>
+          <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button>
+        </div>
+        <div className="flex gap-2 mb-4 flex-wrap">
+          {[['documents', 'Documents'], ['assets', 'Assets'], ['disciplinary', 'Disciplinary records']].map(([key, label]) => (
+            <button key={key} onClick={() => setSection(key)} className={section === key ? 'pill-active' : 'pill'}>{label}</button>
+          ))}
+        </div>
+        {section === 'documents' && <DocumentsPanel entityType="Employee" entityId={employee._id} />}
+        {section === 'assets' && <EmployeeAssetsPanel employee={employee} />}
+        {section === 'disciplinary' && <EmployeeDisciplinaryPanel employee={employee} />}
+      </div>
+    </div>
+  );
+}
+
+function EmployeeAssetsPanel({ employee }) {
+  const toast = useToast();
+  const [assets, setAssets] = useState(null);
+
+  function load() {
+    api.get(`/fixed-assets?assignedToEmployeeId=${employee._id}`).then(setAssets).catch((err) => toast(err.message, 'error'));
+  }
+  useEffect(load, [employee._id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function unassign(assetId) {
+    try {
+      await api.post(`/fixed-assets/${assetId}/unassign`);
+      toast('Asset unassigned.', 'success');
+      load();
+    } catch (err) { toast(err.message, 'error'); }
+  }
+
+  if (assets === null) return <Loading />;
+  if (assets.length === 0) return <p className="text-sm text-ink-muted">No fixed assets assigned to this employee. Assign one from the Fixed Assets page.</p>;
+
+  return (
+    <div className="space-y-2">
+      {assets.map((a) => (
+        <div key={a._id} className="flex items-center justify-between border border-line-muted rounded-lg px-3 py-2">
+          <div>
+            <p className="text-sm font-medium text-ink">{a.name}</p>
+            <p className="text-xs text-ink-muted">{a.category || '—'}{a.assignedAt ? ` · assigned ${formatDate(a.assignedAt)}` : ''}</p>
+          </div>
+          <button className="btn-ghost !text-danger !px-0 text-xs" onClick={() => unassign(a._id)}>Unassign</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function EmployeeDisciplinaryPanel({ employee }) {
+  const toast = useToast();
+  const [records, setRecords] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+
+  function load() {
+    api.get(`/hr/disciplinary-cases/${employee._id}`).then(setRecords).catch((err) => toast(err.message, 'error'));
+  }
+  useEffect(load, [employee._id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function resolve(id) {
+    const resolutionNotes = window.prompt('Resolution notes (optional):') || '';
+    try {
+      await api.post(`/hr/disciplinary-cases/${id}/resolve`, { resolutionNotes });
+      toast('Marked resolved.', 'success');
+      load();
+    } catch (err) { toast(err.message, 'error'); }
+  }
+
+  if (records === null) return <Loading />;
+
+  return (
+    <div>
+      <div className="flex justify-end mb-3">
+        <button className="btn-primary text-xs px-3 py-1.5" onClick={() => setShowForm(true)}>New record</button>
+      </div>
+      {records.length === 0 && <p className="text-sm text-ink-muted">No disciplinary or grievance records for this employee.</p>}
+      <div className="space-y-2">
+        {records.map((r) => (
+          <div key={r._id} className="border border-line-muted rounded-lg px-3 py-2">
+            <div className="flex justify-between items-start">
+              <div>
+                <span className="chip-neutral capitalize mr-2">{r.type}</span>
+                <span className={r.status === 'open' ? 'chip-warning' : 'chip-accent'}>{r.status}</span>
+              </div>
+              <span className="text-xs text-ink-muted">{formatDate(r.dateRecorded)}</span>
+            </div>
+            <p className="text-sm text-ink mt-1.5">{r.description}</p>
+            {r.resolutionNotes && <p className="text-xs text-ink-muted mt-1">Resolution: {r.resolutionNotes}</p>}
+            {r.status === 'open' && <button className="btn-ghost !text-accent !px-0 text-xs mt-1.5" onClick={() => resolve(r._id)}>Mark resolved</button>}
+          </div>
+        ))}
+      </div>
+      {showForm && <DisciplinaryCaseForm employee={employee} onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />}
+    </div>
+  );
+}
+
+function DisciplinaryCaseForm({ employee, onClose, onSaved }) {
+  const toast = useToast();
+  const [form, setForm] = useState({ type: 'warning', description: '', dateRecorded: new Date().toISOString().slice(0, 10) });
+  const [saving, setSaving] = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.post('/hr/disciplinary-cases', { ...form, employeeId: employee._id });
+      toast('Record added.', 'success');
+      onSaved();
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-50 px-4">
+      <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
+        <p className="font-display text-lg mb-4">New disciplinary record — {employee.name}</p>
+        <div className="space-y-3">
+          <div>
+            <label className="field-label">Type</label>
+            <select className="field-input" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
+              <option value="warning">Warning</option>
+              <option value="grievance">Grievance</option>
+              <option value="incident">Incident</option>
+            </select>
+          </div>
+          <div><label className="field-label">Date</label><input type="date" className="field-input" value={form.dateRecorded} onChange={(e) => setForm({ ...form, dateRecorded: e.target.value })} /></div>
+          <div><label className="field-label">Description</label><textarea required className="field-input" rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
+        </div>
+        <div className="flex justify-end gap-2 mt-5">
+          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save'}</button>
+        </div>
+      </form>
     </div>
   );
 }

@@ -30,6 +30,13 @@ const grnItemSchema = new Schema({
   // a truck at the gate until QC finishes.
   qcStatus: { type: String, default: 'pending', enum: ['pending', 'passed', 'failed'] },
   qcNote: String,
+  // Lightweight, free-text putaway tracking — "which bin did this line
+  // actually get put away in", informational only. Deliberately NOT a ref
+  // into WarehouseBin/StockLevel: this app's StockLevel stays warehouse-
+  // level (see BinStock for the separate, fuller bin-level ledger some
+  // flows already use); this is just "where a human said they put it",
+  // editable after the fact, shown on the GRN detail view.
+  binLocation: { type: String, default: '' },
 }, { _id: true });
 
 const grnSchema = new Schema({

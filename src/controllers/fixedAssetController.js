@@ -13,4 +13,12 @@ async function disposeAsset(req, res) {
   try { res.json(await fixedAssetService.disposeAsset(req.params.id, { ...req.body, userId: req.auth.userId })); }
   catch (err) { res.status(400).json({ error: err.message }); }
 }
-module.exports = { registerAsset, listAssets, runDepreciation, disposeAsset };
+async function assignAsset(req, res) {
+  try { res.json(await fixedAssetService.assignAsset(req.params.id, req.body.employeeId)); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+}
+async function unassignAsset(req, res) {
+  try { res.json(await fixedAssetService.assignAsset(req.params.id, null)); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+}
+module.exports = { registerAsset, listAssets, runDepreciation, disposeAsset, assignAsset, unassignAsset };

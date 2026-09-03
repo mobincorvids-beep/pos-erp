@@ -56,4 +56,9 @@ async function releaseToStock(variantId, serialNumbers, session) {
   );
 }
 
-module.exports = { assertAvailable, markSold, releaseToStock };
+/** Lists sellable (status: in_stock) serials for this variant at this warehouse — the picker source for the POS checkout serial picker (client/src/pages/PosPage.jsx). */
+function listAvailable(variantId, warehouseId) {
+  return ProductSerial.find({ variantId, warehouseId, status: 'in_stock' }).sort({ serialNumber: 1 }).lean();
+}
+
+module.exports = { assertAvailable, markSold, releaseToStock, listAvailable };

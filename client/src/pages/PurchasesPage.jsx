@@ -128,6 +128,17 @@ function PurchaseOrderPanel({ po: initialPo, onClose, onChanged }) {
     }
   }
 
+  /** Saves the free-text putaway location for one received line — informational only, doesn't move stock. */
+  async function saveBinLocation(grnId, itemId, binLocation) {
+    try {
+      await api.put(`/purchase-orders/grn/${grnId}/items/${itemId}/bin-location`, { binLocation });
+      toast(t('purchases.binLocationSaved'), 'success');
+      loadGrns();
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  }
+
   const fullyReceived = po.items.every((l) => l.quantityReceived >= l.quantityOrdered);
 
   return (
@@ -185,16 +196,22 @@ function PurchaseOrderPanel({ po: initialPo, onClose, onChanged }) {
             </div>
             <div className="space-y-1.5">
               {grn.items.map((item) => (
-                <div key={item._id} className="flex items-center justify-between text-xs">
-                  <span className="num">{item.quantity} @ {formatMoney(item.unitCost, company?.currency)}</span>
-                  {item.qcStatus === 'pending' ? (
-                    <div className="flex gap-1">
-                      <button className="btn-ghost !text-accent !px-1.5 !py-0.5 !text-xs" onClick={() => recordQC(grn._id, item._id, true)}>{t('purchases.pass')}</button>
-                      <button className="btn-ghost !text-danger !px-1.5 !py-0.5 !text-xs" onClick={() => recordQC(grn._id, item._id, false)}>{t('purchases.fail')}</button>
-                    </div>
-                  ) : (
-                    <span className={item.qcStatus === 'passed' ? 'chip-accent' : 'chip-danger'}>{item.qcStatus}</span>
-                  )}
+                <div key={item._id} className="text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="num">{item.quantity} @ {formatMoney(item.unitCost, company?.currency)}</span>
+                    {item.qcStatus === 'pending' ? (
+                      <div className="flex gap-1">
+                        <button className="btn-ghost !text-accent !px-1.5 !py-0.5 !text-xs" onClick={() => recordQC(grn._id, item._id, true)}>{t('purchases.pass')}</button>
+                        <button className="btn-ghost !text-danger !px-1.5 !py-0.5 !text-xs" onClick={() => recordQC(grn._id, item._id, false)}>{t('purchases.fail')}</button>
+                      </div>
+                    ) : (
+                      <span className={item.qcStatus === 'passed' ? 'chip-accent' : 'chip-danger'}>{item.qcStatus}</span>
+                    )}
+                  </div>
+                  <BinLocationField
+                    value={item.binLocation}
+                    onSave={(value) => saveBinLocation(grn._id, item._id, value)}
+                  />
                 </div>
               ))}
             </div>
@@ -633,6 +650,53 @@ function PurchaseOrderForm({ onClose, onSaved }) {
           <button type="submit" disabled={saving} className="btn-primary">{saving ? t('common.saving') : t('purchases.createPOBtn')}</button>
         </div>
       </form>
+    </div>
+  );
+}
+
+/** Inline, click-to-edit free-text putaway location for one GRN line — informational only, see GoodsReceivedNote.js's binLocation comment. */
+function BinLocationField({ value, onSave }) {
+  const { t } = useTranslation();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value || '');
+  const [saving, setSaving] = useState(false);
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        className="mt-1 flex items-center gap-1 text-ink-muted hover:text-accent"
+        onClick={() => { setDraft(value || ''); setEditing(true); }}
+      >
+        <span className="text-[11px]">{t('purchases.binLocation')}:</span>
+        <span className={value ? 'font-medium text-ink' : 'italic'}>{value || t('purchases.binLocationUnset')}</span>
+      </button>
+    );
+  }
+
+  async function save() {
+    setSaving(true);
+    try {
+      await onSave(draft.trim());
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="mt-1 flex items-center gap-1.5">
+      <input
+        autoFocus
+        className="field-input !py-0.5 !text-xs flex-1"
+        placeholder={t('purchases.binLocationPlaceholder')}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false); }}
+        disabled={saving}
+      />
+      <button type="button" className="btn-ghost !text-accent !px-1.5 !py-0.5 !text-xs" disabled={saving} onClick={save}>{t('common.save')}</button>
+      <button type="button" className="btn-ghost !px-1.5 !py-0.5 !text-xs" disabled={saving} onClick={() => setEditing(false)}>{t('common.cancel')}</button>
     </div>
   );
 }

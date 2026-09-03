@@ -127,7 +127,8 @@
       "documents": "دستاویز",
       "marketingAutomation": "مارڪيٽنگ آٽوميشن",
       "knowledgeBase": "نالج بيس",
-      "reputation": "ساک"
+      "reputation": "ساک",
+      "myAttendance": "منهنجي حاضري"
     },
     "settings": "ترتيبون",
     "signOut": "سائن آئوٽ"
@@ -313,7 +314,17 @@
     "gatewayTimeout": "ادائيگي جي تصديق جو انتظار ختم ٿي ويو۔ گراهڪ کي فون چيڪ ڪرڻ لاءِ چئو ۽ ٻيهر ڪوشش ڪريو.",
     "giftCardCannotBeUsed": "هي گفٽ ڪارڊ استعمال نه ٿو ٿي سگهي.",
     "saleCompleted": "وڪرو {{invoiceNumber}} مڪمل ٿيو: {{amount}}",
-    "scanBarcode": "بار ڪوڊ اسڪين ڪريو"
+    "scanBarcode": "بار ڪوڊ اسڪين ڪريو",
+    "batchLabel": "بيچ: {{label}}",
+    "serialLabel": "سيريل: {{serial}}",
+    "serialOneUnit": "ھيءَ سيريل ٽريڪ ٿيل لائن ھڪ يونٽ آھي — ٻيو يونٽ شامل ڪرڻ لاءِ ٻيو سيريل چونڊيو.",
+    "pickBatchTitle": "بيچ چونڊيو",
+    "pickSerialTitle": "سيريل نمبر چونڊيو",
+    "noBatchesAvailable": "ھن گودام ۾ اسٽاڪ سان ڪوبه بيچ موجود ناھي.",
+    "noSerialsAvailable": "ھن گودام ۾ ڪو سيريل نمبر موجود ناھي.",
+    "expires": "ختم ٿيڻ جي تاريخ {{date}}",
+    "qtyAvailable": "{{qty}} موجود",
+    "addToCart": "ڪارٽ ۾ شامل ڪريو"
   },
   "products": {
     "title": "پراڊڪٽس",
@@ -683,7 +694,11 @@
     "landedCostRemoved": "لينڊيڊ لاڳت ڪڍي وئي.",
     "landedCostSaveError": "هڪ وضاحت ۽ منفي نه رقم داخل ڪريو.",
     "adjustedUnitCost": "ترتيب ٿيل في يونٽ لاڳت",
-    "perUnit": "/يونٽ"
+    "perUnit": "/يونٽ",
+    "binLocation": "بِن",
+    "binLocationUnset": "ھجي تائين نه رکيو ويو",
+    "binLocationPlaceholder": "مثال طور A-12-3",
+    "binLocationSaved": "بِن جي جاءِ سيڪ ٿي وئي."
   },
   "banking": {
     "title": "بينڪنگ",
@@ -900,5 +915,27 @@
     "hours": "ڪلاڪ",
     "totalCost": "ڪل قيمت:",
     "close": "بند ڪريو"
+  },
+  "myAttendance": {
+    "title": "منهنجي حاضري",
+    "subtitle": "حاضري لڳايو ۽ پنھنجي تازي حاضري جي تاريخ ڏسو.",
+    "todayStatus": "اڄ",
+    "clockedInAt": "حاضريءَ جو وقت",
+    "clockedOutAt": "وڃڻ جو وقت",
+    "clockIn": "حاضري لڳايو",
+    "clockOut": "وڃڻ داخل ڪريو",
+    "saving": "سيڪ ٿي رھيو آھي…",
+    "doneForToday": "اڄ لاءِ مڪمل",
+    "clockedIn": "حاضري لڳي وئي.",
+    "clockedOut": "وڃڻ داخل ٿي ويو.",
+    "recentHistory": "تازي تاريخ",
+    "colDate": "تاريخ",
+    "colStatus": "حالت",
+    "colIn": "اندر",
+    "colOut": "ٻاھر",
+    "noEmployeeTitle": "ڪوبه ملازم رڪارڊ لنڪ ٿيل ناھي",
+    "noEmployeeDescription": "توھان جو کائونٽ اڃا تائين ڪنھن ملازم رڪارڊ سان لنڪ نه ٿيل آھي — حاضري لڳائڻ کان اڳ ايڊمن کي ان کي لنڪ ڪرڻ لاءِ چئو.",
+    "noHistoryTitle": "اڃا تائين ڪا تاريخ ناھي",
+    "noHistoryDescription": "حاضري لڳائڻ کان پوءِ توھان جي حاضري جي تاريخ ھتي ڏيکاربي."
   }
 }

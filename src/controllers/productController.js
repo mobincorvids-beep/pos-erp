@@ -1,5 +1,6 @@
 const Product = require('../models/Product');
 const inventoryService = require('../services/inventoryService');
+const serialInventoryService = require('../services/serialInventoryService');
 const productImportService = require('../services/productImportService');
 
 async function list(req, res) {
@@ -120,6 +121,20 @@ async function listBatches(req, res) {
   res.json(await inventoryService.listProductBatches(req.companyId, req.query));
 }
 
+/** GET /products/available-batches?variantId=&warehouseId= — FEFO-sorted batches with sellable stock, for the POS checkout batch/lot picker. */
+async function listAvailableBatches(req, res) {
+  const { variantId, warehouseId } = req.query;
+  if (!variantId || !warehouseId) return res.status(400).json({ error: 'variantId and warehouseId are both required.' });
+  res.json(await inventoryService.listAvailableBatches(warehouseId, variantId));
+}
+
+/** GET /products/available-serials?variantId=&warehouseId= — in-stock serial numbers, for the POS checkout serial picker. */
+async function listAvailableSerials(req, res) {
+  const { variantId, warehouseId } = req.query;
+  if (!variantId || !warehouseId) return res.status(400).json({ error: 'variantId and warehouseId are both required.' });
+  res.json(await serialInventoryService.listAvailable(variantId, warehouseId));
+}
+
 /** POST /products/import-csv: bulk create/update products (and post opening stock) from an uploaded CSV. Never fails the whole batch on one bad row; see productImportService for the row-by-row contract. */
 async function importCsv(req, res) {
   if (!req.file) return res.status(400).json({ error: 'No CSV file was uploaded (expected multipart field "file").' });
@@ -131,4 +146,7 @@ async function importCsv(req, res) {
   }
 }
 
-module.exports = { list, create, update, deactivate, addVariant, updateVariant, deactivateVariant, findByBarcode, listBatches, importCsv };
+module.exports = {
+  list, create, update, deactivate, addVariant, updateVariant, deactivateVariant, findByBarcode,
+  listBatches, listAvailableBatches, listAvailableSerials, importCsv,
+};

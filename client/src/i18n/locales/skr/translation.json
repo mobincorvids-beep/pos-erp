@@ -127,7 +127,8 @@
       "documents": "دستاویز",
       "marketingAutomation": "مارکیٹنگ آٹومیشن",
       "knowledgeBase": "نالج بیس",
-      "reputation": "ساکھ"
+      "reputation": "ساکھ",
+      "myAttendance": "میڈی حاضری"
     },
     "settings": "ترتیباں",
     "signOut": "سائن آؤٹ"
@@ -313,7 +314,17 @@
     "gatewayTimeout": "ادائیگی دی تصدیق دا انتظار ختم تھی ویا۔ گاہک کوں فون چیک کرن کیتے چئو تے ولے کوشش کرو۔",
     "giftCardCannotBeUsed": "ایہ گفٹ کارڈ استعمال نہ تھی سڳدا۔",
     "saleCompleted": "وکرا {{invoiceNumber}} مکمل تھیا: {{amount}}",
-    "scanBarcode": "بار کوڈ سکین کرو"
+    "scanBarcode": "بار کوڈ سکین کرو",
+    "batchLabel": "بیچ: {{label}}",
+    "serialLabel": "سیریل: {{serial}}",
+    "serialOneUnit": "ایہ سیریل ٹریک تھیوں لائن اِک یونٹ ہے — ٻئی یونٹ شامل کرݨ کیتے ٻئی سیریل چُݨو۔",
+    "pickBatchTitle": "بیچ چُݨو",
+    "pickSerialTitle": "سیریل نمبر چُݨو",
+    "noBatchesAvailable": "ایں گودام وِچ اسٹاک نال کوئی بیچ دستیاب کائنی۔",
+    "noSerialsAvailable": "ایں گودام وِچ کوئی سیریل نمبر دستیاب کائنی۔",
+    "expires": "میعاد ختم {{date}}",
+    "qtyAvailable": "{{qty}} دستیاب",
+    "addToCart": "کارٹ وِچ شامل کرو"
   },
   "products": {
     "title": "پراڈکٹس",
@@ -683,7 +694,11 @@
     "landedCostRemoved": "لینڈڈ لاگت ہٹا ڈتی گئی۔",
     "landedCostSaveError": "اک وضاحت تے غیر منفی رقم درج کرو۔",
     "adjustedUnitCost": "ایڈجسٹڈ فی یونٹ لاگت",
-    "perUnit": "/یونٹ"
+    "perUnit": "/یونٹ",
+    "binLocation": "بِن",
+    "binLocationUnset": "ہݨوز تئیں کائنی رکھیا ٻیا",
+    "binLocationPlaceholder": "مثلاً A-12-3",
+    "binLocationSaved": "بِن لوکیشن سیو تھی گئی۔"
   },
   "banking": {
     "title": "بینکنگ",
@@ -900,5 +915,27 @@
     "hours": "گھنٹے",
     "totalCost": "کل لاگت:",
     "close": "بند کرو"
+  },
+  "myAttendance": {
+    "title": "میڈی حاضری",
+    "subtitle": "حاضری لاؤ تے اپݨی حالیہ حاضری دی تاریخ ݙیکھو۔",
+    "todayStatus": "اَج",
+    "clockedInAt": "حاضری دا ویلا",
+    "clockedOutAt": "وݨج دا ویلا",
+    "clockIn": "حاضری لاؤ",
+    "clockOut": "وݨج لاؤ",
+    "saving": "سیو تھی رہیا ہے…",
+    "doneForToday": "اَج کیتے مکمل",
+    "clockedIn": "حاضری لگ ڳئی۔",
+    "clockedOut": "وݨج لگ ڳئی۔",
+    "recentHistory": "حالیہ تاریخ",
+    "colDate": "تاریخ",
+    "colStatus": "حالت",
+    "colIn": "اندر",
+    "colOut": "باہر",
+    "noEmployeeTitle": "کوئی ملازم ریکارڈ نئیں جُڑیا",
+    "noEmployeeDescription": "تہاݙا اکاؤنٹ ہݨوز تئیں کسے ملازم ریکارڈ نال کائنی جُڑیا — حاضری لان تھیں پہلے ایڈمن کوں آکھو۔",
+    "noHistoryTitle": "ہݨوز تئیں کوئی تاریخ کائنی",
+    "noHistoryDescription": "حاضری لان تھیں پُڄاں تہاݙی حاضری دی تاریخ ایتھاں ݙیکھائی ڈیسی۔"
   }
 }

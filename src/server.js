@@ -5,6 +5,7 @@ validateEnv(); // refuses to start rather than run with a missing/insecure JWT_S
 const app = require('./app');
 const connectDB = require('./config/db');
 const marketingJourneyCron = require('./jobs/marketingJourneyCron');
+const lowStockCron = require('./jobs/lowStockCron');
 
 const PORT = process.env.PORT || 4000;
 
@@ -17,6 +18,7 @@ connectDB()
     // a background timer that outlives a single request/process. See
     // marketingJourneyCron.js's header comment for the full reasoning.
     marketingJourneyCron.start();
+    lowStockCron.start();
   })
   .catch((err) => {
     console.error('Failed to connect to MongoDB:', err.message);
@@ -31,6 +33,7 @@ connectDB()
 function gracefulShutdown(signal) {
   console.log(`\n${signal} received — shutting down gracefully.`);
   marketingJourneyCron.stop();
+  lowStockCron.stop();
   if (!server) return process.exit(0);
   server.close(() => {
     require('mongoose').connection.close(false).then(() => {

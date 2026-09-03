@@ -74,7 +74,7 @@ async function resolveMentions(channel, text) {
 }
 
 /** Posts a message. Mentioned members get a real in-app notification, same channel every other automated alert in this app uses, a mention isn't a second-class event. */
-async function sendMessage({ companyId, channelId, senderId, text, replyToMessageId, attachmentUrls }) {
+async function sendMessage({ companyId, channelId, senderId, text, replyToMessageId, attachmentUrls, attachments }) {
   if (!text || !text.trim()) throw new Error('Message text is required.');
   const channel = await ChatChannel.findOne({ _id: channelId, companyId });
   if (!channel) throw new Error('Channel not found.');
@@ -89,17 +89,25 @@ async function sendMessage({ companyId, channelId, senderId, text, replyToMessag
   const message = await ChatMessage.create({
     companyId, channelId, senderId, text: text.trim(), mentionedUserIds,
     replyToMessageId: replyToMessageId || null, attachmentUrls: attachmentUrls || [],
+    attachments: attachments || [],
   });
 
   channel.updatedAt = new Date();
   await channel.save();
 
-  for (const userId of mentionedUserIds) {
-    if (String(userId) === String(senderId)) continue;
-    await notificationService.notify({
-      companyId, userId, type: 'chat_mention', title: 'You were mentioned',
-      message: text.slice(0, 140), entityType: 'ChatChannel', entityId: channel._id,
-    });
+  if (mentionedUserIds.length) {
+    const User = require('../models/User');
+    const sender = await User.findById(senderId, 'name');
+    const channelLabel = channel.type === 'channel' ? `#${channel.name}` : 'a direct message';
+    for (const userId of mentionedUserIds) {
+      if (String(userId) === String(senderId)) continue;
+      await notificationService.notify({
+        companyId, userId, type: 'chat_mention',
+        title: `You were mentioned in ${channelLabel}`,
+        message: `${sender?.name || 'Someone'}: ${text.slice(0, 140)}`,
+        entityType: 'ChatChannel', entityId: channel._id,
+      });
+    }
   }
 
   return ChatMessage.findById(message._id).populate('senderId', 'name');
@@ -126,6 +134,49 @@ async function deleteMessage(messageId, userId) {
   message.text = '[deleted]';
   await message.save();
   return message;
+}
+
+/** Toggles the current user's reaction with a given emoji on a message: adds it if not already present, removes it if it is — a single idempotent call either way, same as Slack's reaction click. */
+async function toggleReaction(messageId, { emoji, userId }) {
+  if (!emoji || !emoji.trim()) throw new Error('An emoji is required.');
+  const message = await ChatMessage.findById(messageId);
+  if (!message || message.deletedAt) throw new Error('Message not found.');
+
+  const row = message.reactions.find((r) => r.emoji === emoji);
+  if (row) {
+    const already = row.userIds.some((id) => String(id) === String(userId));
+    if (already) {
+      row.userIds = row.userIds.filter((id) => String(id) !== String(userId));
+      if (row.userIds.length === 0) {
+        message.reactions = message.reactions.filter((r) => r !== row);
+      }
+    } else {
+      row.userIds.push(userId);
+    }
+  } else {
+    message.reactions.push({ emoji, userIds: [userId] });
+  }
+  await message.save();
+  return ChatMessage.findById(message._id).populate('senderId', 'name');
+}
+
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** Case-insensitive regex search across message text, scoped to channels the searching user is actually a member of (same regex-search pattern knowledgeBaseService already uses, rather than a $text index). */
+async function searchMessages(companyId, userId, q, { limit = 50 } = {}) {
+  if (!q || !q.trim()) return [];
+  const memberChannels = await ChatChannel.find({ companyId, memberIds: userId, archivedAt: null }, '_id name type');
+  const channelIds = memberChannels.map((c) => c._id);
+  const channelById = new Map(memberChannels.map((c) => [String(c._id), c]));
+
+  const re = new RegExp(escapeRegex(q.trim()), 'i');
+  const messages = await ChatMessage.find({
+    companyId, channelId: { $in: channelIds }, deletedAt: null, text: re,
+  }).sort({ createdAt: -1 }).limit(limit).populate('senderId', 'name');
+
+  return messages.map((m) => ({ ...m.toObject(), channel: channelById.get(String(m.channelId)) || null }));
 }
 
 function setPinned(messageId, pinned) {
@@ -169,4 +220,5 @@ module.exports = {
   createChannel, openDirectMessage, listChannelsForUser,
   listMessages, listThreadReplies, sendMessage, editMessage, deleteMessage,
   setPinned, listPinned, markChannelRead, addMember, removeMember,
+  toggleReaction, searchMessages,
 };

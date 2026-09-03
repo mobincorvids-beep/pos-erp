@@ -40,6 +40,7 @@ router.use('/gift-cards', require('./giftCardRoutes'));
 router.use('/appointments', require('./appointmentRoutes'));
 router.use('/crm', require('./crmRoutes'));
 router.use('/hr', require('./hrRoutes'));
+router.use('/attendance', require('./attendanceRoutes')); // self-service clock-in/out — see that file's header comment
 router.use('/fixed-assets', require('./fixedAssetRoutes'));
 router.use('/dashboard', require('./dashboardRoutes'));
 router.use('/currency', require('./currencyRoutes'));

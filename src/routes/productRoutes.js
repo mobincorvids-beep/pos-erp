@@ -18,5 +18,7 @@ router.put('/:id/variants/:variantId', controller.updateVariant);
 router.delete('/:id/variants/:variantId', controller.deactivateVariant);
 router.get('/barcode/:barcode', controller.findByBarcode);
 router.get('/batches', controller.listBatches); // ?productId=
+router.get('/available-batches', controller.listAvailableBatches); // ?variantId=&warehouseId= — FEFO-sorted, POS checkout batch picker
+router.get('/available-serials', controller.listAvailableSerials); // ?variantId=&warehouseId= — POS checkout serial picker
 
 module.exports = router;

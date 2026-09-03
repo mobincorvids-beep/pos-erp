@@ -127,7 +127,8 @@
       "documents": "اسناد",
       "marketingAutomation": "د بازارموندنې اتومات",
       "knowledgeBase": "د پوهې بنسټ",
-      "reputation": "شهرت"
+      "reputation": "شهرت",
+      "myAttendance": "زما حاضري"
     },
     "settings": "تنظیمات",
     "signOut": "وتل"
@@ -313,7 +314,17 @@
     "gatewayTimeout": "د تادیې تایید ته انتظار پای ته ورسید۔ پیرودونکي ته ووایاست چې خپل تلیفون وګوري او بیا هڅه وکړي.",
     "giftCardCannotBeUsed": "دا ډالۍ کارت نشي کارېدلی.",
     "saleCompleted": "پلور {{invoiceNumber}} بشپړ شو: {{amount}}",
-    "scanBarcode": "بارکوډ سکن کړئ"
+    "scanBarcode": "بارکوډ سکن کړئ",
+    "batchLabel": "بيچ: {{label}}",
+    "serialLabel": "سيريل: {{serial}}",
+    "serialOneUnit": "دا د سيريال تعقيب شوې کرښه يوه واحده ده — د دوهمې واحدې د اضافه کولو لپاره بله سيريال وټاکئ.",
+    "pickBatchTitle": "بيچ وټاکئ",
+    "pickSerialTitle": "د سيريال شمېره وټاکئ",
+    "noBatchesAvailable": "پدې ګدام کې د زېرمې سره هيڅ بيچ شتون نلري.",
+    "noSerialsAvailable": "پدې ګدام کې د سيريال شمېره شتون نلري.",
+    "expires": "د پای نېټه {{date}}",
+    "qtyAvailable": "{{qty}} شته",
+    "addToCart": "کارټ ته اضافه کړئ"
   },
   "products": {
     "title": "توکي",
@@ -683,7 +694,11 @@
     "landedCostRemoved": "رسېدلی لګښت لرې شو.",
     "landedCostSaveError": "یو توضیح او غیر منفي مقدار دننه کړئ.",
     "adjustedUnitCost": "سمون شوی فی واحد لګښت",
-    "perUnit": "/واحد"
+    "perUnit": "/واحد",
+    "binLocation": "بین",
+    "binLocationUnset": "لا تر اوسه نه دی ايښودل شوی",
+    "binLocationPlaceholder": "د بېلګې په توګه A-12-3",
+    "binLocationSaved": "د بین موقعیت وساتل شوه."
   },
   "banking": {
     "title": "بانکداري",
@@ -900,5 +915,27 @@
     "hours": "ساعتونه",
     "totalCost": "ټول لګښت:",
     "close": "بندول"
+  },
+  "myAttendance": {
+    "title": "زما حاضري",
+    "subtitle": "حاضري ثبت کړئ او خپله وروستۍ حاضري تاريخچه وګورئ.",
+    "todayStatus": "نن",
+    "clockedInAt": "د راتلو وخت",
+    "clockedOutAt": "د تګ وخت",
+    "clockIn": "حاضري ثبته کړئ",
+    "clockOut": "تګ ثبت کړئ",
+    "saving": "ساتل کیږي…",
+    "doneForToday": "د نن لپاره بشپړ شوی",
+    "clockedIn": "حاضري ثبته شوه.",
+    "clockedOut": "تګ ثبت شو.",
+    "recentHistory": "وروستۍ تاريخچه",
+    "colDate": "نېټه",
+    "colStatus": "حالت",
+    "colIn": "دننه",
+    "colOut": "بهر",
+    "noEmployeeTitle": "هیڅ کارمند ریکارډ نه دی نښلول شوی",
+    "noEmployeeDescription": "ستاسو حساب لا هم تر اوسه له کارمند ریکارډ سره نه دی نښلول شوی — د حاضرۍ ثبتولو دمخه له اډمین څخه وغواړئ چې دا ونښلوي.",
+    "noHistoryTitle": "لا تر اوسه هیڅ تاریخچه نشته",
+    "noHistoryDescription": "د حاضرۍ له ثبتولو وروسته به ستاسو د حاضرۍ تاریخچه دلته ښکاره شي."
   }
 }

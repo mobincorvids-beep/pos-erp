@@ -109,4 +109,10 @@ async function checkExpiringDocuments(companyId, daysAhead = 30) {
   return { notifiedCount };
 }
 
-module.exports = { createDocument, uploadVersion, listDocuments, currentVersion, requestApproval, checkExpiringDocuments };
+async function deleteDocument(documentId) {
+  const doc = await Document.findByIdAndDelete(documentId);
+  if (!doc) throw new Error('Document not found.');
+  return doc;
+}
+
+module.exports = { createDocument, uploadVersion, listDocuments, currentVersion, requestApproval, checkExpiringDocuments, deleteDocument };

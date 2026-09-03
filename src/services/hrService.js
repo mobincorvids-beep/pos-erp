@@ -14,6 +14,7 @@ const LeavePolicy = require('../models/LeavePolicy');
 const LeaveBalance = require('../models/LeaveBalance');
 const PayrollRun = require('../models/PayrollRun');
 const Account = require('../models/Account');
+const DisciplinaryCase = require('../models/DisciplinaryCase');
 const accountingService = require('./accountingService');
 const auditService = require('./auditService');
 const defaultAccountsService = require('./defaultAccountsService');
@@ -59,6 +60,18 @@ async function orgChart(companyId) {
     }
   }
   return roots;
+}
+
+/**
+ * Resolves the Employee record linked to a logged-in User for self-service
+ * views — reuses the existing Employee.userId link (set when an employee
+ * is invited/linked to a system login) rather than introducing a second,
+ * duplicate link field on User. Returns null (not a throw) when this User
+ * has no linked Employee record, so callers can render a clean "no
+ * employee record linked to your account" state instead of a 500.
+ */
+function findEmployeeByUserId(companyId, userId) {
+  return Employee.findOne({ companyId, userId });
 }
 
 // --- Attendance ------------------------------------------------------------
@@ -182,6 +195,53 @@ async function decideLeave(leaveRequestId, { approve, userId }) {
   }
 
   return leave;
+}
+
+/**
+ * True when `userId`'s linked Employee record is the direct manager of
+ * `employeeId` — the carve-out that lets a manager approve/reject their
+ * own reports' leave requests without holding HR_MANAGE. Uses the
+ * managerId edge added for the org chart, so this needs no new data.
+ */
+async function isManagerOfEmployee(companyId, userId, employeeId) {
+  const employee = await Employee.findOne({ _id: employeeId, companyId });
+  if (!employee || !employee.managerId) return false;
+  const manager = await Employee.findOne({ _id: employee.managerId, companyId });
+  return !!(manager && manager.userId && String(manager.userId) === String(userId));
+}
+
+/** Leave requests, still pending, whose employee directly reports to userId's linked Employee — the "pending my approval" list for a manager. */
+async function pendingApprovalForManager(companyId, userId) {
+  const manager = await findEmployeeByUserId(companyId, userId);
+  if (!manager) return [];
+  const reports = await Employee.find({ companyId, managerId: manager._id }).select('_id');
+  if (reports.length === 0) return [];
+  return LeaveRequest.find({ companyId, status: 'pending', employeeId: { $in: reports.map((r) => r._id) } })
+    .populate('employeeId', 'name')
+    .sort({ createdAt: -1 });
+}
+
+// --- Disciplinary / grievance records --------------------------------------
+
+function createDisciplinaryCase({ companyId, employeeId, type, description, dateRecorded, recordedByUserId }) {
+  if (!employeeId) throw new Error('employeeId is required.');
+  if (!description) throw new Error('description is required.');
+  return DisciplinaryCase.create({ companyId, employeeId, type, description, dateRecorded: dateRecorded || new Date(), recordedByUserId });
+}
+
+function listDisciplinaryCases(companyId, employeeId) {
+  return DisciplinaryCase.find({ companyId, employeeId }).sort({ dateRecorded: -1 });
+}
+
+async function resolveDisciplinaryCase(caseId, { resolutionNotes }) {
+  const record = await DisciplinaryCase.findById(caseId);
+  if (!record) throw new Error('Disciplinary record not found.');
+  if (record.status === 'resolved') throw new Error('Already resolved.');
+  record.status = 'resolved';
+  record.resolutionNotes = resolutionNotes;
+  record.resolvedAt = new Date();
+  await record.save();
+  return record;
 }
 
 // --- Payroll ------------------------------------------------------------------
@@ -310,10 +370,87 @@ async function postPayroll(payrollRunId, { paymentAccountId, userId }) {
 }
 
 module.exports = {
-  createEmployee, terminateEmployee, setManager, orgChart,
+  createEmployee, terminateEmployee, setManager, orgChart, findEmployeeByUserId,
   markAttendance, attendanceForMonth,
   createShift, listShifts, assignShiftToEmployee,
   createLeavePolicy, listLeavePolicies, initializeLeaveBalance, getLeaveBalances,
-  requestLeave, decideLeave,
+  requestLeave, decideLeave, isManagerOfEmployee, pendingApprovalForManager,
+  createDisciplinaryCase, listDisciplinaryCases, resolveDisciplinaryCase,
   generatePayroll, addBonusToDraftPayroll, postPayroll,
+  clockIn, clockOut, todayAttendance,
 };
+
+// --- Self-service clock-in/out (TimeTrex-style) ---------------------------
+// Additive block, appended at the end of the file on purpose: hrService.js
+// is being touched by concurrent work, so everything below only ADDS new
+// exported functions rather than editing anything above, to minimize merge
+// collisions. Reuses markAttendance()/Employee.findOne — no new model.
+
+function startOfDay(date = new Date()) {
+  const day = new Date(date);
+  day.setHours(0, 0, 0, 0);
+  return day;
+}
+
+/**
+ * Self-service clock-in for the Employee linked to this logged-in User
+ * (Employee.userId, same link findEmployeeByUserId already resolves).
+ * Upserts today's Attendance row to status 'present' with checkIn = now —
+ * safe to call once; a second call the same day is rejected rather than
+ * silently overwriting an earlier clock-in, so a clock-in always means a
+ * genuine new shift start.
+ */
+async function clockIn(companyId, userId) {
+  const employee = await findEmployeeByUserId(companyId, userId);
+  if (!employee) throw new Error('No employee record is linked to your account — ask an admin to link one.');
+
+  const day = startOfDay();
+  const existing = await Attendance.findOne({ employeeId: employee._id, date: day });
+  if (existing?.checkIn) throw new Error('Already clocked in today.');
+
+  return markAttendance({
+    companyId, employeeId: employee._id, date: day, status: 'present',
+    checkIn: new Date(), checkOut: existing?.checkOut || null, note: existing?.note,
+  });
+}
+
+/**
+ * Self-service clock-out — requires an open clock-in for today first (you
+ * can't clock out of a shift you never clocked into), and rejects a second
+ * clock-out the same day for the same reason clockIn() rejects a second
+ * clock-in.
+ */
+async function clockOut(companyId, userId) {
+  const employee = await findEmployeeByUserId(companyId, userId);
+  if (!employee) throw new Error('No employee record is linked to your account — ask an admin to link one.');
+
+  const day = startOfDay();
+  const existing = await Attendance.findOne({ employeeId: employee._id, date: day });
+  if (!existing?.checkIn) throw new Error('You need to clock in before you can clock out.');
+  if (existing.checkOut) throw new Error('Already clocked out today.');
+
+  return markAttendance({
+    companyId, employeeId: employee._id, date: day, status: existing.status,
+    checkIn: existing.checkIn, checkOut: new Date(), note: existing.note,
+  });
+}
+
+/**
+ * Self-service status: today's Attendance row (or null, if not yet clocked
+ * in) plus the most recent history, for the "today's status + recent
+ * history" self-service widget.
+ */
+async function todayAttendance(companyId, userId, { historyDays = 14 } = {}) {
+  const employee = await findEmployeeByUserId(companyId, userId);
+  if (!employee) return { employee: null, today: null, history: [] };
+
+  const day = startOfDay();
+  const from = new Date(day.getTime() - historyDays * 24 * 60 * 60 * 1000);
+
+  const [today, history] = await Promise.all([
+    Attendance.findOne({ employeeId: employee._id, date: day }),
+    Attendance.find({ employeeId: employee._id, date: { $gte: from, $lte: day } }).sort({ date: -1 }),
+  ]);
+
+  return { employee, today, history };
+}

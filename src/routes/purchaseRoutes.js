@@ -42,6 +42,7 @@ router.post('/:id/decide', requirePermission(PURCHASE_CREATE), body('approve').i
 router.post('/:id/receive', requirePermission(PURCHASE_RECEIVE), receiveValidation, validate, controller.receive);
 router.get('/:id/grns', requirePermission(PURCHASE_RECEIVE), controller.listGRNs);
 router.post('/grn/:grnId/items/:itemId/qc', requirePermission(PURCHASE_RECEIVE), body('passed').isBoolean().withMessage('passed must be true or false.'), validate, controller.recordQC);
+router.put('/grn/:grnId/items/:itemId/bin-location', requirePermission(PURCHASE_RECEIVE), body('binLocation').optional().isString().withMessage('binLocation must be a string.'), validate, controller.setBinLocation);
 
 const landedCostValidation = [
   body('description').isString().trim().notEmpty().withMessage('description is required.'),

@@ -127,7 +127,8 @@
       "documents": "اسناد",
       "marketingAutomation": "د بازارگری اتومات",
       "knowledgeBase": "د پوهی بنیاد",
-      "reputation": "شهرت"
+      "reputation": "شهرت",
+      "myAttendance": "من حاضری"
     },
     "settings": "تنظیمات",
     "signOut": "درکپتگ"
@@ -313,7 +314,17 @@
     "gatewayTimeout": "ادائیگی ئے تاییدا چودگ تمام بوت۔ گیشترین ءَ ٹگرد کہ موبایل وانگت و دوبارہ کوشش کنت۔",
     "giftCardCannotBeUsed": "ایش تحفہ کارت کارمرزی نہ بیت۔",
     "saleCompleted": "روچی {{invoiceNumber}} تمام بوت: {{amount}}",
-    "scanBarcode": "بارکوڈ اسکین کن"
+    "scanBarcode": "بارکوڈ اسکین کن",
+    "batchLabel": "بیچ: {{label}}",
+    "serialLabel": "سیریل: {{serial}}",
+    "serialOneUnit": "ایں سیریل ٹریک بوتگین لائن یک یونٹ انت — دگہ یونٹ ءِ ھاماتگ ءِ واستہ دگہ سیریل انتخاب بکن۔",
+    "pickBatchTitle": "بیچ انتخاب بکن",
+    "pickSerialTitle": "سیریل نمبر انتخاب بکن",
+    "noBatchesAvailable": "ایں انبارءَ اندا ذخیرہ ءِ ساتھ ھیچ بیچ دستیاب نیست۔",
+    "noSerialsAvailable": "ایں انبارءَ اندا ھیچ سیریل نمبر دستیاب نیست۔",
+    "expires": "مۆعد ءِ تمام بوگ {{date}}",
+    "qtyAvailable": "{{qty}} دستیاب",
+    "addToCart": "کارٹ ءَ ھاماتگ"
   },
   "products": {
     "title": "توکی",
@@ -683,7 +694,11 @@
     "landedCostRemoved": "رسیدگ لگت لاهت بوته.",
     "landedCostSaveError": "یک تشریح او غیر منفی مقدار دننه کن.",
     "adjustedUnitCost": "سمون بوته فی واحد لگت",
-    "perUnit": "/واحد"
+    "perUnit": "/واحد",
+    "binLocation": "بِن",
+    "binLocationUnset": "تا اے وہد نہ گنڈاگ بوتگ",
+    "binLocationPlaceholder": "مثال کہ A-12-3",
+    "binLocationSaved": "بِن ءِ جاگہ سیو بوت۔"
   },
   "banking": {
     "title": "بینکداری",
@@ -900,5 +915,27 @@
     "hours": "ساعت",
     "totalCost": "دگاریں قیمت:",
     "close": "بند کن"
+  },
+  "myAttendance": {
+    "title": "من حاضری",
+    "subtitle": "حاضری بدئیت و وتی تازہ حاضری ءِ تاریخ ءَ نگر کن۔",
+    "todayStatus": "اَسک",
+    "clockedInAt": "حاضری ءِ وہد",
+    "clockedOutAt": "شتگ ءِ وہد",
+    "clockIn": "حاضری بدئیت",
+    "clockOut": "شتگ بدئیت",
+    "saving": "سیو بوگ راجت…",
+    "doneForToday": "اَسک ءِ واستہ تمام بوتگ",
+    "clockedIn": "حاضری بوت۔",
+    "clockedOut": "شتگ بوت۔",
+    "recentHistory": "تازہ تاریخ",
+    "colDate": "تاریخ",
+    "colStatus": "حالت",
+    "colIn": "اندرا",
+    "colOut": "برا",
+    "noEmployeeTitle": "ھیچ کارمند ریکارد پیوستہ نیست",
+    "noEmployeeDescription": "تئی حساب تا اے وہد ھیچ کارمند ریکارد ءَ پیوست نیست — حاضری ءِ بدئیت ءَ زیاتر ایڈمن ءَ ھما پیوست کنگ ءِ واستہ بگوش۔",
+    "noHistoryTitle": "تا اے وہد ھیچ تاریخ نیست",
+    "noHistoryDescription": "حاضری ءِ بدئیت ءِ پدا تئی حاضری ءِ تاریخ اِتا ءَ نمایاں بیت۔"
   }
 }

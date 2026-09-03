@@ -37,6 +37,12 @@ const fixedAssetSchema = new Schema({
   disposalDate: { type: Date, default: null },
   disposalProceeds: { type: Number, default: null },
   disposalGainLoss: { type: Number, default: null },
+
+  // Who currently has custody of this asset (a laptop, a vehicle, a phone).
+  // null means unassigned/in the pool. Nullable and optional so every
+  // existing FixedAsset document is unaffected until someone assigns it.
+  assignedToEmployeeId: { type: Schema.Types.ObjectId, ref: 'Employee', default: null },
+  assignedAt: { type: Date, default: null },
 }, { timestamps: true });
 
 module.exports = model('FixedAsset', fixedAssetSchema);

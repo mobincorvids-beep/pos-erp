@@ -16,7 +16,14 @@ export function PosPage() {
   const [products, setProducts] = useState([]);
   const [search, setSearch] = useState('');
   const [scannerOpen, setScannerOpen] = useState(false);
-  const [cart, setCart] = useState([]); // [{ productId, variantId, name, unitPrice, quantity, taxRate }]
+  // [{ lineKey, productId, variantId, name, unitPrice, quantity, taxRate, batchId?, batchLabel?, serialNumbers? }]
+  // lineKey (not just variantId) identifies a cart row so a batch- or
+  // serial-tracked product can have several distinct lines at once — one
+  // per batch/serial picked — instead of merging unrelated lots/units.
+  const [cart, setCart] = useState([]);
+  // Batch (FEFO) or serial picker currently open at add-to-cart time, or
+  // null. { mode: 'batch' | 'serial', product, variant }
+  const [picker, setPicker] = useState(null);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [checkingOut, setCheckingOut] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('cash');
@@ -70,22 +77,45 @@ export function PosPage() {
     return products.filter((p) => p.name.toLowerCase().includes(q) || p.sku?.toLowerCase().includes(q) || p.barcode?.includes(q));
   }, [products, search]);
 
+  /** Adds a plain (untracked) line, or bumps its quantity if already in the cart. Shared by the two tracked-item pickers below and the untracked fast path. */
+  function pushCartLine({ product, variant, batchId, batchLabel, serialNumbers }) {
+    const lineKey = `${variant._id}|${batchId || ''}|${(serialNumbers || []).join(',')}`;
+    setCart((prev) => {
+      const existing = prev.find((line) => line.lineKey === lineKey);
+      if (existing) {
+        return prev.map((line) => line.lineKey === lineKey ? { ...line, quantity: line.quantity + 1 } : line);
+      }
+      return [...prev, {
+        lineKey, productId: product._id, variantId: variant._id, name: product.name,
+        unitPrice: variant.sellingPrice ?? product.sellingPrice, quantity: 1, taxRate: 0,
+        batchId: batchId || null, batchLabel: batchLabel || null, serialNumbers: serialNumbers || undefined,
+      }];
+    });
+  }
+
+  /**
+   * FEFO batch/lot picker and serial picker at add-to-cart time — for a
+   * trackExpiry product this opens a batch picker (server already sorts it
+   * First-Expiry-First-Out, see inventoryService.listAvailableBatches);
+   * for a trackSerial product it opens a serial picker and a serial MUST
+   * be chosen before the item is added (no "just add it" fallback). A
+   * product tracking neither is added straight away, exactly as before.
+   */
   function addToCart(product) {
     const variant = product.variants?.[0];
     if (!variant) {
       toast(t('pos.noSellableVariant'), 'error');
       return;
     }
-    setCart((prev) => {
-      const existing = prev.find((line) => line.variantId === variant._id);
-      if (existing) {
-        return prev.map((line) => line.variantId === variant._id ? { ...line, quantity: line.quantity + 1 } : line);
+    if (product.trackExpiry || product.trackSerial) {
+      if (!context?.warehouseId) {
+        toast(t('pos.setupBeforeCheckout'), 'error');
+        return;
       }
-      return [...prev, {
-        productId: product._id, variantId: variant._id, name: product.name,
-        unitPrice: variant.sellingPrice ?? product.sellingPrice, quantity: 1, taxRate: 0,
-      }];
-    });
+      setPicker({ mode: product.trackSerial ? 'serial' : 'batch', product, variant });
+      return;
+    }
+    pushCartLine({ product, variant });
   }
 
   // Reuses the exact same lookup a typed/keyboard-wedge barcode already
@@ -105,16 +135,16 @@ export function PosPage() {
     toast(match.name, 'success');
   }
 
-  function updateQty(variantId, quantity) {
+  function updateQty(lineKey, quantity) {
     if (quantity <= 0) {
-      setCart((prev) => prev.filter((line) => line.variantId !== variantId));
+      setCart((prev) => prev.filter((line) => line.lineKey !== lineKey));
       return;
     }
-    setCart((prev) => prev.map((line) => line.variantId === variantId ? { ...line, quantity } : line));
+    setCart((prev) => prev.map((line) => line.lineKey === lineKey ? { ...line, quantity } : line));
   }
 
-  function removeLine(variantId) {
-    setCart((prev) => prev.filter((line) => line.variantId !== variantId));
+  function removeLine(lineKey) {
+    setCart((prev) => prev.filter((line) => line.lineKey !== lineKey));
   }
 
   function clearCart() {
@@ -177,7 +207,11 @@ export function PosPage() {
       branchId: context.branchId,
       warehouseId: context.warehouseId,
       posTerminalId: context.posTerminalId || undefined,
-      items: cart.map((l) => ({ productId: l.productId, variantId: l.variantId, quantity: l.quantity, unitPrice: l.unitPrice, taxRate: l.taxRate })),
+      items: cart.map((l) => ({
+        productId: l.productId, variantId: l.variantId, quantity: l.quantity, unitPrice: l.unitPrice, taxRate: l.taxRate,
+        ...(l.batchId ? { batchId: l.batchId } : {}),
+        ...(l.serialNumbers?.length ? { serialNumbers: l.serialNumbers } : {}),
+      })),
       payments: [{ paymentAccountId: context.cashAccountId, method: paymentMethod, amount: total }],
       couponCode: couponResult ? couponCode.toUpperCase().trim() : undefined,
       ...(showCurrency && saleCurrency ? { currency: saleCurrency } : {}),
@@ -386,31 +420,48 @@ export function PosPage() {
           </p>
         ) : (
           <div className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col gap-2.5">
-            {cart.map((line) => (
-              <div key={line.variantId} className="card !shadow-none p-3 hover:border-accent/40 transition-colors">
-                <div className="flex justify-between items-start gap-2 mb-1.5">
-                  <p className="text-sm font-semibold text-ink leading-tight pr-2 rtl:pr-0 rtl:pl-2">{line.name}</p>
-                  <span className="num text-sm font-bold text-ink shrink-0">{formatMoney(line.unitPrice * line.quantity, company?.currency)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-ink-muted">{formatMoney(line.unitPrice, company?.currency)} {t('pos.each')}</span>
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center bg-surface-sunken rounded-md border border-rule">
-                      <button
-                        className="w-6 h-6 flex items-center justify-center text-ink-muted hover:text-ink transition-colors"
-                        onClick={() => updateQty(line.variantId, line.quantity - 1)}
-                      >−</button>
-                      <span className="num w-7 text-center text-xs font-semibold text-ink">{formatQty(line.quantity)}</span>
-                      <button
-                        className="w-6 h-6 flex items-center justify-center text-ink-muted hover:text-ink transition-colors"
-                        onClick={() => updateQty(line.variantId, line.quantity + 1)}
-                      >+</button>
+            {cart.map((line) => {
+              // Serial-tracked lines are locked to one unit per line — a
+              // second unit needs its own serial picked separately, so "+"
+              // is disabled rather than silently bumping quantity with no
+              // serial behind it.
+              const isSerialLine = Boolean(line.serialNumbers?.length);
+              return (
+                <div key={line.lineKey} className="card !shadow-none p-3 hover:border-accent/40 transition-colors">
+                  <div className="flex justify-between items-start gap-2 mb-1.5">
+                    <div className="min-w-0 pr-2 rtl:pr-0 rtl:pl-2">
+                      <p className="text-sm font-semibold text-ink leading-tight">{line.name}</p>
+                      {line.batchLabel && (
+                        <p className="text-[11px] text-ink-muted mt-0.5">{t('pos.batchLabel', { label: line.batchLabel })}</p>
+                      )}
+                      {isSerialLine && (
+                        <p className="text-[11px] text-ink-muted mt-0.5 num">{t('pos.serialLabel', { serial: line.serialNumbers[0] })}</p>
+                      )}
                     </div>
-                    <button className="text-xs font-semibold text-danger hover:underline" onClick={() => removeLine(line.variantId)}>{t('pos.remove')}</button>
+                    <span className="num text-sm font-bold text-ink shrink-0">{formatMoney(line.unitPrice * line.quantity, company?.currency)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-ink-muted">{formatMoney(line.unitPrice, company?.currency)} {t('pos.each')}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center bg-surface-sunken rounded-md border border-rule">
+                        <button
+                          className="w-6 h-6 flex items-center justify-center text-ink-muted hover:text-ink transition-colors"
+                          onClick={() => updateQty(line.lineKey, line.quantity - 1)}
+                        >−</button>
+                        <span className="num w-7 text-center text-xs font-semibold text-ink">{formatQty(line.quantity)}</span>
+                        <button
+                          className="w-6 h-6 flex items-center justify-center text-ink-muted hover:text-ink transition-colors disabled:opacity-30"
+                          disabled={isSerialLine}
+                          title={isSerialLine ? t('pos.serialOneUnit') : undefined}
+                          onClick={() => updateQty(line.lineKey, line.quantity + 1)}
+                        >+</button>
+                      </div>
+                      <button className="text-xs font-semibold text-danger hover:underline" onClick={() => removeLine(line.lineKey)}>{t('pos.remove')}</button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -578,6 +629,112 @@ export function PosPage() {
             </span>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="rtl:rotate-180"><path d="M5 12h14M13 5l7 7-7 7" /></svg>
           </button>
+        </div>
+      </div>
+
+      {picker && (
+        <BatchOrSerialPicker
+          mode={picker.mode}
+          product={picker.product}
+          variant={picker.variant}
+          warehouseId={context?.warehouseId}
+          onClose={() => setPicker(null)}
+          onPick={(selection) => {
+            pushCartLine({ product: picker.product, variant: picker.variant, ...selection });
+            setPicker(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Add-to-cart picker for FEFO batches (product.trackExpiry) and serial
+ * numbers (product.trackSerial) — mode picks which. Batch mode pre-selects
+ * the earliest-expiring batch (server already sorts FEFO, see
+ * inventoryService.listAvailableBatches) but lets the cashier override it;
+ * serial mode requires an explicit pick, there's no default since two
+ * serials are never interchangeable.
+ */
+function BatchOrSerialPicker({ mode, product, variant, warehouseId, onClose, onPick }) {
+  const { t } = useTranslation();
+  const toast = useToast();
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedId, setSelectedId] = useState('');
+
+  useEffect(() => {
+    const endpoint = mode === 'serial' ? '/products/available-serials' : '/products/available-batches';
+    setLoading(true);
+    api.get(`${endpoint}?variantId=${variant._id}&warehouseId=${warehouseId}`)
+      .then((data) => {
+        setRows(data);
+        // FEFO default: the first row is already the earliest-expiring
+        // batch server-side; nothing is pre-selected for serials.
+        if (mode === 'batch' && data.length > 0) setSelectedId(data[0]._id);
+      })
+      .catch((err) => toast(err.message, 'error'))
+      .finally(() => setLoading(false));
+  }, [mode, variant._id, warehouseId]);
+
+  function confirm() {
+    if (!selectedId) return;
+    if (mode === 'serial') {
+      const row = rows.find((r) => r._id === selectedId);
+      onPick({ serialNumbers: [row.serialNumber] });
+    } else {
+      const row = rows.find((r) => r._id === selectedId);
+      const label = row.batchNumber + (row.expiryDate ? ` · ${new Date(row.expiryDate).toLocaleDateString()}` : '');
+      onPick({ batchId: row._id, batchLabel: label });
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4" onClick={onClose}>
+      <div className="card p-5 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+        <p className="font-display text-lg mb-1">
+          {mode === 'serial' ? t('pos.pickSerialTitle') : t('pos.pickBatchTitle')}
+        </p>
+        <p className="text-xs text-ink-muted mb-4">{product.name}</p>
+
+        {loading && <p className="text-sm text-ink-muted">{t('common.loading')}</p>}
+
+        {!loading && rows.length === 0 && (
+          <p className="text-sm text-danger">{mode === 'serial' ? t('pos.noSerialsAvailable') : t('pos.noBatchesAvailable')}</p>
+        )}
+
+        {!loading && rows.length > 0 && (
+          <div className="space-y-1.5 max-h-64 overflow-y-auto mb-4">
+            {rows.map((row) => (
+              <label
+                key={row._id}
+                className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg border cursor-pointer text-sm transition-colors ${selectedId === row._id ? 'border-accent bg-accent-soft' : 'border-rule hover:border-accent/40'}`}
+              >
+                <span className="flex items-center gap-2">
+                  <input
+                    type="radio" name="picker-row" className="accent-current"
+                    checked={selectedId === row._id}
+                    onChange={() => setSelectedId(row._id)}
+                  />
+                  {mode === 'serial' ? (
+                    <span className="num">{row.serialNumber}</span>
+                  ) : (
+                    <span>
+                      <span className="font-medium">{row.batchNumber}</span>
+                      {row.expiryDate && <span className="text-ink-muted num ml-1.5">{t('pos.expires', { date: new Date(row.expiryDate).toLocaleDateString() })}</span>}
+                    </span>
+                  )}
+                </span>
+                {mode === 'batch' && <span className="num text-xs text-ink-muted shrink-0">{t('pos.qtyAvailable', { qty: row.availableQuantity })}</span>}
+              </label>
+            ))}
+          </div>
+        )}
+
+        <div className="flex gap-2 justify-end">
+          <button className="btn-secondary" onClick={onClose}>{t('common.cancel')}</button>
+          <button className="btn-primary" disabled={!selectedId} onClick={confirm}>{t('pos.addToCart')}</button>
         </div>
       </div>
     </div>

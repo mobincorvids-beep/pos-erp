@@ -84,4 +84,14 @@ async function requestApproval(req, res) {
 async function checkExpiring(req, res) {
   res.json(await documentService.checkExpiringDocuments(req.companyId, req.query.daysAhead ? Number(req.query.daysAhead) : undefined));
 }
-module.exports = { createDocument, uploadVersion, listDocuments, requestApproval, checkExpiring };
+async function deleteDocument(req, res) {
+  try {
+    const existing = await Document.findById(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Document not found.' });
+    const requiredPermission = VENDOR_COMPANY_ENTITY_TYPES.includes(existing.entityType) ? VENDOR_COMPANY_DOCUMENTS_MANAGE : DOCUMENTS_MANAGE;
+    if (!hasPermission(req, requiredPermission)) return res.status(403).json({ error: `Missing permission: ${requiredPermission}` });
+    await documentService.deleteDocument(req.params.id);
+    res.status(204).end();
+  } catch (err) { res.status(400).json({ error: err.message }); }
+}
+module.exports = { createDocument, uploadVersion, listDocuments, requestApproval, checkExpiring, deleteDocument };

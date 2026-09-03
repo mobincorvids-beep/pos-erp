@@ -129,7 +129,20 @@ async function recordQC(req, res) {
   }
 }
 
+/** Records/edits where a received line was physically put away — informational only, doesn't move stock (see GoodsReceivedNote.js's binLocation comment). */
+async function setBinLocation(req, res) {
+  const grn = await GoodsReceivedNote.findOne({ _id: req.params.grnId, companyId: req.companyId });
+  if (!grn) return res.status(404).json({ error: 'GRN not found.' });
+
+  const item = grn.items.id(req.params.itemId);
+  if (!item) return res.status(404).json({ error: 'GRN line not found.' });
+
+  item.binLocation = (req.body.binLocation || '').trim();
+  await grn.save();
+  res.json(grn);
+}
+
 module.exports = {
   createOrder, createOrderFromAlternateUnits, receive, list, get, decide, listGRNs, recordQC,
-  addLandedCost, updateLandedCost, removeLandedCost,
+  addLandedCost, updateLandedCost, removeLandedCost, setBinLocation,
 };

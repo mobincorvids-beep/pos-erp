@@ -16,9 +16,12 @@ router.get('/org-chart', controller.orgChart);
 router.post('/attendance', requirePermission(HR_MANAGE), controller.markAttendance); // { employeeId, date, status, checkIn?, checkOut?, note? }
 router.get('/attendance/:employeeId', controller.attendanceForMonth); // ?month=&year=
 
-router.get('/leave-requests', controller.listLeaveRequests); // ?status=
+router.get('/leave-requests', controller.listLeaveRequests); // ?status=  or ?pendingMyApproval=true (a manager's own team's pending requests)
 router.post('/leave-requests', controller.requestLeave);      // an employee/their manager requesting — left open like expense submission
-router.post('/leave-requests/:id/decide', requirePermission(HR_MANAGE), controller.decideLeave); // { approve }
+// Not gated by requirePermission(HR_MANAGE) at the router level: an HR
+// manager OR the requester's own direct manager can decide — the
+// controller checks that carve-out itself (hrService.isManagerOfEmployee).
+router.post('/leave-requests/:id/decide', controller.decideLeave); // { approve }
 
 router.get('/shifts', controller.listShifts);
 router.post('/shifts', requirePermission(HR_MANAGE),
@@ -46,5 +49,26 @@ router.post('/payroll-runs', requirePermission(HR_MANAGE),
 router.post('/payroll-runs/:id/post', requirePermission(PAYROLL_POST),
   body('paymentAccountId').isString().notEmpty().withMessage('paymentAccountId is required.'),
   validate, controller.postPayroll); // separate, stricter permission: generating a draft isn't the same as authorizing money to leave the account
+
+// --- Self-service ("My HR") --------------------------------------------
+// Open to ANY authenticated user (no HR_MANAGE gate) — each endpoint
+// resolves the caller's own Employee record server-side (Employee.userId)
+// and only ever returns/acts on that record. A user with no linked
+// Employee gets a clean 404, not someone else's data.
+router.get('/me', controller.myEmployee);
+router.get('/me/leave-balances', controller.myLeaveBalances);
+router.get('/me/attendance', controller.myAttendance); // ?month=&year=
+router.get('/me/leave-requests', controller.myLeaveRequests);
+router.post('/me/leave-requests', controller.myRequestLeave); // { fromDate, toDate, type, reason, leavePolicyId }
+router.get('/me/payslips', controller.myPayslips);
+
+// --- Disciplinary / grievance records (HR_MANAGE only) ------------------
+router.get('/disciplinary-cases/:employeeId', requirePermission(HR_MANAGE), controller.listDisciplinaryCases);
+router.post('/disciplinary-cases', requirePermission(HR_MANAGE),
+  body('employeeId').isString().notEmpty().withMessage('employeeId is required.'),
+  body('type').isIn(['warning', 'grievance', 'incident']).withMessage('type must be warning, grievance, or incident.'),
+  body('description').isString().trim().notEmpty().withMessage('description is required.'),
+  validate, controller.createDisciplinaryCase);
+router.post('/disciplinary-cases/:id/resolve', requirePermission(HR_MANAGE), controller.resolveDisciplinaryCase);
 
 module.exports = router;

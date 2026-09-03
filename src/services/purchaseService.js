@@ -348,6 +348,7 @@ async function receiveGoods(input) {
               landedCostPerUnit: perUnitLandedCost,
               effectiveUnitCost: i.unitCost + perUnitLandedCost,
               serialNumbers: i.serialNumbers,
+              binLocation: (i.binLocation || '').trim(),
             };
           }),
           userId,

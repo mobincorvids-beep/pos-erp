@@ -16,6 +16,13 @@ const stockLevelSchema = new Schema({
   // still physically there, just spoken for). See "Reserved stock" in the
   // proposal's inventory list.
   reservedQuantity: { type: Number, default: 0 },
+  // Last time the hourly low-stock cron (src/jobs/lowStockCron.js) sent an
+  // alert for THIS stock line — separate from inventoryService's own
+  // per-sale low-stock notification (which dedupes against an unread
+  // Notification), so the cron can apply its own "once per product per
+  // day" rule without depending on whether someone has read/cleared a
+  // notification.
+  lastAlertedAt: { type: Date, default: null },
 }, { timestamps: true });
 
 stockLevelSchema.index(

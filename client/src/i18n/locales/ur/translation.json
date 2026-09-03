@@ -127,7 +127,8 @@
       "documents": "دستاویزات",
       "marketingAutomation": "مارکیٹنگ آٹومیشن",
       "knowledgeBase": "نالج بیس",
-      "reputation": "ساکھ"
+      "reputation": "ساکھ",
+      "myAttendance": "میری حاضری"
     },
     "settings": "ترتیبات",
     "signOut": "سائن آؤٹ"
@@ -313,7 +314,17 @@
     "gatewayTimeout": "ادائیگی کی تصدیق کا انتظار ختم ہو گیا۔ گاہک سے فون چیک کرنے کو کہیں اور دوبارہ کوشش کریں۔",
     "giftCardCannotBeUsed": "یہ گفٹ کارڈ استعمال نہیں کیا جا سکتا۔",
     "saleCompleted": "فروخت {{invoiceNumber}} مکمل ہوئی: {{amount}}",
-    "scanBarcode": "بار کوڈ اسکین کریں"
+    "scanBarcode": "بار کوڈ اسکین کریں",
+    "batchLabel": "بیچ: {{label}}",
+    "serialLabel": "سیریل: {{serial}}",
+    "serialOneUnit": "یہ سیریل ٹریک شدہ لائن ایک یونٹ ہے — دوسری یونٹ شامل کرنے کے لیے کوئی اور سیریل منتخب کریں۔",
+    "pickBatchTitle": "بیچ منتخب کریں",
+    "pickSerialTitle": "سیریل نمبر منتخب کریں",
+    "noBatchesAvailable": "اس گودام میں اسٹاک کے ساتھ کوئی بیچ دستیاب نہیں۔",
+    "noSerialsAvailable": "اس گودام میں کوئی سیریل نمبر دستیاب نہیں۔",
+    "expires": "میعاد ختم {{date}}",
+    "qtyAvailable": "{{qty}} دستیاب",
+    "addToCart": "کارٹ میں شامل کریں"
   },
   "products": {
     "title": "پروڈکٹس",
@@ -683,7 +694,11 @@
     "landedCostRemoved": "لینڈڈ لاگت حذف کر دی گئی۔",
     "landedCostSaveError": "ایک تفصیل اور غیر منفی رقم درج کریں۔",
     "adjustedUnitCost": "ایڈجسٹڈ فی یونٹ لاگت",
-    "perUnit": "/یونٹ"
+    "perUnit": "/یونٹ",
+    "binLocation": "بن",
+    "binLocationUnset": "ابھی تک نہیں رکھا گیا",
+    "binLocationPlaceholder": "مثلاً A-12-3",
+    "binLocationSaved": "بن لوکیشن محفوظ کر دی گئی۔"
   },
   "banking": {
     "title": "بینکنگ",
@@ -900,5 +915,27 @@
     "hours": "گھنٹے",
     "totalCost": "کل لاگت:",
     "close": "بند کریں"
+  },
+  "myAttendance": {
+    "title": "میری حاضری",
+    "subtitle": "حاضری لگائیں اور اپنی حالیہ حاضری کی تاریخ دیکھیں۔",
+    "todayStatus": "آج",
+    "clockedInAt": "حاضری کا وقت",
+    "clockedOutAt": "روانگی کا وقت",
+    "clockIn": "حاضری لگائیں",
+    "clockOut": "روانگی لگائیں",
+    "saving": "محفوظ ہو رہا ہے…",
+    "doneForToday": "آج کے لیے مکمل",
+    "clockedIn": "حاضری لگ گئی۔",
+    "clockedOut": "روانگی لگ گئی۔",
+    "recentHistory": "حالیہ تاریخ",
+    "colDate": "تاریخ",
+    "colStatus": "حالت",
+    "colIn": "اندر",
+    "colOut": "باہر",
+    "noEmployeeTitle": "کوئی ملازم ریکارڈ منسلک نہیں",
+    "noEmployeeDescription": "آپ کا اکاؤنٹ ابھی تک کسی ملازم ریکارڈ سے منسلک نہیں ہے — حاضری لگانے سے پہلے ایڈمن سے اسے منسلک کرنے کو کہیں۔",
+    "noHistoryTitle": "ابھی تک کوئی تاریخ نہیں",
+    "noHistoryDescription": "حاضری لگانے کے بعد آپ کی حاضری کی تاریخ یہاں دکھائی دے گی۔"
   }
 }

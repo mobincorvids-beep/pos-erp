@@ -6,6 +6,7 @@ const controller = require('../controllers/chatController');
 
 router.use(requireAuth, scopeToCompany);
 
+router.get('/search', controller.searchMessages); // ?q=&limit=
 router.get('/channels', controller.listChannels);
 router.post('/channels',
   body('name').isString().trim().notEmpty().withMessage('name is required.'),
@@ -28,5 +29,8 @@ router.put('/messages/:messageId', body('text').isString().trim().notEmpty().wit
 router.delete('/messages/:messageId', controller.deleteMessage);
 router.post('/messages/:messageId/pin', controller.pinMessage);
 router.post('/messages/:messageId/unpin', controller.unpinMessage);
+router.post('/messages/:messageId/reactions',
+  body('emoji').isString().trim().notEmpty().withMessage('emoji is required.'),
+  validate, controller.toggleReaction);
 
 module.exports = router;
