@@ -94,6 +94,24 @@ async function checkout(input) {
         }
       }
 
+      // 1c. Resolve customer-group / quantity-slab pricing for any line
+      // that didn't already have its unitPrice pinned by the caller (the
+      // POS terminal always sends one, so this is a no-op there; it's the
+      // hook a wholesale/van-sales order flow can rely on instead of
+      // re-implementing tier lookup client-side). Never overrides a
+      // unitPrice the caller DID send — same "server fills gaps, never
+      // silently overrides what was explicitly provided" rule the rest of
+      // checkout follows for totals.
+      const priceListService = require('./priceListService');
+      for (const item of items) {
+        if (item.unitPrice === undefined || item.unitPrice === null) {
+          const resolved = await priceListService.resolvePrice(companyId, {
+            customerId, productId: item.productId, variantId: item.variantId, quantity: item.quantity,
+          });
+          item.unitPrice = resolved.unitPrice;
+        }
+      }
+
       // 2. Compute totals server-side — never trust client-sent totals.
       const { lineItems, subtotal, discountTotal, taxTotal, totalAmount: computedTotal } = computeLineItems(items);
 
@@ -115,6 +133,25 @@ async function checkout(input) {
       const totalAmount = Math.round((computedTotal - couponDiscountAmount) * 100) / 100;
       const paidAmount = payments.reduce((sum, p) => sum + p.amount, 0);
       const dueAmount = Math.max(totalAmount - paidAmount, 0);
+
+      // 2c. Credit limit check — only relevant when this sale actually
+      // leaves something owed on a known customer's account. A soft
+      // warning, not a hard wall: blocks by throwing unless the caller
+      // (saleController, gated on CUSTOMER_CREDIT_LIMIT_OVERRIDE) explicitly
+      // passed overrideCreditLimit: true. creditLimit of 0 means "not
+      // configured", never "no credit allowed" — see creditLimitService.
+      if (customerId && dueAmount > 0 && !input.overrideCreditLimit) {
+        const creditLimitService = require('./creditLimitService');
+        const check = await creditLimitService.checkCreditLimit(customerId, dueAmount);
+        if (check.exceeds) {
+          const err = new Error(
+            `This sale would put the customer's outstanding balance at ${check.projectedBalance.toFixed(2)}, over their credit limit of ${check.creditLimit.toFixed(2)}.`
+          );
+          err.code = 'CREDIT_LIMIT_EXCEEDED';
+          err.details = check;
+          throw err;
+        }
+      }
 
       const invoiceNumber = posTerminalId
         ? await nextInvoiceNumber(posTerminalId, session)
@@ -139,6 +176,13 @@ async function checkout(input) {
           currency: resolvedExchangeRate ? input.currency.toUpperCase() : null,
           exchangeRate: resolvedExchangeRate || 1,
           foreignTotalAmount: resolvedExchangeRate ? Math.round(totalAmount * resolvedExchangeRate * 100) / 100 : null,
+          // Cash-on-delivery: a distributor/wholesaler shipping to a retail
+          // store dispatches now and collects cash when the driver hands
+          // over the goods. Purely a delivery-confirmation flag — it does
+          // not change how paidAmount/dueAmount above were computed from
+          // `payments`, so a COD sale can be recorded as due (collect
+          // later) or already paid (recorded after the fact) either way.
+          isCOD: Boolean(input.isCOD),
         }],
         { session }
       );
@@ -279,6 +323,34 @@ async function checkout(input) {
       });
     } catch (err) {
       console.error('Developer Platform webhook delivery for sale.created failed (sale itself still succeeded):', err.message);
+    }
+
+    // Optional WhatsApp order confirmation to the customer — additive,
+    // best-effort, same "never affect a sale that already completed" rule
+    // as the webhooks above. whatsappService itself is already a no-op
+    // when the company hasn't configured WhatsApp, but the extra checks
+    // here (customerId/phone present) avoid even the lookup/log noise for
+    // the common case of a walk-in sale with no customer on file.
+    try {
+      if (sale.customerId) {
+        const Company = require('../models/Company');
+        const company = await Company.findById(input.companyId).select('whatsappEnabled');
+        if (company?.whatsappEnabled) {
+          const Customer = require('../models/Customer');
+          const customer = await Customer.findById(sale.customerId).select('phone name');
+          if (customer?.phone) {
+            const whatsappService = require('./whatsappService');
+            await whatsappService.sendMessage(input.companyId, {
+              to: customer.phone,
+              templateName: 'order_confirmation',
+              params: [customer.name || '', sale.invoiceNumber || sale.documentNumber, String(sale.totalAmount)],
+              type: 'order_confirmation',
+            });
+          }
+        }
+      }
+    } catch (err) {
+      console.error('WhatsApp order confirmation failed (sale itself still succeeded):', err.message);
     }
 
     return sale;

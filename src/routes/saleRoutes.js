@@ -22,6 +22,7 @@ const checkoutValidation = [
   body('items.*.unitPrice').isFloat({ min: 0 }).withMessage('Item unitPrice cannot be negative.'),
   body('payments').optional().isArray(),
   body('payments.*.amount').optional().isFloat({ min: 0 }).withMessage('Payment amount cannot be negative.'),
+  body('isCOD').optional().isBoolean().withMessage('isCOD must be a boolean.'),
 ];
 
 router.use(requireAuth, scopeToCompany);
@@ -32,5 +33,6 @@ router.post('/:id/fbr-submit', controller.submitFbr); // manual retry for FBR di
 router.post('/:id/tax-compliance-submit', controller.submitTaxCompliance); // manual retry across every registered authority
 router.post('/:id/return', controller.processReturn); // { items: [...], refundAccountId, reason }
 router.post('/:id/void', controller.voidSale);          // { reason }
+router.post('/:id/cod-collected', requirePermission(POS_SELL), controller.markCodCollected); // driver/cashier confirms COD cash was collected
 
 module.exports = router;

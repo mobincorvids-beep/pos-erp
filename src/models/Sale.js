@@ -18,10 +18,21 @@ const saleItemSchema = new Schema({
   lineTotal: { type: Number, required: true },
 }, { _id: false });
 
+// Pakistani retail/wholesale market: mobile wallets and informal credit
+// instruments dominate alongside cash/card. Left as a free String on the
+// schema (not a hard mongoose enum, matching what was already there) so an
+// unlisted legacy value never fails validation — SALE_PAYMENT_METHODS is
+// the documented set every caller (checkout UI, reports) should use.
+const SALE_PAYMENT_METHODS = ['cash', 'card', 'bank_transfer', 'jazzcash', 'easypaisa', 'cheque', 'cod', 'credit', 'split'];
+
 const salePaymentSchema = new Schema({
   paymentAccountId: { type: Schema.Types.ObjectId, ref: 'Account' },
-  method: { type: String, required: true }, // cash, card, bank_transfer, credit, split
+  method: { type: String, required: true }, // cash, card, bank_transfer, jazzcash, easypaisa, cheque, cod, credit, split
   amount: { type: Number, required: true },
+  // Set for method 'jazzcash'/'easypaisa' (PaymentGatewayTransaction._id or
+  // providerTransactionId) and for method 'cheque' (Cheque._id), so a
+  // sale's payment line can be traced back to the record that backs it.
+  reference: { type: String, default: null },
 }, { _id: false });
 
 const saleSchema = new Schema({
@@ -102,6 +113,14 @@ const saleSchema = new Schema({
   fbrInvoiceNumber: String,
   fbrQrCode: String,
   fbrSubmittedAt: Date,
+  // Set on every failed fbrService.submitInvoice() attempt and cleared on
+  // success — the retry cron (jobs/fbrRetryCron.js) and the manual "Retry
+  // FBR submission" button both key off this being non-null.
+  fbrSubmissionError: { type: String, default: null },
+  // Timestamp of the most recent submitInvoice() attempt (success or
+  // failure). The retry cron backs off fbrService.RETRY_BACKOFF_MS from
+  // this before trying the same sale again.
+  fbrLastAttemptAt: { type: Date, default: null },
 
   // Provincial services-tax authorities (SRB/PRA/KPRA/BRA) — a company can
   // be registered with more than one (e.g. FBR federally for goods, SRB
@@ -112,6 +131,22 @@ const saleSchema = new Schema({
     referenceNumber: String,
     submittedAt: Date,
   }],
+
+  // Cash-on-delivery: distributors/wholesalers shipping to retail stores
+  // invoice at dispatch but only actually collect cash when the delivery
+  // driver hands over the goods, which can be hours or days after the Sale
+  // document is created. isCOD flags that this sale's tender is collected
+  // on delivery rather than at the counter; codCollectedAt stays null until
+  // a driver/cashier confirms the cash was actually received (see
+  // posSaleService.markCodCollected). Deliberately independent of
+  // dueAmount/paidAmount — a COD sale can still be posted as due/unpaid at
+  // checkout time and only marked collected later, without pretending it
+  // was a normal credit sale.
+  isCOD: { type: Boolean, default: false },
+  codCollectedAt: { type: Date, default: null },
+  codCollectedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
 }, { timestamps: true });
+
+saleSchema.statics.PAYMENT_METHODS = SALE_PAYMENT_METHODS;
 
 module.exports = model('Sale', saleSchema);

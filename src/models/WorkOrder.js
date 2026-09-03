@@ -16,6 +16,21 @@ const scheduledOperationSchema = new Schema({
   status: { type: String, default: 'scheduled', enum: ['scheduled', 'in_progress', 'completed'] },
 }, { _id: true });
 
+// One raw-material batch/lot actually consumed against a work order, for
+// traceability ("this batch of finished fabric used cotton yarn batches X
+// and Y"). Populated by startProduction() when a consumed component's
+// product is batch/expiry tracked (Product.trackExpiry or trackingMode
+// 'batch') — FEFO-picked the same way POS checkout picks batches. Plain
+// (non-batch-tracked) components consume without an entry here, same as
+// before.
+const consumedBatchSchema = new Schema({
+  productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
+  variantId: { type: Schema.Types.ObjectId, required: true },
+  batchId: { type: Schema.Types.ObjectId, ref: 'ProductBatch', required: true },
+  batchNumber: { type: String }, // denormalized for display without a populate
+  quantityConsumed: { type: Number, required: true },
+}, { _id: false });
+
 // A production run against a BOM. Two-phase (start -> complete) rather than
 // one atomic call, mirroring StockTransfer's initiate/receive pattern —
 // production has a real duration (hours/days) between raw materials being
@@ -35,6 +50,20 @@ const workOrderSchema = new Schema({
   actualOverheadCost: Number,
   wastageNote: String,
   schedule: [scheduledOperationSchema], // populated by the forward scheduler when the work order is started
+  consumedBatches: [consumedBatchSchema], // raw material batch/lot traceability, populated at startProduction()
+
+  // --- Production costing (posted on completeProduction) ---
+  actualMaterialCost: { type: Number, default: null }, // sum of (actual consumption x cost at consumption) across all components
+  overheadCost: { type: Number, default: null },        // manual overhead allocation for this run (mirrors actualOverheadCost, kept as the spec-named field)
+  totalProductionCost: { type: Number, default: null },  // actualMaterialCost + actualLaborCost + overheadCost
+  costPerUnit: { type: Number, default: null },           // totalProductionCost / quantityProduced
+
+  // --- Yield / wastage ---
+  expectedOutputQuantity: { type: Number, default: null }, // set at creation = quantityToProduce (1:1 BOM ratio in this data model)
+  actualOutputQuantity: { type: Number, default: null },    // set at completion = quantityProduced
+  yieldPercentage: { type: Number, default: null },         // actualOutputQuantity / expectedOutputQuantity * 100
+  wastageQuantity: { type: Number, default: null },         // max(expectedOutputQuantity - actualOutputQuantity, 0)
+
   startedAt: Date,
   completedAt: Date,
   userId: { type: Schema.Types.ObjectId, ref: 'User' },

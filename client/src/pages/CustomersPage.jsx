@@ -107,11 +107,19 @@ function CustomerForm({ customer, onClose, onSaved }) {
   const [form, setForm] = useState({
     name: customer.name || '', phone: customer.phone || '', email: customer.email || '',
     address: customer.address || '', creditLimit: customer.creditLimit ?? '',
+    priceListId: customer.priceListId || '', salesRepId: customer.salesRepId || '', route: customer.route || '',
     tags: customer.tags || [],
   });
   const [saving, setSaving] = useState(false);
   const [touched, setTouched] = useState({});
   const [tagDraft, setTagDraft] = useState('');
+  const [priceLists, setPriceLists] = useState([]);
+  const [employees, setEmployees] = useState([]);
+
+  useEffect(() => {
+    api.get('/price-lists').then(setPriceLists).catch(() => setPriceLists([]));
+    api.get('/hr/employees').then(setEmployees).catch(() => setEmployees([]));
+  }, []);
 
   function addTag() {
     const value = tagDraft.trim();
@@ -217,6 +225,26 @@ function CustomerForm({ customer, onClose, onSaved }) {
               aria-invalid={Boolean(touched.creditLimit && errors.creditLimit)}
             />
             <FieldError message={touched.creditLimit ? errors.creditLimit : null} />
+          </div>
+          <div>
+            <label className="field-label">{t('customers.fieldPriceList', 'Price list')}</label>
+            <select className="field-input" value={form.priceListId} onChange={(e) => setForm({ ...form, priceListId: e.target.value })}>
+              <option value="">{t('customers.noPriceList', 'None (default pricing)')}</option>
+              {priceLists.map((pl) => <option key={pl._id} value={pl._id}>{pl.name}</option>)}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="field-label">{t('customers.fieldSalesRep', 'Sales rep')}</label>
+              <select className="field-input" value={form.salesRepId} onChange={(e) => setForm({ ...form, salesRepId: e.target.value })}>
+                <option value="">{t('customers.noSalesRep', 'Unassigned')}</option>
+                {employees.map((e) => <option key={e._id} value={e._id}>{e.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="field-label">{t('customers.fieldRoute', 'Route / area')}</label>
+              <input className="field-input" placeholder="Route 3 - Gulshan" value={form.route} onChange={(e) => setForm({ ...form, route: e.target.value })} />
+            </div>
           </div>
           <div>
             <label className="field-label">{t('customers.fieldTags')}</label>

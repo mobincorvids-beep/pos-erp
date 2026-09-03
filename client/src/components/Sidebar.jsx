@@ -9,7 +9,7 @@ import {
   Ticket, Shield, FileSearch, TrendingUp, HandCoins, Repeat, Hourglass, Lock, Layers, Ruler, Percent, X,
   LayoutDashboard, Settings, Car, MapPin, ShieldAlert, FileSignature,
   PackageCheck, Warehouse, UserPlus, Target, Rocket, KeyRound, Radio, Timer, SlidersHorizontal, Pin, PinOff,
-  Paperclip, BookOpen, Workflow, Star, Clock,
+  Paperclip, BookOpen, Workflow, Star, Clock, Send, MessageCircle, Milestone, Tags,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { INDUSTRY_MODULES } from '../industryModuleRegistry';
@@ -25,15 +25,16 @@ const ITEM_ICONS = {
   '/pos': CreditCard, '/sales': Receipt, '/sales-workflow': FileText, '/recurring-invoices': Repeat,
   '/appointments': CalendarClock, '/service-orders': Wrench,
   '/products': Boxes, '/units': Ruler, '/purchases': ClipboardList, '/rfqs': FileSearch, '/early-payment-discount': Percent, '/stock-transfers': ArrowLeftRight,
-  '/stock-counts': Package, '/manufacturing': Factory,
-  '/expenses': Banknote, '/banking': Landmark, '/projects': FolderKanban, '/reports': PieChart, '/budgets': TrendingUp, '/aging': Hourglass, '/periods': Lock, '/cost-centers': Layers,
+  '/stock-counts': Package, '/manufacturing': Factory, '/subcontracting': Send,
+  '/expenses': Banknote, '/banking': Landmark, '/cheques': FileSignature, '/fbr-compliance': ShieldAlert, '/projects': FolderKanban, '/reports': PieChart, '/budgets': TrendingUp, '/aging': Hourglass, '/periods': Lock, '/cost-centers': Layers,
   '/customers': Contact, '/suppliers': Truck, '/team': UserCog, '/hr': Users, '/employee-loans': HandCoins, '/timesheets': Timer, '/my-attendance': Clock,
+  '/my-route': Milestone, '/price-lists': Tags,
   '/crm': HeartHandshake, '/loyalty': Gift,
   '/ai-insights': Sparkles, '/ecommerce': Store, '/tickets': Ticket, '/security': Shield,
   '/fleet': Car, '/field-service': MapPin, '/quality': ShieldAlert, '/contracts': FileSignature, '/documents': Paperclip,
   '/logistics-core': PackageCheck, '/warehouse': Warehouse, '/recruitment': UserPlus,
   '/performance': Target, '/funnels': Rocket, '/reputation': Star, '/marketing-automation': Workflow, '/developer-platform': KeyRound, '/ecommerce-hub': Radio,
-  '/knowledge-base': BookOpen,
+  '/knowledge-base': BookOpen, '/whatsapp-log': MessageCircle,
 };
 
 const SECTION_ICONS = { Sell: ShoppingCart, Stock: Package, Money: Wallet, People: Users, Insights: BarChart3, Industry: Building2 };
@@ -61,6 +62,7 @@ const SECTIONS = [
     sectionKey: 'nav.sections.stock',
     items: [
       { to: '/products', labelKey: 'nav.items.products' },
+      { to: '/price-lists', labelKey: 'nav.items.priceLists' },
       { to: '/categories', labelKey: 'nav.items.categories' },
       { to: '/units', labelKey: 'nav.items.units' },
       { to: '/purchases', labelKey: 'nav.items.purchaseOrders' },
@@ -69,6 +71,7 @@ const SECTIONS = [
       { to: '/stock-transfers', labelKey: 'nav.items.transfers' },
       { to: '/stock-counts', labelKey: 'nav.items.stocktakes' },
       { to: '/manufacturing', labelKey: 'nav.items.manufacturing' },
+      { to: '/subcontracting', labelKey: 'nav.items.subcontracting' },
       { to: '/quality', labelKey: 'nav.items.quality' },
       { to: '/fleet', labelKey: 'nav.items.fleetTransport' },
       { to: '/logistics-core', labelKey: 'nav.items.shipments' },
@@ -81,6 +84,8 @@ const SECTIONS = [
     items: [
       { to: '/expenses', labelKey: 'nav.items.expenses' },
       { to: '/banking', labelKey: 'nav.items.banking' },
+      { to: '/cheques', labelKey: 'nav.items.cheques' },
+      { to: '/fbr-compliance', labelKey: 'nav.items.fbrCompliance' },
       { to: '/projects', labelKey: 'nav.items.projects' },
       { to: '/reports', labelKey: 'nav.items.reports' },
       { to: '/budgets', labelKey: 'nav.items.budgets' },
@@ -102,6 +107,7 @@ const SECTIONS = [
       { to: '/security', labelKey: 'nav.items.security' },
       { to: '/hr', labelKey: 'nav.items.hrPayroll' },
       { to: '/my-attendance', labelKey: 'nav.items.myAttendance' },
+      { to: '/my-route', labelKey: 'nav.items.myRoute' },
       { to: '/employee-loans', labelKey: 'nav.items.employeeLoans' },
       { to: '/timesheets', labelKey: 'nav.items.timesheets' },
       { to: '/recruitment', labelKey: 'nav.items.recruitment' },
@@ -110,6 +116,7 @@ const SECTIONS = [
       { to: '/funnels', labelKey: 'nav.items.funnels' },
       { to: '/reputation', labelKey: 'nav.items.reputation' },
       { to: '/marketing-automation', labelKey: 'nav.items.marketingAutomation' },
+      { to: '/whatsapp-log', labelKey: 'nav.items.whatsappLog' },
       { to: '/loyalty', labelKey: 'nav.items.loyalty' },
       { to: '/tickets', labelKey: 'nav.items.helpdesk' },
       { to: '/knowledge-base', labelKey: 'nav.items.knowledgeBase' },

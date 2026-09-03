@@ -25,7 +25,7 @@ async function create(req, res) {
  * ledger-derived running totals, not free-text fields — changing them here would silently
  * desync the customer record from customerLedgerService's own math. */
 async function update(req, res) {
-  const allowed = ['name', 'phone', 'email', 'address', 'creditLimit', 'priceGroupId', 'tags'];
+  const allowed = ['name', 'phone', 'email', 'address', 'creditLimit', 'priceGroupId', 'priceListId', 'salesRepId', 'route', 'tags'];
   const updates = {};
   for (const key of allowed) if (req.body[key] !== undefined) updates[key] = req.body[key];
 

@@ -4,11 +4,18 @@ import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { Loading } from '../components/Loading';
-import { Pencil, Trash2, Plus, Building2, Landmark, Send } from 'lucide-react';
+import { Pencil, Trash2, Plus, Building2, Landmark, Send, MessageCircle } from 'lucide-react';
 import { FieldError, errorInputClass } from '../components/FieldError';
 import { validate, validateRequired, validatePositiveNumber, hasErrors } from '../lib/validation';
 
 const CURRENCIES = ['PKR', 'USD', 'AED', 'SAR', 'GBP', 'EUR', 'INR'];
+
+const PROVINCES = ['sindh', 'punjab', 'kp', 'balochistan', 'islamabad', 'other'];
+const TAX_AUTHORITIES = ['fbr', 'srb', 'pra', 'kpra', 'bra'];
+// Which provincial services-tax authority a province maps to — used only
+// to suggest a sensible default in the checkbox list below; the vendor
+// can always override which authorities are actually checked.
+const PROVINCIAL_AUTHORITY = { sindh: 'srb', punjab: 'pra', kp: 'kpra', balochistan: 'bra' };
 
 export function SettingsPage() {
   const { t } = useTranslation();
@@ -24,7 +31,7 @@ export function SettingsPage() {
           <p className="text-sm text-ink-muted max-w-2xl">{t('settings.subtitle')}</p>
         </div>
         <div className="flex gap-1 p-1 rounded-lg bg-surface-sunken border border-rule">
-          {[['business', t('settings.tabBusiness')], ['branches', t('settings.tabBranches')], ['tax-payments', t('settings.tabTaxPayments')]].map(([key, label]) => (
+          {[['business', t('settings.tabBusiness')], ['branches', t('settings.tabBranches')], ['tax-payments', t('settings.tabTaxPayments')], ['whatsapp', t('settings.tabWhatsapp')]].map(([key, label]) => (
             <button
               key={key}
               onClick={() => setTab(key)}
@@ -39,6 +46,7 @@ export function SettingsPage() {
       {tab === 'business' && <BusinessDetailsTab canManage={canManage} onSaved={refreshUser} />}
       {tab === 'branches' && <BranchesTab canManage={canManage} />}
       {tab === 'tax-payments' && <TaxPaymentsTab canManage={canManage} />}
+      {tab === 'whatsapp' && <WhatsappTab canManage={canManage} />}
     </div>
   );
 }
@@ -69,6 +77,8 @@ function BusinessDetailsTab({ canManage, onSaved }) {
         fbrApiToken: form.fbrApiToken, fbrSandboxMode: form.fbrSandboxMode,
         phone: form.phone, email: form.email, address: form.address,
         currency: form.currency, timezone: form.timezone,
+        province: form.province || null, businessNature: form.businessNature || 'goods',
+        taxAuthorities: form.taxAuthorities || [],
       });
       setCompany(updated);
       toast(t('settings.businessSaved'), 'success');
@@ -148,6 +158,63 @@ function BusinessDetailsTab({ canManage, onSaved }) {
           />
           {t('settings.sandboxMode')}
         </label>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="field-label">{t('settings.fieldProvince')}</label>
+            <select
+              className="field-input" value={form.province || ''}
+              onChange={(e) => {
+                const province = e.target.value || null;
+                // Nudge the matching provincial authority on when a
+                // province is picked and it's not already selected —
+                // never removes a checkbox the vendor already ticked.
+                const suggested = PROVINCIAL_AUTHORITY[province];
+                const current = form.taxAuthorities || [];
+                const taxAuthorities = suggested && !current.includes(suggested) ? [...current, suggested] : current;
+                setForm({ ...form, province, taxAuthorities });
+              }}
+            >
+              <option value="">{t('common.select')}</option>
+              {PROVINCES.map((p) => <option key={p} value={p}>{t(`settings.province.${p}`)}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="field-label">{t('settings.fieldBusinessNature')}</label>
+            <select
+              className="field-input" value={form.businessNature || 'goods'}
+              onChange={(e) => setForm({ ...form, businessNature: e.target.value })}
+            >
+              <option value="goods">{t('settings.natureGoods')}</option>
+              <option value="services">{t('settings.natureServices')}</option>
+              <option value="both">{t('settings.natureBoth')}</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label className="field-label">{t('settings.fieldTaxAuthorities')}</label>
+          <p className="text-xs text-ink-muted mb-2">{t('settings.taxAuthoritiesHint')}</p>
+          <div className="flex flex-wrap gap-3">
+            {TAX_AUTHORITIES.map((a) => {
+              const checked = (form.taxAuthorities || []).includes(a);
+              return (
+                <label key={a} className="flex items-center gap-2 text-sm text-ink chip-neutral !inline-flex px-3 py-1.5">
+                  <input
+                    type="checkbox" checked={checked}
+                    onChange={(e) => {
+                      const current = form.taxAuthorities || [];
+                      const taxAuthorities = e.target.checked ? [...current, a] : current.filter((x) => x !== a);
+                      setForm({ ...form, taxAuthorities });
+                    }}
+                  />
+                  {a.toUpperCase()}
+                </label>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="field-label">{t('settings.fieldCurrency')}</label>
@@ -625,6 +692,125 @@ function JazzCashTaxPayCredentials({ company, canManage, onSaved }) {
               <label className="field-label">{t('settings.fieldFbrAccountTitle')}</label>
               <input className="field-input" value={form.fbrAccountTitle} onChange={(e) => setForm({ ...form, fbrAccountTitle: e.target.value })} />
             </div>
+          </div>
+        </fieldset>
+        {canManage && (
+          <div className="flex justify-end pt-2">
+            <button type="submit" disabled={saving || hasErrors(errors)} className="btn-primary">{saving ? t('common.saving') : t('settings.saveCredentials')}</button>
+          </div>
+        )}
+      </div>
+    </form>
+  );
+}
+
+/** Per-tenant WhatsApp Business Cloud API (Meta) setup — same self-service
+ * pattern as the FBR/JazzCash credential blocks above: each vendor
+ * connects their own WhatsApp Business Account rather than sharing one
+ * platform-wide sender. Saved via the same PUT /org/company as the rest
+ * of the business profile. See src/services/whatsappService.js for the
+ * send-side behavior. */
+function WhatsappTab({ canManage }) {
+  const { t } = useTranslation();
+  const toast = useToast();
+  const [form, setForm] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [touched, setTouched] = useState({});
+
+  function load() {
+    setLoading(true);
+    api.get('/org/company')
+      .then((data) => {
+        setForm({
+          whatsappEnabled: !!data.whatsappEnabled,
+          whatsappPhoneNumberId: data.whatsappPhoneNumberId || '',
+          whatsappBusinessAccountId: data.whatsappBusinessAccountId || '',
+          whatsappAccessToken: data.whatsappAccessToken || '',
+        });
+      })
+      .catch((err) => toast(err.message, 'error'))
+      .finally(() => setLoading(false));
+  }
+  useEffect(load, []);
+
+  const rules = {
+    whatsappPhoneNumberId: (v) => (form?.whatsappEnabled ? validateRequired(v, 'Phone number ID') : null),
+    whatsappAccessToken: (v) => (form?.whatsappEnabled ? validateRequired(v, 'Access token') : null),
+  };
+  const errors = form ? validate(form, rules) : {};
+
+  function markTouched(field) {
+    setTouched((t) => ({ ...t, [field]: true }));
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setTouched({ whatsappPhoneNumberId: true, whatsappAccessToken: true });
+    if (hasErrors(errors)) return;
+    setSaving(true);
+    try {
+      await api.put('/org/company', form);
+      toast(t('settings.whatsappSaved'), 'success');
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading || !form) return <Loading />;
+
+  return (
+    <form onSubmit={handleSubmit} className="card max-w-2xl overflow-hidden">
+      <div className="p-5 border-b border-rule flex items-center gap-2">
+        <MessageCircle size={18} className="text-accent" />
+        <p className="font-display text-lg font-semibold text-ink">{t('settings.whatsappCredentials')}</p>
+      </div>
+      <div className="p-5 space-y-4">
+        <p className="text-sm text-ink-muted max-w-xl">{t('settings.whatsappDescription')}</p>
+        {!canManage && (
+          <p className="text-xs text-ink-muted bg-surface-sunken rounded-lg px-3 py-2">{t('settings.viewOnlyWhatsapp')}</p>
+        )}
+        <fieldset disabled={!canManage} className="space-y-4">
+          <label className="flex items-center gap-2 text-sm text-ink">
+            <input
+              type="checkbox" checked={form.whatsappEnabled}
+              onChange={(e) => setForm({ ...form, whatsappEnabled: e.target.checked })}
+            />
+            {t('settings.enableWhatsapp')}
+          </label>
+          <div>
+            <label className="field-label">{t('settings.fieldWhatsappPhoneNumberId')}</label>
+            <input
+              className={`field-input ${errorInputClass(touched.whatsappPhoneNumberId && errors.whatsappPhoneNumberId)}`}
+              value={form.whatsappPhoneNumberId}
+              onChange={(e) => setForm({ ...form, whatsappPhoneNumberId: e.target.value })}
+              onBlur={() => markTouched('whatsappPhoneNumberId')}
+              aria-invalid={Boolean(touched.whatsappPhoneNumberId && errors.whatsappPhoneNumberId)}
+            />
+            <FieldError message={touched.whatsappPhoneNumberId ? errors.whatsappPhoneNumberId : null} />
+            <p className="text-xs text-ink-muted mt-1">{t('settings.whatsappPhoneNumberIdHint')}</p>
+          </div>
+          <div>
+            <label className="field-label">{t('settings.fieldWhatsappBusinessAccountId')}</label>
+            <input
+              className="field-input" value={form.whatsappBusinessAccountId}
+              onChange={(e) => setForm({ ...form, whatsappBusinessAccountId: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="field-label">{t('settings.fieldWhatsappAccessToken')}</label>
+            <input
+              type="password" autoComplete="off"
+              className={`field-input ${errorInputClass(touched.whatsappAccessToken && errors.whatsappAccessToken)}`}
+              value={form.whatsappAccessToken}
+              onChange={(e) => setForm({ ...form, whatsappAccessToken: e.target.value })}
+              onBlur={() => markTouched('whatsappAccessToken')}
+              aria-invalid={Boolean(touched.whatsappAccessToken && errors.whatsappAccessToken)}
+            />
+            <FieldError message={touched.whatsappAccessToken ? errors.whatsappAccessToken : null} />
+            <p className="text-xs text-ink-muted mt-1">{t('settings.whatsappTokenHint')}</p>
           </div>
         </fieldset>
         {canManage && (

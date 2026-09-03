@@ -29,7 +29,7 @@ async function recordPayment(input) {
     await session.withTransaction(async () => {
       const {
         companyId, supplierId, paymentAccountId, amount, date, note, userId,
-        payableAccountId,
+        payableAccountId, method, reference,
       } = input;
 
       if (!amount || amount <= 0) throw new Error('Payment amount must be greater than zero.');
@@ -67,7 +67,7 @@ async function recordPayment(input) {
       }
 
       [payment] = await SupplierPayment.create(
-        [{ companyId, supplierId, paymentAccountId, amount, date: date || new Date(), allocations, note, userId }],
+        [{ companyId, supplierId, paymentAccountId, amount, date: date || new Date(), allocations, note, userId, method: method || 'cash', reference: reference || null }],
         { session }
       );
 
@@ -119,9 +119,15 @@ async function ledger(supplierId) {
       }
       return rows;
     }),
-    ...payments.map((p) => ({
+    // A reversed (bounced-cheque-to-supplier) payment stops counting as
+    // money paid out — mirror of the same fix in customerLedgerService.
+    ...payments.filter((p) => !p.reversed).map((p) => ({
       date: p.date, type: 'payment', reference: String(p._id),
       debit: p.amount, credit: 0,
+    })),
+    ...payments.filter((p) => p.reversed).map((p) => ({
+      date: p.reversedAt || p.date, type: 'payment_reversed', reference: String(p._id),
+      debit: 0, credit: p.amount,
     })),
   ].sort((a, b) => a.date - b.date);
 
@@ -162,4 +168,55 @@ async function agingReport(companyId) {
   return Array.from(bySupplier.values()).sort((a, b) => b.total - a.total);
 }
 
-module.exports = { recordPayment, ledger, agingReport };
+/**
+ * Reverses a previously recorded SupplierPayment — used when a cheque the
+ * company wrote to a supplier bounces. Mirror of
+ * customerLedgerService.reversePayment: restores each allocated PO's
+ * dueAmount/paidAmount, posts a compensating voucher (Dr the original
+ * payment account, Cr Accounts Payable), and flags the payment so
+ * ledger() stops treating it as money paid. Idempotent.
+ */
+async function reversePayment(paymentId, companyId, opts = {}) {
+  const session = await mongoose.startSession();
+  try {
+    let payment;
+    await session.withTransaction(async () => {
+      payment = await SupplierPayment.findOne({ _id: paymentId, companyId }).session(session);
+      if (!payment) throw new Error('Supplier payment not found.');
+      if (payment.reversed) return;
+
+      for (const alloc of payment.allocations) {
+        const po = await PurchaseOrder.findById(alloc.purchaseOrderId).session(session);
+        if (!po) continue;
+        po.dueAmount += alloc.amount;
+        po.paidAmount -= alloc.amount;
+        await po.save({ session });
+      }
+
+      payment.reversed = true;
+      payment.reversedAt = new Date();
+      await payment.save({ session });
+
+      const payable = opts.payableAccountId
+        || (await defaultAccountsService.resolve(companyId, 'accountsPayableId', session));
+      if (payable) {
+        const voucher = await accountingService.postVoucher({
+          companyId, type: 'journal', date: new Date(),
+          narration: opts.narration || `Reversal of supplier payment ${payment._id}`,
+          entries: [
+            { accountId: payment.paymentAccountId, debit: payment.amount, credit: 0 },
+            { accountId: payable, debit: 0, credit: payment.amount },
+          ],
+          referenceType: 'SupplierPayment', referenceId: payment._id, userId: opts.userId,
+        }, session);
+        payment.reversalVoucherId = voucher._id;
+        await payment.save({ session });
+      }
+    });
+    return payment;
+  } finally {
+    session.endSession();
+  }
+}
+
+module.exports = { recordPayment, reversePayment, ledger, agingReport };

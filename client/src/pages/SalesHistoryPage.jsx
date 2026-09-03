@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { Loading } from '../components/Loading';
 import { EmptyState } from '../components/EmptyState';
+import { FbrQrCode, printInvoice } from '../components/FbrQrCode';
 import { formatMoney, formatDateTime } from '../lib/format';
 
 const STATUS_CHIP = { completed: 'chip-accent', returned: 'chip-warning', cancelled: 'chip-danger' };
@@ -67,6 +68,7 @@ export function SalesHistoryPage() {
                     <th className="py-3 px-4 eyebrow font-semibold">{t('salesHistory.colDate')}</th>
                     <th className="py-3 px-4 eyebrow font-semibold">{t('salesHistory.colStatus')}</th>
                     <th className="py-3 px-4 eyebrow font-semibold text-right">{t('salesHistory.colTotal')}</th>
+                    <th className="py-3 px-4 eyebrow font-semibold text-right">{t('salesHistory.colDue')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -88,8 +90,16 @@ export function SalesHistoryPage() {
                           </div>
                         </td>
                         <td className="py-3.5 px-4 text-ink-muted">{formatDateTime(sale.createdAt)}</td>
-                        <td className="py-3.5 px-4"><span className={STATUS_CHIP[sale.status] || 'chip-neutral'}>{sale.status}</span></td>
+                        <td className="py-3.5 px-4">
+                          <span className={STATUS_CHIP[sale.status] || 'chip-neutral'}>{sale.status}</span>
+                          {sale.isCOD && (
+                            <span className={`ml-1 ${sale.codCollectedAt ? 'chip-accent' : 'chip-warning'}`}>
+                              {sale.codCollectedAt ? t('salesHistory.codCollected') : t('salesHistory.codPending')}
+                            </span>
+                          )}
+                        </td>
                         <td className="py-3.5 px-4 num font-medium text-right">{formatMoney(sale.totalAmount, company?.currency)}</td>
+                        <td className={`py-3.5 px-4 num text-right ${sale.dueAmount > 0 ? 'text-danger font-semibold' : 'text-ink-muted'}`}>{formatMoney(sale.dueAmount, company?.currency)}</td>
                       </tr>
                     );
                   })}
@@ -120,8 +130,100 @@ function SaleDetailPanel({ sale, onClose, onChanged }) {
   const [busy, setBusy] = useState(false);
   const [creditAmount, setCreditAmount] = useState('');
   const [creditReason, setCreditReason] = useState('');
+  const [fbrRetrying, setFbrRetrying] = useState(false);
+  const [codBusy, setCodBusy] = useState(false);
+  const [collecting, setCollecting] = useState(false); // 'jazzcash' | 'easypaisa' | false
+  const [collectPhone, setCollectPhone] = useState('');
+  const [gatewayStatus, setGatewayStatus] = useState(null); // null | 'waiting' | 'failed'
 
   useEffect(() => { api.get('/org/accounts?paymentOnly=true').then(setAccounts).catch(() => {}); }, []);
+
+  async function handleMarkCodCollected() {
+    setCodBusy(true);
+    try {
+      await api.post(`/sales/${sale._id}/cod-collected`);
+      toast(t('salesHistory.codMarkedCollected'), 'success');
+      onChanged();
+      onClose();
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setCodBusy(false);
+    }
+  }
+
+  /** Mirrors PosPage's waitForGatewayPayment — polls until the customer approves on their phone, then just refreshes (the sale's own dueAmount was reduced server-side by paymentGatewayController's callback once it confirms). */
+  async function waitForCollection(transactionId) {
+    const POLL_MS = 3000;
+    const MAX_ATTEMPTS = 40;
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, POLL_MS));
+      let status;
+      try {
+        status = await api.get(`/payment-gateway/transactions/${transactionId}`);
+      } catch (err) {
+        continue;
+      }
+      if (status.status === 'completed') {
+        toast(t('salesHistory.collectionConfirmed'), 'success');
+        setCollecting(false);
+        setGatewayStatus(null);
+        onChanged();
+        onClose();
+        return;
+      }
+      if (status.status === 'failed') {
+        setGatewayStatus('failed');
+        toast(status.responseMessage || t('salesHistory.collectionFailed'), 'error');
+        return;
+      }
+    }
+    setGatewayStatus('failed');
+    toast(t('salesHistory.collectionTimeout'), 'error');
+  }
+
+  async function handleCollect(provider) {
+    if (!/^03\d{9}$/.test(collectPhone)) {
+      toast(t('salesHistory.enterValidMobile'), 'error');
+      return;
+    }
+    setGatewayStatus('waiting');
+    try {
+      const init = await api.post('/payment-gateway/initiate', {
+        provider, amount: sale.dueAmount, phone: collectPhone, saleId: sale._id,
+      });
+      if (init.status === 'failed') {
+        setGatewayStatus('failed');
+        toast(init.responseMessage || t('salesHistory.collectionFailed'), 'error');
+      } else if (init.status === 'completed') {
+        toast(t('salesHistory.collectionConfirmed'), 'success');
+        setCollecting(false);
+        setGatewayStatus(null);
+        onChanged();
+        onClose();
+      } else {
+        toast(t('salesHistory.collectionRequestSent'), 'success');
+        await waitForCollection(init.transactionId);
+      }
+    } catch (err) {
+      setGatewayStatus('failed');
+      toast(err.message, 'error');
+    }
+  }
+
+  async function handleRetryFbr() {
+    setFbrRetrying(true);
+    try {
+      await api.post(`/sales/${sale._id}/fbr-submit`);
+      toast(t('salesHistory.fbrRetrySuccess'), 'success');
+      onChanged();
+      onClose();
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setFbrRetrying(false);
+    }
+  }
 
   async function handleVoid() {
     setBusy(true);
@@ -183,7 +285,10 @@ function SaleDetailPanel({ sale, onClose, onChanged }) {
     <div className="w-full lg:w-80 shrink-0 card p-4 h-fit">
       <div className="flex items-center justify-between mb-3">
         <p className="font-display font-bold text-lg num text-accent">{sale.invoiceNumber || sale.documentNumber}</p>
-        <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>{t('common.close')}</button>
+        <div className="flex items-center gap-3">
+          <button className="text-ink-muted hover:text-ink text-sm" onClick={() => printInvoice({ sale, company, t })}>{t('salesHistory.print')}</button>
+          <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>{t('common.close')}</button>
+        </div>
       </div>
 
       {mode === 'view' && (
@@ -223,6 +328,66 @@ function SaleDetailPanel({ sale, onClose, onChanged }) {
         <span>{mode === 'return' ? t('salesHistory.returnTotal') : t('salesHistory.total')}</span>
         <span className="num">{formatMoney(mode === 'return' ? returnTotal : sale.totalAmount, company?.currency)}</span>
       </div>
+
+      {mode === 'view' && (
+        <div className="mb-4">
+          {sale.fbrSubmittedAt && sale.fbrQrCode && (
+            <div className="flex flex-col items-center gap-2 p-3 rounded-lg bg-surface-sunken border border-rule">
+              <FbrQrCode value={sale.fbrQrCode} size={104} />
+              <p className="text-xs text-ink-muted text-center">{t('salesHistory.fbrVerified')}</p>
+              {sale.fbrInvoiceNumber && <p className="text-xs num text-ink-muted">{t('salesHistory.fbrInvoiceNumber')}: {sale.fbrInvoiceNumber}</p>}
+            </div>
+          )}
+          {!sale.fbrSubmittedAt && (
+            <div className="p-3 rounded-lg bg-warning-soft border border-warning-soft">
+              <p className="text-xs text-warning font-medium mb-1">
+                {sale.fbrSubmissionError ? t('salesHistory.fbrFailed') : t('salesHistory.fbrPending')}
+              </p>
+              {sale.fbrSubmissionError && <p className="text-xs text-ink-muted mb-2 break-words">{sale.fbrSubmissionError}</p>}
+              <button className="btn-secondary w-full !py-1.5 text-xs" disabled={fbrRetrying} onClick={handleRetryFbr}>
+                {fbrRetrying ? t('salesHistory.fbrRetrying') : t('salesHistory.fbrRetry')}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {sale.status === 'completed' && mode === 'view' && sale.isCOD && !sale.codCollectedAt && (
+        <div className="mb-3 p-3 rounded-lg bg-warning-soft border border-warning-soft">
+          <p className="text-xs text-warning font-medium mb-2">{t('salesHistory.codPendingHint')}</p>
+          <button className="btn-secondary w-full !py-1.5 text-xs" disabled={codBusy} onClick={handleMarkCodCollected}>
+            {codBusy ? t('salesHistory.codMarking') : t('salesHistory.codMarkCollected')}
+          </button>
+        </div>
+      )}
+
+      {sale.status === 'completed' && mode === 'view' && sale.dueAmount > 0 && sale.customerId && !collecting && (
+        <div className="mb-3">
+          <p className="text-xs text-ink-muted mb-2">{t('salesHistory.outstandingHint', { amount: formatMoney(sale.dueAmount, company?.currency) })}</p>
+          <div className="flex gap-2">
+            <button className="btn-secondary flex-1 !py-1.5 text-xs" onClick={() => setCollecting('jazzcash')}>{t('salesHistory.collectViaJazzcash')}</button>
+            <button className="btn-secondary flex-1 !py-1.5 text-xs" onClick={() => setCollecting('easypaisa')}>{t('salesHistory.collectViaEasypaisa')}</button>
+          </div>
+        </div>
+      )}
+
+      {collecting && (
+        <div className="mb-3 p-3 rounded-lg bg-surface-sunken border border-rule">
+          <label className="field-label">{t('pos.customerMobileNumber')}</label>
+          <input
+            className="field-input mb-2" placeholder="03XXXXXXXXX" value={collectPhone}
+            onChange={(e) => setCollectPhone(e.target.value)} disabled={gatewayStatus === 'waiting'}
+          />
+          {gatewayStatus === 'waiting' && <p className="text-xs text-ink-muted mb-2">{t('salesHistory.collectionRequestSent')}</p>}
+          {gatewayStatus === 'failed' && <p className="text-xs text-danger mb-2">{t('salesHistory.collectionFailed')}</p>}
+          <div className="flex gap-2">
+            <button className="btn-secondary flex-1" disabled={gatewayStatus === 'waiting'} onClick={() => { setCollecting(false); setGatewayStatus(null); }}>{t('common.back')}</button>
+            <button className="btn-primary flex-1" disabled={gatewayStatus === 'waiting'} onClick={() => handleCollect(collecting)}>
+              {gatewayStatus === 'waiting' ? t('salesHistory.collecting') : t('salesHistory.confirmCollect')}
+            </button>
+          </div>
+        </div>
+      )}
 
       {sale.status === 'completed' && mode === 'view' && (
         <div className="flex flex-col gap-2">

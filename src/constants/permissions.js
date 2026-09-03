@@ -31,6 +31,15 @@ const KEYS = {
   EXPENSE_APPROVE: 'expenses.approve',
 
   CUSTOMER_PAYMENT_RECORD: 'customers.record_payment',
+  CHEQUES_MANAGE: 'cheques.manage', // record cheques, mark cleared/bounced — receivable and payable both gate off this one key
+  // A credit sale that would push a customer's outstanding balance past
+  // their creditLimit is blocked by default (see posSaleService.checkout)
+  // — this is the escape hatch, not a routine permission: a manager/owner
+  // can override that block for a specific sale, everyone else can't.
+  CUSTOMER_CREDIT_LIMIT_OVERRIDE: 'customers.override_credit_limit',
+  PRICE_LISTS_MANAGE: 'price_lists.manage',
+  ROUTE_SALES_MANAGE: 'route_sales.manage', // assign reps/routes to customers; view any rep's route (not just your own)
+  SECONDARY_SALES_MANAGE: 'secondary_sales.manage',
   SUPPLIER_PAYMENT_RECORD: 'suppliers.record_payment',
   CREDIT_NOTES_MANAGE: 'credit_notes.manage',
   DEBIT_NOTES_MANAGE: 'debit_notes.manage',
@@ -43,6 +52,7 @@ const KEYS = {
   ROLES_MANAGE: 'roles.manage',
 
   MANUFACTURING_MANAGE: 'manufacturing.manage',
+  SUBCONTRACTING_MANAGE: 'subcontracting.manage',
   SERVICE_ORDER_MANAGE: 'service_orders.manage',
   BANKING_MANAGE: 'banking.manage',
   LOYALTY_MANAGE: 'loyalty.manage',
@@ -129,6 +139,8 @@ const CATALOG = [
       { key: KEYS.EXPENSE_SUBMIT, label: 'Submit expenses' },
       { key: KEYS.EXPENSE_APPROVE, label: 'Approve or reject expenses' },
       { key: KEYS.CUSTOMER_PAYMENT_RECORD, label: 'Record customer payments' },
+      { key: KEYS.CHEQUES_MANAGE, label: 'Record cheques and mark them cleared/bounced' },
+      { key: KEYS.CUSTOMER_CREDIT_LIMIT_OVERRIDE, label: 'Override a customer credit limit warning at checkout' },
       { key: KEYS.SUPPLIER_PAYMENT_RECORD, label: 'Record supplier payments' },
       { key: KEYS.CREDIT_NOTES_MANAGE, label: 'Issue/void customer credit notes' },
       { key: KEYS.DEBIT_NOTES_MANAGE, label: 'Issue/void supplier debit notes' },
@@ -163,6 +175,7 @@ const CATALOG = [
     group: 'Manufacturing and services',
     items: [
       { key: KEYS.MANUFACTURING_MANAGE, label: 'Manage bills of materials and work orders' },
+      { key: KEYS.SUBCONTRACTING_MANAGE, label: 'Manage job-work / subcontracting orders' },
       { key: KEYS.SERVICE_ORDER_MANAGE, label: 'Manage service/job orders' },
       { key: KEYS.FIELD_SERVICE_MANAGE, label: 'Manage field service dispatch jobs' },
       { key: KEYS.QUALITY_MANAGE, label: 'Manage quality NCRs and corrective actions' },
@@ -215,6 +228,14 @@ const CATALOG = [
     group: 'Projects',
     items: [
       { key: KEYS.PROJECT_TASKS_MANAGE, label: 'Create, assign, and manage project tasks' },
+    ],
+  },
+  {
+    group: 'Distribution & van sales',
+    items: [
+      { key: KEYS.PRICE_LISTS_MANAGE, label: 'Manage price lists (customer-group / quantity-slab pricing)' },
+      { key: KEYS.ROUTE_SALES_MANAGE, label: 'Assign sales reps/routes to customers and view any rep\'s route coverage' },
+      { key: KEYS.SECONDARY_SALES_MANAGE, label: 'Record and edit retailer secondary (sell-through) sales' },
     ],
   },
   {

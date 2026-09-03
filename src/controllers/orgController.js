@@ -7,7 +7,11 @@ const Company = require('../models/Company');
 /** Editable-by-tenant subset of Company: deliberately excludes activeModules,
  * defaultAccounts, ecommerceConfig, parentCompanyId etc., which are either
  * platform-admin controlled or wired automatically at provisioning time. */
-const EDITABLE_COMPANY_FIELDS = ['name', 'ntn', 'strn', 'fbrPosId', 'fbrApiToken', 'fbrSandboxMode', 'phone', 'email', 'address', 'currency', 'timezone'];
+const EDITABLE_COMPANY_FIELDS = [
+  'name', 'ntn', 'strn', 'fbrPosId', 'fbrApiToken', 'fbrSandboxMode', 'phone', 'email', 'address', 'currency', 'timezone',
+  'whatsappEnabled', 'whatsappPhoneNumberId', 'whatsappAccessToken', 'whatsappBusinessAccountId',
+  'taxAuthorities', 'province', 'businessNature',
+];
 
 async function getCompany(req, res) {
   const company = await Company.findById(req.companyId);
@@ -27,6 +31,14 @@ async function updateCompany(req, res) {
   if (req.body.jazzCashTaxPay && typeof req.body.jazzCashTaxPay === 'object') {
     const existing = await Company.findById(req.companyId).select('jazzCashTaxPay');
     updates.jazzCashTaxPay = { ...(existing?.jazzCashTaxPay?.toObject?.() || existing?.jazzCashTaxPay || {}), ...req.body.jazzCashTaxPay };
+  }
+  // paymentGatewayConfig.defaultPaymentAccountId — the cash/bank account a
+  // confirmed JazzCash/Easypaisa collection against an EXISTING due sale
+  // lands in (see paymentGatewayController.applyGatewayPaymentToSale).
+  // Same shallow-merge-by-tenant pattern as jazzCashTaxPay above.
+  if (req.body.paymentGatewayConfig && typeof req.body.paymentGatewayConfig === 'object') {
+    const existing = await Company.findById(req.companyId).select('paymentGatewayConfig');
+    updates.paymentGatewayConfig = { ...(existing?.paymentGatewayConfig?.toObject?.() || existing?.paymentGatewayConfig || {}), ...req.body.paymentGatewayConfig };
   }
   const company = await Company.findByIdAndUpdate(req.companyId, updates, { new: true, runValidators: true });
   if (!company) return res.status(404).json({ error: 'Company not found.' });

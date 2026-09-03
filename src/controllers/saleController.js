@@ -37,8 +37,17 @@ async function get(req, res) {
 
 async function checkout(req, res) {
   try {
+    // overrideCreditLimit only takes effect when the requester actually
+    // carries the override permission — a client passing the flag on its
+    // own is never enough, the same "trust the server-side check, not the
+    // request body" rule the rest of checkout already follows for totals.
+    const { hasPermission } = require('../middleware/auth');
+    const { CUSTOMER_CREDIT_LIMIT_OVERRIDE } = require('../constants/permissions');
+    const overrideCreditLimit = Boolean(req.body.overrideCreditLimit) && hasPermission(req, CUSTOMER_CREDIT_LIMIT_OVERRIDE);
+
     const sale = await posSaleService.checkout({
       ...req.body,
+      overrideCreditLimit,
       companyId: req.companyId,
       userId: req.auth.userId,
     });
@@ -60,6 +69,13 @@ async function checkout(req, res) {
 
     res.status(201).json(sale);
   } catch (err) {
+    // CREDIT_LIMIT_EXCEEDED is a soft-block, not a validation failure —
+    // surfaced with its own code + details so the frontend can show a
+    // specific "over credit limit" warning (with an Override button, for
+    // whoever has the permission) rather than a generic error toast.
+    if (err.code === 'CREDIT_LIMIT_EXCEEDED') {
+      return res.status(409).json({ error: err.message, code: err.code, details: err.details });
+    }
     res.status(400).json({ error: err.message });
   }
 }
@@ -102,4 +118,24 @@ async function voidSale(req, res) {
   }
 }
 
-module.exports = { list, get, checkout, submitFbr, submitTaxCompliance, processReturn, voidSale };
+/**
+ * Confirms a cash-on-delivery sale's cash was actually collected by the
+ * driver/cashier at the point of delivery. Deliberately simple (no ledger
+ * posting here) — a COD sale is already posted as paid/due at checkout
+ * time via its own `payments`/`dueAmount` the normal way; this only
+ * flips the delivery-confirmation flag distributors/wholesalers need to
+ * know a shipment's cash is actually back in hand, not still on the road.
+ */
+async function markCodCollected(req, res) {
+  const sale = await Sale.findOne({ _id: req.params.id, companyId: req.companyId });
+  if (!sale) return res.status(404).json({ error: 'Sale not found.' });
+  if (!sale.isCOD) return res.status(400).json({ error: 'This sale is not marked as cash-on-delivery.' });
+  if (sale.codCollectedAt) return res.status(400).json({ error: 'COD has already been marked collected for this sale.' });
+
+  sale.codCollectedAt = new Date();
+  sale.codCollectedBy = req.auth.userId;
+  await sale.save();
+  res.json(sale);
+}
+
+module.exports = { list, get, checkout, submitFbr, submitTaxCompliance, processReturn, voidSale, markCodCollected };

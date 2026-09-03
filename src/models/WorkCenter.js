@@ -8,6 +8,11 @@ const workCenterSchema = new Schema({
   name: { type: String, required: true },
   description: String,
   capacityHoursPerDay: { type: Number, required: true, default: 8 },
+  // Hourly labor cost applied to actual hours logged against this work
+  // center's operations when a work order completes — see
+  // manufacturingService.completeProduction(). 0 means labor cost for
+  // operations here falls back to the BOM's flat laborCostPerUnit instead.
+  hourlyRate: { type: Number, default: 0 },
   isActive: { type: Boolean, default: true },
 }, { timestamps: true });
 

@@ -6,6 +6,8 @@ const app = require('./app');
 const connectDB = require('./config/db');
 const marketingJourneyCron = require('./jobs/marketingJourneyCron');
 const lowStockCron = require('./jobs/lowStockCron');
+const fbrRetryCron = require('./jobs/fbrRetryCron');
+const paymentReminderCron = require('./jobs/paymentReminderCron');
 
 const PORT = process.env.PORT || 4000;
 
@@ -19,6 +21,8 @@ connectDB()
     // marketingJourneyCron.js's header comment for the full reasoning.
     marketingJourneyCron.start();
     lowStockCron.start();
+    fbrRetryCron.start();
+    paymentReminderCron.start();
   })
   .catch((err) => {
     console.error('Failed to connect to MongoDB:', err.message);
@@ -34,6 +38,8 @@ function gracefulShutdown(signal) {
   console.log(`\n${signal} received — shutting down gracefully.`);
   marketingJourneyCron.stop();
   lowStockCron.stop();
+  fbrRetryCron.stop();
+  paymentReminderCron.stop();
   if (!server) return process.exit(0);
   server.close(() => {
     require('mongoose').connection.close(false).then(() => {

@@ -49,7 +49,7 @@ async function update(req, res) {
   const allowed = [
     'name', 'categoryId', 'unitId', 'sku', 'barcode', 'description', 'images',
     'costPrice', 'sellingPrice', 'minStock', 'maxStock', 'reorderLevel',
-    'trackExpiry', 'trackSerial',
+    'trackExpiry', 'trackSerial', 'hsCode',
   ];
   const updates = {};
   for (const key of allowed) if (req.body[key] !== undefined) updates[key] = req.body[key];

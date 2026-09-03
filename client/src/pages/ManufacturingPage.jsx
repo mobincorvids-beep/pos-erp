@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
@@ -23,6 +24,7 @@ export function ManufacturingPage() {
             ['routings', 'Routings'],
             ['mrp', 'MRP'],
             ['schedule', 'Schedule'],
+            ['yield', 'Yield report'],
           ].map(([key, label]) => (
             <button key={key} onClick={() => setTab(key)} className={tab === key ? 'pill-active' : 'pill'}>
               {label}
@@ -36,6 +38,7 @@ export function ManufacturingPage() {
       {tab === 'routings' && <RoutingsTab />}
       {tab === 'mrp' && <MrpTab />}
       {tab === 'schedule' && <ScheduleTab />}
+      {tab === 'yield' && <YieldReportTab />}
     </div>
   );
 }
@@ -169,7 +172,38 @@ function WorkOrderPanel({ workOrder, onClose, onChanged }) {
           </button>
         </div>
       )}
-      {workOrder.status === 'completed' && <p className="text-sm text-accent-strong">Completed: {formatQty(workOrder.quantityProduced)} units added to stock.</p>}
+      {workOrder.status === 'completed' && (
+        <div>
+          <p className="text-sm text-accent-strong mb-3">Completed: {formatQty(workOrder.quantityProduced)} units added to stock.</p>
+          <div className="space-y-1 text-xs text-ink-muted border-t border-rule pt-3">
+            <div className="flex justify-between"><span>Material cost</span><span className="num">{formatMoney(workOrder.actualMaterialCost)}</span></div>
+            <div className="flex justify-between"><span>Labor cost</span><span className="num">{formatMoney(workOrder.actualLaborCost)}</span></div>
+            <div className="flex justify-between"><span>Overhead</span><span className="num">{formatMoney(workOrder.overheadCost)}</span></div>
+            <div className="flex justify-between font-semibold text-ink"><span>Total production cost</span><span className="num">{formatMoney(workOrder.totalProductionCost)}</span></div>
+            <div className="flex justify-between font-semibold text-ink"><span>Cost per unit</span><span className="num">{formatMoney(workOrder.costPerUnit)}</span></div>
+          </div>
+          {workOrder.yieldPercentage != null && (
+            <div className="space-y-1 text-xs text-ink-muted border-t border-rule pt-3 mt-3">
+              <div className="flex justify-between"><span>Expected output</span><span className="num">{formatQty(workOrder.expectedOutputQuantity)}</span></div>
+              <div className="flex justify-between"><span>Wastage</span><span className="num">{formatQty(workOrder.wastageQuantity)}</span></div>
+              <div className="flex justify-between font-semibold text-ink">
+                <span>Yield</span>
+                <span className={`num ${workOrder.yieldPercentage >= 95 ? 'text-accent-strong' : workOrder.yieldPercentage >= 85 ? '' : 'text-danger'}`}>{workOrder.yieldPercentage.toFixed(1)}%</span>
+              </div>
+            </div>
+          )}
+          {workOrder.consumedBatches?.length > 0 && (
+            <div className="text-xs text-ink-muted border-t border-rule pt-3 mt-3">
+              <p className="field-label mb-1">Raw material batches consumed</p>
+              <ul className="space-y-0.5">
+                {workOrder.consumedBatches.map((cb, i) => (
+                  <li key={i} className="flex justify-between"><span>{cb.batchNumber || cb.batchId}</span><span className="num">{formatQty(cb.quantityConsumed)}</span></li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -402,6 +436,7 @@ function WorkCentersTab() {
                 <th className="px-5 py-3 font-semibold">Name</th>
                 <th className="px-5 py-3 font-semibold">Description</th>
                 <th className="px-5 py-3 font-semibold text-right">Capacity (hrs/day)</th>
+                <th className="px-5 py-3 font-semibold text-right">Hourly rate</th>
                 <th className="px-5 py-3 font-semibold">Status</th>
                 <th className="px-5 py-3 font-semibold"></th>
               </tr>
@@ -412,6 +447,7 @@ function WorkCentersTab() {
                   <td className="px-5 py-3 font-semibold text-accent">{wc.name}</td>
                   <td className="px-5 py-3 text-ink-muted">{wc.description || '—'}</td>
                   <td className="px-5 py-3 num text-right">{formatQty(wc.capacityHoursPerDay)}</td>
+                  <td className="px-5 py-3 num text-right">{formatMoney(wc.hourlyRate || 0)}</td>
                   <td className="px-5 py-3"><span className={wc.isActive ? 'chip-accent' : 'chip-neutral'}>{wc.isActive ? 'Active' : 'Inactive'}</span></td>
                   <td className="px-5 py-3 text-right"><button className="btn-ghost !px-0 text-xs" onClick={() => { setEditing(wc); setShowForm(true); }}>Edit</button></td>
                 </tr>
@@ -430,6 +466,7 @@ function WorkCenterForm({ workCenter, onClose, onSaved }) {
   const [name, setName] = useState(workCenter?.name || '');
   const [description, setDescription] = useState(workCenter?.description || '');
   const [capacityHoursPerDay, setCapacityHoursPerDay] = useState(workCenter?.capacityHoursPerDay ?? 8);
+  const [hourlyRate, setHourlyRate] = useState(workCenter?.hourlyRate ?? 0);
   const [isActive, setIsActive] = useState(workCenter?.isActive ?? true);
   const [saving, setSaving] = useState(false);
 
@@ -437,7 +474,7 @@ function WorkCenterForm({ workCenter, onClose, onSaved }) {
     e.preventDefault();
     setSaving(true);
     try {
-      const payload = { name, description, capacityHoursPerDay: Number(capacityHoursPerDay), isActive };
+      const payload = { name, description, capacityHoursPerDay: Number(capacityHoursPerDay), hourlyRate: Number(hourlyRate) || 0, isActive };
       if (workCenter) await api.put(`/manufacturing/work-centers/${workCenter._id}`, payload);
       else await api.post('/manufacturing/work-centers', payload);
       toast(workCenter ? 'Work center updated.' : 'Work center created.', 'success');
@@ -457,6 +494,7 @@ function WorkCenterForm({ workCenter, onClose, onSaved }) {
           <div><label className="field-label">Name</label><input required autoFocus className="field-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. CNC Line 1" /></div>
           <div><label className="field-label">Description</label><input className="field-input" value={description} onChange={(e) => setDescription(e.target.value)} /></div>
           <div><label className="field-label">Capacity (hours/day)</label><input type="number" min="0.1" step="0.5" required className="field-input num" value={capacityHoursPerDay} onChange={(e) => setCapacityHoursPerDay(e.target.value)} /></div>
+          <div><label className="field-label">Hourly labor rate</label><input type="number" min="0" step="0.01" className="field-input num" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} placeholder="Used for production labor costing" /></div>
           {workCenter && (
             <label className="flex items-center gap-2 text-sm text-ink-muted">
               <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} /> Active
@@ -869,6 +907,91 @@ function ScheduleTab() {
           </table>
         </div>
       ))}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Yield report — expected vs. actual output, wastage and per-unit cost
+// across recent completed/in-progress work orders. Reads the same
+// efficiency endpoint the OEE-adjacent report uses (yieldRatio/scrap are
+// already computed there), plus each work order's own costing fields for
+// cost-per-unit.
+// ---------------------------------------------------------------------------
+
+function YieldReportTab() {
+  const { t } = useTranslation();
+  const toast = useToast();
+  const [rows, setRows] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    Promise.all([
+      api.get('/manufacturing/reports/efficiency'),
+      api.get('/manufacturing/work-orders?status=completed'),
+    ]).then(([efficiency, wos]) => { setRows(efficiency); setOrders(wos); }).catch((err) => toast(err.message, 'error')).finally(() => setLoading(false));
+  }, []);
+
+  const costByWo = Object.fromEntries(orders.map((wo) => [wo._id, wo]));
+
+  if (loading) return <Loading />;
+  if (rows.length === 0) return <EmptyState title={t('manufacturing.yield.emptyTitle', 'No production runs yet')} description={t('manufacturing.yield.emptyDescription', 'Start and complete a work order to see yield and wastage here.')} />;
+
+  const avgYield = rows.filter((r) => r.yieldRatio != null).reduce((sum, r, _, arr) => sum + (r.yieldRatio * 100) / arr.length, 0);
+
+  return (
+    <div>
+      <div className="grid grid-cols-3 gap-4 mb-4">
+        <div className="card p-5">
+          <p className="eyebrow mb-3">{t('manufacturing.yield.avgYield', 'Average yield')}</p>
+          <p className="font-display text-3xl font-bold text-accent num">{rows.length ? avgYield.toFixed(1) : '—'}%</p>
+        </div>
+        <div className="card p-5">
+          <p className="eyebrow mb-3">{t('manufacturing.yield.runsReported', 'Runs reported')}</p>
+          <p className="font-display text-3xl font-bold text-accent num">{rows.length}</p>
+        </div>
+        <div className="card p-5">
+          <p className="eyebrow mb-3">{t('manufacturing.yield.totalScrap', 'Total scrap units')}</p>
+          <p className="font-display text-3xl font-bold text-accent num">{formatQty(rows.reduce((sum, r) => sum + (r.scrapQuantity || 0), 0))}</p>
+        </div>
+      </div>
+
+      <div className="card overflow-hidden">
+        <p className="font-display text-lg font-semibold text-accent px-5 py-4 border-b border-rule">{t('manufacturing.yield.title', 'Yield & wastage by work order')}</p>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b-2 border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken">
+              <th className="px-5 py-3 font-semibold">{t('manufacturing.yield.workOrder', 'Work order')}</th>
+              <th className="px-5 py-3 font-semibold text-right">{t('manufacturing.yield.expected', 'Expected')}</th>
+              <th className="px-5 py-3 font-semibold text-right">{t('manufacturing.yield.actual', 'Actual')}</th>
+              <th className="px-5 py-3 font-semibold text-right">{t('manufacturing.yield.wastage', 'Wastage')}</th>
+              <th className="px-5 py-3 font-semibold text-right">{t('manufacturing.yield.yieldPct', 'Yield %')}</th>
+              <th className="px-5 py-3 font-semibold text-right">{t('manufacturing.yield.costPerUnit', 'Cost/unit')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => {
+              const wo = costByWo[r.workOrderId];
+              const yieldPct = r.yieldRatio != null ? (r.yieldRatio * 100) : null;
+              const wastage = wo?.wastageQuantity ?? Math.max((r.quantityToProduce || 0) - (r.quantityProduced || 0), 0);
+              return (
+                <tr key={r.workOrderId} className="border-b border-rule last:border-0">
+                  <td className="px-5 py-4 num font-semibold text-accent">{r.workOrderNumber}</td>
+                  <td className="px-5 py-4 num text-right">{formatQty(r.quantityToProduce)}</td>
+                  <td className="px-5 py-4 num text-right">{formatQty(r.quantityProduced)}</td>
+                  <td className="px-5 py-4 num text-right">{formatQty(wastage)}</td>
+                  <td className="px-5 py-4 num text-right">
+                    {yieldPct != null ? <span className={yieldPct >= 95 ? 'chip-accent' : yieldPct >= 85 ? 'chip-info' : 'chip-danger'}>{yieldPct.toFixed(1)}%</span> : '—'}
+                  </td>
+                  <td className="px-5 py-4 num text-right">{wo?.costPerUnit != null ? formatMoney(wo.costPerUnit) : '—'}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

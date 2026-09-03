@@ -5,6 +5,7 @@ router.use('/auth', require('./oauthRoutes')); // Google/Microsoft SSO — see s
 router.use('/products', require('./productRoutes'));
 router.use('/categories', require('./categoryRoutes'));
 router.use('/sales', require('./saleRoutes'));
+router.use('/cheques', require('./chequeRoutes')); // receivable (from customers) and payable (to suppliers) cheque tracking
 router.use('/sales-workflow', require('./salesOrderRoutes')); // quotations & sales orders
 router.use('/purchase-orders', require('./purchaseRoutes'));
 router.use('/requisitions', require('./requisitionRoutes'));
@@ -22,6 +23,7 @@ router.use('/purchase-orders/early-payment', require('./earlyPaymentDiscountRout
 router.use('/stock-transfers', require('./transferRoutes'));
 router.use('/stock-counts', require('./stockCountRoutes'));
 router.use('/manufacturing', require('./manufacturingRoutes'));
+router.use('/subcontracting', require('./subcontractRoutes'));
 router.use('/service-orders', require('./serviceOrderRoutes'));
 router.use('/banking', require('./bankingRoutes'));
 router.use('/reports', require('./reportRoutes'));
@@ -33,6 +35,9 @@ router.use('/roles', require('./roleRoutes'));
 router.use('/expense-categories', require('./expenseCategoryRoutes'));
 router.use('/expenses', require('./expenseRoutes'));
 router.use('/customers', require('./customerRoutes'));
+router.use('/price-lists', require('./priceListRoutes'));
+router.use('/route-sales', require('./routeSalesRoutes'));
+router.use('/secondary-sales', require('./secondarySaleRoutes'));
 router.use('/suppliers', require('./supplierRoutes'));
 router.use('/loyalty', require('./loyaltyRoutes'));
 router.use('/coupons', require('./couponRoutes'));
@@ -57,6 +62,7 @@ router.use('/workflows', require('./workflowRoutes'));
 router.use('/webhooks', require('./webhookRoutes'));
 router.use('/payment-gateway', require('./paymentGatewayRoutes')); // JazzCash/Easypaisa — callback/:provider is public, see that file
 router.use('/tax-payments', require('./taxPaymentRoutes')); // vendor pays own FBR tax liability via JazzCash — jazzcash-callback is public, see that file
+router.use('/fbr-compliance', require('./fbrComplianceRoutes')); // FBR Digital Invoicing dashboard: counts, outstanding sales, retry-all
 router.use('/projects', require('./projectRoutes'));
 router.use('/tasks', require('./taskRoutes'));
 router.use('/ecommerce-config', require('./ecommerceConfigRoutes')); // tenant-side setup
@@ -83,6 +89,7 @@ router.use('/marketing', require('./marketingRoutes')); // audience segments + d
 router.use('/review-requests', require('./reviewRequestRoutes'));
 router.use('/public/reviews', require('./publicReviewRoutes')); // public, no JWT — mirrors publicFunnelRoutes.js
 router.use('/call-logs', require('./callLogRoutes'));
+router.use('/whatsapp', require('./whatsappRoutes')); // per-tenant WhatsApp Business API — credentials via /org/company, send log here
 router.use('/developer/api-keys', require('./apiKeyRoutes'));
 router.use('/developer/webhooks', require('./webhookSubscriptionRoutes'));
 router.use('/public-api/v1', require('./publicApiRoutes')); // public, apiKeyAuth only — no JWT

@@ -20,6 +20,11 @@ const paymentGatewayTransactionSchema = new Schema({
   responseMessage: { type: String, default: null },
   rawResponse: { type: Schema.Types.Mixed, default: null }, // full provider payload, kept for audit/debugging — never displayed to the customer
   initiatedByUserId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+  // True once a saleId-linked, completed transaction has actually been
+  // posted as a CustomerPayment against that sale's due balance (see
+  // paymentGatewayController.applyGatewayPaymentToSale) — guards against
+  // double-posting if the provider's callback is ever redelivered.
+  appliedToSale: { type: Boolean, default: false },
 }, { timestamps: true });
 
 module.exports = model('PaymentGatewayTransaction', paymentGatewayTransactionSchema);

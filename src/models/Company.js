@@ -36,6 +36,16 @@ const companySchema = new Schema({
   // for goods and SRB provincially for services — so this is a list, not
   // a single enum. See taxComplianceService for the dispatch logic.
   taxAuthorities: [{ type: String, enum: ['fbr', 'srb', 'pra', 'kpra', 'bra'] }],
+  // Which Pakistani province the business is registered/operating in — used
+  // (together with businessNature below) purely to suggest the right
+  // provincial authority in Settings; taxAuthorities above remains the
+  // actual, explicit source of truth for where sales are filed.
+  province: { type: String, default: null, enum: ['sindh', 'punjab', 'kp', 'balochistan', 'islamabad', 'other', null] },
+  // Goods are taxed federally by FBR; services fall under the province's own
+  // revenue authority (SRB/PRA/KPRA/BRA) instead. A business can sell both
+  // (e.g. a restaurant selling packaged goods at the counter too), hence
+  // 'both' rather than a strict either/or.
+  businessNature: { type: String, default: 'goods', enum: ['goods', 'services', 'both'] },
 
   // Multi-company grouping — a holding business running several registered
   // companies (e.g. separate legal entities per city) that wants a combined
@@ -57,6 +67,17 @@ const companySchema = new Schema({
     webhookToken: { type: String, default: null },
     defaultBranchId: { type: Schema.Types.ObjectId, ref: 'Branch', default: null },
     defaultWarehouseId: { type: Schema.Types.ObjectId, ref: 'Warehouse', default: null },
+    defaultPaymentAccountId: { type: Schema.Types.ObjectId, ref: 'Account', default: null },
+  },
+
+  // Where a confirmed JazzCash/Easypaisa collection against an EXISTING
+  // due sale/invoice (as opposed to a fresh POS checkout, which already
+  // carries its own paymentAccountId on the payments[] line) lands —
+  // paymentGatewayController.callback() needs a cash/bank account to post
+  // the resulting CustomerPayment into and has no checkout request to read
+  // one from. Same "small per-company settings block" shape as
+  // ecommerceConfig above.
+  paymentGatewayConfig: {
     defaultPaymentAccountId: { type: Schema.Types.ObjectId, ref: 'Account', default: null },
   },
 
@@ -83,6 +104,21 @@ const companySchema = new Schema({
     fbrAccountNumber: { type: String, default: null },
     fbrAccountTitle: { type: String, default: null },
   },
+
+  // Per-tenant WhatsApp Business Cloud API credentials (Meta) — same
+  // self-service pattern as fbrApiToken/jazzCashTaxPay above: there is no
+  // shared/platform-wide WhatsApp sender, each vendor connects their own
+  // WhatsApp Business Account under Settings so order confirmations,
+  // invoices and payment reminders go out from THEIR number, not a shared
+  // one. See src/services/whatsappService.js for the send-side no-op
+  // behavior when these aren't configured.
+  whatsappEnabled: { type: Boolean, default: false },
+  whatsappPhoneNumberId: { type: String, default: null }, // Meta "Phone number ID" (not the phone number itself)
+  whatsappBusinessAccountId: { type: String, default: null }, // Meta WABA ID
+  // TODO(security): encrypt at rest in production — stored plain for now,
+  // no existing encryption helper in this codebase to reuse, same caveat
+  // already noted on fbrApiToken/jazzCashTaxPay.password above.
+  whatsappAccessToken: { type: String, default: null },
 
   defaultAccounts: {
     inventoryAssetId: { type: Schema.Types.ObjectId, ref: 'Account', default: null },

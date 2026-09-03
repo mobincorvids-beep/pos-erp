@@ -24,6 +24,12 @@ const productSchema = new Schema({
   sku: String,
   barcode: { type: String, index: true },
   description: String,
+  // Harmonized System code — required per line item on FBR Digital
+  // Invoicing submissions (see fbrService.buildInvoicePayload). Optional
+  // here since not every tenant is FBR-registered, but a product left
+  // without one submits a null hsCode on that item, which FBR is likely
+  // to reject for a goods invoice.
+  hsCode: { type: String, default: null },
 
   // Images stored inline as base64 data-URI strings — this app has no cloud/object
   // storage configured, so uploads are resized/compressed client-side (~800px max

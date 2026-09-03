@@ -27,6 +27,7 @@ export function PosPage() {
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [checkingOut, setCheckingOut] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [isCOD, setIsCOD] = useState(false);
   const [gatewayPhone, setGatewayPhone] = useState('');
   const [gatewayStatus, setGatewayStatus] = useState(null); // null | 'waiting' | 'failed'
   const isGatewayMethod = paymentMethod === 'jazzcash' || paymentMethod === 'easypaisa';
@@ -215,6 +216,7 @@ export function PosPage() {
       payments: [{ paymentAccountId: context.cashAccountId, method: paymentMethod, amount: total }],
       couponCode: couponResult ? couponCode.toUpperCase().trim() : undefined,
       ...(showCurrency && saleCurrency ? { currency: saleCurrency } : {}),
+      isCOD,
     });
 
     // Gift card is redeemed AFTER the sale exists, so the redemption's
@@ -227,6 +229,7 @@ export function PosPage() {
 
     toast(t('pos.saleCompleted', { invoiceNumber: sale.invoiceNumber, amount: formatMoney(sale.totalAmount, company?.currency) }), 'success');
     setCart([]);
+    setIsCOD(false);
     setGatewayStatus(null);
     setGatewayPhone('');
     setGatewayPhoneTouched(false);
@@ -555,9 +558,16 @@ export function PosPage() {
               <option value="bank_transfer">{t('pos.bankTransfer')}</option>
               <option value="jazzcash">{t('pos.jazzcash')}</option>
               <option value="easypaisa">{t('pos.easypaisa')}</option>
+              <option value="cheque">{t('pos.cheque')}</option>
+              <option value="credit">{t('pos.credit')}</option>
               <option value="gift_card">{t('pos.giftCard')}</option>
             </select>
           </div>
+
+          <label className="flex items-center gap-2 mb-2 text-sm text-ink-muted">
+            <input type="checkbox" checked={isCOD} onChange={(e) => setIsCOD(e.target.checked)} />
+            {t('pos.codCheckboxLabel')}
+          </label>
 
           {isGatewayMethod && (
             <div className="mb-2">

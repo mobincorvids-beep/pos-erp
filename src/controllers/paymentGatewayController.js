@@ -13,18 +13,37 @@
 const crypto = require('crypto');
 const PaymentGatewayTransaction = require('../models/PaymentGatewayTransaction');
 const paymentGatewayService = require('../services/paymentGatewayService');
+const Sale = require('../models/Sale');
+const Company = require('../models/Company');
+const customerLedgerService = require('../services/customerLedgerService');
 
 async function initiate(req, res) {
   try {
-    const { provider, amount, phone } = req.body;
+    const { provider, amount, phone, saleId } = req.body;
     if (!provider || !amount || !phone) {
       return res.status(400).json({ error: 'provider, amount and phone are required.' });
+    }
+
+    // saleId is optional and NEW: set when a cashier/collector is
+    // "Collecting via JazzCash/Easypaisa" against an EXISTING due sale
+    // (outstanding balance on an invoice), as opposed to the normal POS
+    // checkout flow where saleId is still null here and only gets linked
+    // once /sales/checkout runs afterwards (see the comment at the bottom
+    // of this function). When set, the callback below applies the
+    // confirmed payment straight to that sale's due balance instead of
+    // waiting on a checkout call that will never come.
+    let sale = null;
+    if (saleId) {
+      sale = await Sale.findOne({ _id: saleId, companyId: req.companyId });
+      if (!sale) return res.status(404).json({ error: 'Sale not found.' });
+      if (sale.dueAmount <= 0) return res.status(400).json({ error: 'This sale has no outstanding balance to collect.' });
     }
 
     const orderRef = `PGW-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
 
     const transaction = await PaymentGatewayTransaction.create({
       companyId: req.companyId,
+      saleId: sale ? sale._id : null,
       provider,
       orderRef,
       phone,
@@ -110,6 +129,27 @@ async function callback(req, res) {
     if (verification.providerTransactionId) transaction.providerTransactionId = verification.providerTransactionId;
     await transaction.save();
 
+    // If this transaction was initiated against an EXISTING due sale
+    // (transaction.saleId set — see initiate() above), a successful,
+    // not-yet-applied confirmation applies the money straight to that
+    // sale's balance now, through the same customerLedgerService path a
+    // manual cash receipt would use. A fresh POS checkout (saleId null at
+    // this point) is deliberately left alone — the frontend finalizes
+    // that one itself via POST /sales/checkout once it sees 'completed'.
+    if (transaction.status === 'completed' && transaction.saleId && !transaction.appliedToSale) {
+      try {
+        await applyGatewayPaymentToSale(transaction);
+        transaction.appliedToSale = true;
+        await transaction.save();
+      } catch (err) {
+        // Never fail the webhook response over a bookkeeping error on our
+        // side — the money already moved at the provider; log for
+        // follow-up (an accountant can record the receipt manually) same
+        // as every other best-effort side effect in this codebase.
+        console.error(`Applying gateway payment to sale ${transaction.saleId} failed:`, err.message);
+      }
+    }
+
     res.status(200).json({ received: true, verified: true, status: transaction.status });
   } catch (err) {
     // A 200 here too — a 4xx/5xx on a webhook endpoint typically triggers
@@ -119,6 +159,30 @@ async function callback(req, res) {
     console.error(`Payment gateway callback (${req.params.provider}) failed:`, err.message);
     res.status(200).json({ received: true, verified: false });
   }
+}
+
+/** Records the confirmed gateway transaction as a customer receipt against the sale it was collected for, reducing its dueAmount. */
+async function applyGatewayPaymentToSale(transaction) {
+  const sale = await Sale.findOne({ _id: transaction.saleId, companyId: transaction.companyId });
+  if (!sale || !sale.customerId) return;
+
+  const company = await Company.findById(transaction.companyId);
+  const paymentAccountId = company?.paymentGatewayConfig?.defaultPaymentAccountId;
+  if (!paymentAccountId) {
+    throw new Error('No default payment account configured for JazzCash/Easypaisa collections — set Company.paymentGatewayConfig.defaultPaymentAccountId under Settings.');
+  }
+
+  await customerLedgerService.recordPayment({
+    companyId: transaction.companyId,
+    customerId: sale.customerId,
+    paymentAccountId,
+    amount: transaction.amount,
+    allocations: [{ saleId: sale._id, amount: Math.min(transaction.amount, sale.dueAmount) }],
+    method: transaction.provider,
+    reference: transaction.providerTransactionId || transaction.orderRef,
+    note: `Collected via ${transaction.provider} (${transaction.orderRef})`,
+    userId: transaction.initiatedByUserId,
+  });
 }
 
 async function getStatus(req, res) {

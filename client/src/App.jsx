@@ -13,6 +13,7 @@ import { PosPage } from './pages/PosPage';
 import { ProductsPage } from './pages/ProductsPage';
 import { CategoriesPage } from './pages/CategoriesPage';
 import { SalesHistoryPage } from './pages/SalesHistoryPage';
+import { ChequesPage } from './pages/ChequesPage';
 import { SalesWorkflowPage } from './pages/SalesWorkflowPage';
 import { PurchasesPage } from './pages/PurchasesPage';
 import { StockTransfersPage } from './pages/StockTransfersPage';
@@ -37,6 +38,7 @@ import { PeriodsPage } from './pages/PeriodsPage';
 import { CostCentersPage } from './pages/CostCentersPage';
 import { UnitsPage } from './pages/UnitsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { FbrCompliancePage } from './pages/FbrCompliancePage';
 import { EarlyPaymentDiscountPage } from './pages/EarlyPaymentDiscountPage';
 import { BankingPage } from './pages/BankingPage';
 import { ReportsPage } from './pages/ReportsPage';
@@ -45,8 +47,11 @@ import { SuppliersPage } from './pages/SuppliersPage';
 import { TeamPage } from './pages/TeamPage';
 import { HrPage } from './pages/HrPage';
 import { MyAttendancePage } from './pages/MyAttendancePage';
+import { MyRoutePage } from './pages/MyRoutePage';
+import { PriceListsPage } from './pages/PriceListsPage';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { ManufacturingPage } from './pages/ManufacturingPage';
+import { SubcontractingPage } from './pages/SubcontractingPage';
 import { ServiceOrdersPage } from './pages/ServiceOrdersPage';
 import { CrmPage } from './pages/CrmPage';
 import { LoyaltyPage } from './pages/LoyaltyPage';
@@ -66,6 +71,7 @@ import { PerformancePage } from './pages/PerformancePage';
 import { FunnelsPage } from './pages/FunnelsPage';
 import { ReputationPage } from './pages/ReputationPage';
 import { MarketingAutomationPage } from './pages/MarketingAutomationPage';
+import { WhatsappLogPage } from './pages/WhatsappLogPage';
 import { FunnelLandingPage } from './public/FunnelLandingPage';
 import { PublicReviewPage } from './public/PublicReviewPage';
 import { DeveloperPlatformPage } from './pages/DeveloperPlatformPage';
@@ -137,6 +143,7 @@ export default function App() {
               <Route path="/dashboard/team" element={<DashboardPage />} />
               <Route path="/pos" element={<PosPage />} />
               <Route path="/sales" element={<SalesHistoryPage />} />
+              <Route path="/cheques" element={<ChequesPage />} />
               <Route path="/sales-workflow" element={<SalesWorkflowPage />} />
               <Route path="/products" element={<ProductsPage />} />
               <Route path="/categories" element={<CategoriesPage />} />
@@ -153,6 +160,7 @@ export default function App() {
               <Route path="/documents" element={<DocumentsPage />} />
               <Route path="/security" element={<SecurityPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/fbr-compliance" element={<FbrCompliancePage />} />
               <Route path="/rfqs" element={<RfqPage />} />
               <Route path="/budgets" element={<BudgetsPage />} />
               <Route path="/employee-loans" element={<EmployeeLoansPage />} />
@@ -170,8 +178,11 @@ export default function App() {
               <Route path="/team" element={<TeamPage />} />
               <Route path="/hr" element={<HrPage />} />
               <Route path="/my-attendance" element={<MyAttendancePage />} />
+              <Route path="/my-route" element={<MyRoutePage />} />
+              <Route path="/price-lists" element={<PriceListsPage />} />
               <Route path="/projects" element={<ProjectsPage />} />
               <Route path="/manufacturing" element={<ManufacturingPage />} />
+              <Route path="/subcontracting" element={<SubcontractingPage />} />
               <Route path="/service-orders" element={<ServiceOrdersPage />} />
               <Route path="/crm" element={<CrmPage />} />
               <Route path="/loyalty" element={<LoyaltyPage />} />
@@ -189,6 +200,7 @@ export default function App() {
               <Route path="/funnels" element={<FunnelsPage />} />
               <Route path="/reputation" element={<ReputationPage />} />
               <Route path="/marketing-automation" element={<MarketingAutomationPage />} />
+              <Route path="/whatsapp-log" element={<WhatsappLogPage />} />
               <Route path="/developer-platform" element={<DeveloperPlatformPage />} />
               <Route path="/ecommerce-hub" element={<EcommerceHubPage />} />
               {INDUSTRY_MODULES.map(({ key, path, label, component: Component }) => (

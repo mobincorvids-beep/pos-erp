@@ -35,7 +35,7 @@ async function recordPayment(input) {
     await session.withTransaction(async () => {
       const {
         companyId, customerId, paymentAccountId, amount, date, note, userId,
-        receivableAccountId,
+        receivableAccountId, method, reference,
       } = input;
 
       if (!amount || amount <= 0) throw new Error('Payment amount must be greater than zero.');
@@ -74,7 +74,7 @@ async function recordPayment(input) {
       }
 
       [payment] = await CustomerPayment.create(
-        [{ companyId, customerId, paymentAccountId, amount, date: date || new Date(), allocations, note, userId }],
+        [{ companyId, customerId, paymentAccountId, amount, date: date || new Date(), allocations, note, userId, method: method || 'cash', reference: reference || null }],
         { session }
       );
 
@@ -96,6 +96,67 @@ async function recordPayment(input) {
       }
     });
 
+    return payment;
+  } finally {
+    session.endSession();
+  }
+}
+
+/**
+ * Reverses a previously recorded CustomerPayment — used when a cheque
+ * bounces (see chequeService.markBounced) or, in principle, any other
+ * receipt that turns out not to have actually cleared. Undoes exactly
+ * what recordPayment() did: puts each allocated sale's dueAmount/
+ * paidAmount back where they were, posts a compensating voucher
+ * (Dr Accounts Receivable, Cr the original payment account — the mirror
+ * image of the original receipt voucher), and flags the payment itself
+ * so ledger() stops treating it as money received. Idempotent: reversing
+ * an already-reversed payment is a no-op.
+ *
+ * @param {String} paymentId
+ * @param {String} companyId
+ * @param {Object} [opts]
+ * @param {String} [opts.userId]
+ * @param {String} [opts.receivableAccountId] - falls back to the company's default AR account
+ * @param {String} [opts.narration]
+ */
+async function reversePayment(paymentId, companyId, opts = {}) {
+  const session = await mongoose.startSession();
+  try {
+    let payment;
+    await session.withTransaction(async () => {
+      payment = await CustomerPayment.findOne({ _id: paymentId, companyId }).session(session);
+      if (!payment) throw new Error('Customer payment not found.');
+      if (payment.reversed) return; // already reversed — no-op
+
+      for (const alloc of payment.allocations) {
+        const sale = await Sale.findById(alloc.saleId).session(session);
+        if (!sale) continue; // sale may since have been deleted/voided independently — reversal of the payment itself still proceeds
+        sale.dueAmount += alloc.amount;
+        sale.paidAmount -= alloc.amount;
+        await sale.save({ session });
+      }
+
+      payment.reversed = true;
+      payment.reversedAt = new Date();
+      await payment.save({ session });
+
+      const receivable = opts.receivableAccountId
+        || (await defaultAccountsService.resolve(companyId, 'accountsReceivableId', session));
+      if (receivable) {
+        const voucher = await accountingService.postVoucher({
+          companyId, type: 'journal', date: new Date(),
+          narration: opts.narration || `Reversal of customer payment ${payment._id}`,
+          entries: [
+            { accountId: receivable, debit: payment.amount, credit: 0 },
+            { accountId: payment.paymentAccountId, debit: 0, credit: payment.amount },
+          ],
+          referenceType: 'CustomerPayment', referenceId: payment._id, userId: opts.userId,
+        }, session);
+        payment.reversalVoucherId = voucher._id;
+        await payment.save({ session });
+      }
+    });
     return payment;
   } finally {
     session.endSession();
@@ -137,9 +198,17 @@ async function ledger(customerId) {
       }
       return rows;
     }),
-    ...payments.map((p) => ({
+    // A reversed (bounced-cheque) payment stops counting as money received
+    // — no credit row for it — and instead reinstates the debt as a debit
+    // dated when it actually bounced, not when the cheque was first
+    // deposited, so the ledger reads as "paid, then it came back".
+    ...payments.filter((p) => !p.reversed).map((p) => ({
       date: p.date, type: 'payment', reference: String(p._id),
       debit: 0, credit: p.amount,
+    })),
+    ...payments.filter((p) => p.reversed).map((p) => ({
+      date: p.reversedAt || p.date, type: 'payment_reversed', reference: String(p._id),
+      debit: p.amount, credit: 0,
     })),
   ].sort((a, b) => a.date - b.date);
 
@@ -180,4 +249,15 @@ async function agingReport(companyId) {
   return Array.from(byCustomer.values()).sort((a, b) => b.total - a.total);
 }
 
-module.exports = { recordPayment, ledger, agingReport };
+/**
+ * Sum of dueAmount across a customer's completed, not-written-off sales —
+ * the same "outstanding balance" number agingReport() buckets by age, but
+ * for one customer with no aging breakdown. Used by creditLimitService
+ * before letting a new credit sale through.
+ */
+async function getOutstandingBalance(customerId) {
+  const dueSales = await Sale.find({ customerId, status: 'completed', dueAmount: { $gt: 0 } });
+  return dueSales.reduce((sum, s) => sum + s.dueAmount, 0);
+}
+
+module.exports = { recordPayment, reversePayment, ledger, agingReport, getOutstandingBalance };

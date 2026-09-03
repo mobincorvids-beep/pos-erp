@@ -211,6 +211,7 @@ function ProductForm({ product, onClose, onSaved }) {
     minStock: product.minStock ?? '', reorderLevel: product.reorderLevel ?? '',
     trackingMode: product.trackingMode || 'simple',
     description: product.description || '',
+    hsCode: product.hsCode || '',
   });
   const [images, setImages] = useState(product.images || []);
   const MAX_IMAGES = 4;
@@ -335,6 +336,7 @@ function ProductForm({ product, onClose, onSaved }) {
           categoryId: effectiveCategoryId,
           trackingMode: form.trackingMode,
           description: form.description || undefined,
+          hsCode: form.hsCode || undefined,
           images: images.length ? images : undefined,
           costPrice: Number(form.costPrice) || 0, sellingPrice: Number(form.sellingPrice) || 0,
           variants: [{ sku: form.sku || undefined, barcode: form.barcode || undefined, sellingPrice: Number(form.sellingPrice) || 0 }],
@@ -345,6 +347,7 @@ function ProductForm({ product, onClose, onSaved }) {
           name: form.name, sku: form.sku || undefined, barcode: form.barcode || undefined,
           categoryId: effectiveCategoryId,
           description: form.description || undefined,
+          hsCode: form.hsCode || undefined,
           images,
           costPrice: Number(form.costPrice) || 0, sellingPrice: Number(form.sellingPrice) || 0,
           minStock: Number(form.minStock) || 0, reorderLevel: Number(form.reorderLevel) || 0,
@@ -411,6 +414,15 @@ function ProductForm({ product, onClose, onSaved }) {
               <label className="field-label">{t('products.fieldBarcode')}</label>
               <input className="field-input" value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} />
             </div>
+          </div>
+          <div>
+            <label className="field-label">{t('products.fieldHsCode')}</label>
+            <input
+              className="field-input" value={form.hsCode}
+              onChange={(e) => setForm({ ...form, hsCode: e.target.value })}
+              placeholder={t('products.hsCodePlaceholder')}
+            />
+            <p className="text-xs text-ink-muted mt-1">{t('products.hsCodeHint')}</p>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

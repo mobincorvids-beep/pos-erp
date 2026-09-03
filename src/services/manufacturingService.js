@@ -15,6 +15,7 @@ const WorkOrder = require('../models/WorkOrder');
 const WorkCenter = require('../models/WorkCenter');
 const Routing = require('../models/Routing');
 const Account = require('../models/Account');
+const Product = require('../models/Product');
 const inventoryService = require('./inventoryService');
 const accountingService = require('./accountingService');
 const auditService = require('./auditService');
@@ -32,9 +33,9 @@ function createBOM(input) {
 }
 
 function createWorkCenter(input) {
-  const { companyId, name, description, capacityHoursPerDay } = input;
+  const { companyId, name, description, capacityHoursPerDay, hourlyRate } = input;
   if (!name) throw new Error('Work center name is required.');
-  return WorkCenter.create({ companyId, name, description, capacityHoursPerDay: capacityHoursPerDay || 8 });
+  return WorkCenter.create({ companyId, name, description, capacityHoursPerDay: capacityHoursPerDay || 8, hourlyRate: hourlyRate || 0 });
 }
 
 function listWorkCenters(companyId) {
@@ -44,7 +45,7 @@ function listWorkCenters(companyId) {
 async function updateWorkCenter(id, companyId, patch) {
   const workCenter = await WorkCenter.findOne({ _id: id, companyId });
   if (!workCenter) throw new Error('Work center not found.');
-  ['name', 'description', 'capacityHoursPerDay', 'isActive'].forEach((field) => {
+  ['name', 'description', 'capacityHoursPerDay', 'hourlyRate', 'isActive'].forEach((field) => {
     if (patch[field] !== undefined) workCenter[field] = patch[field];
   });
   await workCenter.save();
@@ -83,10 +84,22 @@ async function createWorkOrder(input) {
     companyId, branchId, warehouseId, bomId, routingId: routing ? routing._id : null,
     workOrderNumber: nextDocumentNumber('WO'),
     quantityToProduce, status: 'planned', userId,
+    // 1:1 BOM ratio in this data model (components are expressed per ONE
+    // finished unit), so the expected output is simply the planned quantity
+    // — see the yield/wastage report this feeds at completion.
+    expectedOutputQuantity: quantityToProduce,
   });
 }
 
-/** Consumes raw materials for the work order's full planned quantity. */
+/**
+ * Consumes raw materials for the work order's full planned quantity. For a
+ * batch/expiry-tracked component (Product.trackExpiry or trackingMode
+ * 'batch'), consumption is picked FEFO across that component's available
+ * batches at this warehouse — same ordering as the POS checkout batch
+ * picker — and each batch actually drawn from is recorded on
+ * workOrder.consumedBatches for traceability. A non-tracked component
+ * consumes exactly as before (no batchId).
+ */
 async function startProduction(workOrderId, userId) {
   const session = await mongoose.startSession();
   try {
@@ -104,16 +117,60 @@ async function startProduction(workOrderId, userId) {
         await inventoryService.assertSufficientStock(workOrder.warehouseId, component.variantId, null, requiredQty);
       }
 
+      const consumedBatches = [];
       for (const component of bom.components) {
-        const requiredQty = component.quantityPerUnit * workOrder.quantityToProduce;
-        await inventoryService.recordMovement({
-          companyId: workOrder.companyId, warehouseId: workOrder.warehouseId,
-          productId: component.productId, variantId: component.variantId,
-          type: 'production_consume', quantity: -requiredQty,
-          referenceType: 'WorkOrder', referenceId: workOrder._id, userId,
-          note: `Consumed for ${workOrder.workOrderNumber}`,
-        }, session);
+        let requiredQty = component.quantityPerUnit * workOrder.quantityToProduce;
+        const product = await Product.findById(component.productId).session(session);
+        const isBatchTracked = product && (product.trackExpiry || product.trackingMode === 'batch');
+
+        if (isBatchTracked) {
+          // listAvailableBatches isn't session-aware (it's a plain read used
+          // by the POS picker too) — acceptable here since startProduction
+          // already asserted sufficient TOTAL stock above; a concurrent
+          // consumer racing a specific batch just means the FEFO order is a
+          // best-effort snapshot, not a hard reservation.
+          const batches = await inventoryService.listAvailableBatches(workOrder.warehouseId, component.variantId);
+          let remaining = requiredQty;
+          for (const batch of batches) {
+            if (remaining <= 0) break;
+            const takeQty = Math.min(remaining, batch.availableQuantity);
+            if (takeQty <= 0) continue;
+            await inventoryService.recordMovement({
+              companyId: workOrder.companyId, warehouseId: workOrder.warehouseId,
+              productId: component.productId, variantId: component.variantId, batchId: batch._id,
+              type: 'production_consume', quantity: -takeQty,
+              referenceType: 'WorkOrder', referenceId: workOrder._id, userId,
+              note: `Consumed for ${workOrder.workOrderNumber}`,
+            }, session);
+            consumedBatches.push({
+              productId: component.productId, variantId: component.variantId,
+              batchId: batch._id, batchNumber: batch.batchNumber, quantityConsumed: takeQty,
+            });
+            remaining -= takeQty;
+          }
+          if (remaining > 0) {
+            // Batches on hand don't cover it (e.g. some stock isn't
+            // batch-assigned) — consume the rest untracked rather than fail
+            // a run that assertSufficientStock already cleared overall.
+            await inventoryService.recordMovement({
+              companyId: workOrder.companyId, warehouseId: workOrder.warehouseId,
+              productId: component.productId, variantId: component.variantId,
+              type: 'production_consume', quantity: -remaining,
+              referenceType: 'WorkOrder', referenceId: workOrder._id, userId,
+              note: `Consumed for ${workOrder.workOrderNumber}`,
+            }, session);
+          }
+        } else {
+          await inventoryService.recordMovement({
+            companyId: workOrder.companyId, warehouseId: workOrder.warehouseId,
+            productId: component.productId, variantId: component.variantId,
+            type: 'production_consume', quantity: -requiredQty,
+            referenceType: 'WorkOrder', referenceId: workOrder._id, userId,
+            note: `Consumed for ${workOrder.workOrderNumber}`,
+          }, session);
+        }
       }
+      workOrder.consumedBatches = consumedBatches;
 
       if (workOrder.routingId) {
         const routing = await Routing.findById(workOrder.routingId).session(session);
@@ -173,7 +230,27 @@ async function completeProduction(workOrderId, { quantityProduced, actualLaborCo
         materialCost += avgCost * component.quantityPerUnit * workOrder.quantityToProduce;
       }
 
-      const laborCost = actualLaborCost ?? (bom.laborCostPerUnit * quantityProduced);
+      // Labor cost preference order: an explicit override (actualLaborCost),
+      // then WorkCenter.hourlyRate x actual hours logged against this work
+      // order's scheduled operations (real routed runs), falling back to
+      // the BOM's flat laborCostPerUnit x quantity when there's no routing
+      // or no work center has an hourly rate configured.
+      let laborCost = actualLaborCost;
+      if (laborCost === undefined || laborCost === null) {
+        if (workOrder.schedule && workOrder.schedule.length) {
+          const workCenterIds = [...new Set(workOrder.schedule.map((op) => String(op.workCenterId)))];
+          const workCenters = await WorkCenter.find({ _id: { $in: workCenterIds } }).session(session);
+          const rateById = new Map(workCenters.map((wc) => [String(wc._id), wc.hourlyRate || 0]));
+          const hasAnyRate = workCenters.some((wc) => wc.hourlyRate > 0);
+          if (hasAnyRate) {
+            laborCost = workOrder.schedule.reduce((sum, op) => {
+              const hours = op.actualHours ?? op.estimatedHours ?? 0;
+              return sum + hours * (rateById.get(String(op.workCenterId)) || 0);
+            }, 0);
+          }
+        }
+        if (laborCost === undefined || laborCost === null) laborCost = bom.laborCostPerUnit * quantityProduced;
+      }
       const overheadCost = actualOverheadCost ?? (bom.overheadCostPerUnit * quantityProduced);
       const totalProductionCost = materialCost + laborCost + overheadCost;
       const unitCost = totalProductionCost / quantityProduced;
@@ -191,12 +268,39 @@ async function completeProduction(workOrderId, { quantityProduced, actualLaborCo
       workOrder.actualOverheadCost = overheadCost;
       workOrder.wastageNote = wastageNote || null;
       workOrder.scrapQuantity = scrapQuantity || 0;
+
+      // --- Production costing ---
+      workOrder.actualMaterialCost = materialCost;
+      workOrder.overheadCost = overheadCost;
+      workOrder.totalProductionCost = totalProductionCost;
+      workOrder.costPerUnit = unitCost;
+
+      // --- Yield / wastage ---
+      const expectedOutput = workOrder.expectedOutputQuantity ?? workOrder.quantityToProduce;
+      workOrder.actualOutputQuantity = quantityProduced;
+      workOrder.yieldPercentage = expectedOutput > 0 ? (quantityProduced / expectedOutput) * 100 : null;
+      workOrder.wastageQuantity = Math.max(expectedOutput - quantityProduced, 0);
+
       if (workOrder.schedule && workOrder.schedule.length) {
         workOrder.schedule.forEach((op) => { if (op.status !== 'completed') op.status = 'completed'; });
       }
       workOrder.status = 'completed';
       workOrder.completedAt = new Date();
       await workOrder.save({ session });
+
+      // Update the finished product's static cost basis to the actual run
+      // cost, the same "last cost wins" pattern productImportService uses
+      // for a CSV cost update — StockLevel.avgCost (already updated above
+      // via the production_output movement) remains the real weighted-
+      // average valuation used for COGS; this just keeps Product.costPrice
+      // from sitting stale at 0 for a manufactured item.
+      const finishedProduct = await Product.findById(bom.finishedProductId).session(session);
+      if (finishedProduct) {
+        finishedProduct.costPrice = unitCost;
+        const variant = finishedProduct.variants?.id(bom.finishedVariantId);
+        if (variant) variant.costPrice = unitCost;
+        await finishedProduct.save({ session });
+      }
 
       // Move value: Cr Raw Material Inventory (already reflected via the
       // production_consume movements' effect on StockLevel — no separate
