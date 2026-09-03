@@ -16,6 +16,18 @@ const saleItemSchema = new Schema({
   taxRate: { type: Number, default: 0 },
   taxAmount: { type: Number, default: 0 },
   lineTotal: { type: Number, required: true },
+
+  // Drop-shipping — set when this sales-order line is fulfilled directly
+  // by a supplier shipping to the customer (see PurchaseOrder.isDropShip)
+  // instead of from this company's own warehouse stock. Left null/false
+  // for every ordinary line, so existing Sale documents and every prior
+  // reader of `items` are unaffected. Populated by purchaseService.
+  // receiveGoods() when receiving against the linked drop-ship PO line —
+  // NOT by convertToInvoice(), which is skipped entirely for a fulfilled
+  // drop-ship line (there's no local stock to deduct).
+  dropShipFulfilled: { type: Boolean, default: false },
+  dropShipPurchaseOrderId: { type: Schema.Types.ObjectId, ref: 'PurchaseOrder', default: null },
+  dropShipFulfilledAt: { type: Date, default: null },
 }, { _id: false });
 
 // Pakistani retail/wholesale market: mobile wallets and informal credit
@@ -151,6 +163,24 @@ const saleSchema = new Schema({
   isCOD: { type: Boolean, default: false },
   codCollectedAt: { type: Date, default: null },
   codCollectedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+
+  // Order holds — credit/fraud/manual review. 'none' is the default and
+  // covers every existing document unchanged. A held sales_order should not
+  // proceed to fulfillment/picking/conversion-to-invoice until released via
+  // orderHoldService.releaseOrderHold — see salesOrderService.convertToInvoice's
+  // hold check. Additive: nothing that doesn't call the new hold logic is
+  // affected.
+  holdStatus: { type: String, default: 'none', enum: ['none', 'credit_hold', 'fraud_review', 'manual_hold'] },
+  holdReason: { type: String, default: null },
+  heldBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+  heldAt: { type: Date, default: null },
+  releasedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+  releasedAt: { type: Date, default: null },
+
+  // Order splitting (see salesOrderService.splitOrder) — set on the NEW
+  // document created by a split, pointing back at the order it was split
+  // from, e.g. for partial-warehouse-fulfillment.
+  splitFromOrderId: { type: Schema.Types.ObjectId, ref: 'Sale', default: null },
 }, { timestamps: true });
 
 saleSchema.statics.PAYMENT_METHODS = SALE_PAYMENT_METHODS;

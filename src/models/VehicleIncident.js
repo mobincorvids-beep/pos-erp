@@ -22,6 +22,10 @@ const vehicleIncidentSchema = new Schema({
   companyId: { type: Schema.Types.ObjectId, ref: 'Company', required: true, index: true },
   vehicleId: { type: Schema.Types.ObjectId, ref: 'CompanyVehicle', required: true },
   driverId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+  // The real driver PROFILE (license/document tracking — see
+  // src/models/Driver.js), additive alongside driverId above (kept as-is,
+  // ref 'User'). Optional/nullable, same rationale as CompanyVehicle.driverProfileId.
+  driverProfileId: { type: Schema.Types.ObjectId, ref: 'Driver', default: null },
   date: { type: Date, default: Date.now },
   type: { type: String, required: true, enum: ['accident', 'damage', 'theft', 'other'] },
   description: { type: String, default: '' },

@@ -6,6 +6,13 @@ const poItemSchema = new Schema({
   quantityOrdered: { type: Number, required: true },
   quantityReceived: { type: Number, default: 0 },
   unitCost: { type: Number, required: true },
+
+  // Drop-ship linking — set only on a PO whose header isDropShip is true.
+  // Points at the Sale (saleType 'sales_order') line this PO line exists
+  // to fulfill directly from the supplier to the customer. Null for every
+  // ordinary PO line, and for a drop-ship line until it's linked.
+  dropShipSaleId: { type: Schema.Types.ObjectId, ref: 'Sale', default: null },
+  dropShipSaleItemIndex: { type: Number, default: null }, // index into Sale.items — Sale line items are subdocuments without a stable own _id path used elsewhere, so position is how other code (e.g. saleCalculations) already addresses a line
 }, { timestamps: true });
 
 // Extra costs incurred on the PO as a whole (freight/shipping, customs duty,
@@ -51,6 +58,14 @@ const purchaseOrderSchema = new Schema({
   // a PO entered into the system days after it was actually raised ages
   // correctly. Defaults to now: existing behaviour is unchanged.
   orderDate: { type: Date, default: Date.now },
+  // Expected arrival date — snapshotted at creation as orderDate +
+  // supplier.leadTimeDays (whatever the supplier's lead time was AT THAT
+  // TIME; a later change to the supplier's leadTimeDays never retroactively
+  // reshuffles an already-placed PO's expectation). Null when the supplier
+  // had no leadTimeDays set, matching that field's own "0 = not tracked"
+  // convention. supplierScorecardService.getSupplierScorecard() reads this
+  // to compute on-time delivery %.
+  expectedDate: { type: Date, default: null },
   status: { type: String, default: 'draft' }, // draft, ordered, partially_received, received, cancelled
   items: [poItemSchema],
   landedCosts: [landedCostSchema],
@@ -80,6 +95,20 @@ const purchaseOrderSchema = new Schema({
   currency: { type: String, default: null }, // null = base currency, no conversion involved
   exchangeRate: { type: Number, default: 1 }, // 1 unit of `currency` = this many units of the base currency
   foreignTotalAmount: { type: Number, default: null }, // totalAmount expressed in `currency`, display only — never used for accounting math
+
+  // Drop-shipping — this PO ships directly from the supplier to a
+  // customer instead of into warehouseId's stock. Schema + linking only,
+  // no carrier integration: when isDropShip is true, purchaseService.
+  // receiveGoods() skips the normal stock-in movement for any line that
+  // carries a dropShipSaleId/dropShipSaleItemIndex (see poItemSchema
+  // above) and instead marks that Sale line fulfilled. warehouseId above
+  // is still required by the schema and is kept as the "notional"
+  // warehouse for reporting/branch scoping, but no StockLevel there is
+  // ever touched for a drop-ship line. Defaults to false, so every
+  // existing PurchaseOrder is completely unaffected.
+  isDropShip: { type: Boolean, default: false },
+  dropShipCustomerId: { type: Schema.Types.ObjectId, ref: 'Customer', default: null },
+  dropShipAddress: { type: String, default: null },
 
   userId: { type: Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });

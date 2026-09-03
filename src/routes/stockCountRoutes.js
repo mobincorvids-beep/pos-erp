@@ -16,7 +16,7 @@ async function extractBranchIdFromWarehouse(req) {
 router.use(requireAuth, scopeToCompany);
 router.get('/', controller.list);
 router.get('/:id', controller.get);
-router.post('/', requirePermission(INVENTORY_ADJUST), requireBranchAccess(extractBranchIdFromWarehouse), controller.start);           // { warehouseId, variantIds? }
+router.post('/', requirePermission(INVENTORY_ADJUST), requireBranchAccess(extractBranchIdFromWarehouse), controller.start);           // { warehouseId, variantIds?, scope?: { type: 'full'|'zone'|'abc_class', zoneId?, abcClass? } }
 router.patch('/:id/counts', requirePermission(INVENTORY_ADJUST), controller.recordCounts); // { counts: [{ itemId, countedQuantity }] }
 router.post('/:id/submit', requirePermission(INVENTORY_ADJUST), controller.submit);
 router.delete('/:id', requirePermission(INVENTORY_ADJUST), controller.remove); // only while in_progress — see stockCountService.deleteCount

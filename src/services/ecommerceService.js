@@ -12,6 +12,7 @@ const StockLevel = require('../models/StockLevel');
 const User = require('../models/User');
 const Role = require('../models/Role');
 const posSaleService = require('./posSaleService');
+const fleetAnalyticsService = require('./fleetAnalyticsService');
 const { nanoid } = require('nanoid');
 
 /** Enables the integration and generates a webhook token, called once per store, or again to rotate the token. */
@@ -63,6 +64,33 @@ async function getProductFeed(companyId, warehouseId) {
 }
 
 /**
+ * Shipping-rate calculation for an ecommerce checkout/import — reuses the
+ * freight-quoting service added for fleet/logistics (fleetAnalyticsService
+ * .quoteFreight) rather than building a second freight calculator. Weight
+ * is derived from each item's variant weight (grams, see Product.variants
+ * .weight) x quantity when the caller doesn't supply one directly.
+ *
+ * @param {String} companyId
+ * @param {Object} opts
+ * @param {Number} opts.distanceKm - delivery distance, required (same as quoteFreight)
+ * @param {Array} [opts.items] - [{ productId, variantId, quantity }] used to derive total weight, if weightKg isn't given directly
+ * @param {Number} [opts.weightKg] - overrides the item-derived weight
+ */
+async function calculateShippingForOrder(companyId, { distanceKm, items, weightKg } = {}) {
+  let resolvedWeightKg = weightKg;
+  if (resolvedWeightKg === undefined && items && items.length > 0) {
+    let totalGrams = 0;
+    for (const item of items) {
+      const product = await Product.findOne({ companyId, _id: item.productId });
+      const variant = product?.variants.find((v) => String(v._id) === String(item.variantId));
+      totalGrams += (variant?.weight || 0) * (item.quantity || 1);
+    }
+    resolvedWeightKg = totalGrams > 0 ? totalGrams / 1000 : undefined;
+  }
+  return fleetAnalyticsService.quoteFreight(companyId, { distanceKm, weightKg: resolvedWeightKg });
+}
+
+/**
  * Imports an external order as a completed sale. Items are matched by
  * barcode first, then SKU (an external store's product export usually
  * carries one or the other). The customer is found-or-created by email —
@@ -78,8 +106,17 @@ async function importOrder(company, payload) {
     throw new Error('E-commerce integration is enabled but missing default branch/warehouse/payment account configuration.');
   }
 
-  const { items, customerEmail, customerName, customerPhone, userId } = payload;
+  const { items, customerEmail, customerName, customerPhone, userId, shipping } = payload;
   if (!items || items.length === 0) throw new Error('Order must contain at least one item.');
+
+  // Optional shipping-rate calculation — payload.shipping: { distanceKm,
+  // weightKg? }. Computed here (not folded silently into item totals so
+  // the checkout response can show the shipping breakdown separately) and
+  // added on top of the goods total as a distinct payment line.
+  let shippingQuote = null;
+  if (shipping && shipping.distanceKm) {
+    shippingQuote = await calculateShippingForOrder(company._id, { distanceKm: shipping.distanceKm, weightKg: shipping.weightKg, items });
+  }
 
   const resolvedItems = [];
   for (const item of items) {
@@ -141,7 +178,9 @@ async function importOrder(company, payload) {
     resolvedUserId = adminUser._id;
   }
 
-  return posSaleService.checkout({
+  const shippingCharge = shippingQuote ? shippingQuote.total : 0;
+
+  const sale = await posSaleService.checkout({
     companyId: company._id, branchId: defaultBranchId, warehouseId: defaultWarehouseId,
     customerId, channel: 'ecommerce',
     items: resolvedItems,
@@ -149,9 +188,18 @@ async function importOrder(company, payload) {
     // Online orders are assumed prepaid — the external store already
     // collected payment before this webhook fires; this just records where
     // that money landed (the configured settlement account), it doesn't
-    // process a real payment itself.
-    payments: [{ paymentAccountId: defaultPaymentAccountId, method: 'online', amount: totalAmount }],
+    // process a real payment itself. The shipping charge (if quoted above)
+    // is folded into the same settlement payment, since it was collected
+    // alongside the goods total by the same external checkout.
+    payments: [{ paymentAccountId: defaultPaymentAccountId, method: 'online', amount: totalAmount + shippingCharge }],
   });
+
+  // Kept as a plain returned Sale document (not wrapped) so every existing
+  // caller (salesChannelService.receiveOrder, the webhook controller) keeps
+  // working unchanged — the quote, when computed, rides along as a
+  // non-persisted extra property rather than changing the return shape.
+  if (shippingQuote) sale.shippingQuote = shippingQuote;
+  return sale;
 }
 
-module.exports = { enableAndRotateToken, disable, getProductFeed, importOrder };
+module.exports = { enableAndRotateToken, disable, getProductFeed, importOrder, calculateShippingForOrder };

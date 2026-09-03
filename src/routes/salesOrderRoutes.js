@@ -1,5 +1,6 @@
 const router = require('express').Router();
-const { requireAuth, scopeToCompany } = require('../middleware/auth');
+const { requireAuth, scopeToCompany, requirePermission } = require('../middleware/auth');
+const { ORDER_HOLDS_MANAGE } = require('../constants/permissions');
 const controller = require('../controllers/salesOrderController');
 
 // PUBLIC — registered BEFORE the requireAuth/scopeToCompany middleware
@@ -24,5 +25,19 @@ router.post('/sales-orders', controller.createSalesOrder);
 // Works on either a quotation or a sales order document.
 router.post('/:id/convert-to-invoice', controller.convertToInvoice);
 router.post('/:id/cancel', controller.cancel);
+
+// Multi-channel consolidated order view — POS, sales orders/quotations,
+// e-commerce in one unified shape. ?channel=&status=&from=&to=
+router.get('/consolidated', controller.getConsolidatedOrders);
+
+// Order holds — credit_hold is placed automatically by createSalesOrder;
+// fraud_review/manual_hold are placed here directly. Releasing either kind
+// goes through the same endpoint.
+router.post('/:id/hold', requirePermission(ORDER_HOLDS_MANAGE), controller.placeOrderHold);
+router.post('/:id/release-hold', requirePermission(ORDER_HOLDS_MANAGE), controller.releaseOrderHold);
+
+// Order splitting/merging.
+router.post('/:id/split', controller.splitOrder);
+router.post('/merge', controller.mergeOrders);
 
 module.exports = router;

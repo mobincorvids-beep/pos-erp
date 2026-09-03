@@ -9,16 +9,60 @@
 const mongoose = require('mongoose');
 const StockCount = require('../models/StockCount');
 const StockLevel = require('../models/StockLevel');
+const BinStock = require('../models/BinStock');
+const WarehouseBin = require('../models/WarehouseBin');
 const inventoryService = require('./inventoryService');
 const auditService = require('./auditService');
+const reportingService = require('./reportingService');
 const { nextDocumentNumber } = require('./numberingService');
 
-async function startCount({ companyId, warehouseId, variantIds, userId }) {
+/** Resolves scope.zoneId to the set of productIds currently located (via BinStock) to bins in that zone. Reuses the existing bin-location breakdown rather than adding a new one. */
+async function productIdsForZone(companyId, warehouseId, zoneId) {
+  const bins = await WarehouseBin.find({ companyId, warehouseId, zoneId });
+  if (bins.length === 0) return [];
+  const binIds = bins.map((b) => b._id);
+  const rows = await BinStock.find({ warehouseId, binId: { $in: binIds }, quantity: { $gt: 0 } }).distinct('productId');
+  return rows.map(String);
+}
+
+/** Resolves scope.abcClass to the set of productIds in that class, reusing reportingService.abcAnalysisReport (last-90-days sales) rather than re-deriving ABC classification here. */
+async function productIdsForAbcClass(companyId, abcClass) {
+  const to = new Date();
+  const from = new Date(to.getTime() - 90 * 24 * 60 * 60 * 1000);
+  const { rows } = await reportingService.abcAnalysisReport(companyId, from, to);
+  return [...new Set(rows.filter((r) => r.class === abcClass).map((r) => String(r.productId)))];
+}
+
+/**
+ * @param {Object} input
+ * @param {String} input.companyId
+ * @param {String} input.warehouseId
+ * @param {Array} [input.variantIds] - explicit variant subset (existing behaviour, scope defaults to 'full')
+ * @param {Object} [input.scope] - { type: 'full'|'zone'|'abc_class', zoneId, abcClass } — an alternative,
+ *   named way to scope a partial/rolling cycle count instead of (or in addition to) passing variantIds
+ *   directly. 'zone' and 'abc_class' resolve to a productId subset and are ANDed with any variantIds given.
+ * @param {String} input.userId
+ */
+async function startCount({ companyId, warehouseId, variantIds, scope, userId }) {
   const filter = { companyId, warehouseId };
   if (variantIds && variantIds.length > 0) filter.variantId = { $in: variantIds };
 
+  const resolvedScope = scope && scope.type && scope.type !== 'full' ? scope : { type: 'full' };
+
+  if (resolvedScope.type === 'zone') {
+    if (!resolvedScope.zoneId) throw new Error('scope.zoneId is required for a zone-scoped count.');
+    const productIds = await productIdsForZone(companyId, warehouseId, resolvedScope.zoneId);
+    if (productIds.length === 0) throw new Error('No stock is currently located to bins in that zone.');
+    filter.productId = { $in: productIds };
+  } else if (resolvedScope.type === 'abc_class') {
+    if (!resolvedScope.abcClass) throw new Error('scope.abcClass is required for an ABC-class-scoped count.');
+    const productIds = await productIdsForAbcClass(companyId, resolvedScope.abcClass);
+    if (productIds.length === 0) throw new Error(`No products fall in ABC class "${resolvedScope.abcClass}" for the recent sales window.`);
+    filter.productId = { $in: productIds };
+  }
+
   const levels = await StockLevel.find(filter);
-  if (levels.length === 0) throw new Error('No stock found for this warehouse (or variant filter) to count.');
+  if (levels.length === 0) throw new Error('No stock found for this warehouse (or filter) to count.');
 
   return StockCount.create({
     companyId, warehouseId, userId,
@@ -27,6 +71,7 @@ async function startCount({ companyId, warehouseId, variantIds, userId }) {
       productId: l.productId, variantId: l.variantId, batchId: l.batchId,
       systemQuantity: l.quantity, countedQuantity: null,
     })),
+    scope: resolvedScope,
   });
 }
 

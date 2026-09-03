@@ -79,7 +79,54 @@ async function publicTrackOrder(req, res) {
   }
 }
 
+async function placeOrderHold(req, res) {
+  try {
+    const sale = await salesOrderService.placeOrderHold(req.params.id, { ...req.body, userId: req.auth.userId });
+    res.json(sale);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function releaseOrderHold(req, res) {
+  try {
+    const sale = await salesOrderService.releaseOrderHold(req.params.id, { ...req.body, userId: req.auth.userId });
+    res.json(sale);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function getConsolidatedOrders(req, res) {
+  try {
+    const { channel, status, from, to } = req.query;
+    const orders = await salesOrderService.getConsolidatedOrders(req.companyId, { channel, status, from, to });
+    res.json(orders);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function splitOrder(req, res) {
+  try {
+    const doc = await salesOrderService.splitOrder(req.params.id, req.body);
+    res.status(201).json(doc);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function mergeOrders(req, res) {
+  try {
+    const doc = await salesOrderService.mergeOrders(req.body.saleIds, req.body.targetCustomerId);
+    res.json(doc);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
 module.exports = {
   listQuotations, listSalesOrders, createQuotation, createSalesOrder, acceptQuotation, convertToInvoice, cancel,
   publicTrackOrder,
+  placeOrderHold, releaseOrderHold, getConsolidatedOrders, splitOrder, mergeOrders,
 };

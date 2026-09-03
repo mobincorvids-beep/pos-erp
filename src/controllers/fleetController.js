@@ -1,4 +1,5 @@
 const fleetService = require('../services/fleetService');
+const fleetGpsService = require('../services/fleetGpsService');
 
 async function registerVehicle(req, res) {
   try { res.status(201).json(await fleetService.registerVehicle({ ...req.body, companyId: req.companyId })); }
@@ -57,9 +58,19 @@ async function vehicleHistory(req, res) {
   catch (err) { res.status(400).json({ error: err.message }); }
 }
 
+async function recordVehiclePing(req, res) {
+  try { res.status(201).json(await fleetGpsService.recordVehiclePing(req.params.id, { ...req.body, companyId: req.companyId })); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+}
+async function latestVehicleLocations(req, res) {
+  try { res.json(await fleetGpsService.getLatestVehicleLocations(req.companyId)); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+}
+
 module.exports = {
   registerVehicle, listVehicles, getVehicle, updateVehicle, updateVehicleStatus, retireVehicle,
   listFuelLogs, logFuel,
   listTrips, startTrip, completeTrip, cancelTrip,
   vehicleHistory,
+  recordVehiclePing, latestVehicleLocations,
 };

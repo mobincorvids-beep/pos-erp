@@ -218,8 +218,58 @@ async function abcAnalysis(req, res) {
   }
 }
 
+/**
+ * Drill-down for Sales Summary and Trial Balance: ?drillDown=true&groupKey=X
+ * on the respective summary endpoint. Kept as separate controller
+ * functions/routes (rather than folding into salesSummary/trialBalance)
+ * so the summary endpoints' response shape never changes based on a query
+ * flag — a drill-down is always its own explicit call.
+ */
+async function salesSummaryDrillDown(req, res) {
+  try {
+    const { from, to, groupBy, groupKey } = req.query;
+    if (!from || !to) return res.status(400).json({ error: '`from` and `to` query params are required (ISO dates).' });
+    const report = await reportingService.salesSummaryDrillDown(req.companyId, from, to, groupBy, groupKey);
+    res.json(report);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function trialBalanceDrillDown(req, res) {
+  try {
+    const asOfDate = req.query.asOfDate ? new Date(req.query.asOfDate) : new Date();
+    const report = await reportingService.trialBalanceDrillDown(req.companyId, asOfDate, req.query.groupKey || req.query.accountId);
+    res.json(report);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function comparativePeriod(req, res) {
+  try {
+    const { metric, periodType } = req.query;
+    const periodsBack = req.query.periodsBack ? Number(req.query.periodsBack) : undefined;
+    const report = await reportingService.getComparativePeriodReport(req.companyId, { metric, periodType, periodsBack });
+    res.json(report);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function kpiScorecard(req, res) {
+  try {
+    const range = requireRange(req, res);
+    if (!range) return;
+    const report = await reportingService.getKpiScorecard(req.companyId, range);
+    res.json(report);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
 module.exports = {
   trialBalance, stockValuation, salesSummary, profitAndLoss, balanceSheet, cashBankBook,
   lowStock, topProducts, topCustomers, salespersonPerformance, expenseReport, branchComparison, stockMovement, apAging,
-  abcAnalysis,
+  abcAnalysis, salesSummaryDrillDown, trialBalanceDrillDown, comparativePeriod, kpiScorecard,
 };

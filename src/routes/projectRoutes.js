@@ -12,6 +12,13 @@ router.patch('/:id/status', controller.updateStatus);
 router.get('/:id/costs', controller.listCosts);
 router.post('/:id/costs', controller.logManualCost); // manual entries only — most costs arrive automatically, see projectService
 router.get('/:id/profitability', controller.profitability);
+router.get('/:id/profitability-by-category', controller.profitabilityByCategory); // Budget granularity by category — actual vs Project.budgetByCategory, bucketed by ProjectCost.type
+
+// Multi-project resource/capacity view — per-employee allocated hours across
+// all active projects in a date range, flagging over-100% allocation.
+// Not project-scoped (no :id) — mounted at the router root, e.g.
+// GET /projects/resource-capacity?from=&to=
+router.get('/resource-capacity', controller.resourceCapacity); // ?from=&to=&standardHoursPerDay=
 
 // Subcontractor cost tracking — sums subcontractor-tagged Expense/PO costs
 // for this project separately from labor/material, and tracks retention

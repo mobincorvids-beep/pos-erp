@@ -96,6 +96,11 @@ const KEYS = {
   DEVELOPER_PLATFORM_MANAGE: 'developer_platform.manage',
 
   PROJECT_TASKS_MANAGE: 'project_tasks.manage',
+  // Change order approve/reject adjusts the live Project.budget — same
+  // permission as managing project tasks (a project manager-level action),
+  // rather than a brand-new key for one narrow action.
+  CHANGE_ORDERS_MANAGE: 'change_orders.manage',
+  SCHEDULED_REPORTS_MANAGE: 'scheduled_reports.manage',
 
   TAX_PAYMENTS_VIEW: 'tax_payments.view',
   TAX_PAYMENTS_CREATE: 'tax_payments.create',
@@ -105,6 +110,27 @@ const KEYS = {
   // authenticated user regardless of role (same split as DOCUMENTS_VIEW
   // vs DOCUMENTS_MANAGE) — this key only gates authoring/publishing/delete.
   KNOWLEDGE_BASE_MANAGE: 'knowledge_base.manage',
+
+  // Order holds — releasing a credit/fraud/manual hold on a sales order so
+  // it can proceed to fulfillment/invoicing. Deliberately separate from
+  // CUSTOMER_CREDIT_LIMIT_OVERRIDE (which lets a POS checkout push past a
+  // limit outright) — a hold is a review/approval workflow with its own
+  // gate rather than riding on that key.
+  ORDER_HOLDS_MANAGE: 'orders.holds.manage',
+  RMA_MANAGE: 'rma.manage',
+
+  // Vendor onboarding/qualification workflow — submitting a supplier for
+  // review and deciding (approve/reject) that review. Deliberately
+  // separate from PURCHASE_CREATE: someone can be trusted to raise POs
+  // against already-qualified suppliers without being able to qualify a
+  // brand-new one.
+  SUPPLIER_ONBOARDING_MANAGE: 'suppliers.onboarding.manage',
+
+  // Posting a stock write-off (inventory aging report's disposal action).
+  // Separate from INVENTORY_ADJUST so a write-off — a permanent, reason-
+  // coded loss — can be gated more tightly than routine stocktake
+  // adjustments if a company wants to.
+  INVENTORY_WRITE_OFF: 'inventory.write_off',
 };
 
 // Human-readable catalog for the role-editor UI — grouped so checkboxes
@@ -125,6 +151,7 @@ const CATALOG = [
     items: [
       { key: KEYS.PURCHASE_CREATE, label: 'Create purchase orders' },
       { key: KEYS.PURCHASE_RECEIVE, label: 'Receive goods (GRN)' },
+      { key: KEYS.SUPPLIER_ONBOARDING_MANAGE, label: 'Submit and decide vendor onboarding/qualification' },
     ],
   },
   {
@@ -132,6 +159,7 @@ const CATALOG = [
     items: [
       { key: KEYS.INVENTORY_ADJUST, label: 'Adjust stock / run stocktakes' },
       { key: KEYS.INVENTORY_TRANSFER, label: 'Transfer stock between warehouses' },
+      { key: KEYS.INVENTORY_WRITE_OFF, label: 'Write off aged/damaged inventory' },
       { key: KEYS.CATEGORIES_VIEW, label: 'View categories' },
       { key: KEYS.CATEGORIES_CREATE, label: 'Create categories & subcategories' },
       { key: KEYS.CATEGORIES_EDIT, label: 'Edit categories & subcategories' },
@@ -233,6 +261,8 @@ const CATALOG = [
     group: 'Projects',
     items: [
       { key: KEYS.PROJECT_TASKS_MANAGE, label: 'Create, assign, and manage project tasks' },
+      { key: KEYS.CHANGE_ORDERS_MANAGE, label: 'Approve or reject project change orders' },
+      { key: KEYS.SCHEDULED_REPORTS_MANAGE, label: 'Create and manage scheduled/emailed reports' },
     ],
   },
   {
@@ -247,6 +277,13 @@ const CATALOG = [
     group: 'Knowledge base',
     items: [
       { key: KEYS.KNOWLEDGE_BASE_MANAGE, label: 'Author, edit, publish, and delete Knowledge Base / SOP articles' },
+    ],
+  },
+  {
+    group: 'Order management',
+    items: [
+      { key: KEYS.ORDER_HOLDS_MANAGE, label: 'Place and release credit/fraud/manual holds on orders' },
+      { key: KEYS.RMA_MANAGE, label: 'Approve, receive, and refund return merchandise authorizations (RMAs)' },
     ],
   },
   {

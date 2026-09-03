@@ -17,6 +17,12 @@ const vehicleSchema = new Schema({
   type: { type: String, default: 'car', enum: ['car', 'van', 'truck', 'bike', 'bus', 'other'] },
   status: { type: String, default: 'active', enum: ['active', 'maintenance', 'retired'] },
   assignedDriverId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+  // The real driver PROFILE (license/document tracking — see
+  // src/models/Driver.js), additive alongside assignedDriverId above
+  // (kept as-is, ref 'User', so nothing that already reads/writes it
+  // breaks). Optional and nullable: a vehicle can be assigned a driver
+  // without a Driver profile existing yet.
+  driverProfileId: { type: Schema.Types.ObjectId, ref: 'Driver', default: null },
   odometerReading: { type: Number, default: 0 },
   fuelType: { type: String, default: 'petrol', enum: ['petrol', 'diesel', 'cng', 'electric', 'hybrid', 'other'] },
   notes: { type: String, default: '' },

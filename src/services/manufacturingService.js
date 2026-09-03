@@ -24,10 +24,11 @@ const schedulingService = require('./schedulingService');
 const { nextDocumentNumber } = require('./numberingService');
 
 function createBOM(input) {
-  const { companyId, finishedProductId, finishedVariantId, name, components, laborCostPerUnit, overheadCostPerUnit } = input;
+  const { companyId, finishedProductId, finishedVariantId, name, components, byproducts, laborCostPerUnit, overheadCostPerUnit } = input;
   if (!components || components.length === 0) throw new Error('BOM must have at least one component.');
   return BillOfMaterials.create({
     companyId, finishedProductId, finishedVariantId, name, components,
+    byproducts: byproducts || [],
     laborCostPerUnit: laborCostPerUnit || 0, overheadCostPerUnit: overheadCostPerUnit || 0,
   });
 }
@@ -308,6 +309,42 @@ async function completeProduction(workOrderId, { quantityProduced, actualLaborCo
         note: `Produced from ${workOrder.workOrderNumber}`,
       }, session);
 
+      // --- Byproduct / co-product output ---
+      // A BOM can declare secondary outputs (bom.byproducts, "quantity
+      // per ONE main-output unit") that come out of the same run — e.g.
+      // sawdust from milling, offcuts from cutting. Posted here as their
+      // own 'production_output' stock-in movements, scaled by the ACTUAL
+      // quantityProduced (not the planned quantityToProduce), same as the
+      // main output.
+      //
+      // Costing choice, documented rather than guessed at: byproducts are
+      // posted at ZERO incremental unit cost. The alternative (allocating
+      // a fraction of totalProductionCost by relative sales value) would
+      // require a byproduct sale price this app doesn't reliably have at
+      // completion time, and would silently REDUCE the main output's
+      // unitCost by whatever was carved off — quietly understating the
+      // main product's cost. Zero-cost byproducts keep the main output's
+      // unitCost exactly what it already honestly is (full material +
+      // labor + overhead / quantityProduced), and any byproduct sale
+      // later recorded is then pure margin, which is the more common and
+      // more honest way small manufacturers actually treat scrap/co-product
+      // recovery. A tenant that genuinely needs value-based allocation can
+      // override Product.costPrice on the byproduct manually.
+      const byproductMovements = [];
+      for (const byproduct of bom.byproducts || []) {
+        const byproductQty = byproduct.quantityPerUnit * quantityProduced;
+        if (byproductQty <= 0) continue;
+        await inventoryService.recordMovement({
+          companyId: workOrder.companyId, warehouseId: workOrder.warehouseId,
+          productId: byproduct.productId, variantId: byproduct.variantId,
+          type: 'production_output', quantity: byproductQty, unitCost: 0,
+          referenceType: 'WorkOrder', referenceId: workOrder._id, userId,
+          note: `Byproduct from ${workOrder.workOrderNumber}`,
+        }, session);
+        byproductMovements.push({ productId: byproduct.productId, variantId: byproduct.variantId, quantity: byproductQty, unitCost: 0 });
+      }
+      workOrder.byproductOutput = byproductMovements;
+
       workOrder.quantityProduced = quantityProduced;
       workOrder.actualLaborCost = laborCost;
       workOrder.actualOverheadCost = overheadCost;
@@ -536,10 +573,103 @@ async function getCostVarianceReport(companyId, { from, to, warehouseId } = {}) 
   return { workOrders: rows, totals };
 }
 
+/**
+ * Records a pass/fail QC checkpoint result against one scheduled operation
+ * on a work order, identified by its position in `schedule` (operationIndex)
+ * per the gap spec — simpler and more stable across re-scheduling than the
+ * routingOperationId, since a single routing operation can span multiple
+ * `schedule` entries when it spills across days (see schedulingService).
+ * Append-only (operationQcResults), so an operation can be re-checked after
+ * rework without losing the earlier failed result.
+ */
+async function recordOperationQc(workOrderId, operationIndex, { passed, notes, checkedBy }) {
+  const workOrder = await WorkOrder.findById(workOrderId);
+  if (!workOrder) throw new Error('Work order not found.');
+  if (passed === undefined || passed === null) throw new Error('passed (true/false) is required.');
+  const idx = Number(operationIndex);
+  if (!Number.isInteger(idx) || idx < 0 || idx >= workOrder.schedule.length) {
+    throw new Error('operationIndex is out of range for this work order\'s schedule.');
+  }
+  workOrder.operationQcResults.push({
+    operationIndex: idx, passed: !!passed, notes: notes || '', checkedBy: checkedBy || null, checkedAt: new Date(),
+  });
+  await workOrder.save();
+  await auditService.record({
+    companyId: workOrder.companyId, userId: checkedBy, action: 'work_order.operation_qc_recorded',
+    entityType: 'WorkOrder', entityId: workOrder._id, metadata: { operationIndex: idx, passed: !!passed },
+  });
+  return workOrder;
+}
+
+/**
+ * Read-only capacity dashboard: per work center, per day in [from, to],
+ * hours already booked (from every non-cancelled work order's persisted
+ * `schedule` — the same source schedulingService.loadExistingBookings()
+ * reads to avoid double-booking) vs. that work center's
+ * capacityHoursPerDay, flagging any day where booked hours exceed 100% of
+ * available capacity. Deliberately read-only and derived entirely from
+ * data schedulingService/completeProduction already write — no new
+ * scheduling state introduced.
+ */
+async function getCapacityDashboard(companyId, { from, to } = {}) {
+  const rangeStart = from ? new Date(from) : new Date();
+  const rangeEnd = to ? new Date(to) : new Date(rangeStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+  const workCenters = await WorkCenter.find({ companyId, isActive: true });
+  const capacityByWc = new Map(workCenters.map((wc) => [String(wc._id), { name: wc.name, capacityHoursPerDay: wc.capacityHoursPerDay }]));
+
+  const workOrders = await WorkOrder.find({
+    companyId,
+    status: { $in: ['planned', 'in_progress', 'completed'] },
+    'schedule.0': { $exists: true },
+  }).select('workOrderNumber schedule');
+
+  // bookedByWcDay: "workCenterId|YYYY-MM-DD" -> booked hours
+  const bookedByWcDay = new Map();
+  const dayKey = (d) => new Date(d).toISOString().slice(0, 10);
+
+  for (const wo of workOrders) {
+    for (const op of wo.schedule) {
+      const start = new Date(op.scheduledStart);
+      const end = new Date(op.scheduledEnd);
+      if (end < rangeStart || start > rangeEnd) continue;
+      const key = `${op.workCenterId}|${dayKey(start)}`;
+      const hours = (end - start) / (1000 * 60 * 60);
+      bookedByWcDay.set(key, (bookedByWcDay.get(key) || 0) + hours);
+    }
+  }
+
+  const rows = [];
+  for (const [key, bookedHours] of bookedByWcDay.entries()) {
+    const [wcId, day] = key.split('|');
+    const wc = capacityByWc.get(wcId);
+    const availableHours = wc ? wc.capacityHoursPerDay : null;
+    const utilizationPct = availableHours ? (bookedHours / availableHours) * 100 : null;
+    rows.push({
+      workCenterId: wcId,
+      workCenterName: wc ? wc.name : '(unknown/inactive work center)',
+      day,
+      bookedHours,
+      availableHours,
+      utilizationPct,
+      overCapacity: utilizationPct !== null && utilizationPct > 100,
+    });
+  }
+
+  rows.sort((a, b) => (a.day === b.day ? a.workCenterName.localeCompare(b.workCenterName) : a.day.localeCompare(b.day)));
+
+  return {
+    from: rangeStart, to: rangeEnd,
+    workCenters: workCenters.map((wc) => ({ workCenterId: wc._id, name: wc.name, capacityHoursPerDay: wc.capacityHoursPerDay })),
+    days: rows,
+    overCapacityCount: rows.filter((r) => r.overCapacity).length,
+  };
+}
+
 module.exports = {
   createBOM, createWorkOrder, startProduction, completeProduction,
   createWorkCenter, listWorkCenters, updateWorkCenter,
   createRouting, listRoutings,
-  recordOperationActuals, getEfficiencyReport,
-  getCostVarianceReport,
+  recordOperationActuals, recordOperationQc, getEfficiencyReport,
+  getCostVarianceReport, getCapacityDashboard,
 };

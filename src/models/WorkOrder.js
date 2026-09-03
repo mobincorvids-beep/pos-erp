@@ -14,6 +14,23 @@ const scheduledOperationSchema = new Schema({
   scheduledStart: { type: Date, required: true },
   scheduledEnd: { type: Date, required: true },
   status: { type: String, default: 'scheduled', enum: ['scheduled', 'in_progress', 'completed'] },
+  // Copied from Routing.operations[i] at scheduling time (see
+  // schedulingService.scheduleWorkOrder), so the checkpoint spec is
+  // visible on the work order itself without a populate back to Routing.
+  qcRequired: { type: Boolean, default: false },
+  qcCriteria: { type: String, default: '' },
+}, { _id: true });
+
+// One recorded QC pass/fail against a scheduled operation, keyed by its
+// index in `schedule` (not routingOperationId) per manufacturingService.
+// recordOperationQc()'s contract — an operation can be re-checked (e.g.
+// rework then re-inspect), so this is append-only, not one-per-operation.
+const operationQcResultSchema = new Schema({
+  operationIndex: { type: Number, required: true },
+  passed: { type: Boolean, required: true },
+  notes: { type: String, default: '' },
+  checkedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+  checkedAt: { type: Date, default: Date.now },
 }, { _id: true });
 
 // One raw-material batch/lot actually consumed against a work order, for
@@ -50,6 +67,18 @@ const workOrderSchema = new Schema({
   actualOverheadCost: Number,
   wastageNote: String,
   schedule: [scheduledOperationSchema], // populated by the forward scheduler when the work order is started
+  operationQcResults: { type: [operationQcResultSchema], default: [] }, // per-operation QC checkpoint results, recorded via recordOperationQc()
+  // Secondary/co-product output actually posted at completeProduction()
+  // time, from bom.byproducts scaled by quantityProduced — see the costing
+  // note in manufacturingService.completeProduction() (posted at zero
+  // incremental unit cost, documented there).
+  byproductOutput: [{
+    productId: { type: Schema.Types.ObjectId, ref: 'Product' },
+    variantId: { type: Schema.Types.ObjectId },
+    quantity: { type: Number },
+    unitCost: { type: Number },
+    _id: false,
+  }],
   consumedBatches: [consumedBatchSchema], // raw material batch/lot traceability, populated at startProduction()
 
   // Backflush / actual-consumption reporting. startProduction() always

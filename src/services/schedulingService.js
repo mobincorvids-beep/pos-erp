@@ -110,6 +110,8 @@ async function scheduleWorkOrder({ companyId, workOrderId, routing, workCentersB
       scheduledStart: segStart,
       scheduledEnd: segEnd,
       status: 'scheduled',
+      qcRequired: !!op.qcRequired,
+      qcCriteria: op.qcCriteria || '',
     });
   }
 

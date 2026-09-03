@@ -49,6 +49,27 @@ async function profitability(req, res) {
   }
 }
 
+async function profitabilityByCategory(req, res) {
+  try {
+    const report = await projectService.profitabilityByCategory(req.params.id);
+    res.json(report);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function resourceCapacity(req, res) {
+  try {
+    const { from, to, standardHoursPerDay } = req.query;
+    const report = await projectService.getResourceCapacityView(req.companyId, {
+      from, to, standardHoursPerDay: standardHoursPerDay ? Number(standardHoursPerDay) : undefined,
+    });
+    res.json(report);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
 async function subcontractorCosts(req, res) {
   try {
     const report = await projectService.getProjectSubcontractorCosts(req.params.id);
@@ -91,6 +112,7 @@ async function deleteDoc(req, res) {
 
 module.exports = {
   list, create, updateStatus, logManualCost, listCosts, profitability,
+  profitabilityByCategory, resourceCapacity,
   subcontractorCosts, releaseRetention,
   listDocs, createDoc, updateDoc, deleteDoc,
 };

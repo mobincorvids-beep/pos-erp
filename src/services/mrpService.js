@@ -17,6 +17,7 @@ const Product = require('../models/Product');
 const BillOfMaterials = require('../models/BillOfMaterials');
 const StockLevel = require('../models/StockLevel');
 const MrpRun = require('../models/MrpRun');
+const Supplier = require('../models/Supplier');
 const purchaseService = require('./purchaseService');
 const manufacturingService = require('./manufacturingService');
 const reorderRuleService = require('./reorderRuleService');
@@ -37,7 +38,7 @@ async function getOnHandQuantity(warehouseId, variantId) {
  * exploded further to get raw-material requirements. A component with no BOM
  * is a raw material / purchased part: recorded, not exploded further.
  */
-async function explode(companyId, productId, variantId, quantity, requirements, depth = 0) {
+async function explode(companyId, productId, variantId, quantity, requirements, depth = 0, needByDate = null) {
   if (depth > MAX_BOM_DEPTH) {
     throw new Error('BOM explosion exceeded maximum depth — check for a circular BOM.');
   }
@@ -46,16 +47,25 @@ async function explode(companyId, productId, variantId, quantity, requirements, 
   const bom = await BillOfMaterials.findOne({ companyId, finishedProductId: productId, finishedVariantId: variantId, isActive: true });
 
   const existing = requirements.get(key);
+  // The most URGENT (earliest) needByDate across every demand line that
+  // rolled into this requirement wins — driving lead-time backward from the
+  // earliest date is the conservative choice (never plans an order later
+  // than the tightest real need).
+  const existingNeedBy = existing?.needByDate ?? null;
+  const mergedNeedBy = !needByDate ? existingNeedBy
+    : (!existingNeedBy || needByDate < existingNeedBy) ? needByDate : existingNeedBy;
+
   requirements.set(key, {
     productId, variantId,
     quantity: (existing?.quantity || 0) + quantity,
     bomId: bom ? bom._id : (existing?.bomId ?? null),
+    needByDate: mergedNeedBy,
   });
 
   if (!bom) return; // raw material / purchased part — nothing further to explode
 
   for (const component of bom.components) {
-    await explode(companyId, component.productId, component.variantId, component.quantityPerUnit * quantity, requirements, depth + 1);
+    await explode(companyId, component.productId, component.variantId, component.quantityPerUnit * quantity, requirements, depth + 1, needByDate);
   }
 }
 
@@ -97,10 +107,10 @@ async function runMrp({ companyId, branchId, warehouseId, demand, includeReorder
 
   if (demandLines.length === 0) throw new Error('No demand to plan — provide manual target quantities or enable reorder-level demand.');
 
-  // requirements: Map of "productId:variantId" -> { productId, variantId, quantity (gross requirement), bomId }
+  // requirements: Map of "productId:variantId" -> { productId, variantId, quantity (gross requirement), bomId, needByDate }
   const requirements = new Map();
   for (const line of demandLines) {
-    await explode(companyId, line.productId, line.variantId, line.quantity, requirements);
+    await explode(companyId, line.productId, line.variantId, line.quantity, requirements, 0, line.needByDate ? new Date(line.needByDate) : null);
   }
 
   const suggestedPurchases = [];
@@ -108,8 +118,19 @@ async function runMrp({ companyId, branchId, warehouseId, demand, includeReorder
 
   for (const req of requirements.values()) {
     const onHand = await getOnHandQuantity(warehouseId, req.variantId);
-    const shortfall = req.quantity - onHand;
-    if (shortfall <= 0) continue; // fully covered by on-hand stock
+    const product = await Product.findById(req.productId);
+
+    // Safety stock: a floor MRP must never plan a net requirement below —
+    // stock is netted against (onHand - safetyStockQty), not raw onHand, so
+    // a component sitting right at its safety floor still generates a
+    // shortfall large enough to replenish back up to req.quantity + floor,
+    // never eating into the floor itself. safetyStockQty of 0 (the default)
+    // reproduces the exact netting this function did before the field
+    // existed.
+    const safetyStockQty = product?.safetyStockQty || 0;
+    const effectiveOnHand = Math.max(onHand - safetyStockQty, 0);
+    const shortfall = req.quantity - effectiveOnHand;
+    if (shortfall <= 0) continue; // fully covered by on-hand stock above the safety floor
 
     if (req.bomId) {
       // Sub-assembly with its own BOM — suggest building it, not buying it.
@@ -118,13 +139,32 @@ async function runMrp({ companyId, branchId, warehouseId, demand, includeReorder
         requiredQuantity: shortfall, status: 'suggested', workOrderId: null,
       });
     } else {
-      const product = await Product.findById(req.productId);
       const variant = product?.variants?.id(req.variantId);
       const estimatedUnitCost = variant?.costPrice ?? product?.costPrice ?? 0;
+
+      // Lead-time awareness: pull the preferred supplier's leadTimeDays (the
+      // same field reorderRuleService already reads elsewhere) and, when a
+      // needByDate is known (from the triggering demand line — see
+      // explode()), subtract it to get the planned-order-RELEASE date —
+      // the date this PO should actually be placed by to land on time.
+      // Either piece missing (no preferred supplier / no leadTimeDays / no
+      // needByDate) simply leaves plannedOrderDate null, same as before
+      // this feature existed.
+      let leadTimeDays = null;
+      if (product?.preferredSupplierId) {
+        const supplier = await Supplier.findById(product.preferredSupplierId);
+        if (supplier && supplier.leadTimeDays) leadTimeDays = supplier.leadTimeDays;
+      }
+      let plannedOrderDate = null;
+      if (req.needByDate && leadTimeDays !== null) {
+        plannedOrderDate = new Date(req.needByDate.getTime() - leadTimeDays * 24 * 60 * 60 * 1000);
+      }
+
       suggestedPurchases.push({
         productId: req.productId, variantId: req.variantId,
         requiredQuantity: req.quantity, onHandQuantity: onHand, shortfallQuantity: shortfall,
         estimatedUnitCost, status: 'suggested', purchaseOrderId: null,
+        needByDate: req.needByDate || null, leadTimeDays, plannedOrderDate,
       });
     }
   }

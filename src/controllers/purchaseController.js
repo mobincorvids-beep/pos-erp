@@ -1,5 +1,6 @@
 const purchaseService = require('../services/purchaseService');
 const unitConversionService = require('../services/unitConversionService');
+const putawayService = require('../services/putawayService');
 const PurchaseOrder = require('../models/PurchaseOrder');
 const GoodsReceivedNote = require('../models/GoodsReceivedNote');
 
@@ -41,7 +42,25 @@ async function receive(req, res) {
       purchaseOrderId: req.params.id,
       userId: req.auth.userId,
     });
-    res.status(201).json(grn);
+
+    // Directed putaway is a suggestion only — it never blocks or alters
+    // the receiving flow above, which already recorded stock and (if the
+    // caller passed one) each line's free-text binLocation note. Failures
+    // computing a suggestion (e.g. a bad/legacy productId) are swallowed
+    // per line so they can never turn a successful receipt into an error.
+    const grnObj = grn.toObject ? grn.toObject() : grn;
+    grnObj.items = await Promise.all((grnObj.items || []).map(async (item) => {
+      try {
+        const suggestion = await putawayService.suggestPutawayBin(
+          req.companyId, grn.warehouseId, item.productId, item.quantity
+        );
+        return { ...item, suggestedBinId: suggestion?.binId || null, suggestedBinCode: suggestion?.binCode || null };
+      } catch {
+        return { ...item, suggestedBinId: null, suggestedBinCode: null };
+      }
+    }));
+
+    res.status(201).json(grnObj);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }

@@ -21,4 +21,10 @@ router.use(requireAuth, scopeToCompany);
 router.post('/initiate', requirePermission(POS_SELL), initiateValidation, validate, controller.initiate);
 router.get('/transactions/:id', controller.getStatus);
 
+// Ecommerce/storefront checkout-intent — { orderId, amount, provider?, phone? }
+router.post('/checkout-intent',
+  body('orderId').isString().notEmpty().withMessage('orderId is required.'),
+  body('amount').isFloat({ gt: 0 }).withMessage('amount must be greater than zero.'),
+  validate, controller.createCheckoutIntent);
+
 module.exports = router;

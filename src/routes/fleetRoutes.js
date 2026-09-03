@@ -18,6 +18,13 @@ router.post('/vehicles/:id/status',
 router.post('/vehicles/:id/retire', requirePermission('fleet.manage'), controller.retireVehicle);
 router.get('/vehicles/:id/history', controller.vehicleHistory);
 
+// GPS/real-time tracking — ingestion hook only, no hardware integration.
+router.post('/vehicles/:id/ping',
+  body('lat').isFloat().withMessage('lat is required.'),
+  body('lng').isFloat().withMessage('lng is required.'),
+  validate, controller.recordVehiclePing); // { lat, lng, speed?, timestamp? } — no fleet.manage gate: a tracker device/driver app posts frequently and shouldn't need admin rights
+router.get('/vehicles/locations/latest', controller.latestVehicleLocations); // most recent ping per vehicle
+
 router.get('/fuel-logs', controller.listFuelLogs); // ?vehicleId=
 router.post('/fuel-logs',
   body('vehicleId').isString().notEmpty().withMessage('vehicleId is required.'),

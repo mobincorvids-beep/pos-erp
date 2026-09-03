@@ -167,11 +167,31 @@ async function costVarianceReport(req, res) {
   }
 }
 
+async function capacityDashboard(req, res) {
+  try {
+    const dashboard = await manufacturingService.getCapacityDashboard(req.companyId, req.query);
+    res.json(dashboard);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function recordOperationQc(req, res) {
+  try {
+    const workOrder = await manufacturingService.recordOperationQc(
+      req.params.id, req.params.operationIndex, { ...req.body, checkedBy: req.auth.userId }
+    );
+    res.json(workOrder);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
 module.exports = {
   listBOMs, createBOM,
-  listWorkOrders, createWorkOrder, start, complete, recordOperation,
+  listWorkOrders, createWorkOrder, start, complete, recordOperation, recordOperationQc,
   listWorkCenters, createWorkCenter, updateWorkCenter,
   listRoutings, createRouting,
   listMrpRuns, getMrpRun, runMrp, convertPurchaseLine, convertWorkOrderLine,
-  efficiencyReport, costVarianceReport,
+  efficiencyReport, costVarianceReport, capacityDashboard,
 };

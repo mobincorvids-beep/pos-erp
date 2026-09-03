@@ -54,6 +54,11 @@ const productSchema = new Schema({
   maxStock: Number,
   reorderLevel: { type: Number, default: 0 },
 
+  // Floor MRP planning must never plan a net requirement below — see
+  // mrpService.runMrp()'s netting step. 0 (the default) means "not
+  // tracked", identical to today's behavior (net purely against on-hand).
+  safetyStockQty: { type: Number, default: 0, min: 0 },
+
   // Which supplier normally supplies this product, so the reorder-urgency
   // check can read that supplier's leadTimeDays without the caller having
   // to pass one in. Optional/nullable — a product with no preferred
@@ -77,6 +82,22 @@ const productSchema = new Schema({
   // Embedded variants — for products with no real variation, one implicit
   // variant is created automatically (see ProductService.createSimpleVariant).
   variants: [variantSchema],
+
+  // Per-channel pricing/content overrides — 'ecommerce', a specific
+  // SalesChannel key, etc. Absent/empty means every channel falls back to
+  // the base product fields above (price/name/description) and is visible,
+  // exactly as before this field existed. Resolved by
+  // productChannelService.getEffectiveProductForChannel.
+  channelOverrides: {
+    type: Map,
+    of: new Schema({
+      price: { type: Number, default: null },
+      title: { type: String, default: null },
+      description: { type: String, default: null },
+      isVisible: { type: Boolean, default: true },
+    }, { _id: false }),
+    default: undefined,
+  },
 }, { timestamps: true });
 
 productSchema.index({ companyId: 1, sku: 1 });

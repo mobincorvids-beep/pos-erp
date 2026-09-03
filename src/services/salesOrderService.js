@@ -18,6 +18,7 @@ const accountingService = require('./accountingService');
 const bundleService = require('./bundleService');
 const serialInventoryService = require('./serialInventoryService');
 const defaultAccountsService = require('./defaultAccountsService');
+const creditLimitService = require('./creditLimitService');
 const { nextInvoiceNumber, nextDocumentNumber } = require('./numberingService');
 const { computeLineItems } = require('./saleCalculations');
 
@@ -39,6 +40,27 @@ async function createDraft(input, { saleType, prefix, status, reserveStock }) {
       totalAmount, paidAmount: 0, dueAmount: totalAmount,
       validUntil: validUntil || null,
     });
+  }
+
+  // Order holds (credit): a sales order that would push the customer's
+  // outstanding balance over their Customer.creditLimit is created anyway
+  // (additive, not a hard block like posSaleService.checkout's) but with
+  // holdStatus set to credit_hold, so it can't proceed to
+  // fulfillment/picking/invoicing until released — see
+  // convertToInvoice()'s hold check and releaseOrderHold() below. Computed
+  // before the transaction (a plain read, same "no network/heavy work
+  // inside the transaction" discipline as posSaleService.checkout).
+  let holdFields = { holdStatus: 'none', holdReason: null, heldBy: null, heldAt: null };
+  if (customerId) {
+    const check = await creditLimitService.checkCreditLimit(customerId, totalAmount);
+    if (check.exceeds) {
+      holdFields = {
+        holdStatus: 'credit_hold',
+        holdReason: `Order total ${totalAmount.toFixed(2)} would put the customer's outstanding balance at ${check.projectedBalance.toFixed(2)}, over their credit limit of ${check.creditLimit.toFixed(2)}.`,
+        heldBy: null, // system-placed, not a person
+        heldAt: new Date(),
+      };
+    }
   }
 
   // Sales orders commit stock (reserve, don't deduct) so it can't be
@@ -63,6 +85,7 @@ async function createDraft(input, { saleType, prefix, status, reserveStock }) {
           subtotal, discountAmount: discountTotal, taxAmount: taxTotal,
           totalAmount, paidAmount: 0, dueAmount: totalAmount,
           validUntil: validUntil || null,
+          ...holdFields,
         }],
         { session }
       );
@@ -149,6 +172,9 @@ async function convertToInvoice(saleId, input) {
       if (!sale) throw new Error('Document not found.');
       if (!['quotation', 'sales_order'].includes(sale.status)) {
         throw new Error(`Cannot convert a document with status "${sale.status}" to an invoice.`);
+      }
+      if (sale.holdStatus && sale.holdStatus !== 'none') {
+        throw new Error(`This order is on hold (${sale.holdStatus}: ${sale.holdReason || 'no reason given'}) and cannot be converted to an invoice until the hold is released.`);
       }
 
       const {
@@ -350,7 +376,257 @@ async function getPublicOrderStatus(orderNumber, phone) {
   return toPublicStatusSummary(sale);
 }
 
+/**
+ * Places a hold on an order directly (fraud review or a manual/staff-
+ * initiated hold) — distinct from the automatic credit_hold createDraft()
+ * applies. type must be 'fraud_review' or 'manual_hold' (credit_hold is
+ * system-only, never placed by a person through this endpoint).
+ */
+async function placeOrderHold(saleId, { type, reason, userId }) {
+  if (!['fraud_review', 'manual_hold'].includes(type)) {
+    throw new Error('type must be "fraud_review" or "manual_hold".');
+  }
+  const sale = await Sale.findById(saleId);
+  if (!sale) throw new Error('Order not found.');
+  sale.holdStatus = type;
+  sale.holdReason = reason || null;
+  sale.heldBy = userId || null;
+  sale.heldAt = new Date();
+  sale.releasedBy = null;
+  sale.releasedAt = null;
+  await sale.save();
+  return sale;
+}
+
+/** Releases whatever hold (credit_hold, fraud_review, manual_hold) is on an order, letting it proceed to fulfillment/invoicing again. */
+async function releaseOrderHold(saleId, { userId, note } = {}) {
+  const sale = await Sale.findById(saleId);
+  if (!sale) throw new Error('Order not found.');
+  if (!sale.holdStatus || sale.holdStatus === 'none') throw new Error('This order is not on hold.');
+  sale.holdStatus = 'none';
+  sale.holdReason = note ? `${sale.holdReason || ''} — released: ${note}`.trim() : sale.holdReason;
+  sale.releasedBy = userId || null;
+  sale.releasedAt = new Date();
+  await sale.save();
+  return sale;
+}
+
+// Maps a Sale document's saleType/channel/status onto one label a
+// consolidated cross-channel order view can group/filter by, without
+// requiring the frontend to know this codebase's internal field layout.
+// POS/ecommerce are tagged directly via `channel`; sales orders/
+// quotations are their own saleType regardless of channel. Route sales and
+// secondary (sell-through) sales do not create Sale documents in this
+// codebase today (see routeSalesService/secondarySaleService — they track
+// visits/sell-through numbers, not invoices), so they never appear in this
+// list; the shape below still reserves a place for them once/if they do.
+function resolveOrderChannel(sale) {
+  if (sale.saleType === 'sales_order' || sale.saleType === 'quotation') return 'sales_order';
+  return sale.channel || 'pos';
+}
+
+/**
+ * Consolidated, cross-channel order list — POS, sales orders/quotations,
+ * and e-commerce (including per-SalesChannel imports, which are tagged
+ * channel:'ecommerce' the same as the single-channel integration; see
+ * ecommerceService.importOrder) in one unified shape, so the frontend
+ * doesn't need to query each source separately.
+ *
+ * @param {String} companyId
+ * @param {Object} [opts]
+ * @param {String} [opts.channel] - 'pos' | 'ecommerce' | 'sales_order' (see resolveOrderChannel)
+ * @param {String} [opts.status] - Sale.status value
+ * @param {String|Date} [opts.from] - invoiceDate lower bound
+ * @param {String|Date} [opts.to] - invoiceDate upper bound
+ */
+async function getConsolidatedOrders(companyId, { channel, status, from, to } = {}) {
+  const filter = { companyId };
+  if (status) filter.status = status;
+  if (from || to) {
+    filter.invoiceDate = {};
+    if (from) filter.invoiceDate.$gte = new Date(from);
+    if (to) filter.invoiceDate.$lte = new Date(to);
+  }
+  if (channel === 'sales_order') {
+    filter.saleType = { $in: ['sales_order', 'quotation'] };
+  } else if (channel) {
+    filter.channel = channel;
+    filter.saleType = { $nin: ['sales_order', 'quotation'] };
+  }
+
+  const sales = await Sale.find(filter).sort({ invoiceDate: -1, createdAt: -1 }).limit(500)
+    .populate('customerId', 'name phone email');
+
+  return sales.map((sale) => ({
+    id: sale._id,
+    documentNumber: sale.documentNumber,
+    invoiceNumber: sale.invoiceNumber,
+    orderChannel: resolveOrderChannel(sale),
+    saleType: sale.saleType,
+    channel: sale.channel,
+    status: sale.status,
+    holdStatus: sale.holdStatus,
+    customer: sale.customerId ? { id: sale.customerId._id, name: sale.customerId.name, phone: sale.customerId.phone, email: sale.customerId.email } : null,
+    totalAmount: sale.totalAmount,
+    dueAmount: sale.dueAmount,
+    itemCount: sale.items.length,
+    invoiceDate: sale.invoiceDate,
+    expectedDeliveryDate: sale.expectedDeliveryDate,
+    updatedAt: sale.updatedAt,
+  }));
+}
+
+/**
+ * Splits a subset of an order's line items into a new Sale document
+ * (splitFromOrderId links back), e.g. for partial-warehouse-fulfillment —
+ * one part ships now, the rest waits. Only allowed on a document that
+ * hasn't been billed yet (quotation/sales_order). lineItemAllocations:
+ * [{ variantId, batchId?, quantity }] — quantity split OUT of the
+ * original order into the new one; must not exceed what's left on that
+ * line. Reservations move with the split quantity when the original was a
+ * reserved sales order.
+ */
+async function splitOrder(saleId, { lineItemAllocations }) {
+  if (!lineItemAllocations || lineItemAllocations.length === 0) {
+    throw new Error('lineItemAllocations must contain at least one item.');
+  }
+
+  const session = await mongoose.startSession();
+  try {
+    let newSale;
+    await session.withTransaction(async () => {
+      const original = await Sale.findById(saleId).session(session);
+      if (!original) throw new Error('Order not found.');
+      if (!['quotation', 'sales_order'].includes(original.status)) {
+        throw new Error(`Cannot split a document with status "${original.status}".`);
+      }
+
+      const remainingItems = original.items.map((i) => i.toObject());
+      const newItems = [];
+
+      for (const alloc of lineItemAllocations) {
+        const idx = remainingItems.findIndex((i) =>
+          String(i.variantId) === String(alloc.variantId) && String(i.batchId || '') === String(alloc.batchId || '')
+        );
+        if (idx === -1) throw new Error(`Item ${alloc.variantId} is not on this order.`);
+        const line = remainingItems[idx];
+        if (alloc.quantity <= 0 || alloc.quantity > line.quantity) {
+          throw new Error(`Cannot split ${alloc.quantity} of a line with only ${line.quantity} on the order.`);
+        }
+
+        const unitShare = alloc.quantity / line.quantity;
+        const splitLine = {
+          ...line,
+          quantity: alloc.quantity,
+          discountAmount: line.discountAmount * unitShare,
+          taxAmount: line.taxAmount * unitShare,
+          lineTotal: line.lineTotal * unitShare,
+          serialNumbers: (line.serialNumbers || []).slice(0, alloc.quantity),
+        };
+        newItems.push(splitLine);
+
+        if (alloc.quantity === line.quantity) {
+          remainingItems.splice(idx, 1);
+        } else {
+          line.quantity -= alloc.quantity;
+          line.serialNumbers = (line.serialNumbers || []).slice(alloc.quantity);
+          line.discountAmount -= splitLine.discountAmount;
+          line.taxAmount -= splitLine.taxAmount;
+          line.lineTotal -= splitLine.lineTotal;
+        }
+      }
+      if (remainingItems.length === 0) throw new Error('Cannot split every line off an order — nothing would remain on the original.');
+
+      const sumOf = (items, key) => items.reduce((s, i) => s + i[key], 0);
+      const recompute = (items) => ({
+        subtotal: items.reduce((s, i) => s + i.unitPrice * i.quantity, 0),
+        discountAmount: sumOf(items, 'discountAmount'),
+        taxAmount: sumOf(items, 'taxAmount'),
+        totalAmount: sumOf(items, 'lineTotal'),
+      });
+
+      const newTotals = recompute(newItems);
+      const remainingTotals = recompute(remainingItems);
+
+      [newSale] = await Sale.create(
+        [{
+          companyId: original.companyId, branchId: original.branchId, warehouseId: original.warehouseId,
+          customerId: original.customerId, userId: original.userId,
+          documentNumber: nextDocumentNumber(original.saleType === 'quotation' ? 'QUO' : 'SO'),
+          status: original.status, saleType: original.saleType,
+          items: newItems, ...newTotals,
+          paidAmount: 0, dueAmount: newTotals.totalAmount,
+          splitFromOrderId: original._id,
+        }],
+        { session }
+      );
+
+      original.items = remainingItems;
+      Object.assign(original, remainingTotals);
+      original.dueAmount = Math.max(remainingTotals.totalAmount - original.paidAmount, 0);
+      await original.save({ session });
+    });
+    return newSale;
+  } finally {
+    session.endSession();
+  }
+}
+
+/**
+ * Merges multiple pending (quotation/sales_order) orders from the same
+ * customer into one combined order, only allowed pre-fulfillment (neither
+ * this nor any invoicing has happened yet). The first order in saleIds is
+ * kept and absorbs the others' line items; the rest are marked cancelled
+ * with a note pointing at the survivor.
+ */
+async function mergeOrders(saleIds, targetCustomerId) {
+  if (!saleIds || saleIds.length < 2) throw new Error('mergeOrders needs at least two saleIds.');
+
+  const session = await mongoose.startSession();
+  try {
+    let survivor;
+    await session.withTransaction(async () => {
+      const orders = await Sale.find({ _id: { $in: saleIds } }).session(session);
+      if (orders.length !== saleIds.length) throw new Error('One or more orders were not found.');
+
+      for (const order of orders) {
+        if (!['quotation', 'sales_order'].includes(order.status)) {
+          throw new Error(`Order ${order.documentNumber} has status "${order.status}" and can't be merged (only pending quotations/sales orders can be merged).`);
+        }
+        if (String(order.customerId) !== String(targetCustomerId)) {
+          throw new Error(`Order ${order.documentNumber} does not belong to the target customer.`);
+        }
+      }
+
+      const ordered = saleIds.map((id) => orders.find((o) => String(o._id) === String(id)));
+      [survivor] = ordered;
+      const rest = ordered.slice(1);
+
+      for (const order of rest) {
+        survivor.items.push(...order.items.map((i) => i.toObject()));
+      }
+      survivor.subtotal = survivor.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+      survivor.discountAmount = survivor.items.reduce((s, i) => s + i.discountAmount, 0);
+      survivor.taxAmount = survivor.items.reduce((s, i) => s + i.taxAmount, 0);
+      survivor.totalAmount = survivor.items.reduce((s, i) => s + i.lineTotal, 0);
+      survivor.dueAmount = Math.max(survivor.totalAmount - survivor.paidAmount, 0);
+      await survivor.save({ session });
+
+      for (const order of rest) {
+        order.status = 'cancelled';
+        order.holdReason = `Merged into order ${survivor.documentNumber}.`;
+        await order.save({ session });
+      }
+    });
+    return survivor;
+  } finally {
+    session.endSession();
+  }
+}
+
 module.exports = {
   createQuotation, createSalesOrder, convertQuotationToSalesOrder, convertToInvoice, cancel,
   toPublicStatusSummary, getPublicOrderStatus,
+  placeOrderHold, releaseOrderHold, getConsolidatedOrders,
+  splitOrder, mergeOrders,
 };

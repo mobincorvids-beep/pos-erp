@@ -37,7 +37,7 @@ const { nextDocumentNumber } = require('./numberingService');
  * @param {String} [input.currencyDate] - date to resolve the rate for, defaults to today
  */
 async function createPurchaseOrder(input) {
-  const { companyId, branchId, warehouseId, supplierId, items, requisitionId, projectId, subcontractorId, retentionPercent, retentionAmount, userId } = input;
+  const { companyId, branchId, warehouseId, supplierId, items, requisitionId, projectId, subcontractorId, retentionPercent, retentionAmount, userId, isDropShip, dropShipCustomerId, dropShipAddress } = input;
   if (!items || items.length === 0) throw new Error('Purchase order must contain at least one item.');
 
   const subtotal = items.reduce((sum, i) => sum + i.unitCost * i.quantityOrdered, 0);
@@ -55,17 +55,35 @@ async function createPurchaseOrder(input) {
     }
   }
 
+  // Snapshot the expected arrival date from the supplier's current lead
+  // time at creation — see PurchaseOrder.expectedDate's own comment.
+  let expectedDate = null;
+  {
+    const Supplier = require('../models/Supplier');
+    const supplier = await Supplier.findById(supplierId).select('leadTimeDays');
+    if (supplier && supplier.leadTimeDays > 0) {
+      expectedDate = new Date();
+      expectedDate.setDate(expectedDate.getDate() + supplier.leadTimeDays);
+    }
+  }
+
   const po = await PurchaseOrder.create({
     companyId, branchId, warehouseId, supplierId, requisitionId: requisitionId || null, projectId: projectId || null,
     subcontractorId: subcontractorId || null, retentionPercent: retentionPercent || 0, retentionAmount: retentionAmount || 0,
     poNumber: nextDocumentNumber('PO'),
+    expectedDate,
     status: 'draft', // must be approved before it can be received — see approvePurchaseOrder()
+    isDropShip: !!isDropShip,
+    dropShipCustomerId: isDropShip ? (dropShipCustomerId || null) : null,
+    dropShipAddress: isDropShip ? (dropShipAddress || null) : null,
     items: items.map((i) => ({
       productId: i.productId,
       variantId: i.variantId,
       quantityOrdered: i.quantityOrdered,
       quantityReceived: 0,
       unitCost: i.unitCost,
+      dropShipSaleId: isDropShip ? (i.dropShipSaleId || null) : null,
+      dropShipSaleItemIndex: isDropShip && i.dropShipSaleItemIndex != null ? i.dropShipSaleItemIndex : null,
     })),
     subtotal,
     taxAmount: 0,
@@ -281,6 +299,7 @@ async function receiveGoods(input) {
               manufactureDate: item.manufactureDate || null,
               expiryDate: item.expiryDate || null,
               costPrice: item.unitCost,
+              receivedDate: new Date(),
             }],
             { session }
           );
@@ -373,20 +392,40 @@ async function receiveGoods(input) {
         // part of the product's cost basis.
         const effectiveUnitCost = item.unitCost + perUnitLandedCost;
 
-        await inventoryService.recordMovement({
-          companyId: po.companyId,
-          warehouseId,
-          productId: item.productId,
-          variantId: item.variantId,
-          batchId: item.batchId || null,
-          type: 'purchase',
-          quantity: item.quantity, // stock in
-          unitCost: effectiveUnitCost,
-          referenceType: 'GoodsReceivedNote',
-          referenceId: grn._id,
-          userId,
-          note: `GRN ${grn.grnNumber}`,
-        }, session);
+        // Drop-shipping: this line's goods never touch this company's
+        // warehouse — the supplier ships straight to the customer — so
+        // skip the normal stock-in movement entirely and instead mark the
+        // linked Sale (sales order) line fulfilled. Everything else about
+        // receiving (PO quantityReceived rollup, AP/payable posting below)
+        // still happens exactly as normal — the PO is still genuinely
+        // "received" from an accounting standpoint, it just never becomes
+        // on-hand stock.
+        if (po.isDropShip && line.dropShipSaleId != null && line.dropShipSaleItemIndex != null) {
+          const Sale = require('../models/Sale');
+          const sale = await Sale.findById(line.dropShipSaleId).session(session);
+          if (sale && sale.items[line.dropShipSaleItemIndex]) {
+            const saleItem = sale.items[line.dropShipSaleItemIndex];
+            saleItem.dropShipFulfilled = true;
+            saleItem.dropShipPurchaseOrderId = po._id;
+            saleItem.dropShipFulfilledAt = new Date();
+            await sale.save({ session });
+          }
+        } else {
+          await inventoryService.recordMovement({
+            companyId: po.companyId,
+            warehouseId,
+            productId: item.productId,
+            variantId: item.variantId,
+            batchId: item.batchId || null,
+            type: 'purchase',
+            quantity: item.quantity, // stock in
+            unitCost: effectiveUnitCost,
+            referenceType: 'GoodsReceivedNote',
+            referenceId: grn._id,
+            userId,
+            note: `GRN ${grn.grnNumber}`,
+          }, session);
+        }
 
         // The payable/AP posting and job-costing below still reflect what's
         // actually owed to the supplier (vendor unit price only) — landed

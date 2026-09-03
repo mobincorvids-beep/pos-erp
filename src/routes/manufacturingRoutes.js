@@ -34,6 +34,11 @@ router.post('/work-orders/:id/operations/:operationId',
   body('actualHours').optional().isFloat({ min: 0 }),
   body('status').optional().isIn(['scheduled', 'in_progress', 'completed']),
   validate, controller.recordOperation); // { actualHours?, status? } — records actuals for a scheduled operation
+router.post('/work-orders/:id/operations/:operationIndex/qc',
+  requirePermission(MANUFACTURING_MANAGE),
+  body('passed').isBoolean().withMessage('passed (true/false) is required.'),
+  body('notes').optional().isString(),
+  validate, controller.recordOperationQc); // { passed, notes? } — records a per-operation QC checkpoint result; :operationIndex is the position in workOrder.schedule
 
 // --- Work Centers ---
 router.get('/work-centers', controller.listWorkCenters);
@@ -80,5 +85,6 @@ router.post('/mrp-runs/:id/suggested-work-orders/:lineId/convert', requirePermis
 // --- Reporting ---
 router.get('/reports/efficiency', controller.efficiencyReport); // ?warehouseId=&from=&to=
 router.get('/reports/cost-variance', controller.costVarianceReport); // ?warehouseId=&from=&to= — actual vs BOM-standard cost per completed work order
+router.get('/reports/capacity-dashboard', controller.capacityDashboard); // ?from=&to= — per-work-center booked vs available hours per day, flags over-100% utilization
 
 module.exports = router;

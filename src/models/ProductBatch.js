@@ -8,6 +8,13 @@ const productBatchSchema = new Schema({
   manufactureDate: Date,
   expiryDate: Date,
   costPrice: Number,
+  // When this batch was actually received into stock (set by
+  // purchaseService.receiveGoods to the GRN's receivedDate at batch
+  // creation). Used by inventoryAgingService's aging buckets. Optional —
+  // any batch created before this field existed falls back to `createdAt`
+  // wherever it's read, which is a reasonable proxy since batches are
+  // created at receiving time in the first place.
+  receivedDate: { type: Date, default: null },
 }, { timestamps: true });
 
 module.exports = model('ProductBatch', productBatchSchema);

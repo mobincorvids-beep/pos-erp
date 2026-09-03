@@ -3,6 +3,7 @@ const router = require('express').Router();
 router.use('/auth', require('./authRoutes'));
 router.use('/auth', require('./oauthRoutes')); // Google/Microsoft SSO — see src/config/passport.js for env-var-gated setup
 router.use('/products', require('./productRoutes'));
+router.use('/products', require('./productChannelRoutes')); // adds /:id/channel — disjoint sub-path from productRoutes
 router.use('/categories', require('./categoryRoutes'));
 router.use('/sales', require('./saleRoutes'));
 router.use('/cheques', require('./chequeRoutes')); // receivable (from customers) and payable (to suppliers) cheque tracking
@@ -72,7 +73,22 @@ router.use('/account-settings', require('./accountSettingsRoutes'));
 router.use('/fleet', require('./fleetRoutes'));
 router.use('/fleet', require('./fleetAnalyticsRoutes')); // fuel efficiency, freight quoting — disjoint paths from fleetRoutes
 router.use('/fleet/incidents', require('./vehicleIncidentRoutes'));
+router.use('/fleet/drivers', require('./driverRoutes'));
 router.use('/bin-transfers', require('./binTransferRoutes'));
+router.use('/pack-ship', require('./packShipRoutes'));
+router.use('/warehouse/scan', require('./scanRoutes'));
+router.use('/asns', require('./asnRoutes'));
+router.use('/supplier-scorecards', require('./supplierScorecardRoutes'));
+router.use('/supplier-onboarding', require('./supplierOnboardingRoutes'));
+router.use('/inventory-valuation', require('./inventoryValuationRoutes'));
+router.use('/inventory-aging', require('./inventoryAgingRoutes'));
+router.use('/batches', require('./batchTraceabilityRoutes'));
+router.use('/network-stock', require('./networkStockRoutes'));
+router.use('/rma', require('./rmaRoutes'));
+router.use('/carts', require('./cartRoutes'));
+router.use('/change-orders', require('./changeOrderRoutes'));
+router.use('/scheduled-reports', require('./scheduledReportRoutes'));
+router.use('/dashboard-layout', require('./dashboardLayoutRoutes'));
 router.use('/field-service', require('./fieldServiceRoutes'));
 router.use('/quality', require('./qualityRoutes'));
 router.use('/contracts', require('./contractRoutes'));

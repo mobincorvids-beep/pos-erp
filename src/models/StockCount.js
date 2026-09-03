@@ -13,6 +13,21 @@ const stockCountItemSchema = new Schema({
 // them becomes 'adjustment' stock movements — this is the ONLY sanctioned
 // way stock quantities get corrected outside of a real transaction (sale,
 // purchase, transfer), so every correction is still ledger-traceable.
+// scope records HOW this count's item set was selected — 'full' (the
+// original behaviour: every StockLevel row at the warehouse, or an
+// explicit variantIds filter), 'zone' (only variants currently located, via
+// BinStock, to bins in one WarehouseZone), or 'abc_class' (only variants
+// falling in a given ABC class per reportingService.abcAnalysisReport).
+// Purely descriptive/audit metadata — stockCountService.startCount does the
+// actual filtering into `items` up front, same as it always has; a 'full'
+// count with no zoneId/abcClass behaves identically to before this field
+// existed.
+const stockCountScopeSchema = new Schema({
+  type: { type: String, enum: ['full', 'zone', 'abc_class'], default: 'full' },
+  zoneId: { type: Schema.Types.ObjectId, ref: 'WarehouseZone', default: null },
+  abcClass: { type: String, enum: ['A', 'B', 'C', null], default: null },
+}, { _id: false });
+
 const stockCountSchema = new Schema({
   companyId: { type: Schema.Types.ObjectId, ref: 'Company', required: true, index: true },
   warehouseId: { type: Schema.Types.ObjectId, ref: 'Warehouse', required: true },
@@ -21,6 +36,7 @@ const stockCountSchema = new Schema({
   status: { type: String, default: 'in_progress', enum: ['in_progress', 'submitted'] },
   userId: { type: Schema.Types.ObjectId, ref: 'User' },
   submittedAt: Date,
+  scope: { type: stockCountScopeSchema, default: () => ({ type: 'full' }) },
 }, { timestamps: true });
 
 module.exports = model('StockCount', stockCountSchema);

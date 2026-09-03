@@ -1,4 +1,5 @@
 const Shipment = require('../models/CoreShipment');
+const ProofOfDelivery = require('../models/ProofOfDelivery');
 const logisticsService = require('../services/logisticsService');
 
 async function list(req, res) {
@@ -54,8 +55,20 @@ async function assign(req, res) {
 async function deliver(req, res) {
   const shipment = await Shipment.findOne({ _id: req.params.id, companyId: req.companyId });
   if (!shipment) return res.status(404).json({ message: 'Shipment not found.' });
-  const updated = await logisticsService.recordDelivery(req.params.id, { podNote: req.body.podNote });
-  res.json(updated);
+  // recordDelivery() now also captures a structured ProofOfDelivery when
+  // recipientName is supplied — see src/models/ProofOfDelivery.js. Response
+  // shape changed from the bare shipment to { shipment, proofOfDelivery }
+  // to carry that back; podNote-only callers still work exactly as before,
+  // just reading `.shipment` off the response now instead of the body root.
+  const result = await logisticsService.recordDelivery(req.params.id, {
+    podNote: req.body.podNote,
+    recipientName: req.body.recipientName,
+    signatureImageBase64: req.body.signatureImageBase64,
+    photoBase64: req.body.photoBase64,
+    gpsLat: req.body.gpsLat, gpsLng: req.body.gpsLng,
+    notes: req.body.notes, capturedBy: req.auth?.userId,
+  });
+  res.json(result);
 }
 
 async function timeline(req, res) {
@@ -71,4 +84,11 @@ async function track(req, res) {
   res.json(result);
 }
 
-module.exports = { list, getOne, create, updateStatus, assign, deliver, timeline, track };
+async function proofOfDelivery(req, res) {
+  const shipment = await Shipment.findOne({ _id: req.params.id, companyId: req.companyId }).lean();
+  if (!shipment) return res.status(404).json({ message: 'Shipment not found.' });
+  const records = await ProofOfDelivery.find({ companyId: req.companyId, shipmentId: req.params.id }).sort({ createdAt: -1 });
+  res.json(records);
+}
+
+module.exports = { list, getOne, create, updateStatus, assign, deliver, timeline, track, proofOfDelivery };

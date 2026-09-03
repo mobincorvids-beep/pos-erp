@@ -185,6 +185,53 @@ async function applyGatewayPaymentToSale(transaction) {
   });
 }
 
+/**
+ * Ecommerce/storefront checkout-intent endpoint — creates a
+ * PaymentGatewayTransaction (same bookkeeping row `initiate` uses) for a
+ * specific existing order/Sale and returns whatever the checkout UI needs
+ * (checkoutId/redirectUrl) via paymentGatewayService.createCheckoutIntent.
+ * The later provider callback (POST /payment-gateway/callback/:provider)
+ * reconciles against this same transaction by orderRef exactly as
+ * `initiate`'s does — no separate confirmation path needed.
+ */
+async function createCheckoutIntent(req, res) {
+  try {
+    const { orderId, amount, provider, phone } = req.body;
+    if (!orderId || !amount) return res.status(400).json({ error: 'orderId and amount are required.' });
+
+    const sale = await Sale.findOne({ _id: orderId, companyId: req.companyId });
+    if (!sale) return res.status(404).json({ error: 'Order not found.' });
+
+    const orderRef = `PGW-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+    const resolvedProvider = provider || paymentGatewayService.PROVIDERS[0];
+
+    const transaction = await PaymentGatewayTransaction.create({
+      companyId: req.companyId, saleId: sale._id,
+      provider: resolvedProvider, orderRef, phone: phone || null, amount,
+      status: 'pending', initiatedByUserId: req.auth ? req.auth.userId : null,
+    });
+
+    let intent;
+    try {
+      intent = await paymentGatewayService.createCheckoutIntent(req.companyId, orderId, amount, { provider: resolvedProvider, phone });
+    } catch (err) {
+      transaction.status = 'failed';
+      transaction.responseMessage = err.message;
+      await transaction.save();
+      return res.status(502).json({ error: err.message, transactionId: transaction._id });
+    }
+
+    transaction.providerTransactionId = intent.checkoutId || null;
+    transaction.responseMessage = intent.responseMessage || null;
+    if (intent.success) transaction.status = 'completed';
+    await transaction.save();
+
+    res.status(201).json({ transactionId: transaction._id, orderRef, ...intent });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
 async function getStatus(req, res) {
   const transaction = await PaymentGatewayTransaction.findOne({ _id: req.params.id, companyId: req.companyId });
   if (!transaction) return res.status(404).json({ error: 'Transaction not found.' });
@@ -197,4 +244,4 @@ async function getStatus(req, res) {
   });
 }
 
-module.exports = { initiate, callback, getStatus };
+module.exports = { initiate, callback, getStatus, createCheckoutIntent };

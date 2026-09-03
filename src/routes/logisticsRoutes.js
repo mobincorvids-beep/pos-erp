@@ -15,6 +15,7 @@ router.get('/', controller.list);
 router.get('/track/:trackingNumber', controller.track);
 router.get('/:id', controller.getOne);
 router.get('/:id/timeline', controller.timeline);
+router.get('/:id/proof-of-delivery', controller.proofOfDelivery); // structured POD capture history (signature/photo/GPS) — see ProofOfDelivery.js
 router.post('/', controller.create);
 router.post('/:id/status', controller.updateStatus);
 router.post('/:id/assign', controller.assign);

@@ -9,6 +9,10 @@ const vehicleTripSchema = new Schema({
   branchId: { type: Schema.Types.ObjectId, ref: 'Branch', default: null },
   vehicleId: { type: Schema.Types.ObjectId, ref: 'CompanyVehicle', required: true },
   driverId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+  // The real driver PROFILE (license/document tracking — see
+  // src/models/Driver.js), additive alongside driverId above (kept as-is,
+  // ref 'User'). Optional/nullable, same rationale as CompanyVehicle.driverProfileId.
+  driverProfileId: { type: Schema.Types.ObjectId, ref: 'Driver', default: null },
   purpose: { type: String, default: '' },
   destination: { type: String, default: '' },
   startOdometer: { type: Number, required: true },

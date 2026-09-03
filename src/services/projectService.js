@@ -80,6 +80,133 @@ function listCosts(projectId) {
 }
 
 /**
+ * Budget granularity by category: breaks profitability()'s single
+ * project-wide budget/actual down per category, using Project.budgetByCategory
+ * (budgeted amounts) against ProjectCost.type actuals — already the bucket
+ * every cost entry carries, so no extra mapping table is needed. A
+ * ProjectCost.type with no matching budgetByCategory entry still shows up
+ * (budgeted defaults to 0, so it reads as visibly over budget rather than
+ * being silently dropped).
+ */
+async function profitabilityByCategory(projectId) {
+  const project = await Project.findById(projectId);
+  if (!project) throw new Error('Project not found.');
+
+  const actualsByType = await ProjectCost.aggregate([
+    { $match: { projectId: new mongoose.Types.ObjectId(projectId) } },
+    { $group: { _id: '$type', total: { $sum: '$amount' } } },
+  ]);
+
+  const budgetMap = project.budgetByCategory instanceof Map
+    ? project.budgetByCategory
+    : new Map(Object.entries(project.budgetByCategory || {}));
+
+  const categories = new Set([...budgetMap.keys(), ...actualsByType.map((a) => a._id)]);
+  const actualByType = new Map(actualsByType.map((a) => [a._id, a.total]));
+
+  const rows = [...categories].map((category) => {
+    const budgeted = budgetMap.get(category) || 0;
+    const actual = Math.round((actualByType.get(category) || 0) * 100) / 100;
+    return {
+      category,
+      budgeted: Math.round(budgeted * 100) / 100,
+      actual,
+      variance: Math.round((budgeted - actual) * 100) / 100,
+      utilization: budgeted > 0 ? Math.round((actual / budgeted) * 10000) / 100 : null,
+    };
+  }).sort((a, b) => a.category.localeCompare(b.category));
+
+  const totalBudgeted = Math.round(rows.reduce((s, r) => s + r.budgeted, 0) * 100) / 100;
+  const totalActual = Math.round(rows.reduce((s, r) => s + r.actual, 0) * 100) / 100;
+
+  return {
+    project: { id: project._id, name: project.name, code: project.code, budget: project.budget },
+    categories: rows,
+    totalBudgeted, totalActual,
+    totalVariance: Math.round((totalBudgeted - totalActual) * 100) / 100,
+  };
+}
+
+/**
+ * Multi-project resource/capacity view: for every employee who logged (or
+ * was assigned) time against an active project's tasks in [from, to],
+ * sums their allocated hours across ALL active projects and flags anyone
+ * over 100% of standard working hours for that same range — reusing
+ * Timesheet (approved + submitted, since a planning view should reflect
+ * requested time, not only already-approved time) rather than building a
+ * parallel allocation-tracking entity. standardHoursPerDay defaults to 8;
+ * "working days" in range is counted as calendar weekdays (Mon-Fri),
+ * which is an honest approximation — this app has no shared holiday
+ * calendar to consult here.
+ */
+async function getResourceCapacityView(companyId, { from, to, standardHoursPerDay = 8 } = {}) {
+  if (!from || !to) throw new Error('`from` and `to` are required.');
+  const fromDate = new Date(from);
+  const toDate = new Date(to);
+  toDate.setUTCHours(23, 59, 59, 999);
+
+  const activeProjectIds = (await Project.find({ companyId, status: { $in: ['planned', 'in_progress'] } }).select('_id')).map((p) => p._id);
+
+  const Timesheet = require('../models/Timesheet');
+  const Employee = require('../models/Employee');
+
+  const rows = await Timesheet.aggregate([
+    {
+      $match: {
+        companyId: new mongoose.Types.ObjectId(companyId),
+        projectId: { $in: activeProjectIds },
+        status: { $in: ['submitted', 'approved'] },
+        date: { $gte: fromDate, $lte: toDate },
+      },
+    },
+    {
+      $group: {
+        _id: '$employeeId',
+        allocatedHours: { $sum: '$hours' },
+        projectIds: { $addToSet: '$projectId' },
+        entryCount: { $sum: 1 },
+      },
+    },
+    { $sort: { allocatedHours: -1 } },
+  ]);
+
+  // Standard capacity for the range: weekdays between from/to x standardHoursPerDay.
+  let weekdayCount = 0;
+  for (let d = new Date(fromDate); d <= toDate; d.setUTCDate(d.getUTCDate() + 1)) {
+    const day = d.getUTCDay();
+    if (day !== 0 && day !== 6) weekdayCount += 1;
+  }
+  const standardHours = weekdayCount * standardHoursPerDay;
+
+  const employeeIds = rows.map((r) => r._id).filter(Boolean);
+  const employees = await Employee.find({ _id: { $in: employeeIds } }).select('name designation');
+  const employeeById = new Map(employees.map((e) => [String(e._id), e]));
+
+  const resourceRows = rows.map((r) => {
+    const employee = employeeById.get(String(r._id));
+    const allocatedHours = Math.round(r.allocatedHours * 100) / 100;
+    const utilizationPercent = standardHours > 0 ? Math.round((allocatedHours / standardHours) * 10000) / 100 : null;
+    return {
+      employeeId: r._id,
+      employeeName: employee?.name || 'Unknown',
+      designation: employee?.designation || null,
+      allocatedHours,
+      projectCount: r.projectIds.length,
+      entryCount: r.entryCount,
+      standardHours,
+      utilizationPercent,
+      overAllocated: utilizationPercent !== null && utilizationPercent > 100,
+    };
+  });
+
+  return {
+    from, to, standardHoursPerDay, weekdayCount, standardHours,
+    employees: resourceRows,
+    overAllocatedCount: resourceRows.filter((r) => r.overAllocated).length,
+  };
+}
+
+/**
  * Subcontractor cost tracking: sums subcontractor-tagged ProjectCost
  * entries (from Expense/PurchaseOrder rows carrying a subcontractorId —
  * see expenseService.approveExpense and purchaseService.receiveGoods) per
@@ -168,6 +295,7 @@ async function deleteDoc(companyId, docId) {
 
 module.exports = {
   createProject, updateStatus, logManualCost, profitability, listCosts,
+  profitabilityByCategory, getResourceCapacityView,
   getProjectSubcontractorCosts, releaseSubcontractorRetention,
   listDocs, createDoc, updateDoc, deleteDoc,
 };

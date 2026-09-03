@@ -6,6 +6,8 @@
  * financial transaction in its own right.
  */
 const Timesheet = require('../models/Timesheet');
+const Employee = require('../models/Employee');
+const ProjectCost = require('../models/ProjectCost');
 
 async function logTime(input) {
   const { companyId, employeeId, projectId, taskId, date, hours, description, billable } = input;
@@ -66,6 +68,15 @@ async function submitTimesheet(companyId, id) {
   return entry;
 }
 
+/**
+ * Approving a timesheet is also where project labor cost gets posted: if
+ * the entry is tagged with a projectId, this auto-creates a ProjectCost
+ * ('labor') record for hours x the employee's hourlyRate, reusing
+ * ProjectCost's existing shape (the same model expenseService/
+ * purchaseService write into) rather than building a separate labor-cost
+ * mechanism. An employee with no hourlyRate set (0) still gets approved
+ * normally — it just posts a $0 cost entry, since there's no rate to guess from.
+ */
 async function approveTimesheet(companyId, id, approvedByUserId) {
   const entry = await getTimesheet(companyId, id);
   if (entry.status !== 'submitted') throw new Error('Only submitted entries can be approved.');
@@ -73,6 +84,20 @@ async function approveTimesheet(companyId, id, approvedByUserId) {
   entry.approvedBy = approvedByUserId;
   entry.rejectionReason = '';
   await entry.save();
+
+  if (entry.projectId) {
+    const employee = await Employee.findById(entry.employeeId);
+    const rate = employee?.hourlyRate || 0;
+    const cost = Math.round(entry.hours * rate * 100) / 100;
+    await ProjectCost.create({
+      companyId, projectId: entry.projectId, type: 'labor', amount: cost,
+      referenceType: 'Timesheet', referenceId: entry._id,
+      date: entry.date,
+      note: `Labor cost: ${entry.hours}h${entry.taskId ? ` (task ${entry.taskId})` : ''} @ ${rate}/hr — ${employee?.name || 'employee'}`,
+      userId: approvedByUserId,
+    });
+  }
+
   return entry;
 }
 

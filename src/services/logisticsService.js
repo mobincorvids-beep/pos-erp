@@ -1,5 +1,6 @@
 const Shipment = require('../models/CoreShipment');
 const ShipmentEvent = require('../models/ShipmentEvent');
+const ProofOfDelivery = require('../models/ProofOfDelivery');
 const { nextDocumentNumber } = require('./numberingService');
 
 // Sane forward status transitions. 'failed' and 'returned' are reachable
@@ -9,13 +10,19 @@ const { nextDocumentNumber } = require('./numberingService');
 // shipment does not move again except via a fresh return flow, which is
 // out of scope here (a returned shipment is its own status, not a
 // re-opening of the delivered one).
+// 'packed' and 'shipped' are only reached by the warehouse pack/ship
+// workflow (see src/services/packShipService.js) — a shipment not created
+// from a pick wave never visits them and goes pending -> picked_up exactly
+// as before.
 const FORWARD_TRANSITIONS = {
-  pending: ['picked_up', 'failed'],
+  pending: ['packed', 'picked_up', 'failed'],
+  packed: ['shipped', 'picked_up', 'failed'],
+  shipped: ['in_transit', 'out_for_delivery', 'delivered', 'failed', 'returned'],
   picked_up: ['in_transit', 'failed', 'returned'],
   in_transit: ['out_for_delivery', 'failed', 'returned'],
   out_for_delivery: ['delivered', 'failed', 'returned'],
   delivered: [],
-  failed: ['picked_up', 'in_transit', 'returned'], // a failed attempt can be retried
+  failed: ['packed', 'shipped', 'picked_up', 'in_transit', 'returned'], // a failed attempt can be retried
   returned: [],
 };
 
@@ -91,7 +98,16 @@ async function assignCarrierOrDriver(shipmentId, { carrierName, trackingNumber, 
   return shipment;
 }
 
-async function recordDelivery(shipmentId, { podNote = '' } = {}) {
+/**
+ * Marks a shipment delivered. `podNote` remains the coarse, always-supported
+ * note stored directly on the shipment. When any of the structured capture
+ * fields are also supplied (recipientName + a signature/photo and/or GPS),
+ * a real ProofOfDelivery record is created too — the actual capture this
+ * function's name promises, previously just a free-text note. Both are
+ * additive: a caller passing only podNote (or nothing) behaves exactly as
+ * before, no ProofOfDelivery row created.
+ */
+async function recordDelivery(shipmentId, { podNote = '', recipientName, signatureImageBase64, photoBase64, gpsLat, gpsLng, notes, capturedBy } = {}) {
   const shipment = await Shipment.findById(shipmentId);
   if (!shipment) throw new Error('Shipment not found.');
 
@@ -109,7 +125,18 @@ async function recordDelivery(shipmentId, { podNote = '' } = {}) {
     note: podNote ? `Delivered: POD: ${podNote}` : 'Delivered',
   });
 
-  return shipment;
+  let proofOfDelivery = null;
+  if (recipientName) {
+    proofOfDelivery = await ProofOfDelivery.create({
+      companyId: shipment.companyId, shipmentId: shipment._id,
+      recipientName, deliveredAt: shipment.deliveredAt,
+      signatureImageBase64: signatureImageBase64 || null, photoBase64: photoBase64 || null,
+      gpsLat: gpsLat ?? null, gpsLng: gpsLng ?? null,
+      notes: notes || '', capturedBy: capturedBy || null,
+    });
+  }
+
+  return { shipment, proofOfDelivery };
 }
 
 async function listShipments(companyId, filters = {}) {

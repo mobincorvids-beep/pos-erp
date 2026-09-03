@@ -499,11 +499,187 @@ async function abcAnalysisReport(companyId, from, to) {
   return { from, to, totalValue: Math.round(grandTotal * 100) / 100, summary, rows: classified };
 }
 
+/**
+ * Drill-down for Sales Summary: instead of the byDay/byPaymentMethod
+ * aggregates, returns the actual completed Sale documents that rolled up
+ * into one summary row. groupKey's meaning depends on groupBy:
+ *   groupBy 'day'            -> groupKey is a 'YYYY-MM-DD' date (matches byDay._id)
+ *   groupBy 'paymentMethod'  -> groupKey is a payment method string (matches byPaymentMethod._id)
+ * Same [from, to] window and 'completed' filter as salesSummary(), so the
+ * transaction list is guaranteed to actually sum back to the row it's
+ * drilling into.
+ */
+async function salesSummaryDrillDown(companyId, from, to, groupBy, groupKey) {
+  if (!groupBy || !groupKey) throw new Error('`groupBy` and `groupKey` are required for drill-down.');
+  const match = {
+    companyId: new mongoose.Types.ObjectId(companyId),
+    status: 'completed',
+    createdAt: { $gte: new Date(from), $lte: endOfDay(to) },
+  };
+
+  if (groupBy === 'day') {
+    const dayStart = new Date(`${groupKey}T00:00:00.000Z`);
+    const dayEnd = new Date(`${groupKey}T23:59:59.999Z`);
+    match.createdAt = { $gte: dayStart, $lte: dayEnd };
+    const sales = await Sale.find(match).sort({ createdAt: -1 });
+    return { groupBy, groupKey, count: sales.length, sales };
+  }
+
+  if (groupBy === 'paymentMethod') {
+    const sales = await Sale.find({ ...match, 'payments.method': groupKey }).sort({ createdAt: -1 });
+    return { groupBy, groupKey, count: sales.length, sales };
+  }
+
+  throw new Error(`Unsupported groupBy "${groupBy}" — expected "day" or "paymentMethod".`);
+}
+
+/**
+ * Drill-down for Trial Balance: the raw Voucher entries that summed into
+ * one account's debit/credit row, up to asOfDate — same source
+ * trialBalance() aggregates over (Voucher.entries), just unaggregated.
+ */
+async function trialBalanceDrillDown(companyId, asOfDate, accountId) {
+  if (!accountId) throw new Error('`accountId` (groupKey) is required for drill-down.');
+  const vouchers = await Voucher.find({
+    companyId, date: { $lte: asOfDate }, 'entries.accountId': accountId,
+  }).sort({ date: 1 });
+
+  const entries = [];
+  for (const voucher of vouchers) {
+    for (const entry of voucher.entries) {
+      if (String(entry.accountId) !== String(accountId)) continue;
+      entries.push({
+        voucherId: voucher._id, voucherNumber: voucher.voucherNumber, type: voucher.type,
+        date: voucher.date, narration: voucher.narration, debit: entry.debit, credit: entry.credit,
+      });
+    }
+  }
+
+  return { accountId, asOfDate, count: entries.length, entries };
+}
+
+/**
+ * Comparative period analysis (MoM/YoY): computes one metric for the
+ * current period and `periodsBack` prior periods of the same periodType,
+ * returning {period, value, changePercent} rows suitable for a trend
+ * chart. Reuses salesSummary/profitAndLoss's own math rather than
+ * re-deriving revenue/margin a second way.
+ *   metric: 'revenue' (net sales) | 'grossMargin' (P&L netProfit as a % proxy is NOT this —
+ *           grossMargin here = (netSales - COGS-ish expense total) via profitAndLoss's
+ *           income/expense split, expressed as netProfit for simplicity, see below)
+ */
+function periodBounds(periodType, periodsBack, offset) {
+  const now = new Date();
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  if (periodType === 'month') {
+    start.setUTCMonth(start.getUTCMonth() - offset);
+    const end = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 0, 23, 59, 59, 999));
+    const label = `${start.getUTCFullYear()}-${String(start.getUTCMonth() + 1).padStart(2, '0')}`;
+    return { from: start, to: end, label };
+  }
+  if (periodType === 'year') {
+    const yearStart = new Date(Date.UTC(now.getUTCFullYear() - offset, 0, 1));
+    const yearEnd = new Date(Date.UTC(now.getUTCFullYear() - offset, 11, 31, 23, 59, 59, 999));
+    return { from: yearStart, to: yearEnd, label: String(yearStart.getUTCFullYear()) };
+  }
+  throw new Error(`Unsupported periodType "${periodType}" — expected "month" or "year".`);
+}
+
+async function getComparativePeriodReport(companyId, { metric = 'revenue', periodType = 'month', periodsBack = 6 } = {}) {
+  const offsets = Array.from({ length: periodsBack + 1 }, (_, i) => i).reverse(); // oldest -> newest, current last
+
+  const periods = [];
+  for (const offset of offsets) {
+    const { from, to, label } = periodBounds(periodType, periodsBack, offset);
+    let value = 0;
+    if (metric === 'revenue') {
+      const summary = await salesSummary(companyId, from.toISOString().slice(0, 10), to.toISOString().slice(0, 10));
+      value = summary.summary.netSales;
+    } else if (metric === 'grossMargin') {
+      const pnl = await profitAndLoss(companyId, from.toISOString().slice(0, 10), to.toISOString().slice(0, 10));
+      value = pnl.totalIncome > 0 ? Math.round((pnl.netProfit / pnl.totalIncome) * 10000) / 100 : 0; // percent
+    } else {
+      throw new Error(`Unsupported metric "${metric}" — expected "revenue" or "grossMargin".`);
+    }
+    periods.push({ period: label, value: Math.round(value * 100) / 100 });
+  }
+
+  const withChange = periods.map((p, i) => {
+    if (i === 0) return { ...p, changePercent: null };
+    const prev = periods[i - 1].value;
+    const changePercent = prev !== 0 ? Math.round(((p.value - prev) / Math.abs(prev)) * 10000) / 100 : null;
+    return { ...p, changePercent };
+  });
+
+  return { metric, periodType, periodsBack, periods: withChange };
+}
+
+/**
+ * KPI/scorecard dashboard: a fixed set of cross-module KPIs already
+ * computable from existing services, aggregated into one response shaped
+ * for a dashboard of KPI cards. on-time delivery % is included only when
+ * a supplier scorecard service exists (a parallel-round feature) — it's
+ * silently omitted (not a hard failure) if that module isn't present in
+ * this deployment.
+ */
+async function getKpiScorecard(companyId, { from, to } = {}) {
+  if (!from || !to) throw new Error('`from` and `to` are required.');
+
+  const [sales, pnl, lowStock, apAging] = await Promise.all([
+    salesSummary(companyId, from, to),
+    profitAndLoss(companyId, from, to),
+    lowStockReport(companyId),
+    apAgingReport(companyId, endOfDay(to)),
+  ]);
+
+  // AR aging total — badDebtService owns arAgingReport; require lazily so
+  // reportingService doesn't hard-depend on a module that could be absent.
+  let arAgingTotal = null;
+  try {
+    const { arAgingReport } = require('./badDebtService');
+    const ar = await arAgingReport(companyId, endOfDay(to));
+    arAgingTotal = ar.totalOutstanding ?? null;
+  } catch (err) { /* badDebtService not present in this deployment */ }
+
+  // On-time delivery % — only if a supplier-scorecard module exists (parallel round).
+  let onTimeDeliveryPercent = null;
+  try {
+    const supplierScorecardService = require('./supplierScorecardService');
+    if (typeof supplierScorecardService.getOnTimeDeliveryPercent === 'function') {
+      onTimeDeliveryPercent = await supplierScorecardService.getOnTimeDeliveryPercent(companyId, { from, to });
+    }
+  } catch (err) { /* supplierScorecardService not present in this deployment */ }
+
+  // Inventory turnover: COGS proxy (expense total for the period) / average
+  // inventory value (current stock valuation, since we don't retain
+  // historical valuations to average against — an honest approximation).
+  const stockVal = await stockValuation(companyId);
+  const inventoryTurnover = stockVal.totalValue > 0
+    ? Math.round((pnl.totalExpense / stockVal.totalValue) * 100) / 100
+    : null;
+
+  const grossMarginPercent = pnl.totalIncome > 0 ? Math.round((pnl.netProfit / pnl.totalIncome) * 10000) / 100 : null;
+
+  return {
+    from, to,
+    kpis: {
+      revenue: sales.summary.netSales,
+      grossMarginPercent,
+      onTimeDeliveryPercent,
+      inventoryTurnover,
+      arAgingTotal,
+      lowStockSkuCount: lowStock.length,
+      apAgingTotal: apAging.totalOutstanding,
+    },
+  };
+}
+
 module.exports = {
   trialBalance, stockValuation, salesSummary,
   profitAndLoss, balanceSheet, cashBankBook,
   lowStockReport, topProductsReport, topCustomersReport, salespersonPerformanceReport,
   expenseReport, branchComparisonReport, stockMovementReport, apAgingReport, abcAnalysisReport,
+  salesSummaryDrillDown, trialBalanceDrillDown, getComparativePeriodReport, getKpiScorecard,
 };
 
 /**

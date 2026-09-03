@@ -29,6 +29,13 @@ const employeeSchema = new Schema({
     allowances: { type: Number, default: 0 }, // fixed monthly allowances, summed
     deductions: { type: Number, default: 0 }, // fixed monthly deductions (before attendance-based ones)
   },
+
+  // Labor-costing rate: cost per hour of this employee's time, used by
+  // timesheetService.approveTimesheet to auto-post a ProjectCost('labor')
+  // entry (hours x hourlyRate) whenever an approved timesheet is tagged
+  // with a project. Optional and defaults to 0 — an employee with no rate
+  // set simply doesn't generate labor cost entries (rather than guessing).
+  hourlyRate: { type: Number, default: 0 },
 }, { timestamps: true });
 
 module.exports = model('Employee', employeeSchema);
