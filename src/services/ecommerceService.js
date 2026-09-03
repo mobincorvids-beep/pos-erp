@@ -119,12 +119,24 @@ async function importOrder(company, payload) {
   // Online orders have no cashier. Attribute the sale to whichever user
   // triggered the import if given; otherwise fall back to this company's
   // Admin-role user, since Sale.userId is required by schema.
+  //
+  // The company's own owner/admin (created directly by onboardCompany) has
+  // roleId: null — that's this app's super-admin convention (see
+  // Role-based permission checks: permissions === null means "all access"),
+  // not a dangling reference to a Role literally named "Admin". So the
+  // fallback here tries three things in order: (1) a user assigned to a
+  // Role named "Admin" (a starter-role-template admin, if the company has
+  // one), (2) a roleId: null super-admin user (the onboarding owner), then
+  // (3) any user at all in the company — never leave a valid company
+  // unable to import orders just because none of its users happen to match
+  // the first two shapes.
   let resolvedUserId = userId || null;
   if (!resolvedUserId) {
     const adminRole = await Role.findOne({ companyId: company._id, name: 'Admin' });
-    const adminUser = adminRole
-      ? await User.findOne({ companyId: company._id, roleId: adminRole._id })
-      : await User.findOne({ companyId: company._id });
+    const adminUser =
+      (adminRole && await User.findOne({ companyId: company._id, roleId: adminRole._id })) ||
+      await User.findOne({ companyId: company._id, roleId: null }) ||
+      await User.findOne({ companyId: company._id });
     if (!adminUser) throw new Error('E-commerce order import needs a userId (no admin user found to attribute the sale to).');
     resolvedUserId = adminUser._id;
   }
