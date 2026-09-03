@@ -2488,21 +2488,36 @@ async function run() {
     assert(threw, 'expected a second approval request on the same document to be rejected');
   });
 
+  let docExpiryRoleId; // set inside the next step, read by the one after it
   await step('A document expiring in 15 days IS caught by a 30-day expiry sweep, and fires a REAL notification through the actual Notification Engine', async () => {
     const docExpiryRole = await require('./models/Role').create({ companyId: company._id, name: 'Document Manager', permissions: ['roles.manage'] });
+    docExpiryRoleId = docExpiryRole._id;
     const result = await documentService.checkExpiringDocuments(company._id, 30);
     assert(result.notifiedCount >= 1, `expected at least 1 document to be caught by a 30-day expiry sweep for a document expiring in 15 days, got ${result.notifiedCount}`);
 
-    const notification = await require('./models/Notification').findOne({ companyId: company._id, type: 'document_expiring', entityId: document._id });
-    assert(notification, 'expected a real Notification document to have been created for the expiring contract');
+    // Scoped to docExpiryRole specifically, not just "any document_expiring
+    // notification for this document" — this company's starter Admin role
+    // (permissions: ['*']) also legitimately matches checkExpiringDocuments'
+    // audience query ($in: ['roles.manage', '*']), so it correctly gets its
+    // own independent notification too. Every qualifying role getting one
+    // is intended (whoever can act on an expiring document should know),
+    // so this checks the one role this test fully controls, same pattern
+    // as the low-stock notification steps above.
+    const notification = await require('./models/Notification').findOne({ companyId: company._id, type: 'document_expiring', entityId: document._id, roleId: docExpiryRoleId });
+    assert(notification, 'expected a real Notification document to have been created for the expiring contract, targeted at the docs-managing role');
   });
 
   await step('Running the SAME expiry sweep again does NOT re-notify the same document — expiryNotified correctly prevents daily spam', async () => {
     const result = await documentService.checkExpiringDocuments(company._id, 30);
     const refreshedDoc = await require('./models/Document').findById(document._id);
     assert(refreshedDoc.expiryNotified === true, 'expected expiryNotified to be true after the first sweep caught it');
-    const notificationCount = await require('./models/Notification').countDocuments({ companyId: company._id, type: 'document_expiring', entityId: document._id });
-    assert(notificationCount === 1, `expected still exactly 1 expiry notification (not re-fired on the second sweep), got ${notificationCount}`);
+    // Scoped to docExpiryRole (see the comment above) — the starter Admin
+    // role's independent copy is unaffected by and irrelevant to this
+    // check; expiryNotified is what actually prevents re-firing (a
+    // per-document flag, not per-role), so this just confirms this one
+    // role's notification count didn't grow on the second sweep.
+    const notificationCount = await require('./models/Notification').countDocuments({ companyId: company._id, type: 'document_expiring', entityId: document._id, roleId: docExpiryRoleId });
+    assert(notificationCount === 1, `expected still exactly 1 expiry notification for this role (not re-fired on the second sweep), got ${notificationCount}`);
   });
 
   // --- 47. Multi-Currency completed: a Sale can now genuinely be denominated in a foreign currency, real conversion applied, base-currency accounting untouched ---
