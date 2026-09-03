@@ -49,6 +49,24 @@ async function profitability(req, res) {
   }
 }
 
+async function subcontractorCosts(req, res) {
+  try {
+    const report = await projectService.getProjectSubcontractorCosts(req.params.id);
+    res.json(report);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function releaseRetention(req, res) {
+  try {
+    const cost = await projectService.releaseSubcontractorRetention(req.params.costId);
+    res.json(cost);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
 async function listDocs(req, res) {
   try { res.json(await projectService.listDocs(req.companyId, req.params.id)); }
   catch (err) { res.status(400).json({ error: err.message }); }
@@ -71,4 +89,8 @@ async function deleteDoc(req, res) {
   catch (err) { res.status(400).json({ error: err.message }); }
 }
 
-module.exports = { list, create, updateStatus, logManualCost, listCosts, profitability, listDocs, createDoc, updateDoc, deleteDoc };
+module.exports = {
+  list, create, updateStatus, logManualCost, listCosts, profitability,
+  subcontractorCosts, releaseRetention,
+  listDocs, createDoc, updateDoc, deleteDoc,
+};

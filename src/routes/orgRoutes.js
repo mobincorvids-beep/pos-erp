@@ -17,6 +17,7 @@ router.put('/branches/:id', requirePermission(ROLES_MANAGE), controller.updateBr
 router.delete('/branches/:id', requirePermission(ROLES_MANAGE), controller.deactivateBranch);
 
 router.get('/warehouses', controller.listWarehouses);   // ?branchId=...
+router.get('/warehouses/:id/hierarchy', controller.warehouseHierarchy); // parent DC + child branches
 router.get('/pos-terminals', controller.listPosTerminals); // ?branchId=...
 router.get('/accounts', controller.listAccounts);        // ?paymentOnly=true&type=asset
 

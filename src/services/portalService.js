@@ -123,6 +123,51 @@ async function getInvoice(customerId, saleId) {
   return sale;
 }
 
+/**
+ * Ecommerce order tracking: the customer's own orders placed through the
+ * online-store channel (see ecommerceService.importOrder — channel:
+ * 'ecommerce'), with a simple derived trackingStatus rather than exposing
+ * the internal Sale.status vocabulary directly. This app has no real
+ * shipping/carrier integration, so "tracking" here means order + payment
+ * status only (paid/processing/awaiting payment/cancelled/returned), not a
+ * courier's in-transit/out-for-delivery events.
+ */
+function deriveTrackingStatus(sale) {
+  if (sale.status === 'cancelled' || sale.status === 'returned') return sale.status;
+  if (sale.dueAmount > 0) return 'awaiting_payment';
+  return 'processing'; // paid in full; this app has no fulfillment/shipping stage to report beyond this
+}
+
+async function listEcommerceOrders(customerId) {
+  const sales = await Sale.find({ customerId, channel: 'ecommerce' }).sort({ createdAt: -1 })
+    .select('invoiceNumber documentNumber totalAmount paidAmount dueAmount status createdAt');
+  return sales.map((sale) => ({
+    saleId: sale._id,
+    invoiceNumber: sale.invoiceNumber || sale.documentNumber,
+    totalAmount: sale.totalAmount,
+    dueAmount: sale.dueAmount,
+    status: sale.status,
+    trackingStatus: deriveTrackingStatus(sale),
+    createdAt: sale.createdAt,
+  }));
+}
+
+async function getEcommerceOrder(customerId, saleId) {
+  const sale = await Sale.findOne({ _id: saleId, customerId, channel: 'ecommerce' });
+  if (!sale) throw new Error('Order not found.');
+  return {
+    saleId: sale._id,
+    invoiceNumber: sale.invoiceNumber || sale.documentNumber,
+    items: sale.items,
+    totalAmount: sale.totalAmount,
+    paidAmount: sale.paidAmount,
+    dueAmount: sale.dueAmount,
+    status: sale.status,
+    trackingStatus: deriveTrackingStatus(sale),
+    createdAt: sale.createdAt,
+  };
+}
+
 /** Lets the customer raise a support request themselves, through the same real Ticket/SLA engine staff use, not a separate, disconnected "contact us" form. Uses the company's first active branch since a customer has no branch of their own to pick from. */
 async function submitTicket(companyId, customerId, { category, subject, description, priority }) {
   const branch = await Branch.findOne({ companyId, isActive: true }).sort({ createdAt: 1 });
@@ -139,4 +184,7 @@ async function refresh(rawRefreshToken) {
   return { accessToken: signPortalAccessToken(portalUser), refreshToken: newToken };
 }
 
-module.exports = { invite, activateInvite, login, refresh, dashboard, listInvoices, getInvoice, submitTicket };
+module.exports = {
+  invite, activateInvite, login, refresh, dashboard, listInvoices, getInvoice, submitTicket,
+  listEcommerceOrders, getEcommerceOrder,
+};

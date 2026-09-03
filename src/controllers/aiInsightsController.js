@@ -27,6 +27,18 @@ async function salesAnomalies(req, res) {
   }
 }
 
+async function seasonalSalesAnomalies(req, res) {
+  try {
+    const result = await aiInsightsService.weekdaySeasonalAnomalies(req.companyId, {
+      weeks: Number(req.query.weeks) || 8,
+      thresholdPercent: Number(req.query.thresholdPercent) || 40,
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
 async function briefing(req, res) {
   try {
     const result = await aiInsightsService.briefing(req.companyId);
@@ -36,4 +48,4 @@ async function briefing(req, res) {
   }
 }
 
-module.exports = { reorderRecommendations, slowMoving, salesAnomalies, briefing };
+module.exports = { reorderRecommendations, slowMoving, salesAnomalies, seasonalSalesAnomalies, briefing };

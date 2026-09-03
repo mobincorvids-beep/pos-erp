@@ -27,4 +27,19 @@ router.post('/tickets',
   body('description').isString().trim().notEmpty().withMessage('description is required.'),
   validate, controller.submitTicket);
 
+// Ecommerce order tracking — the customer's own online-store orders only
+// (see portalService.listEcommerceOrders/getEcommerceOrder), separate from
+// the general invoices/:saleId above since not every invoice came through
+// the ecommerce channel and this shape carries a derived trackingStatus.
+router.get('/orders', controller.listEcommerceOrders);
+router.get('/orders/:saleId', controller.getEcommerceOrder);
+
+// Wishlist — scoped to the logged-in customer via req.portalAuth, never a
+// customerId taken from the request.
+router.get('/wishlist', controller.listWishlist);
+router.post('/wishlist',
+  body('productId').isString().notEmpty().withMessage('productId is required.'),
+  validate, controller.addToWishlist);
+router.delete('/wishlist/:itemId', controller.removeFromWishlist);
+
 module.exports = router;

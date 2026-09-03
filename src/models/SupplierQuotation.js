@@ -1,5 +1,12 @@
 const { Schema, model } = require('mongoose');
 
+// CANONICAL for the formal RFQ (request-for-quotation) flow. Both this
+// model and SupplierQuote.js were found live in the codebase, wired into
+// DIFFERENT flows, not duplicates of each other — see the matching header
+// comment on SupplierQuote.js for the full explanation. In short: this one
+// hangs off an RFQ sent to multiple suppliers (rfqService.compareQuotations
+// picks the cheapest supplier PER LINE ITEM across responses); SupplierQuote
+// hangs off a single PurchaseRequisition for simpler ad-hoc quote capture.
 const quotedItemSchema = new Schema({
   productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
   variantId: { type: Schema.Types.ObjectId, required: true },

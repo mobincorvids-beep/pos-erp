@@ -52,6 +52,22 @@ const workOrderSchema = new Schema({
   schedule: [scheduledOperationSchema], // populated by the forward scheduler when the work order is started
   consumedBatches: [consumedBatchSchema], // raw material batch/lot traceability, populated at startProduction()
 
+  // Backflush / actual-consumption reporting. startProduction() always
+  // consumes the full planned BOM quantity (component.quantityPerUnit x
+  // quantityToProduce) up front — actualConsumption records what
+  // completeProduction() was told was REALLY used per component, so the
+  // delta (actual - planned) can be posted as a stock adjustment and this
+  // stays available for reporting even though the ledger itself only ever
+  // shows the two movements (planned consume at start, delta adjustment at
+  // completion).
+  actualConsumption: [{
+    productId: { type: Schema.Types.ObjectId, ref: 'Product' },
+    variantId: { type: Schema.Types.ObjectId },
+    plannedQuantity: { type: Number },
+    actualQuantity: { type: Number },
+    _id: false,
+  }],
+
   // --- Production costing (posted on completeProduction) ---
   actualMaterialCost: { type: Number, default: null }, // sum of (actual consumption x cost at consumption) across all components
   overheadCost: { type: Number, default: null },        // manual overhead allocation for this run (mirrors actualOverheadCost, kept as the spec-named field)

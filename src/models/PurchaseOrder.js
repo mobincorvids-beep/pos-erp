@@ -32,6 +32,19 @@ const purchaseOrderSchema = new Schema({
   supplierId: { type: Schema.Types.ObjectId, ref: 'Supplier', required: true },
   requisitionId: { type: Schema.Types.ObjectId, ref: 'PurchaseRequisition', default: null },
   projectId: { type: Schema.Types.ObjectId, ref: 'Project', default: null }, // tags this PO for job costing; a ProjectCost is auto-created per GRN received against it
+
+  // Subcontractor cost tagging — set alongside projectId when this PO is
+  // for a subcontractor/job-worker's bill rather than ordinary materials.
+  // When set, receiveGoods() creates a 'subcontractor'-typed ProjectCost
+  // per GRN instead of 'material', with retention prorated to exactly what
+  // that GRN brought in (same partial-receiving-safe approach the existing
+  // material job-costing already uses). retentionAmount here is the total
+  // holdback for the WHOLE PO; retentionPercent, if set instead, is applied
+  // to each GRN's received value.
+  subcontractorId: { type: Schema.Types.ObjectId, ref: 'Supplier', default: null },
+  retentionPercent: { type: Number, default: 0 },
+  retentionAmount: { type: Number, default: 0 },
+
   poNumber: { type: String, required: true, unique: true },
   // Business date of the order — AP aging and early-payment-discount
   // terms measure from THIS, not from the immutable createdAt stamp, so

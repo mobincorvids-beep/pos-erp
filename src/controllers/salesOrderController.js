@@ -60,4 +60,26 @@ async function cancel(req, res) {
   }
 }
 
-module.exports = { listQuotations, listSalesOrders, createQuotation, createSalesOrder, acceptQuotation, convertToInvoice, cancel };
+/**
+ * PUBLIC — no staff auth, no JWT. See publicOrderTrackingRoutes.js: the
+ * order number + phone the caller supplies IS the auth, same pattern as
+ * publicFunnelRoutes.js/publicReviewRoutes.js. Returns 404 for anything
+ * that doesn't match — a wrong order number and a right order number with
+ * the wrong phone look identical, deliberately, so this can't be used to
+ * enumerate orders or confirm a phone number is on file.
+ */
+async function publicTrackOrder(req, res) {
+  try {
+    const { orderNumber, phone } = req.query;
+    const summary = await salesOrderService.getPublicOrderStatus(orderNumber, phone);
+    if (!summary) return res.status(404).json({ error: 'No matching order found.' });
+    res.json(summary);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+module.exports = {
+  listQuotations, listSalesOrders, createQuotation, createSalesOrder, acceptQuotation, convertToInvoice, cancel,
+  publicTrackOrder,
+};

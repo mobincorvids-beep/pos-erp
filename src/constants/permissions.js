@@ -76,6 +76,11 @@ const KEYS = {
   VENDOR_COMPANY_DOCUMENTS_MANAGE: 'documents.vendor_company.manage',
 
   FLEET_MANAGE: 'fleet.manage',
+  // Separate from FLEET_MANAGE — logging/updating an accident/incident
+  // (with its estimated cost + insurance claim status) is more sensitive
+  // than routine vehicle/fuel/trip admin, so it gets its own gate rather
+  // than riding on fleet.manage.
+  FLEET_INCIDENTS_MANAGE: 'fleet.incidents.manage',
   FIELD_SERVICE_MANAGE: 'field_service.manage',
   QUALITY_MANAGE: 'quality.manage',
   CONTRACTS_MANAGE: 'contracts.manage',

@@ -62,4 +62,31 @@ function toPdfBuffer({ title, columns, rows, generatedAt }) {
   });
 }
 
-module.exports = { toExcelBuffer, toPdfBuffer };
+/**
+ * CSV — hand-built rather than pulling in a new dependency (json2csv isn't
+ * already in package.json, and a CSV is just a header row plus
+ * comma-joined, properly-quoted rows). Same {title, columns, rows} shape
+ * as toExcelBuffer/toPdfBuffer so any report already wired for
+ * excel/pdf export can add "csv" with one more `if` branch, not a
+ * parallel code path.
+ */
+function csvEscape(value) {
+  const str = value === null || value === undefined ? '' : String(value);
+  // Quote whenever the value contains a comma, a double quote, or a
+  // newline — the three characters that would otherwise corrupt the row
+  // structure — doubling any embedded double quotes per RFC 4180.
+  if (/[",\n\r]/.test(str)) return `"${str.replace(/"/g, '""')}"`;
+  return str;
+}
+
+function toCsvBuffer({ columns, rows }) {
+  const lines = [columns.map((c) => csvEscape(c.header)).join(',')];
+  rows.forEach((row) => {
+    lines.push(columns.map((c) => csvEscape(row[c.key])).join(','));
+  });
+  // \r\n per RFC 4180; a leading BOM so Excel opens UTF-8 CSVs (accented
+  // customer/supplier names etc.) without mangling them.
+  return Buffer.from('﻿' + lines.join('\r\n'), 'utf8');
+}
+
+module.exports = { toExcelBuffer, toPdfBuffer, toCsvBuffer };

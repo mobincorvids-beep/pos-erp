@@ -70,6 +70,9 @@ router.use('/ecommerce', require('./ecommerceWebhookRoutes'));        // externa
 router.use('/ai', require('./aiInsightsRoutes'));
 router.use('/account-settings', require('./accountSettingsRoutes'));
 router.use('/fleet', require('./fleetRoutes'));
+router.use('/fleet', require('./fleetAnalyticsRoutes')); // fuel efficiency, freight quoting — disjoint paths from fleetRoutes
+router.use('/fleet/incidents', require('./vehicleIncidentRoutes'));
+router.use('/bin-transfers', require('./binTransferRoutes'));
 router.use('/field-service', require('./fieldServiceRoutes'));
 router.use('/quality', require('./qualityRoutes'));
 router.use('/contracts', require('./contractRoutes'));

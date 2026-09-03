@@ -11,7 +11,10 @@ const ProjectCost = require('../models/ProjectCost');
 const accountingService = require('./accountingService');
 
 async function submitExpense(input) {
-  const { companyId, branchId, categoryId, paymentAccountId, amount, date, note, userId, projectId } = input;
+  const {
+    companyId, branchId, categoryId, paymentAccountId, amount, date, note, userId, projectId,
+    subcontractorId, retentionPercent, retentionAmount,
+  } = input;
   if (!amount || amount <= 0) throw new Error('Expense amount must be greater than zero.');
 
   const category = await ExpenseCategory.findOne({ _id: categoryId, companyId });
@@ -20,6 +23,7 @@ async function submitExpense(input) {
   return Expense.create({
     companyId, branchId, categoryId, paymentAccountId, amount,
     date: date || new Date(), note, userId, status: 'pending', projectId: projectId || null,
+    subcontractorId: subcontractorId || null, retentionPercent: retentionPercent || 0, retentionAmount: retentionAmount || 0,
   });
 }
 
@@ -61,12 +65,24 @@ async function approveExpense(expenseId, approverUserId) {
       // automatically becomes a ProjectCost the moment it's approved — no
       // separate re-entry into the Projects module, and it can't happen
       // twice since approval is a one-way status transition guarded above.
+      // An expense also tagged with a subcontractorId is costed as
+      // 'subcontractor' instead of 'expense' (see
+      // projectService.getProjectSubcontractorCosts), and its retention
+      // holdback (retentionAmount if given, else amount * retentionPercent%)
+      // is carried onto the cost entry so it can be tracked held vs released.
       if (expense.projectId) {
+        const isSubcontractor = !!expense.subcontractorId;
+        const retentionAmount = isSubcontractor
+          ? (expense.retentionAmount > 0 ? expense.retentionAmount : Math.round(expense.amount * (expense.retentionPercent || 0) / 100 * 100) / 100)
+          : 0;
         await ProjectCost.create(
           [{
-            companyId: expense.companyId, projectId: expense.projectId, type: 'expense',
+            companyId: expense.companyId, projectId: expense.projectId, type: isSubcontractor ? 'subcontractor' : 'expense',
             amount: expense.amount, referenceType: 'Expense', referenceId: expense._id,
             date: expense.date, note: expense.note, userId: approverUserId,
+            subcontractorId: expense.subcontractorId || null,
+            retentionPercent: isSubcontractor ? (expense.retentionPercent || 0) : 0,
+            retentionAmount,
           }],
           { session }
         );

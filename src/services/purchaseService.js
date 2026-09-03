@@ -37,7 +37,7 @@ const { nextDocumentNumber } = require('./numberingService');
  * @param {String} [input.currencyDate] - date to resolve the rate for, defaults to today
  */
 async function createPurchaseOrder(input) {
-  const { companyId, branchId, warehouseId, supplierId, items, requisitionId, projectId, userId } = input;
+  const { companyId, branchId, warehouseId, supplierId, items, requisitionId, projectId, subcontractorId, retentionPercent, retentionAmount, userId } = input;
   if (!items || items.length === 0) throw new Error('Purchase order must contain at least one item.');
 
   const subtotal = items.reduce((sum, i) => sum + i.unitCost * i.quantityOrdered, 0);
@@ -57,6 +57,7 @@ async function createPurchaseOrder(input) {
 
   const po = await PurchaseOrder.create({
     companyId, branchId, warehouseId, supplierId, requisitionId: requisitionId || null, projectId: projectId || null,
+    subcontractorId: subcontractorId || null, retentionPercent: retentionPercent || 0, retentionAmount: retentionAmount || 0,
     poNumber: nextDocumentNumber('PO'),
     status: 'draft', // must be approved before it can be received — see approvePurchaseOrder()
     items: items.map((i) => ({
@@ -413,13 +414,30 @@ async function receiveGoods(input) {
       // Job costing interlink: a PO tagged with a project gets a
       // ProjectCost for exactly what THIS GRN brought in — not the whole
       // PO — so partial receiving across several GRNs still costs the
-      // project accurately as goods actually arrive, not on order.
+      // project accurately as goods actually arrive, not on order. A PO
+      // also tagged with a subcontractorId is costed as 'subcontractor'
+      // instead of 'material' (so subcontractor spend reports separately —
+      // see projectService.getProjectSubcontractorCosts), with retention
+      // prorated to this GRN's share of the PO's subtotal so partial
+      // receiving holds back the right amount each time rather than the
+      // whole retention on the first GRN.
       if (po.projectId && receivedTotal > 0) {
+        const isSubcontractor = !!po.subcontractorId;
+        let retentionAmount = 0;
+        if (isSubcontractor) {
+          const shareOfPo = po.subtotal > 0 ? receivedTotal / po.subtotal : 0;
+          retentionAmount = po.retentionAmount > 0
+            ? Math.round(po.retentionAmount * shareOfPo * 100) / 100
+            : Math.round(receivedTotal * (po.retentionPercent || 0) / 100 * 100) / 100;
+        }
         await ProjectCost.create(
           [{
-            companyId: po.companyId, projectId: po.projectId, type: 'material',
+            companyId: po.companyId, projectId: po.projectId, type: isSubcontractor ? 'subcontractor' : 'material',
             amount: receivedTotal, referenceType: 'GoodsReceivedNote', referenceId: grn._id,
             date: new Date(), note: `GRN ${grn.grnNumber} against ${po.poNumber}`, userId,
+            subcontractorId: po.subcontractorId || null,
+            retentionPercent: isSubcontractor ? (po.retentionPercent || 0) : 0,
+            retentionAmount,
           }],
           { session }
         );

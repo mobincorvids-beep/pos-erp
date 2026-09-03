@@ -58,6 +58,36 @@ async function recordMovement(params, session) {
     throw new Error('Stock movement quantity must be non-zero.');
   }
 
+  // Centralized negative-stock guard. This used to live only in the
+  // separate assertSufficientStock() export, which meant it only protected
+  // whichever callers remembered to call it BEFORE recordMovement (POS
+  // checkout, transfers, manufacturing consumption, sales orders, service
+  // jobs, maintenance parts all did) — any write path that skipped it
+  // could silently take StockLevel.quantity negative. recordMovement() is
+  // the one function every module actually goes through to mutate stock
+  // (see the module header comment), so the guard now lives here instead,
+  // as the last line of defense for every caller, not just the careful
+  // ones. 'adjustment' is exempt: a stocktake reconciliation
+  // (stockCountService.submitCount) authoritatively SETS the true physical
+  // count via a variance movement, including a negative variance that
+  // corrects a previously-wrong balance — that's the mechanism for fixing
+  // a bad StockLevel, so it can't be blocked by the same check it exists
+  // to correct. assertSufficientStock() itself is left in place and
+  // unchanged (it also accounts for reservedQuantity, which this raw
+  // on-hand check deliberately does not) — callers that need the
+  // reservation-aware pre-check should keep calling it for an earlier,
+  // friendlier error, but this is now the guarantee, not just their
+  // sole line of defense.
+  if (quantity < 0 && type !== 'adjustment') {
+    const level = await StockLevel.findOne({ warehouseId, variantId, batchId }).session(session || null);
+    const onHand = level?.quantity || 0;
+    if (onHand + quantity < 0) {
+      throw new Error(
+        `Insufficient stock: requested ${-quantity}, available ${onHand} (warehouse ${warehouseId}, variant ${variantId}${batchId ? `, batch ${batchId}` : ''}).`
+      );
+    }
+  }
+
   const [movement] = await StockMovement.create(
     [{
       companyId, warehouseId, productId, variantId, batchId,

@@ -106,16 +106,94 @@ async function salesAnomalies(companyId, thresholdPercent = 25) {
 }
 
 /**
+ * Weekday-relative sales anomaly detection: instead of comparing a day's
+ * sales against one flat all-time (or single rolling) average, each of the
+ * last 7 days is compared against the average for the SAME weekday over
+ * the trailing `weeks` weeks before it — a normal Friday spike is compared
+ * to other Fridays, not to a Monday-Friday blend, so it isn't flagged just
+ * for being a normal busy day.
+ *
+ * Honest limitation: this is weekday-relative, not calendar-aware — it has
+ * no idea Eid, Ramadan, or any other holiday exists, so a real
+ * once-a-year event can still show up as a "same weekday" outlier (or,
+ * conversely, a holiday-driven multi-week pattern can quietly become the
+ * new "normal" baseline). A real fix needs an actual holiday calendar;
+ * this is a cheap, honest step up from a single flat threshold, not that.
+ */
+async function weekdaySeasonalAnomalies(companyId, { weeks = 8, thresholdPercent = 40 } = {}) {
+  const companyObjectId = new mongoose.Types.ObjectId(companyId);
+  const now = new Date();
+  const historyStart = new Date(now - (weeks * 7 + 7) * 24 * 60 * 60 * 1000);
+
+  const byDay = await Sale.aggregate([
+    { $match: { companyId: companyObjectId, status: 'completed', createdAt: { $gte: historyStart, $lte: now } } },
+    {
+      $group: {
+        _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+        total: { $sum: '$totalAmount' },
+      },
+    },
+    { $sort: { _id: 1 } },
+  ]);
+
+  const totalByDate = new Map(byDay.map((d) => [d._id, d.total]));
+
+  const dateKey = (d) => d.toISOString().slice(0, 10);
+  const last7 = [];
+  for (let i = 6; i >= 0; i--) last7.push(new Date(now - i * 24 * 60 * 60 * 1000));
+
+  const days = last7.map((date) => {
+    const key = dateKey(date);
+    const weekday = date.getDay(); // 0=Sunday..6=Saturday
+    const total = totalByDate.get(key) || 0;
+
+    // Same-weekday baseline: the `weeks` occurrences of this weekday
+    // strictly before today, excluding today itself.
+    const sameWeekdayTotals = [];
+    for (let w = 1; w <= weeks; w++) {
+      const priorDate = new Date(date.getTime() - w * 7 * 24 * 60 * 60 * 1000);
+      sameWeekdayTotals.push(totalByDate.get(dateKey(priorDate)) || 0);
+    }
+    const baseline = sameWeekdayTotals.reduce((sum, v) => sum + v, 0) / sameWeekdayTotals.length;
+
+    let deviationPercent = null;
+    let flagged = false;
+    if (baseline > 0) {
+      deviationPercent = Math.round(((total - baseline) / baseline) * 10000) / 100;
+      flagged = Math.abs(deviationPercent) >= thresholdPercent;
+    }
+
+    return {
+      date: key,
+      weekday: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][weekday],
+      total: Math.round(total * 100) / 100,
+      sameWeekdayBaseline: Math.round(baseline * 100) / 100,
+      deviationPercent,
+      flagged,
+    };
+  });
+
+  return {
+    weeks,
+    thresholdPercent,
+    days,
+    flaggedCount: days.filter((d) => d.flagged).length,
+    caveat: 'Compares each day only against the trailing average for the same weekday — it does not know about Eid, Ramadan, or any other actual calendar holiday, so a real once-a-year event can still read as an outlier (or quietly become the new baseline over time).',
+  };
+}
+
+/**
  * A plain-language briefing combining the above — the "why did sales
  * decrease / which products should I reorder" style summary from the
  * proposal's AI section, built from rule-based findings rather than a
  * language model, and labeled as such rather than implying otherwise.
  */
 async function briefing(companyId) {
-  const [reorders, slowMoving, anomaly] = await Promise.all([
+  const [reorders, slowMoving, anomaly, seasonalAnomaly] = await Promise.all([
     reorderRecommendations(companyId),
     slowMovingInventory(companyId, 60),
     salesAnomalies(companyId),
+    weekdaySeasonalAnomalies(companyId),
   ]);
 
   const findings = [];
@@ -133,11 +211,19 @@ async function briefing(companyId) {
     findings.push(`Sales are ${anomaly.direction} ${Math.abs(anomaly.deviationPercent)}% this week compared to the prior month's daily average.`);
   }
 
+  if (seasonalAnomaly.flaggedCount > 0) {
+    const worstDay = [...seasonalAnomaly.days].sort((a, b) => Math.abs(b.deviationPercent ?? 0) - Math.abs(a.deviationPercent ?? 0))[0];
+    findings.push(`${worstDay.date} (${worstDay.weekday}) was ${worstDay.deviationPercent >= 0 ? 'up' : 'down'} ${Math.abs(worstDay.deviationPercent)}% versus its usual ${worstDay.weekday} average, not just the overall daily average.`);
+  }
+
   if (findings.length === 0) {
     findings.push('Nothing unusual to flag right now, stock levels and sales are within normal ranges.');
   }
 
-  return { generatedAt: new Date(), findings, reorderCount: reorders.length, slowMovingCount: slowMoving.length, salesAnomaly: anomaly };
+  return {
+    generatedAt: new Date(), findings, reorderCount: reorders.length, slowMovingCount: slowMoving.length,
+    salesAnomaly: anomaly, seasonalSalesAnomaly: seasonalAnomaly,
+  };
 }
 
-module.exports = { reorderRecommendations, slowMovingInventory, salesAnomalies, briefing };
+module.exports = { reorderRecommendations, slowMovingInventory, salesAnomalies, weekdaySeasonalAnomalies, briefing };

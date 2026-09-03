@@ -24,7 +24,11 @@ router.post('/work-orders/:id/complete',
   requirePermission(MANUFACTURING_MANAGE),
   body('quantityProduced').isFloat({ gt: 0 }).withMessage('quantityProduced must be greater than zero.'),
   body('scrapQuantity').optional().isFloat({ min: 0 }),
-  validate, controller.complete); // { quantityProduced, actualLaborCost?, actualOverheadCost?, wastageNote?, scrapQuantity? }
+  body('actualConsumption').optional().isArray(),
+  body('actualConsumption.*.productId').optional().isString(),
+  body('actualConsumption.*.variantId').optional().isString(),
+  body('actualConsumption.*.quantityActual').optional().isFloat({ min: 0 }),
+  validate, controller.complete); // { quantityProduced, actualLaborCost?, actualOverheadCost?, wastageNote?, scrapQuantity?, actualConsumption?: [{productId,variantId,quantityActual}] } — backflush: omitted components default to their planned BOM quantity
 router.post('/work-orders/:id/operations/:operationId',
   requirePermission(MANUFACTURING_MANAGE),
   body('actualHours').optional().isFloat({ min: 0 }),
@@ -75,5 +79,6 @@ router.post('/mrp-runs/:id/suggested-work-orders/:lineId/convert', requirePermis
 
 // --- Reporting ---
 router.get('/reports/efficiency', controller.efficiencyReport); // ?warehouseId=&from=&to=
+router.get('/reports/cost-variance', controller.costVarianceReport); // ?warehouseId=&from=&to= — actual vs BOM-standard cost per completed work order
 
 module.exports = router;

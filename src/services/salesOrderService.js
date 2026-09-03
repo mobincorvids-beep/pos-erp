@@ -300,4 +300,57 @@ async function cancel(saleId) {
   }
 }
 
-module.exports = { createQuotation, createSalesOrder, convertQuotationToSalesOrder, convertToInvoice, cancel };
+// Human-friendly labels for the customer-facing summary — internal status
+// values (quotation, sales_order, completed, cancelled, returned) stay as
+// the source of truth everywhere else in the app; this is presentation only.
+const CUSTOMER_STATUS_LABELS = {
+  quotation: 'Quotation',
+  sales_order: 'Order placed',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+  returned: 'Returned',
+};
+
+/**
+ * Customer-safe status summary for the public order-tracking lookup (see
+ * publicOrderTrackingRoutes.js / salesOrderController.publicTrackOrder).
+ * Deliberately returns ONLY status/tracking-shaped fields — no pricing,
+ * cost, payment, or line-item detail, so this is safe to hand back with no
+ * staff auth at all as long as the caller already proved they know the
+ * order number + the customer's phone (the lookup key IS the auth, same
+ * pattern as publicFunnelRoutes.js/publicReviewRoutes.js).
+ */
+function toPublicStatusSummary(sale) {
+  return {
+    orderNumber: sale.documentNumber,
+    status: sale.status,
+    statusLabel: CUSTOMER_STATUS_LABELS[sale.status] || sale.status,
+    expectedDeliveryDate: sale.expectedDeliveryDate || null,
+    lastUpdatedAt: sale.updatedAt,
+  };
+}
+
+/**
+ * Looks up a sales order by documentNumber + the customer's phone on file
+ * (Customer.phone) — the "order number + phone" lookup-key pattern the task
+ * calls for as the fallback, since this codebase has no existing per-order
+ * public token to reuse. Returns null rather than throwing when nothing
+ * matches (a wrong order number and a right order number/wrong phone look
+ * identical to the caller — no order/customer enumeration).
+ */
+async function getPublicOrderStatus(orderNumber, phone) {
+  if (!orderNumber || !phone) return null;
+
+  const sale = await Sale.findOne({ documentNumber: orderNumber }).populate('customerId', 'phone');
+  if (!sale || !sale.customerId) return null;
+
+  const normalize = (p) => String(p || '').replace(/\D/g, '');
+  if (normalize(phone) === '' || normalize(sale.customerId.phone) !== normalize(phone)) return null;
+
+  return toPublicStatusSummary(sale);
+}
+
+module.exports = {
+  createQuotation, createSalesOrder, convertQuotationToSalesOrder, convertToInvoice, cancel,
+  toPublicStatusSummary, getPublicOrderStatus,
+};

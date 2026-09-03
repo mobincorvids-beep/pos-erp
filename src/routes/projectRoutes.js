@@ -13,6 +13,12 @@ router.get('/:id/costs', controller.listCosts);
 router.post('/:id/costs', controller.logManualCost); // manual entries only — most costs arrive automatically, see projectService
 router.get('/:id/profitability', controller.profitability);
 
+// Subcontractor cost tracking — sums subcontractor-tagged Expense/PO costs
+// for this project separately from labor/material, and tracks retention
+// (holdback) held vs released. See projectService.getProjectSubcontractorCosts.
+router.get('/:id/subcontractor-costs', controller.subcontractorCosts);
+router.post('/costs/:costId/release-retention', requirePermission(PROJECT_TASKS_MANAGE), controller.releaseRetention);
+
 // Project docs/wiki — simple free-text/markdown notes pages, multiple per project.
 router.get('/:id/docs', controller.listDocs);
 router.post('/:id/docs',

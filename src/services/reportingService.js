@@ -440,11 +440,70 @@ async function stockMovementReport(companyId, warehouseId, from, to) {
   return StockMovement.find(filter).sort({ createdAt: -1 }).limit(500).populate('productId', 'name sku');
 }
 
+/**
+ * ABC analysis (Pareto/SKU classification): ranks every product sold in the
+ * date range by its total sales value (quantity x price, straight off
+ * completed Sale line items — same source topProductsReport uses), then
+ * walks that descending list accumulating a running share of total value.
+ * Standard Pareto thresholds: class A is however many top products it
+ * takes to reach 80% of cumulative value, B extends that to 95%, and
+ * everything after is C. Read-only, like every other report here — no
+ * write path, purely a classification view over data other modules already
+ * wrote (Sale).
+ */
+async function abcAnalysisReport(companyId, from, to) {
+  const rows = await Sale.aggregate([
+    { $match: { companyId: new mongoose.Types.ObjectId(companyId), status: 'completed', createdAt: { $gte: new Date(from), $lte: endOfDay(to) } } },
+    { $unwind: '$items' },
+    {
+      $group: {
+        _id: { productId: '$items.productId', variantId: '$items.variantId' },
+        quantitySold: { $sum: '$items.quantity' },
+        salesValue: { $sum: '$items.lineTotal' },
+      },
+    },
+    { $sort: { salesValue: -1 } },
+    { $lookup: { from: 'products', localField: '_id.productId', foreignField: '_id', as: 'product' } },
+    { $unwind: { path: '$product', preserveNullAndEmptyArrays: true } },
+  ]);
+
+  const grandTotal = rows.reduce((sum, r) => sum + r.salesValue, 0);
+
+  let cumulativeValue = 0;
+  const classified = rows.map((r) => {
+    cumulativeValue += r.salesValue;
+    const cumulativePercent = grandTotal > 0 ? (cumulativeValue / grandTotal) * 100 : 0;
+    // Standard Pareto cutoffs: A = top ~80% of cumulative value, B = next
+    // ~15% (up to 95%), C = the remaining ~5% (the long tail).
+    const abcClass = cumulativePercent <= 80 ? 'A' : cumulativePercent <= 95 ? 'B' : 'C';
+    return {
+      productId: r._id.productId, variantId: r._id.variantId, productName: r.product?.name || 'Unknown',
+      quantitySold: r.quantitySold,
+      salesValue: Math.round(r.salesValue * 100) / 100,
+      percentOfTotal: grandTotal > 0 ? Math.round((r.salesValue / grandTotal) * 10000) / 100 : 0,
+      cumulativePercent: Math.round(cumulativePercent * 100) / 100,
+      class: abcClass,
+    };
+  });
+
+  const summary = { A: { count: 0, value: 0 }, B: { count: 0, value: 0 }, C: { count: 0, value: 0 } };
+  for (const row of classified) {
+    summary[row.class].count += 1;
+    summary[row.class].value += row.salesValue;
+  }
+  for (const key of Object.keys(summary)) {
+    summary[key].value = Math.round(summary[key].value * 100) / 100;
+    summary[key].percentOfValue = grandTotal > 0 ? Math.round((summary[key].value / grandTotal) * 10000) / 100 : 0;
+  }
+
+  return { from, to, totalValue: Math.round(grandTotal * 100) / 100, summary, rows: classified };
+}
+
 module.exports = {
   trialBalance, stockValuation, salesSummary,
   profitAndLoss, balanceSheet, cashBankBook,
   lowStockReport, topProductsReport, topCustomersReport, salespersonPerformanceReport,
-  expenseReport, branchComparisonReport, stockMovementReport, apAgingReport,
+  expenseReport, branchComparisonReport, stockMovementReport, apAgingReport, abcAnalysisReport,
 };
 
 /**

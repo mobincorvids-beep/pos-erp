@@ -16,6 +16,7 @@ router.get('/top-customers', requirePermission(REPORTS_VIEW), controller.topCust
 router.get('/salesperson-performance', requirePermission(REPORTS_VIEW), controller.salespersonPerformance); // ?from=&to=
 router.get('/branch-comparison', requirePermission(REPORTS_VIEW), controller.branchComparison); // ?from=&to=
 router.get('/stock-movement', requirePermission(REPORTS_VIEW), controller.stockMovement);       // ?warehouseId=&from=&to=
+router.get('/abc-analysis', requirePermission(REPORTS_VIEW), controller.abcAnalysis);            // ?from=&to= — Pareto ABC SKU classification by sales value
 
 // Financial statements are gated behind a stricter permission — a cashier
 // who can view sales-summary shouldn't necessarily see the company's P&L.

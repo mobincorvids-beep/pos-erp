@@ -207,7 +207,7 @@ async function startProduction(workOrderId, userId) {
  * correctly makes each finished unit more expensive rather than silently
  * absorbed.
  */
-async function completeProduction(workOrderId, { quantityProduced, actualLaborCost, actualOverheadCost, wastageNote, scrapQuantity, userId }) {
+async function completeProduction(workOrderId, { quantityProduced, actualLaborCost, actualOverheadCost, wastageNote, scrapQuantity, actualConsumption, userId }) {
   const session = await mongoose.startSession();
   try {
     let workOrder;
@@ -224,11 +224,56 @@ async function completeProduction(workOrderId, { quantityProduced, actualLaborCo
       // Value them at each component's CURRENT avgCost — acceptable for a
       // short production cycle; a longer one should snapshot cost at
       // startProduction() time instead if raw material costs are volatile.
+      // Backflush / actual-consumption: startProduction() already posted a
+      // 'production_consume' movement for the full PLANNED quantity of
+      // every component. If the caller reports what was ACTUALLY used
+      // (actualConsumption: [{ productId, variantId, quantityActual }]),
+      // any difference from the planned quantity is posted here as a
+      // separate 'adjustment' movement for just the delta — never
+      // re-posting the full actual quantity, which would double-count the
+      // consumption already recorded at start. A component not mentioned
+      // in actualConsumption defaults to its planned quantity (no delta,
+      // no adjustment posted) — this makes actualConsumption fully
+      // optional and backward compatible with a plain "consume full BOM"
+      // completion.
+      const actualConsumptionByVariant = new Map(
+        (actualConsumption || []).map((row) => [String(row.variantId), row])
+      );
+
       let materialCost = 0;
+      const actualConsumptionRecord = [];
       for (const component of bom.components) {
         const avgCost = await inventoryService.getAvgCost(workOrder.warehouseId, component.variantId, null);
-        materialCost += avgCost * component.quantityPerUnit * workOrder.quantityToProduce;
+        const plannedQty = component.quantityPerUnit * workOrder.quantityToProduce;
+        const reported = actualConsumptionByVariant.get(String(component.variantId));
+        const actualQty = (reported && reported.quantityActual !== undefined && reported.quantityActual !== null)
+          ? reported.quantityActual
+          : plannedQty;
+
+        materialCost += avgCost * actualQty;
+        actualConsumptionRecord.push({
+          productId: component.productId, variantId: component.variantId,
+          plannedQuantity: plannedQty, actualQuantity: actualQty,
+        });
+
+        const delta = actualQty - plannedQty; // >0 = consumed more than planned, <0 = consumed less (some returned to stock)
+        if (delta !== 0) {
+          await inventoryService.recordMovement({
+            companyId: workOrder.companyId, warehouseId: workOrder.warehouseId,
+            productId: component.productId, variantId: component.variantId,
+            type: 'adjustment', quantity: -delta,
+            // Only relevant when stock is going back UP (delta < 0, so
+            // quantity here is positive) — recordMovement only treats
+            // 'adjustment' as a costed incoming when quantity is positive
+            // and unitCost is set, so this is a no-op for the "consumed
+            // more" (outgoing) case.
+            unitCost: delta < 0 ? avgCost : undefined,
+            referenceType: 'WorkOrder', referenceId: workOrder._id, userId,
+            note: `Backflush adjustment for ${workOrder.workOrderNumber} (planned ${plannedQty}, actual ${actualQty})`,
+          }, session);
+        }
       }
+      workOrder.actualConsumption = actualConsumptionRecord;
 
       // Labor cost preference order: an explicit override (actualLaborCost),
       // then WorkCenter.hourlyRate x actual hours logged against this work
@@ -402,9 +447,99 @@ async function getEfficiencyReport(companyId, { warehouseId, from, to } = {}) {
   });
 }
 
+/**
+ * Production cost variance report — for completed work orders in a date
+ * range, compares the ACTUAL cost already captured on each work order at
+ * completeProduction() time (actualMaterialCost + actualLaborCost +
+ * overheadCost, i.e. totalProductionCost) against the BOM-STANDARD cost of
+ * that same run: planned quantity x each component's standard cost
+ * (Product/variant.costPrice, the same static cost-basis field the rest of
+ * the app treats as "standard cost" — see productImportService's CSV cost
+ * update) plus the BOM's standard labor/overhead per unit x planned
+ * quantity. Read-only — this never writes anything, it only re-reads
+ * fields other functions already populated.
+ */
+async function getCostVarianceReport(companyId, { from, to, warehouseId } = {}) {
+  const filter = { companyId, status: 'completed' };
+  if (warehouseId) filter.warehouseId = warehouseId;
+  if (from || to) {
+    filter.completedAt = {};
+    if (from) filter.completedAt.$gte = new Date(from);
+    if (to) filter.completedAt.$lte = new Date(to);
+  }
+
+  const workOrders = await WorkOrder.find(filter).sort({ completedAt: -1 }).limit(500);
+  const bomIds = [...new Set(workOrders.map((wo) => String(wo.bomId)))];
+  const boms = await BillOfMaterials.find({ _id: { $in: bomIds } });
+  const bomsById = new Map(boms.map((b) => [String(b._id), b]));
+
+  const productIds = [...new Set(
+    boms.flatMap((b) => b.components.map((c) => String(c.productId)))
+  )];
+  const products = await Product.find({ _id: { $in: productIds } });
+  const productsById = new Map(products.map((p) => [String(p._id), p]));
+
+  function standardUnitCost(product, variantId) {
+    if (!product) return 0;
+    const variant = product.variants?.id ? product.variants.id(variantId) : null;
+    if (variant && variant.costPrice) return variant.costPrice;
+    return product.costPrice || 0;
+  }
+
+  const rows = workOrders.map((wo) => {
+    const bom = bomsById.get(String(wo.bomId));
+    const plannedQty = wo.quantityToProduce;
+
+    let standardMaterialCost = 0;
+    if (bom) {
+      for (const component of bom.components) {
+        const product = productsById.get(String(component.productId));
+        const unitCost = standardUnitCost(product, component.variantId);
+        standardMaterialCost += unitCost * component.quantityPerUnit * plannedQty;
+      }
+    }
+    const standardLaborCost = (bom?.laborCostPerUnit || 0) * plannedQty;
+    const standardOverheadCost = (bom?.overheadCostPerUnit || 0) * plannedQty;
+    const standardCost = standardMaterialCost + standardLaborCost + standardOverheadCost;
+
+    const actualCost = wo.totalProductionCost != null
+      ? wo.totalProductionCost
+      : (wo.actualMaterialCost || 0) + (wo.actualLaborCost || 0) + (wo.overheadCost || wo.actualOverheadCost || 0);
+
+    const varianceAmount = actualCost - standardCost;
+    const variancePercent = standardCost > 0 ? (varianceAmount / standardCost) * 100 : null;
+
+    return {
+      workOrderId: wo._id,
+      workOrderNumber: wo.workOrderNumber,
+      completedAt: wo.completedAt,
+      quantityToProduce: plannedQty,
+      quantityProduced: wo.quantityProduced,
+      standardMaterialCost, standardLaborCost, standardOverheadCost, standardCost,
+      actualMaterialCost: wo.actualMaterialCost || 0,
+      actualLaborCost: wo.actualLaborCost || 0,
+      actualOverheadCost: wo.overheadCost || wo.actualOverheadCost || 0,
+      actualCost,
+      varianceAmount, variancePercent,
+    };
+  });
+
+  const totals = rows.reduce((acc, r) => {
+    acc.standardCost += r.standardCost;
+    acc.actualCost += r.actualCost;
+    acc.varianceAmount += r.varianceAmount;
+    return acc;
+  }, { standardCost: 0, actualCost: 0, varianceAmount: 0 });
+  totals.variancePercent = totals.standardCost > 0 ? (totals.varianceAmount / totals.standardCost) * 100 : null;
+  totals.workOrderCount = rows.length;
+
+  return { workOrders: rows, totals };
+}
+
 module.exports = {
   createBOM, createWorkOrder, startProduction, completeProduction,
   createWorkCenter, listWorkCenters, updateWorkCenter,
   createRouting, listRoutings,
   recordOperationActuals, getEfficiencyReport,
+  getCostVarianceReport,
 };

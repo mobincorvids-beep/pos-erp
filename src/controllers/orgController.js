@@ -3,6 +3,7 @@ const Warehouse = require('../models/Warehouse');
 const PosTerminal = require('../models/PosTerminal');
 const Account = require('../models/Account');
 const Company = require('../models/Company');
+const warehouseService = require('../services/warehouseService');
 
 /** Editable-by-tenant subset of Company: deliberately excludes activeModules,
  * defaultAccounts, ecommerceConfig, parentCompanyId etc., which are either
@@ -105,6 +106,16 @@ async function listWarehouses(req, res) {
   res.json(rows);
 }
 
+/** GET /org/warehouses/:id/hierarchy — its parent DC (if any) and child branches (if any). */
+async function warehouseHierarchy(req, res) {
+  try {
+    const result = await warehouseService.getHierarchy(req.companyId, req.params.id);
+    res.json(result);
+  } catch (err) {
+    res.status(404).json({ error: err.message });
+  }
+}
+
 async function listPosTerminals(req, res) {
   const filter = { companyId: req.companyId, isActive: true };
   if (req.query.branchId) filter.branchId = req.query.branchId;
@@ -123,5 +134,5 @@ async function listAccounts(req, res) {
 module.exports = {
   getCompany, updateCompany,
   listBranches, createBranch, updateBranch, deactivateBranch,
-  listWarehouses, listPosTerminals, listAccounts,
+  listWarehouses, warehouseHierarchy, listPosTerminals, listAccounts,
 };

@@ -54,6 +54,13 @@ const productSchema = new Schema({
   maxStock: Number,
   reorderLevel: { type: Number, default: 0 },
 
+  // Which supplier normally supplies this product, so the reorder-urgency
+  // check can read that supplier's leadTimeDays without the caller having
+  // to pass one in. Optional/nullable — a product with no preferred
+  // supplier just falls back to the simple min/max trigger, exactly as
+  // before this field existed.
+  preferredSupplierId: { type: Schema.Types.ObjectId, ref: 'Supplier', default: null },
+
   isActive: { type: Boolean, default: true },
   hasVariants: { type: Boolean, default: false },
   trackExpiry: { type: Boolean, default: false },

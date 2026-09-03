@@ -19,7 +19,7 @@ async function create(req, res) {
 
 async function decide(req, res) {
   try {
-    const requisition = await requisitionService.decide(req.params.id, { approve: req.body.approve, userId: req.auth.userId });
+    const requisition = await requisitionService.decide(req.params.id, { approve: req.body.approve, userId: req.auth.userId, note: req.body.note });
     res.json(requisition);
   } catch (err) {
     res.status(400).json({ error: err.message });

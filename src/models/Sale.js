@@ -70,6 +70,12 @@ const saleSchema = new Schema({
   convertedFromId: { type: Schema.Types.ObjectId, ref: 'Sale', default: null },
   validUntil: { type: Date, default: null }, // quotation expiry
 
+  // Customer-facing delivery estimate for a sales order, optional/nullable
+  // — most existing sales (POS, quotations) never set it, so every prior
+  // document and call site is unaffected. Read by
+  // salesOrderService.getPublicOrderStatus() for order-tracking lookups.
+  expectedDeliveryDate: { type: Date, default: null },
+
   items: [saleItemSchema],
   payments: [salePaymentSchema],
 

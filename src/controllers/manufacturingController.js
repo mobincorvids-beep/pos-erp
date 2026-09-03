@@ -158,11 +158,20 @@ async function efficiencyReport(req, res) {
   res.json(rows);
 }
 
+async function costVarianceReport(req, res) {
+  try {
+    const report = await manufacturingService.getCostVarianceReport(req.companyId, req.query);
+    res.json(report);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
 module.exports = {
   listBOMs, createBOM,
   listWorkOrders, createWorkOrder, start, complete, recordOperation,
   listWorkCenters, createWorkCenter, updateWorkCenter,
   listRoutings, createRouting,
   listMrpRuns, getMrpRun, runMrp, convertPurchaseLine, convertWorkOrderLine,
-  efficiencyReport,
+  efficiencyReport, costVarianceReport,
 };
