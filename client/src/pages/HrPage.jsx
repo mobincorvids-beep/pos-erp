@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
@@ -8,6 +9,7 @@ import { DocumentsPanel } from '../components/DocumentsPanel';
 import { formatMoney, formatDate } from '../lib/format';
 
 export function HrPage() {
+  const { t } = useTranslation();
   const { can } = useAuth();
   const canManageHr = can('hr.manage');
   const [tab, setTab] = useState('my-hr');
@@ -16,19 +18,19 @@ export function HrPage() {
   // (directory, org chart, payroll processing, etc.) stays HR-manager-only,
   // matching the existing hr.manage gates elsewhere on this page.
   const tabs = [
-    ['my-hr', 'My HR'],
+    ['my-hr', t('hr.myHr')],
     ...(canManageHr ? [
-      ['employees', 'Employees'], ['org-chart', 'Org chart'], ['leave', 'Leave requests'],
-      ['shifts', 'Shifts'], ['leave-policies', 'Leave policies'], ['payroll', 'Payroll'],
-    ] : [['leave', 'Leave requests']]), // a non-HR-manager can still land here if they're a manager approving their team's leave
+      ['employees', t('hr.employees')], ['org-chart', t('hr.orgChart')], ['leave', t('hr.leaveRequests')],
+      ['shifts', t('hr.shifts')], ['leave-policies', t('hr.leavePolicies')], ['payroll', t('hr.payroll')],
+    ] : [['leave', t('hr.leaveRequests')]]), // a non-HR-manager can still land here if they're a manager approving their team's leave
   ];
 
   return (
     <div>
       <div className="flex flex-wrap justify-between items-end gap-3 mb-6">
         <div>
-          <p className="page-title mb-1">Human Resources</p>
-          <p className="text-ink-muted">Manage employee directory, attendance, and payroll processing.</p>
+          <p className="page-title mb-1">{t('hr.title')}</p>
+          <p className="text-ink-muted">{t('hr.subtitle')}</p>
         </div>
       </div>
       <div className="flex gap-2 mb-5 flex-wrap">
@@ -57,6 +59,7 @@ export function HrPage() {
  * of an error-y blank page.
  */
 function MyHrTab() {
+  const { t } = useTranslation();
   const toast = useToast();
   const { company } = useAuth();
   const [employee, setEmployee] = useState(undefined); // undefined = loading, null = no linked record
@@ -87,7 +90,7 @@ function MyHrTab() {
 
   if (employee === undefined) return <Loading />;
   if (employee === null) {
-    return <EmptyState title="No employee record linked to your account" description="Ask HR to link your login to your Employee record before My HR can show your profile, leave, attendance, and payslips." />;
+    return <EmptyState title={t('hr.noEmployeeRecordLinked')} description={t('hr.noEmployeeRecordLinkedDescription')} />;
   }
 
   return (
@@ -102,19 +105,19 @@ function MyHrTab() {
             </div>
           </div>
           <div className="text-sm space-y-1.5 text-ink-muted">
-            <p>Status: <span className="chip-accent capitalize">{employee.status?.replace('_', ' ')}</span></p>
-            <p>Joined: {formatDate(employee.joiningDate)}</p>
-            {employee.phone && <p>Phone: {employee.phone}</p>}
+            <p>{t('hr.status')}: <span className="chip-accent capitalize">{employee.status?.replace('_', ' ')}</span></p>
+            <p>{t('hr.joined')}: {formatDate(employee.joiningDate)}</p>
+            {employee.phone && <p>{t('hr.phone')}: {employee.phone}</p>}
           </div>
         </div>
 
         <div className="card p-5">
-          <p className="font-display text-base font-semibold mb-3">My leave balance</p>
-          {balances.length === 0 && <p className="text-sm text-ink-muted">No leave balance records yet.</p>}
+          <p className="font-display text-base font-semibold mb-3">{t('hr.myLeaveBalance')}</p>
+          {balances.length === 0 && <p className="text-sm text-ink-muted">{t('hr.noLeaveBalanceRecordsYet')}</p>}
           {balances.map((b) => (
             <div key={b._id} className="flex justify-between text-sm border-b border-rule py-1.5 last:border-0">
-              <span>{b.leavePolicyId?.name || 'Policy'} <span className="text-xs text-ink-muted">({b.year})</span></span>
-              <span className="num">{b.remainingDays} / {b.entitledDays} days</span>
+              <span>{b.leavePolicyId?.name || t('hr.policy')} <span className="text-xs text-ink-muted">({b.year})</span></span>
+              <span className="num">{b.remainingDays} / {b.entitledDays} {t('hr.days')}</span>
             </div>
           ))}
         </div>
@@ -123,10 +126,10 @@ function MyHrTab() {
       <div className="lg:col-span-2 space-y-6">
         <div className="card p-5">
           <div className="flex justify-between items-center mb-3">
-            <p className="font-display text-base font-semibold">My leave requests</p>
-            <button className="btn-primary text-xs px-3 py-1.5" onClick={() => setShowLeaveForm(true)}>Request leave</button>
+            <p className="font-display text-base font-semibold">{t('hr.myLeaveRequests')}</p>
+            <button className="btn-primary text-xs px-3 py-1.5" onClick={() => setShowLeaveForm(true)}>{t('hr.requestLeave')}</button>
           </div>
-          {leaveRequests.length === 0 && <p className="text-sm text-ink-muted">No leave requests yet.</p>}
+          {leaveRequests.length === 0 && <p className="text-sm text-ink-muted">{t('hr.noLeaveRequestsYet')}</p>}
           <div className="space-y-1.5">
             {leaveRequests.map((r) => (
               <div key={r._id} className="flex justify-between items-center text-sm border-b border-rule py-1.5 last:border-0">
@@ -139,13 +142,13 @@ function MyHrTab() {
 
         <div className="card p-5">
           <div className="flex justify-between items-center mb-3">
-            <p className="font-display text-base font-semibold">My attendance</p>
+            <p className="font-display text-base font-semibold">{t('hr.myAttendance')}</p>
             <div className="flex gap-1">
               <input type="number" className="field-input num !w-20 !py-1 text-xs" value={month} onChange={(e) => setMonth(Number(e.target.value))} />
               <input type="number" className="field-input num !w-24 !py-1 text-xs" value={year} onChange={(e) => setYear(Number(e.target.value))} />
             </div>
           </div>
-          {attendance.length === 0 && <p className="text-sm text-ink-muted">No attendance recorded for {month}/{year}.</p>}
+          {attendance.length === 0 && <p className="text-sm text-ink-muted">{t('hr.noAttendanceRecordedFor', { month, year })}</p>}
           <div className="max-h-56 overflow-y-auto space-y-1">
             {attendance.map((r) => (
               <div key={r._id} className="flex justify-between text-sm border-b border-rule py-1 last:border-0">
@@ -157,8 +160,8 @@ function MyHrTab() {
         </div>
 
         <div className="card p-5">
-          <p className="font-display text-base font-semibold mb-3">My payslips</p>
-          {payslips.length === 0 && <p className="text-sm text-ink-muted">No posted payslips yet.</p>}
+          <p className="font-display text-base font-semibold mb-3">{t('hr.myPayslips')}</p>
+          {payslips.length === 0 && <p className="text-sm text-ink-muted">{t('hr.noPostedPayslipsYet')}</p>}
           <div className="space-y-1.5">
             {payslips.map((p) => (
               <div key={p.payrollRunId} className="flex justify-between text-sm border-b border-rule py-1.5 last:border-0">
@@ -176,6 +179,7 @@ function MyHrTab() {
 }
 
 function MyLeaveRequestForm({ onClose, onSaved, toast }) {
+  const { t } = useTranslation();
   const [form, setForm] = useState({ fromDate: '', toDate: '', type: 'annual', reason: '' });
   const [saving, setSaving] = useState(false);
 
@@ -184,7 +188,7 @@ function MyLeaveRequestForm({ onClose, onSaved, toast }) {
     setSaving(true);
     try {
       await api.post('/hr/me/leave-requests', form);
-      toast('Leave request submitted.', 'success');
+      toast(t('hr.leaveRequestSubmitted'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -196,26 +200,26 @@ function MyLeaveRequestForm({ onClose, onSaved, toast }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Request leave</p>
+        <p className="font-display text-lg mb-4">{t('hr.requestLeave')}</p>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
-            <div><label className="field-label">From</label><input required type="date" className="field-input" value={form.fromDate} onChange={(e) => setForm({ ...form, fromDate: e.target.value })} /></div>
-            <div><label className="field-label">To</label><input required type="date" className="field-input" value={form.toDate} onChange={(e) => setForm({ ...form, toDate: e.target.value })} /></div>
+            <div><label className="field-label">{t('hr.from')}</label><input required type="date" className="field-input" value={form.fromDate} onChange={(e) => setForm({ ...form, fromDate: e.target.value })} /></div>
+            <div><label className="field-label">{t('hr.to')}</label><input required type="date" className="field-input" value={form.toDate} onChange={(e) => setForm({ ...form, toDate: e.target.value })} /></div>
           </div>
           <div>
-            <label className="field-label">Type</label>
+            <label className="field-label">{t('hr.type')}</label>
             <select className="field-input" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
-              <option value="annual">Annual</option>
-              <option value="sick">Sick</option>
-              <option value="unpaid">Unpaid</option>
-              <option value="other">Other</option>
+              <option value="annual">{t('hr.annual')}</option>
+              <option value="sick">{t('hr.sick')}</option>
+              <option value="unpaid">{t('hr.unpaid')}</option>
+              <option value="other">{t('hr.other')}</option>
             </select>
           </div>
-          <div><label className="field-label">Reason</label><input className="field-input" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} /></div>
+          <div><label className="field-label">{t('hr.reason')}</label><input className="field-input" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} /></div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Submitting…' : 'Submit'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('hr.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('hr.submitting') : t('hr.submit')}</button>
         </div>
       </form>
     </div>
@@ -236,6 +240,7 @@ function Avatar({ name, active }) {
 
 /** Simple recursive tree view of the reporting hierarchy — indented, nested boxes, no charting library needed for this. */
 function OrgChartTab() {
+  const { t } = useTranslation();
   const [roots, setRoots] = useState(null);
 
   function load() {
@@ -244,11 +249,11 @@ function OrgChartTab() {
   useEffect(load, []);
 
   if (roots === null) return <Loading />;
-  if (roots.length === 0) return <EmptyState title="No employees yet" description="Add employees under the Employees tab, then set each one's manager to build the org chart." />;
+  if (roots.length === 0) return <EmptyState title={t('hr.noEmployeesYet')} description={t('hr.orgChartEmptyDescription')} />;
 
   return (
     <div className="card p-5">
-      <p className="text-sm text-ink-muted mb-4">Each employee's manager is set from their edit form on the Employees tab.</p>
+      <p className="text-sm text-ink-muted mb-4">{t('hr.orgChartNote')}</p>
       <div className="space-y-2">
         {roots.map((node) => <OrgChartNode key={node._id} node={node} />)}
       </div>
@@ -283,6 +288,7 @@ function OrgChartNode({ node }) {
 }
 
 function EmployeesTab() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -303,7 +309,7 @@ function EmployeesTab() {
   async function terminate(id) {
     try {
       await api.post(`/hr/employees/${id}/terminate`);
-      toast('Employee terminated.', 'success');
+      toast(t('hr.employeeTerminated'), 'success');
       load();
     } catch (err) { toast(err.message, 'error'); }
   }
@@ -311,26 +317,26 @@ function EmployeesTab() {
   return (
     <div>
       <div className="flex justify-end mb-3">
-        <button className="btn-primary" onClick={() => setShowForm(true)}>Add employee</button>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>{t('hr.addEmployee')}</button>
       </div>
 
       {loading && <Loading />}
       {!loading && employees.length === 0 && (
-        <EmptyState title="No employees yet" description="Add your team to track attendance and run payroll." action={<button className="btn-primary" onClick={() => setShowForm(true)}>Add an employee</button>} />
+        <EmptyState title={t('hr.noEmployeesYet')} description={t('hr.employeesEmptyDescription')} action={<button className="btn-primary" onClick={() => setShowForm(true)}>{t('hr.addAnEmployee')}</button>} />
       )}
       {!loading && employees.length > 0 && (
         <div className="card overflow-hidden">
           <div className="px-5 py-4 border-b border-rule flex items-center justify-between">
-            <p className="font-display text-lg font-semibold">Active Directory</p>
+            <p className="font-display text-lg font-semibold">{t('hr.activeDirectory')}</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken/60">
-                  <th className="px-5 py-3 font-medium">Employee</th>
-                  <th className="px-5 py-3 font-medium">Role &amp; Dept</th>
-                  <th className="px-5 py-3 font-medium">Status</th>
-                  <th className="px-5 py-3 font-medium text-right">Basic pay</th>
+                  <th className="px-5 py-3 font-medium">{t('hr.employee')}</th>
+                  <th className="px-5 py-3 font-medium">{t('hr.roleAndDept')}</th>
+                  <th className="px-5 py-3 font-medium">{t('hr.status')}</th>
+                  <th className="px-5 py-3 font-medium text-right">{t('hr.basicPay')}</th>
                   <th className="px-5 py-3 font-medium"></th>
                 </tr>
               </thead>
@@ -349,19 +355,19 @@ function EmployeesTab() {
                     <td className="px-5 py-3 text-ink-muted">
                       {e.designation || '-'}
                       <br />
-                      <span className="text-xs text-ink-muted">{e.departmentId?.name || '-'}{e.shiftId?.name ? ` · ${e.shiftId.name} shift` : ''}</span>
+                      <span className="text-xs text-ink-muted">{e.departmentId?.name || '-'}{e.shiftId?.name ? ` · ${e.shiftId.name} ${t('hr.shift')}` : ''}</span>
                     </td>
                     <td className="px-5 py-3"><span className={e.status === 'active' ? 'chip-accent' : e.status === 'on_leave' ? 'chip-warning' : 'chip-danger'}>{e.status.replace('_', ' ')}</span></td>
                     <td className="px-5 py-3 num text-right">{formatMoney(e.salaryStructure?.basic)}</td>
                     <td className="px-5 py-3 text-right">
                       <div className="flex gap-1 justify-end">
-                        <button className="btn-ghost !text-accent" onClick={() => setDetailFor(e)}>Details</button>
-                        <button className="btn-ghost !text-accent" onClick={() => setAttendanceFor(e)}>Attendance</button>
-                        <button className="btn-ghost !text-accent" onClick={() => setShiftFor(e)}>Shift</button>
-                        <button className="btn-ghost !text-accent" onClick={() => setManagerFor(e)}>Manager</button>
-                        <button className="btn-ghost !text-accent" onClick={() => setBalancesFor(e)}>Leave balance</button>
-                        <button className="btn-ghost !text-accent" onClick={() => setInviteFor(e)}>Invite to portal</button>
-                        {e.status !== 'terminated' && <button className="btn-ghost !text-danger" onClick={() => terminate(e._id)}>Terminate</button>}
+                        <button className="btn-ghost !text-accent" onClick={() => setDetailFor(e)}>{t('hr.details')}</button>
+                        <button className="btn-ghost !text-accent" onClick={() => setAttendanceFor(e)}>{t('hr.attendance')}</button>
+                        <button className="btn-ghost !text-accent" onClick={() => setShiftFor(e)}>{t('hr.shift')}</button>
+                        <button className="btn-ghost !text-accent" onClick={() => setManagerFor(e)}>{t('hr.manager')}</button>
+                        <button className="btn-ghost !text-accent" onClick={() => setBalancesFor(e)}>{t('hr.leaveBalance')}</button>
+                        <button className="btn-ghost !text-accent" onClick={() => setInviteFor(e)}>{t('hr.inviteToPortal')}</button>
+                        {e.status !== 'terminated' && <button className="btn-ghost !text-danger" onClick={() => terminate(e._id)}>{t('hr.terminate')}</button>}
                       </div>
                     </td>
                   </tr>
@@ -390,6 +396,7 @@ function EmployeesTab() {
  * disciplinary records deliberately never appear there.
  */
 function EmployeeDetailModal({ employee, onClose }) {
+  const { t } = useTranslation();
   const [section, setSection] = useState('documents');
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4 py-8 overflow-y-auto">
@@ -402,10 +409,10 @@ function EmployeeDetailModal({ employee, onClose }) {
               <p className="text-xs text-ink-muted">{employee.designation || '—'}</p>
             </div>
           </div>
-          <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button>
+          <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>{t('hr.close')}</button>
         </div>
         <div className="flex gap-2 mb-4 flex-wrap">
-          {[['documents', 'Documents'], ['assets', 'Assets'], ['disciplinary', 'Disciplinary records']].map(([key, label]) => (
+          {[['documents', t('hr.documents')], ['assets', t('hr.assets')], ['disciplinary', t('hr.disciplinaryRecords')]].map(([key, label]) => (
             <button key={key} onClick={() => setSection(key)} className={section === key ? 'pill-active' : 'pill'}>{label}</button>
           ))}
         </div>
@@ -418,6 +425,7 @@ function EmployeeDetailModal({ employee, onClose }) {
 }
 
 function EmployeeAssetsPanel({ employee }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [assets, setAssets] = useState(null);
 
@@ -429,13 +437,13 @@ function EmployeeAssetsPanel({ employee }) {
   async function unassign(assetId) {
     try {
       await api.post(`/fixed-assets/${assetId}/unassign`);
-      toast('Asset unassigned.', 'success');
+      toast(t('hr.assetUnassigned'), 'success');
       load();
     } catch (err) { toast(err.message, 'error'); }
   }
 
   if (assets === null) return <Loading />;
-  if (assets.length === 0) return <p className="text-sm text-ink-muted">No fixed assets assigned to this employee. Assign one from the Fixed Assets page.</p>;
+  if (assets.length === 0) return <p className="text-sm text-ink-muted">{t('hr.noFixedAssetsAssigned')}</p>;
 
   return (
     <div className="space-y-2">
@@ -443,9 +451,9 @@ function EmployeeAssetsPanel({ employee }) {
         <div key={a._id} className="flex items-center justify-between border border-line-muted rounded-lg px-3 py-2">
           <div>
             <p className="text-sm font-medium text-ink">{a.name}</p>
-            <p className="text-xs text-ink-muted">{a.category || '—'}{a.assignedAt ? ` · assigned ${formatDate(a.assignedAt)}` : ''}</p>
+            <p className="text-xs text-ink-muted">{a.category || '—'}{a.assignedAt ? ` · ${t('hr.assigned')} ${formatDate(a.assignedAt)}` : ''}</p>
           </div>
-          <button className="btn-ghost !text-danger !px-0 text-xs" onClick={() => unassign(a._id)}>Unassign</button>
+          <button className="btn-ghost !text-danger !px-0 text-xs" onClick={() => unassign(a._id)}>{t('hr.unassign')}</button>
         </div>
       ))}
     </div>
@@ -453,6 +461,7 @@ function EmployeeAssetsPanel({ employee }) {
 }
 
 function EmployeeDisciplinaryPanel({ employee }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [records, setRecords] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -463,10 +472,10 @@ function EmployeeDisciplinaryPanel({ employee }) {
   useEffect(load, [employee._id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function resolve(id) {
-    const resolutionNotes = window.prompt('Resolution notes (optional):') || '';
+    const resolutionNotes = window.prompt(t('hr.resolutionNotesOptional')) || '';
     try {
       await api.post(`/hr/disciplinary-cases/${id}/resolve`, { resolutionNotes });
-      toast('Marked resolved.', 'success');
+      toast(t('hr.markedResolved'), 'success');
       load();
     } catch (err) { toast(err.message, 'error'); }
   }
@@ -476,9 +485,9 @@ function EmployeeDisciplinaryPanel({ employee }) {
   return (
     <div>
       <div className="flex justify-end mb-3">
-        <button className="btn-primary text-xs px-3 py-1.5" onClick={() => setShowForm(true)}>New record</button>
+        <button className="btn-primary text-xs px-3 py-1.5" onClick={() => setShowForm(true)}>{t('hr.newRecord')}</button>
       </div>
-      {records.length === 0 && <p className="text-sm text-ink-muted">No disciplinary or grievance records for this employee.</p>}
+      {records.length === 0 && <p className="text-sm text-ink-muted">{t('hr.noDisciplinaryRecords')}</p>}
       <div className="space-y-2">
         {records.map((r) => (
           <div key={r._id} className="border border-line-muted rounded-lg px-3 py-2">
@@ -490,8 +499,8 @@ function EmployeeDisciplinaryPanel({ employee }) {
               <span className="text-xs text-ink-muted">{formatDate(r.dateRecorded)}</span>
             </div>
             <p className="text-sm text-ink mt-1.5">{r.description}</p>
-            {r.resolutionNotes && <p className="text-xs text-ink-muted mt-1">Resolution: {r.resolutionNotes}</p>}
-            {r.status === 'open' && <button className="btn-ghost !text-accent !px-0 text-xs mt-1.5" onClick={() => resolve(r._id)}>Mark resolved</button>}
+            {r.resolutionNotes && <p className="text-xs text-ink-muted mt-1">{t('hr.resolution')}: {r.resolutionNotes}</p>}
+            {r.status === 'open' && <button className="btn-ghost !text-accent !px-0 text-xs mt-1.5" onClick={() => resolve(r._id)}>{t('hr.markResolved')}</button>}
           </div>
         ))}
       </div>
@@ -501,6 +510,7 @@ function EmployeeDisciplinaryPanel({ employee }) {
 }
 
 function DisciplinaryCaseForm({ employee, onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [form, setForm] = useState({ type: 'warning', description: '', dateRecorded: new Date().toISOString().slice(0, 10) });
   const [saving, setSaving] = useState(false);
@@ -510,7 +520,7 @@ function DisciplinaryCaseForm({ employee, onClose, onSaved }) {
     setSaving(true);
     try {
       await api.post('/hr/disciplinary-cases', { ...form, employeeId: employee._id });
-      toast('Record added.', 'success');
+      toast(t('hr.recordAdded'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -522,22 +532,22 @@ function DisciplinaryCaseForm({ employee, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-50 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">New disciplinary record — {employee.name}</p>
+        <p className="font-display text-lg mb-4">{t('hr.newDisciplinaryRecord')} — {employee.name}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Type</label>
+            <label className="field-label">{t('hr.type')}</label>
             <select className="field-input" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
-              <option value="warning">Warning</option>
-              <option value="grievance">Grievance</option>
-              <option value="incident">Incident</option>
+              <option value="warning">{t('hr.warning')}</option>
+              <option value="grievance">{t('hr.grievance')}</option>
+              <option value="incident">{t('hr.incident')}</option>
             </select>
           </div>
-          <div><label className="field-label">Date</label><input type="date" className="field-input" value={form.dateRecorded} onChange={(e) => setForm({ ...form, dateRecorded: e.target.value })} /></div>
-          <div><label className="field-label">Description</label><textarea required className="field-input" rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
+          <div><label className="field-label">{t('hr.date')}</label><input type="date" className="field-input" value={form.dateRecorded} onChange={(e) => setForm({ ...form, dateRecorded: e.target.value })} /></div>
+          <div><label className="field-label">{t('hr.description')}</label><textarea required className="field-input" rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('hr.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('hr.saving') : t('hr.save')}</button>
         </div>
       </form>
     </div>
@@ -545,6 +555,7 @@ function DisciplinaryCaseForm({ employee, onClose, onSaved }) {
 }
 
 function AssignShiftModal({ employee, onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [shifts, setShifts] = useState([]);
   const [shiftId, setShiftId] = useState(employee.shiftId?._id || employee.shiftId || '');
@@ -556,7 +567,7 @@ function AssignShiftModal({ employee, onClose, onSaved }) {
     setSaving(true);
     try {
       await api.post('/hr/shifts/assign', { employeeId: employee._id, shiftId: shiftId || null });
-      toast('Shift assigned.', 'success');
+      toast(t('hr.shiftAssigned'), 'success');
       onSaved();
     } catch (err) { toast(err.message, 'error'); } finally { setSaving(false); }
   }
@@ -565,17 +576,17 @@ function AssignShiftModal({ employee, onClose, onSaved }) {
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <div className="card p-5 w-full max-w-sm">
         <div className="flex items-center justify-between mb-4">
-          <p className="font-display text-lg">{employee.name}: shift</p>
-          <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button>
+          <p className="font-display text-lg">{employee.name}: {t('hr.shift')}</p>
+          <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>{t('hr.close')}</button>
         </div>
-        <label className="field-label">Shift</label>
+        <label className="field-label">{t('hr.shift')}</label>
         <select className="field-input mb-4" value={shiftId} onChange={(e) => setShiftId(e.target.value)}>
-          <option value="">Unassigned</option>
+          <option value="">{t('hr.unassigned')}</option>
           {shifts.map((s) => <option key={s._id} value={s._id}>{s.name} ({s.startTime}–{s.endTime})</option>)}
         </select>
         <div className="flex justify-end gap-2">
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn-primary" disabled={saving} onClick={assign}>{saving ? 'Saving…' : 'Save'}</button>
+          <button className="btn-secondary" onClick={onClose}>{t('hr.cancel')}</button>
+          <button className="btn-primary" disabled={saving} onClick={assign}>{saving ? t('hr.saving') : t('hr.save')}</button>
         </div>
       </div>
     </div>
@@ -583,6 +594,7 @@ function AssignShiftModal({ employee, onClose, onSaved }) {
 }
 
 function AssignManagerModal({ employee, onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [employees, setEmployees] = useState([]);
   const [managerId, setManagerId] = useState(employee.managerId?._id || employee.managerId || '');
@@ -594,7 +606,7 @@ function AssignManagerModal({ employee, onClose, onSaved }) {
     setSaving(true);
     try {
       await api.post(`/hr/employees/${employee._id}/manager`, { managerId: managerId || null });
-      toast('Manager updated.', 'success');
+      toast(t('hr.managerUpdated'), 'success');
       onSaved();
     } catch (err) { toast(err.message, 'error'); } finally { setSaving(false); }
   }
@@ -603,17 +615,17 @@ function AssignManagerModal({ employee, onClose, onSaved }) {
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <div className="card p-5 w-full max-w-sm">
         <div className="flex items-center justify-between mb-4">
-          <p className="font-display text-lg">{employee.name}: manager</p>
-          <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button>
+          <p className="font-display text-lg">{employee.name}: {t('hr.manager')}</p>
+          <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>{t('hr.close')}</button>
         </div>
-        <label className="field-label">Reports to</label>
+        <label className="field-label">{t('hr.reportsTo')}</label>
         <select className="field-input mb-4" value={managerId} onChange={(e) => setManagerId(e.target.value)}>
-          <option value="">No manager (top of the org chart)</option>
+          <option value="">{t('hr.noManagerTopOfOrgChart')}</option>
           {employees.filter((e) => e._id !== employee._id).map((e) => <option key={e._id} value={e._id}>{e.name}</option>)}
         </select>
         <div className="flex justify-end gap-2">
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn-primary" disabled={saving} onClick={assign}>{saving ? 'Saving…' : 'Save'}</button>
+          <button className="btn-secondary" onClick={onClose}>{t('hr.cancel')}</button>
+          <button className="btn-primary" disabled={saving} onClick={assign}>{saving ? t('hr.saving') : t('hr.save')}</button>
         </div>
       </div>
     </div>
@@ -621,6 +633,7 @@ function AssignManagerModal({ employee, onClose, onSaved }) {
 }
 
 function LeaveBalancesModal({ employee, onClose }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [rows, setRows] = useState(null);
 
@@ -632,17 +645,17 @@ function LeaveBalancesModal({ employee, onClose }) {
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <div className="card p-5 w-full max-w-sm">
         <div className="flex items-center justify-between mb-4">
-          <p className="font-display text-lg">{employee.name}: leave balance</p>
-          <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button>
+          <p className="font-display text-lg">{employee.name}: {t('hr.leaveBalance')}</p>
+          <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>{t('hr.close')}</button>
         </div>
         {rows === null && <Loading />}
-        {rows && rows.length === 0 && <p className="text-sm text-ink-muted">No leave balance records yet: one is created automatically the first time a leave request against a policy is approved.</p>}
+        {rows && rows.length === 0 && <p className="text-sm text-ink-muted">{t('hr.noLeaveBalanceRecordsAutoNote')}</p>}
         {rows && rows.length > 0 && (
           <div className="space-y-2">
             {rows.map((b) => (
               <div key={b._id} className="flex justify-between text-sm border-b border-rule py-1.5 last:border-0">
-                <span>{b.leavePolicyId?.name || 'Policy'} <span className="text-xs text-ink-muted">({b.year})</span></span>
-                <span className="num">{b.remainingDays} / {b.entitledDays} days left</span>
+                <span>{b.leavePolicyId?.name || t('hr.policy')} <span className="text-xs text-ink-muted">({b.year})</span></span>
+                <span className="num">{b.remainingDays} / {b.entitledDays} {t('hr.daysLeft')}</span>
               </div>
             ))}
           </div>
@@ -653,6 +666,7 @@ function LeaveBalancesModal({ employee, onClose }) {
 }
 
 function InviteEmployeePortalModal({ employee, onClose }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [email, setEmail] = useState(employee.email || '');
   const [inviteLink, setInviteLink] = useState('');
@@ -666,7 +680,7 @@ function InviteEmployeePortalModal({ employee, onClose }) {
       // No email provider is wired up yet, so the invite link is shown
       // directly here to copy/send manually — see employeePortalController.js.
       setInviteLink(`${window.location.origin}/employee-portal/activate?token=${result.inviteToken}`);
-      toast('Portal invite created.', 'success');
+      toast(t('hr.portalInviteCreated'), 'success');
     } catch (err) {
       toast(err.message, 'error');
     } finally {
@@ -678,24 +692,24 @@ function InviteEmployeePortalModal({ employee, onClose }) {
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <div className="card p-5 w-full max-w-sm">
         <div className="flex items-center justify-between mb-4">
-          <p className="font-display text-lg">{employee.name}: portal invite</p>
-          <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button>
+          <p className="font-display text-lg">{employee.name}: {t('hr.portalInvite')}</p>
+          <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>{t('hr.close')}</button>
         </div>
 
         {!inviteLink ? (
           <form onSubmit={handleInvite} className="space-y-3">
-            <div><label className="field-label">Portal email</label><input type="email" required autoFocus className="field-input" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+            <div><label className="field-label">{t('hr.portalEmail')}</label><input type="email" required autoFocus className="field-input" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
             <div className="flex justify-end gap-2">
-              <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-              <button type="submit" disabled={sending} className="btn-primary">{sending ? 'Sending…' : 'Create invite'}</button>
+              <button type="button" className="btn-secondary" onClick={onClose}>{t('hr.cancel')}</button>
+              <button type="submit" disabled={sending} className="btn-primary">{sending ? t('hr.sending') : t('hr.createInvite')}</button>
             </div>
           </form>
         ) : (
           <div>
-            <p className="text-xs text-ink-muted mb-1">Send this activation link to the employee:</p>
+            <p className="text-xs text-ink-muted mb-1">{t('hr.sendActivationLinkNote')}</p>
             <input readOnly className="field-input text-xs" value={inviteLink} onClick={(e) => e.target.select()} />
             <div className="flex justify-end mt-3">
-              <button className="btn-secondary" onClick={onClose}>Done</button>
+              <button className="btn-secondary" onClick={onClose}>{t('hr.done')}</button>
             </div>
           </div>
         )}
@@ -705,6 +719,7 @@ function InviteEmployeePortalModal({ employee, onClose }) {
 }
 
 function EmployeeForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [branches, setBranches] = useState([]);
   const [form, setForm] = useState({ name: '', designation: '', branchId: '', basic: '', allowances: '', deductions: '' });
@@ -720,7 +735,7 @@ function EmployeeForm({ onClose, onSaved }) {
         name: form.name, designation: form.designation, branchId: form.branchId || undefined,
         salaryStructure: { basic: Number(form.basic) || 0, allowances: Number(form.allowances) || 0, deductions: Number(form.deductions) || 0 },
       });
-      toast('Employee added.', 'success');
+      toast(t('hr.employeeAdded'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -732,26 +747,26 @@ function EmployeeForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Add employee</p>
+        <p className="font-display text-lg mb-4">{t('hr.addEmployee')}</p>
         <div className="space-y-3">
-          <div><label className="field-label">Name</label><input required autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-          <div><label className="field-label">Designation</label><input className="field-input" value={form.designation} onChange={(e) => setForm({ ...form, designation: e.target.value })} placeholder="e.g. Cashier, Waiter" /></div>
+          <div><label className="field-label">{t('hr.name')}</label><input required autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+          <div><label className="field-label">{t('hr.designation')}</label><input className="field-input" value={form.designation} onChange={(e) => setForm({ ...form, designation: e.target.value })} placeholder={t('hr.designationPlaceholder')} /></div>
           <div>
-            <label className="field-label">Branch</label>
+            <label className="field-label">{t('hr.branch')}</label>
             <select className="field-input" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value })}>
-              <option value="">Unassigned</option>
+              <option value="">{t('hr.unassigned')}</option>
               {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-3 gap-2">
-            <div><label className="field-label">Basic</label><input type="number" className="field-input num" value={form.basic} onChange={(e) => setForm({ ...form, basic: e.target.value })} /></div>
-            <div><label className="field-label">Allowances</label><input type="number" className="field-input num" value={form.allowances} onChange={(e) => setForm({ ...form, allowances: e.target.value })} /></div>
-            <div><label className="field-label">Deductions</label><input type="number" className="field-input num" value={form.deductions} onChange={(e) => setForm({ ...form, deductions: e.target.value })} /></div>
+            <div><label className="field-label">{t('hr.basic')}</label><input type="number" className="field-input num" value={form.basic} onChange={(e) => setForm({ ...form, basic: e.target.value })} /></div>
+            <div><label className="field-label">{t('hr.allowances')}</label><input type="number" className="field-input num" value={form.allowances} onChange={(e) => setForm({ ...form, allowances: e.target.value })} /></div>
+            <div><label className="field-label">{t('hr.deductions')}</label><input type="number" className="field-input num" value={form.deductions} onChange={(e) => setForm({ ...form, deductions: e.target.value })} /></div>
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('hr.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('hr.saving') : t('hr.save')}</button>
         </div>
       </form>
     </div>
@@ -759,6 +774,7 @@ function EmployeeForm({ onClose, onSaved }) {
 }
 
 function AttendancePanel({ employee, onClose }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const today = new Date();
   const [month, setMonth] = useState(today.getMonth() + 1);
@@ -777,7 +793,7 @@ function AttendancePanel({ employee, onClose }) {
     setBusy(true);
     try {
       await api.post('/hr/attendance', { employeeId: employee._id, date, status });
-      toast('Attendance recorded.', 'success');
+      toast(t('hr.attendanceRecorded'), 'success');
       load();
     } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }
   }
@@ -786,23 +802,23 @@ function AttendancePanel({ employee, onClose }) {
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <div className="card p-5 w-full max-w-md">
         <div className="flex items-center justify-between mb-4">
-          <p className="font-display text-lg">{employee.name}: attendance</p>
-          <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button>
+          <p className="font-display text-lg">{employee.name}: {t('hr.attendance')}</p>
+          <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>{t('hr.close')}</button>
         </div>
 
         <div className="grid grid-cols-3 gap-2 mb-3">
           <input type="date" className="field-input" value={date} onChange={(e) => setDate(e.target.value)} />
           <select className="field-input" value={status} onChange={(e) => setStatus(e.target.value)}>
-            <option value="present">Present</option>
-            <option value="absent">Absent</option>
-            <option value="leave">Leave</option>
-            <option value="holiday">Holiday</option>
+            <option value="present">{t('hr.present')}</option>
+            <option value="absent">{t('hr.absent')}</option>
+            <option value="leave">{t('hr.leave')}</option>
+            <option value="holiday">{t('hr.holiday')}</option>
           </select>
-          <button className="btn-primary" disabled={busy} onClick={mark}>{busy ? 'Saving…' : 'Mark'}</button>
+          <button className="btn-primary" disabled={busy} onClick={mark}>{busy ? t('hr.saving') : t('hr.mark')}</button>
         </div>
 
         <div className="max-h-60 overflow-y-auto space-y-1">
-          {rows.length === 0 && <p className="text-sm text-ink-muted">No attendance recorded for {month}/{year} yet.</p>}
+          {rows.length === 0 && <p className="text-sm text-ink-muted">{t('hr.noAttendanceRecordedForYet', { month, year })}</p>}
           {rows.map((r) => (
             <div key={r._id} className="flex justify-between text-sm border-b border-rule py-1 last:border-0">
               <span className="text-ink-muted">{formatDate(r.date)}</span>
@@ -816,6 +832,7 @@ function AttendancePanel({ employee, onClose }) {
 }
 
 function LeaveTab() {
+  const { t } = useTranslation();
   const toast = useToast();
   const { can } = useAuth();
   const [rows, setRows] = useState([]);
@@ -831,27 +848,27 @@ function LeaveTab() {
   async function decide(id, approve) {
     try {
       await api.post(`/hr/leave-requests/${id}/decide`, { approve });
-      toast(approve ? 'Leave approved.' : 'Leave rejected.', 'success');
+      toast(approve ? t('hr.leaveApproved') : t('hr.leaveRejected'), 'success');
       load();
     } catch (err) { toast(err.message, 'error'); }
   }
 
   if (loading) return <Loading />;
-  if (rows.length === 0) return <EmptyState title="No leave requests" />;
+  if (rows.length === 0) return <EmptyState title={t('hr.noLeaveRequests')} />;
 
   return (
     <div className="card overflow-hidden">
       <div className="px-5 py-4 border-b border-rule">
-        <p className="font-display text-lg font-semibold">Leave requests</p>
+        <p className="font-display text-lg font-semibold">{t('hr.leaveRequests')}</p>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken/60">
-              <th className="px-5 py-3 font-medium">Employee</th>
-              <th className="px-5 py-3 font-medium">Dates</th>
-              <th className="px-5 py-3 font-medium">Type</th>
-              <th className="px-5 py-3 font-medium">Status</th>
+              <th className="px-5 py-3 font-medium">{t('hr.employee')}</th>
+              <th className="px-5 py-3 font-medium">{t('hr.dates')}</th>
+              <th className="px-5 py-3 font-medium">{t('hr.type')}</th>
+              <th className="px-5 py-3 font-medium">{t('hr.status')}</th>
               <th className="px-5 py-3 font-medium"></th>
             </tr>
           </thead>
@@ -867,11 +884,11 @@ function LeaveTab() {
                 <td className="px-5 py-3"><span className={r.status === 'pending' ? 'chip-warning' : r.status === 'approved' ? 'chip-accent' : 'chip-danger'}>{r.status}</span></td>
                 <td className="px-5 py-3 text-right">
                   <div className="flex gap-1 justify-end">
-                    <button className="btn-ghost !text-accent" onClick={() => setBalancesFor(r.employeeId)}>Balance</button>
+                    <button className="btn-ghost !text-accent" onClick={() => setBalancesFor(r.employeeId)}>{t('hr.balance')}</button>
                     {r.status === 'pending' && can('hr.manage') && (
                       <>
-                        <button className="btn-ghost !text-accent" onClick={() => decide(r._id, true)}>Approve</button>
-                        <button className="btn-ghost !text-danger" onClick={() => decide(r._id, false)}>Reject</button>
+                        <button className="btn-ghost !text-accent" onClick={() => decide(r._id, true)}>{t('hr.approve')}</button>
+                        <button className="btn-ghost !text-danger" onClick={() => decide(r._id, false)}>{t('hr.reject')}</button>
                       </>
                     )}
                   </div>
@@ -887,6 +904,7 @@ function LeaveTab() {
 }
 
 function ShiftsTab() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [shifts, setShifts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -901,25 +919,25 @@ function ShiftsTab() {
   return (
     <div>
       <div className="flex justify-end mb-3">
-        <button className="btn-primary" onClick={() => setShowForm(true)}>New shift</button>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>{t('hr.newShift')}</button>
       </div>
       {loading && <Loading />}
       {!loading && shifts.length === 0 && (
-        <EmptyState title="No shifts defined" description="Define shifts like Morning or Night to assign to employees." action={<button className="btn-primary" onClick={() => setShowForm(true)}>New shift</button>} />
+        <EmptyState title={t('hr.noShiftsDefined')} description={t('hr.noShiftsDefinedDescription')} action={<button className="btn-primary" onClick={() => setShowForm(true)}>{t('hr.newShift')}</button>} />
       )}
       {!loading && shifts.length > 0 && (
         <div className="card overflow-hidden">
           <div className="px-5 py-4 border-b border-rule">
-            <p className="font-display text-lg font-semibold">Shifts</p>
+            <p className="font-display text-lg font-semibold">{t('hr.shifts')}</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken/60">
-                  <th className="px-5 py-3 font-medium">Name</th>
-                  <th className="px-5 py-3 font-medium">Time</th>
-                  <th className="px-5 py-3 font-medium">Days</th>
-                  <th className="px-5 py-3 font-medium">Status</th>
+                  <th className="px-5 py-3 font-medium">{t('hr.name')}</th>
+                  <th className="px-5 py-3 font-medium">{t('hr.time')}</th>
+                  <th className="px-5 py-3 font-medium">{t('hr.daysLabel')}</th>
+                  <th className="px-5 py-3 font-medium">{t('hr.status')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -927,8 +945,8 @@ function ShiftsTab() {
                   <tr key={s._id} className="border-b border-rule last:border-0">
                     <td className="px-5 py-3 font-medium">{s.name}</td>
                     <td className="px-5 py-3 num text-ink-muted">{s.startTime}–{s.endTime}</td>
-                    <td className="px-5 py-3 text-ink-muted">{(s.daysOfWeek || []).map((d) => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]).join(', ')}</td>
-                    <td className="px-5 py-3"><span className={s.active ? 'chip-accent' : 'chip-neutral'}>{s.active ? 'Active' : 'Inactive'}</span></td>
+                    <td className="px-5 py-3 text-ink-muted">{(s.daysOfWeek || []).map((d) => WEEKDAY_LABELS[d]).join(', ')}</td>
+                    <td className="px-5 py-3"><span className={s.active ? 'chip-accent' : 'chip-neutral'}>{s.active ? t('hr.active') : t('hr.inactive')}</span></td>
                   </tr>
                 ))}
               </tbody>
@@ -944,6 +962,7 @@ function ShiftsTab() {
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 function ShiftForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [form, setForm] = useState({ name: '', startTime: '09:00', endTime: '17:00', daysOfWeek: [1, 2, 3, 4, 5] });
   const [saving, setSaving] = useState(false);
@@ -957,7 +976,7 @@ function ShiftForm({ onClose, onSaved }) {
     setSaving(true);
     try {
       await api.post('/hr/shifts', form);
-      toast('Shift created.', 'success');
+      toast(t('hr.shiftCreated'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -969,15 +988,15 @@ function ShiftForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">New shift</p>
+        <p className="font-display text-lg mb-4">{t('hr.newShift')}</p>
         <div className="space-y-3">
-          <div><label className="field-label">Name</label><input required autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Morning, Night" /></div>
+          <div><label className="field-label">{t('hr.name')}</label><input required autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t('hr.shiftNamePlaceholder')} /></div>
           <div className="grid grid-cols-2 gap-2">
-            <div><label className="field-label">Start</label><input required type="time" className="field-input" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} /></div>
-            <div><label className="field-label">End</label><input required type="time" className="field-input" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} /></div>
+            <div><label className="field-label">{t('hr.start')}</label><input required type="time" className="field-input" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} /></div>
+            <div><label className="field-label">{t('hr.end')}</label><input required type="time" className="field-input" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} /></div>
           </div>
           <div>
-            <label className="field-label">Days</label>
+            <label className="field-label">{t('hr.daysLabel')}</label>
             <div className="flex gap-1 flex-wrap">
               {WEEKDAY_LABELS.map((label, d) => (
                 <button type="button" key={d} onClick={() => toggleDay(d)} className={form.daysOfWeek.includes(d) ? 'chip-accent' : 'chip-neutral'}>{label}</button>
@@ -986,8 +1005,8 @@ function ShiftForm({ onClose, onSaved }) {
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('hr.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('hr.saving') : t('hr.save')}</button>
         </div>
       </form>
     </div>
@@ -995,6 +1014,7 @@ function ShiftForm({ onClose, onSaved }) {
 }
 
 function LeavePoliciesTab() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [policies, setPolicies] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1009,34 +1029,34 @@ function LeavePoliciesTab() {
   return (
     <div>
       <div className="flex justify-end mb-3">
-        <button className="btn-primary" onClick={() => setShowForm(true)}>New leave policy</button>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>{t('hr.newLeavePolicy')}</button>
       </div>
       {loading && <Loading />}
       {!loading && policies.length === 0 && (
-        <EmptyState title="No leave policies yet" description="Define policies like Annual Leave or Sick Leave with a yearly entitlement." action={<button className="btn-primary" onClick={() => setShowForm(true)}>New leave policy</button>} />
+        <EmptyState title={t('hr.noLeavePoliciesYet')} description={t('hr.noLeavePoliciesYetDescription')} action={<button className="btn-primary" onClick={() => setShowForm(true)}>{t('hr.newLeavePolicy')}</button>} />
       )}
       {!loading && policies.length > 0 && (
         <div className="card overflow-hidden">
           <div className="px-5 py-4 border-b border-rule">
-            <p className="font-display text-lg font-semibold">Leave policies</p>
+            <p className="font-display text-lg font-semibold">{t('hr.leavePolicies')}</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken/60">
-                  <th className="px-5 py-3 font-medium">Name</th>
-                  <th className="px-5 py-3 font-medium text-right">Annual entitlement</th>
-                  <th className="px-5 py-3 font-medium">Carry forward</th>
-                  <th className="px-5 py-3 font-medium">Status</th>
+                  <th className="px-5 py-3 font-medium">{t('hr.name')}</th>
+                  <th className="px-5 py-3 font-medium text-right">{t('hr.annualEntitlement')}</th>
+                  <th className="px-5 py-3 font-medium">{t('hr.carryForward')}</th>
+                  <th className="px-5 py-3 font-medium">{t('hr.status')}</th>
                 </tr>
               </thead>
               <tbody>
                 {policies.map((p) => (
                   <tr key={p._id} className="border-b border-rule last:border-0">
                     <td className="px-5 py-3 font-medium">{p.name}</td>
-                    <td className="px-5 py-3 num text-right">{p.annualEntitlementDays} days</td>
-                    <td className="px-5 py-3 text-ink-muted">{p.carryForwardAllowed ? `Up to ${p.maxCarryForwardDays} days` : 'Not allowed'}</td>
-                    <td className="px-5 py-3"><span className={p.active ? 'chip-accent' : 'chip-neutral'}>{p.active ? 'Active' : 'Inactive'}</span></td>
+                    <td className="px-5 py-3 num text-right">{p.annualEntitlementDays} {t('hr.days')}</td>
+                    <td className="px-5 py-3 text-ink-muted">{p.carryForwardAllowed ? `${t('hr.upTo')} ${p.maxCarryForwardDays} ${t('hr.days')}` : t('hr.notAllowed')}</td>
+                    <td className="px-5 py-3"><span className={p.active ? 'chip-accent' : 'chip-neutral'}>{p.active ? t('hr.active') : t('hr.inactive')}</span></td>
                   </tr>
                 ))}
               </tbody>
@@ -1050,6 +1070,7 @@ function LeavePoliciesTab() {
 }
 
 function LeavePolicyForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [form, setForm] = useState({ name: '', annualEntitlementDays: '14', carryForwardAllowed: false, maxCarryForwardDays: '0' });
   const [saving, setSaving] = useState(false);
@@ -1064,7 +1085,7 @@ function LeavePolicyForm({ onClose, onSaved }) {
         carryForwardAllowed: form.carryForwardAllowed,
         maxCarryForwardDays: Number(form.maxCarryForwardDays) || 0,
       });
-      toast('Leave policy created.', 'success');
+      toast(t('hr.leavePolicyCreated'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -1076,21 +1097,21 @@ function LeavePolicyForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">New leave policy</p>
+        <p className="font-display text-lg mb-4">{t('hr.newLeavePolicy')}</p>
         <div className="space-y-3">
-          <div><label className="field-label">Name</label><input required autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Annual Leave, Sick Leave" /></div>
-          <div><label className="field-label">Annual entitlement (days)</label><input type="number" min="0" className="field-input num" value={form.annualEntitlementDays} onChange={(e) => setForm({ ...form, annualEntitlementDays: e.target.value })} /></div>
+          <div><label className="field-label">{t('hr.name')}</label><input required autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t('hr.leavePolicyNamePlaceholder')} /></div>
+          <div><label className="field-label">{t('hr.annualEntitlementDays')}</label><input type="number" min="0" className="field-input num" value={form.annualEntitlementDays} onChange={(e) => setForm({ ...form, annualEntitlementDays: e.target.value })} /></div>
           <div className="flex items-center gap-2">
             <input id="cf" type="checkbox" checked={form.carryForwardAllowed} onChange={(e) => setForm({ ...form, carryForwardAllowed: e.target.checked })} />
-            <label htmlFor="cf" className="text-sm">Allow carry-forward</label>
+            <label htmlFor="cf" className="text-sm">{t('hr.allowCarryForward')}</label>
           </div>
           {form.carryForwardAllowed && (
-            <div><label className="field-label">Max carry-forward (days)</label><input type="number" min="0" className="field-input num" value={form.maxCarryForwardDays} onChange={(e) => setForm({ ...form, maxCarryForwardDays: e.target.value })} /></div>
+            <div><label className="field-label">{t('hr.maxCarryForwardDays')}</label><input type="number" min="0" className="field-input num" value={form.maxCarryForwardDays} onChange={(e) => setForm({ ...form, maxCarryForwardDays: e.target.value })} /></div>
           )}
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('hr.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('hr.saving') : t('hr.save')}</button>
         </div>
       </form>
     </div>
@@ -1098,6 +1119,7 @@ function LeavePolicyForm({ onClose, onSaved }) {
 }
 
 function PayrollTab() {
+  const { t } = useTranslation();
   const { company, can } = useAuth();
   const toast = useToast();
   const [runs, setRuns] = useState([]);
@@ -1116,23 +1138,23 @@ function PayrollTab() {
       <div className="flex-1 min-w-0">
         {can('hr.manage') && (
           <div className="flex justify-end mb-3">
-            <button className="btn-primary" onClick={() => setShowForm(true)}>Generate payroll</button>
+            <button className="btn-primary" onClick={() => setShowForm(true)}>{t('hr.generatePayroll')}</button>
           </div>
         )}
         {loading && <Loading />}
-        {!loading && runs.length === 0 && <EmptyState title="No payroll runs yet" />}
+        {!loading && runs.length === 0 && <EmptyState title={t('hr.noPayrollRunsYet')} />}
         {!loading && runs.length > 0 && (
           <div className="card overflow-hidden">
             <div className="px-5 py-4 border-b border-rule">
-              <p className="font-display text-lg font-semibold">Payroll runs</p>
+              <p className="font-display text-lg font-semibold">{t('hr.payrollRuns')}</p>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken/60">
-                    <th className="px-5 py-3 font-medium">Period</th>
-                    <th className="px-5 py-3 font-medium">Status</th>
-                    <th className="px-5 py-3 font-medium text-right">Total net pay</th>
+                    <th className="px-5 py-3 font-medium">{t('hr.period')}</th>
+                    <th className="px-5 py-3 font-medium">{t('hr.status')}</th>
+                    <th className="px-5 py-3 font-medium text-right">{t('hr.totalNetPay')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1157,6 +1179,7 @@ function PayrollTab() {
 }
 
 function PayrollRunPanel({ run: initialRun, onClose, onChanged }) {
+  const { t } = useTranslation();
   const { company, can } = useAuth();
   const toast = useToast();
   const [run, setRun] = useState(initialRun);
@@ -1173,7 +1196,7 @@ function PayrollRunPanel({ run: initialRun, onClose, onChanged }) {
     setBusy(true);
     try {
       await api.post(`/hr/payroll-runs/${run._id}/post`, { paymentAccountId });
-      toast('Payroll posted to the ledger.', 'success');
+      toast(t('hr.payrollPostedToLedger'), 'success');
       onChanged();
       onClose();
     } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }
@@ -1183,32 +1206,32 @@ function PayrollRunPanel({ run: initialRun, onClose, onChanged }) {
     <div className="w-full lg:w-96 shrink-0 card p-4 h-fit">
       <div className="flex items-center justify-between mb-3">
         <p className="font-display text-lg">{run.month}/{run.year}</p>
-        <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button>
+        <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>{t('hr.close')}</button>
       </div>
 
       <div className="space-y-1.5 text-sm max-h-56 overflow-y-auto mb-3">
         {run.entries.map((e, i) => (
           <div key={i} className="flex justify-between">
-            <span className="truncate">{e.employeeId?.name || 'Employee'} {e.absentDays > 0 && <span className="text-xs text-warning">({e.absentDays}d absent)</span>}</span>
+            <span className="truncate">{e.employeeId?.name || t('hr.employee')} {e.absentDays > 0 && <span className="text-xs text-warning">({e.absentDays}{t('hr.dAbsent')})</span>}</span>
             <span className="num">{formatMoney(e.netPay, company?.currency)}</span>
           </div>
         ))}
       </div>
       <div className="tear-line my-2" />
       <div className="flex justify-between items-center rounded-lg bg-accent-soft px-3 py-3 mb-4">
-        <span className="font-medium text-accent-strong">Total net pay</span>
+        <span className="font-medium text-accent-strong">{t('hr.totalNetPay')}</span>
         <span className="num font-bold text-accent-strong text-base">{formatMoney(run.totalNetPay, company?.currency)}</span>
       </div>
 
       {run.status === 'draft' && can('payroll.post') && (
         <div>
-          <label className="field-label">Pay from</label>
+          <label className="field-label">{t('hr.payFrom')}</label>
           <select className="field-input mb-2" value={paymentAccountId} onChange={(e) => setPaymentAccountId(e.target.value)}>
-            <option value="">Select account…</option>
+            <option value="">{t('hr.selectAccount')}</option>
             {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
           </select>
           <button className="btn-primary w-full" disabled={busy || !paymentAccountId} onClick={post}>
-            {busy ? 'Posting…' : 'Post payroll to ledger'}
+            {busy ? t('hr.posting') : t('hr.postPayrollToLedger')}
           </button>
         </div>
       )}
@@ -1217,6 +1240,7 @@ function PayrollRunPanel({ run: initialRun, onClose, onChanged }) {
 }
 
 function GeneratePayrollForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const today = new Date();
   const [month, setMonth] = useState(today.getMonth() + 1);
@@ -1228,7 +1252,7 @@ function GeneratePayrollForm({ onClose, onSaved }) {
     setSaving(true);
     try {
       await api.post('/hr/payroll-runs', { month: Number(month), year: Number(year) });
-      toast('Payroll draft generated from attendance.', 'success');
+      toast(t('hr.payrollDraftGenerated'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -1240,15 +1264,15 @@ function GeneratePayrollForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-xs">
-        <p className="font-display text-lg mb-4">Generate payroll</p>
+        <p className="font-display text-lg mb-4">{t('hr.generatePayroll')}</p>
         <div className="grid grid-cols-2 gap-2 mb-4">
-          <div><label className="field-label">Month</label><input type="number" min="1" max="12" className="field-input num" value={month} onChange={(e) => setMonth(e.target.value)} /></div>
-          <div><label className="field-label">Year</label><input type="number" className="field-input num" value={year} onChange={(e) => setYear(e.target.value)} /></div>
+          <div><label className="field-label">{t('hr.month')}</label><input type="number" min="1" max="12" className="field-input num" value={month} onChange={(e) => setMonth(e.target.value)} /></div>
+          <div><label className="field-label">{t('hr.year')}</label><input type="number" className="field-input num" value={year} onChange={(e) => setYear(e.target.value)} /></div>
         </div>
-        <p className="text-xs text-ink-muted mb-4">Computes each active employee's net pay from their salary structure minus attendance-based deductions for that month.</p>
+        <p className="text-xs text-ink-muted mb-4">{t('hr.generatePayrollNote')}</p>
         <div className="flex justify-end gap-2">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Generating…' : 'Generate'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('hr.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('hr.generating') : t('hr.generate')}</button>
         </div>
       </form>
     </div>

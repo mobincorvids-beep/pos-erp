@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
@@ -7,6 +8,7 @@ import { EmptyState } from '../components/EmptyState';
 import { formatMoney, formatDate } from '../lib/format';
 
 export function NgoPage() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [funds, setFunds] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,27 +25,27 @@ export function NgoPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <p className="eyebrow mb-1">NGO &amp; Grant Management</p>
-          <p className="page-title">Funds</p>
+          <p className="eyebrow mb-1">{t('ngo.ngoAndGrantManagement')}</p>
+          <p className="page-title">{t('ngo.funds')}</p>
         </div>
         <button className="btn-primary" onClick={() => setShowForm(true)}>
           <span className="material-symbols-outlined text-base leading-none">add</span>
-          New fund
+          {t('ngo.newFund')}
         </button>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
         <div className="flex-1 min-w-0">
           {loading && <Loading />}
-          {!loading && funds.length === 0 && <EmptyState title="No funds yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Create one</button>} />}
+          {!loading && funds.length === 0 && <EmptyState title={t('ngo.noFundsYet')} action={<button className="btn-primary" onClick={() => setShowForm(true)}>{t('ngo.createOne')}</button>} />}
           {!loading && funds.length > 0 && (
             <div className="card overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-widest">
-                      <th className="px-4 py-3 font-semibold">Name</th>
-                      <th className="px-4 py-3 font-semibold">Type</th>
+                      <th className="px-4 py-3 font-semibold">{t('ngo.name')}</th>
+                      <th className="px-4 py-3 font-semibold">{t('ngo.type')}</th>
                       <th className="px-4 py-3 font-semibold"></th>
                     </tr>
                   </thead>
@@ -59,7 +61,7 @@ export function NgoPage() {
                           <span className={f.type === 'restricted' ? 'chip-warning' : 'chip-neutral'}>{f.type}</span>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <span className="text-accent text-xs font-semibold">View ledger →</span>
+                          <span className="text-accent text-xs font-semibold">{t('ngo.viewLedgerArrow')}</span>
                         </td>
                       </tr>
                     ))}
@@ -78,6 +80,7 @@ export function NgoPage() {
 }
 
 function FundForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [name, setName] = useState('');
   const [type, setType] = useState('unrestricted');
@@ -88,7 +91,7 @@ function FundForm({ onClose, onSaved }) {
     setSaving(true);
     try {
       await api.post('/ngo/funds', { name, type });
-      toast('Fund created.', 'success');
+      toast(t('ngo.fundCreated'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -100,23 +103,23 @@ function FundForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg font-bold text-ink mb-4">New fund</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">{t('ngo.newFund')}</p>
         <div className="space-y-3">
           <div>
-            <p className="field-label">Name</p>
-            <input required className="field-input" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
+            <p className="field-label">{t('ngo.name')}</p>
+            <input required className="field-input" placeholder={t('ngo.name')} value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div>
-            <p className="field-label">Type</p>
+            <p className="field-label">{t('ngo.type')}</p>
             <select className="field-input" value={type} onChange={(e) => setType(e.target.value)}>
-              <option value="unrestricted">Unrestricted</option>
-              <option value="restricted">Restricted</option>
+              <option value="unrestricted">{t('ngo.unrestricted')}</option>
+              <option value="restricted">{t('ngo.restricted')}</option>
             </select>
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Creating…' : 'Create'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('ngo.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('ngo.creating') : t('ngo.create')}</button>
         </div>
       </form>
     </div>
@@ -124,6 +127,7 @@ function FundForm({ onClose, onSaved }) {
 }
 
 function FundPanel({ fund, onClose }) {
+  const { t } = useTranslation();
   const { company } = useAuth();
   const toast = useToast();
   const [ledger, setLedger] = useState(null);
@@ -135,36 +139,36 @@ function FundPanel({ fund, onClose }) {
   }
   useEffect(load, [fund._id]);
 
-  const balance = ledger?.reduce((sum, t) => sum + (t.type === 'donation' ? t.amount : -t.amount), 0) || 0;
+  const balance = ledger?.reduce((sum, tr) => sum + (tr.type === 'donation' ? tr.amount : -tr.amount), 0) || 0;
 
   return (
     <div className="w-full lg:w-96 shrink-0 card p-5 h-fit">
       <div className="flex items-center justify-between mb-4">
         <p className="font-display text-lg font-bold text-ink">{fund.name}</p>
-        <button className="btn-ghost !px-2 !py-1 text-xs" onClick={onClose}>Close</button>
+        <button className="btn-ghost !px-2 !py-1 text-xs" onClick={onClose}>{t('ngo.close')}</button>
       </div>
 
       <div className="rounded-lg bg-accent-strong text-white p-4 mb-4">
-        <p className="eyebrow text-white/70 mb-1">Balance</p>
+        <p className="eyebrow text-white/70 mb-1">{t('ngo.balance')}</p>
         <p className="font-display text-2xl font-bold num">{formatMoney(balance, company?.currency)}</p>
       </div>
 
       <div className="flex gap-2 mb-5">
-        <button className="btn-secondary flex-1" onClick={() => setShowDonate(true)}>Record donation</button>
-        <button className="btn-secondary flex-1" onClick={() => setShowDisburse(true)}>Disburse</button>
+        <button className="btn-secondary flex-1" onClick={() => setShowDonate(true)}>{t('ngo.recordDonation')}</button>
+        <button className="btn-secondary flex-1" onClick={() => setShowDisburse(true)}>{t('ngo.disburse')}</button>
       </div>
 
-      <p className="eyebrow mb-2">Transactions</p>
+      <p className="eyebrow mb-2">{t('ngo.transactions')}</p>
       {!ledger && <Loading />}
-      {ledger?.length === 0 && <p className="text-sm text-ink-muted">No transactions yet.</p>}
+      {ledger?.length === 0 && <p className="text-sm text-ink-muted">{t('ngo.noTransactionsYet')}</p>}
       <div className="divide-y divide-rule">
-        {ledger?.map((t) => (
-          <div key={t._id} className="flex items-center justify-between py-2.5 text-sm">
+        {ledger?.map((tr) => (
+          <div key={tr._id} className="flex items-center justify-between py-2.5 text-sm">
             <div>
-              <p className="text-ink">{t.type === 'donation' ? (t.donorCustomerId?.name || 'Donation') : t.description}</p>
-              <p className="text-xs text-ink-muted">{formatDate(t.createdAt)}</p>
+              <p className="text-ink">{tr.type === 'donation' ? (tr.donorCustomerId?.name || t('ngo.donation')) : tr.description}</p>
+              <p className="text-xs text-ink-muted">{formatDate(tr.createdAt)}</p>
             </div>
-            <span className={`num font-semibold ${t.type === 'donation' ? 'text-accent' : 'text-danger'}`}>{t.type === 'donation' ? '+' : '-'}{formatMoney(t.amount, company?.currency)}</span>
+            <span className={`num font-semibold ${tr.type === 'donation' ? 'text-accent' : 'text-danger'}`}>{tr.type === 'donation' ? '+' : '-'}{formatMoney(tr.amount, company?.currency)}</span>
           </div>
         ))}
       </div>
@@ -176,6 +180,7 @@ function FundPanel({ fund, onClose }) {
 }
 
 function DonateForm({ fund, onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [branches, setBranches] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -194,7 +199,7 @@ function DonateForm({ fund, onClose, onSaved }) {
     setSaving(true);
     try {
       await api.post(`/ngo/funds/${fund._id}/donations`, { ...form, amount: Number(form.amount), donorCustomerId: form.donorCustomerId || undefined });
-      toast('Donation recorded.', 'success');
+      toast(t('ngo.donationRecorded'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -206,30 +211,30 @@ function DonateForm({ fund, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/30 flex items-center justify-center z-50 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg font-bold text-ink mb-4">Record donation</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">{t('ngo.recordDonation')}</p>
         <div className="space-y-3">
           <select required className="field-input" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value })}>
-            <option value="">Branch…</option>
+            <option value="">{t('ngo.branchEllipsis')}</option>
             {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
           </select>
           <select className="field-input" value={form.donorCustomerId} onChange={(e) => setForm({ ...form, donorCustomerId: e.target.value })}>
-            <option value="">Anonymous / walk-in</option>
+            <option value="">{t('ngo.anonymousWalkIn')}</option>
             {customers.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
           </select>
-          <input type="number" required className="field-input num" placeholder="Amount" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
-          <input className="field-input" placeholder="Description (optional)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          <input type="number" required className="field-input num" placeholder={t('ngo.amount')} value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+          <input className="field-input" placeholder={t('ngo.descriptionOptional')} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           <select required className="field-input" value={form.receivingAccountId} onChange={(e) => setForm({ ...form, receivingAccountId: e.target.value })}>
-            <option value="">Received into…</option>
+            <option value="">{t('ngo.receivedIntoEllipsis')}</option>
             {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
           </select>
           <select required className="field-input" value={form.donationRevenueAccountId} onChange={(e) => setForm({ ...form, donationRevenueAccountId: e.target.value })}>
-            <option value="">Donation revenue account…</option>
+            <option value="">{t('ngo.donationRevenueAccountEllipsis')}</option>
             {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
           </select>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Recording…' : 'Record'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('ngo.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('ngo.recording') : t('ngo.record')}</button>
         </div>
       </form>
     </div>
@@ -237,6 +242,7 @@ function DonateForm({ fund, onClose, onSaved }) {
 }
 
 function DisburseForm({ fund, onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [branches, setBranches] = useState([]);
   const [accounts, setAccounts] = useState([]);
@@ -253,7 +259,7 @@ function DisburseForm({ fund, onClose, onSaved }) {
     setSaving(true);
     try {
       await api.post(`/ngo/funds/${fund._id}/disbursements`, { ...form, amount: Number(form.amount) });
-      toast('Disbursement recorded.', 'success');
+      toast(t('ngo.disbursementRecorded'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -265,26 +271,26 @@ function DisburseForm({ fund, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/30 flex items-center justify-center z-50 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg font-bold text-ink mb-4">Disburse</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">{t('ngo.disburse')}</p>
         <div className="space-y-3">
           <select required className="field-input" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value })}>
-            <option value="">Branch…</option>
+            <option value="">{t('ngo.branchEllipsis')}</option>
             {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
           </select>
-          <input type="number" required className="field-input num" placeholder="Amount" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
-          <input required className="field-input" placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          <input type="number" required className="field-input num" placeholder={t('ngo.amount')} value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+          <input required className="field-input" placeholder={t('ngo.description')} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           <select required className="field-input" value={form.expenseAccountId} onChange={(e) => setForm({ ...form, expenseAccountId: e.target.value })}>
-            <option value="">Expense account…</option>
+            <option value="">{t('ngo.expenseAccountEllipsis')}</option>
             {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
           </select>
           <select required className="field-input" value={form.payingAccountId} onChange={(e) => setForm({ ...form, payingAccountId: e.target.value })}>
-            <option value="">Paid from…</option>
+            <option value="">{t('ngo.paidFromEllipsis')}</option>
             {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
           </select>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Disbursing…' : 'Disburse'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('ngo.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('ngo.disbursing') : t('ngo.disburse')}</button>
         </div>
       </form>
     </div>

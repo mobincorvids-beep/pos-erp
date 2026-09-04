@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
@@ -7,6 +8,7 @@ import { EmptyState } from '../components/EmptyState';
 import { formatMoney } from '../lib/format';
 
 export function ToysGiftsPage() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [registries, setRegistries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -21,15 +23,15 @@ export function ToysGiftsPage() {
 
   return (
     <div>
-      <p className="eyebrow mb-1">Toys & gifts</p>
-      <p className="page-title mb-5">Gift registries</p>
+      <p className="eyebrow mb-1">{t('toysGifts.eyebrow')}</p>
+      <p className="page-title mb-5">{t('toysGifts.title')}</p>
       <div className="flex flex-col lg:flex-row gap-6">
         <div className="flex-1 min-w-0">
           <div className="flex justify-end mb-3">
-            <button className="btn-primary" onClick={() => setShowForm(true)}>+ New registry</button>
+            <button className="btn-primary" onClick={() => setShowForm(true)}>{t('toysGifts.newRegistry')}</button>
           </div>
           {loading && <Loading />}
-          {!loading && registries.length === 0 && <EmptyState title="No registries yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Create one</button>} />}
+          {!loading && registries.length === 0 && <EmptyState title={t('toysGifts.noRegistriesYet')} action={<button className="btn-primary" onClick={() => setShowForm(true)}>{t('toysGifts.createOne')}</button>} />}
           {!loading && registries.length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {registries.map((r) => (
@@ -56,6 +58,7 @@ export function ToysGiftsPage() {
 }
 
 function RegistryForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [branches, setBranches] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -75,7 +78,7 @@ function RegistryForm({ onClose, onSaved }) {
         return { productId: i.productId, variantId: product?.variants[0]?._id, desiredQuantity: Number(i.desiredQuantity) };
       });
       await api.post('/toys-gifts/registries', { ...form, items: resolvedItems });
-      toast('Registry created.', 'success');
+      toast(t('toysGifts.registryCreated'), 'success');
       onSaved();
     } catch (err) { toast(err.message, 'error'); } finally { setSaving(false); }
   }
@@ -83,46 +86,46 @@ function RegistryForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 backdrop-blur-[1px] flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm max-h-[85vh] overflow-y-auto">
-        <p className="eyebrow mb-1">Toys & gifts</p>
-        <p className="font-display text-lg font-bold text-ink mb-4">New gift registry</p>
+        <p className="eyebrow mb-1">{t('toysGifts.eyebrow')}</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">{t('toysGifts.newGiftRegistry')}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Branch</label>
+            <label className="field-label">{t('toysGifts.branch')}</label>
             <select required className="field-input" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('toysGifts.select')}</option>
               {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Registry owner</label>
+            <label className="field-label">{t('toysGifts.registryOwner')}</label>
             <select required className="field-input" value={form.ownerCustomerId} onChange={(e) => setForm({ ...form, ownerCustomerId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('toysGifts.select')}</option>
               {customers.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Occasion</label>
-            <input className="field-input" placeholder="Birthday, baby shower…" value={form.occasion} onChange={(e) => setForm({ ...form, occasion: e.target.value })} />
+            <label className="field-label">{t('toysGifts.occasion')}</label>
+            <input className="field-input" placeholder={t('toysGifts.occasionPlaceholder')} value={form.occasion} onChange={(e) => setForm({ ...form, occasion: e.target.value })} />
           </div>
         </div>
 
-        <p className="field-label mt-4 mb-1.5">Wanted items</p>
+        <p className="field-label mt-4 mb-1.5">{t('toysGifts.wantedItems')}</p>
         <div className="space-y-2">
           {items.map((it, i) => (
             <div key={i} className="grid grid-cols-3 gap-2">
               <select className="field-input col-span-2" value={it.productId} onChange={(e) => updateItem(i, { productId: e.target.value })}>
-                <option value="">Product…</option>
+                <option value="">{t('toysGifts.productEllipsis')}</option>
                 {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
               </select>
               <input type="number" min="1" className="field-input num" value={it.desiredQuantity} onChange={(e) => updateItem(i, { desiredQuantity: e.target.value })} />
             </div>
           ))}
         </div>
-        <button type="button" className="btn-ghost !px-0 text-xs mt-2 mb-1" onClick={() => setItems([...items, { productId: '', desiredQuantity: 1 }])}>+ Add item</button>
+        <button type="button" className="btn-ghost !px-0 text-xs mt-2 mb-1" onClick={() => setItems([...items, { productId: '', desiredQuantity: 1 }])}>{t('toysGifts.addItem')}</button>
 
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Creating…' : 'Create'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('toysGifts.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('toysGifts.creating') : t('toysGifts.create')}</button>
         </div>
       </form>
     </div>
@@ -130,6 +133,7 @@ function RegistryForm({ onClose, onSaved }) {
 }
 
 function RegistryPanel({ registryId, onClose }) {
+  const { t } = useTranslation();
   const { company } = useAuth();
   const toast = useToast();
   const [registry, setRegistry] = useState(null);
@@ -147,7 +151,7 @@ function RegistryPanel({ registryId, onClose }) {
       await api.post(`/toys-gifts/registries/${registryId}/items/${itemId}/purchase`, {
         quantity: Number(state.quantity || 1), purchasingCustomerId: state.customerId, warehouseId: state.warehouseId, paymentAccountId: state.paymentAccountId,
       });
-      toast('Gift purchased!', 'success');
+      toast(t('toysGifts.giftPurchased'), 'success');
       load();
     } catch (err) { toast(err.message, 'error'); }
   }
@@ -157,9 +161,9 @@ function RegistryPanel({ registryId, onClose }) {
     <div className="w-full lg:w-96 shrink-0 card p-4 h-fit">
       <div className="flex items-center justify-between mb-1">
         <p className="font-display text-lg font-bold text-ink">{registry.occasion}</p>
-        <button className="btn-ghost !px-2 !py-1 text-xs" onClick={onClose}>Close</button>
+        <button className="btn-ghost !px-2 !py-1 text-xs" onClick={onClose}>{t('toysGifts.close')}</button>
       </div>
-      <p className="text-sm text-ink-muted mb-4">For {registry.ownerCustomerId?.name}</p>
+      <p className="text-sm text-ink-muted mb-4">{t('toysGifts.forOwner', { name: registry.ownerCustomerId?.name })}</p>
       <div className="divide-y divide-rule">
         {registry.items.map((item) => {
           const claimed = item.purchasedQuantity >= item.desiredQuantity;
@@ -172,20 +176,20 @@ function RegistryPanel({ registryId, onClose }) {
               {!claimed && (
                 <div className="space-y-1.5 mt-2">
                   <select className="field-input !text-xs !py-1.5" value={purchaseState[item._id]?.customerId || ''} onChange={(e) => setPurchaseState({ ...purchaseState, [item._id]: { ...purchaseState[item._id], customerId: e.target.value } })}>
-                    <option value="">Buyer…</option>
+                    <option value="">{t('toysGifts.buyerEllipsis')}</option>
                     {customers.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
                   </select>
                   <select className="field-input !text-xs !py-1.5" value={purchaseState[item._id]?.warehouseId || ''} onChange={(e) => setPurchaseState({ ...purchaseState, [item._id]: { ...purchaseState[item._id], warehouseId: e.target.value } })}>
-                    <option value="">Warehouse…</option>
+                    <option value="">{t('toysGifts.warehouseEllipsis')}</option>
                     {warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
                   </select>
                   <select className="field-input !text-xs !py-1.5" value={purchaseState[item._id]?.paymentAccountId || ''} onChange={(e) => setPurchaseState({ ...purchaseState, [item._id]: { ...purchaseState[item._id], paymentAccountId: e.target.value } })}>
-                    <option value="">Payment account…</option>
+                    <option value="">{t('toysGifts.paymentAccountEllipsis')}</option>
                     {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
                   </select>
                   <div className="flex gap-1.5">
-                    <input type="number" min="1" placeholder="Qty" className="field-input num !text-xs !py-1.5 w-16" value={purchaseState[item._id]?.quantity || 1} onChange={(e) => setPurchaseState({ ...purchaseState, [item._id]: { ...purchaseState[item._id], quantity: e.target.value } })} />
-                    <button className="btn-primary flex-1 !text-xs !py-1.5" onClick={() => purchase(item._id)}>Buy this gift</button>
+                    <input type="number" min="1" placeholder={t('toysGifts.qty')} className="field-input num !text-xs !py-1.5 w-16" value={purchaseState[item._id]?.quantity || 1} onChange={(e) => setPurchaseState({ ...purchaseState, [item._id]: { ...purchaseState[item._id], quantity: e.target.value } })} />
+                    <button className="btn-primary flex-1 !text-xs !py-1.5" onClick={() => purchase(item._id)}>{t('toysGifts.buyThisGift')}</button>
                   </div>
                 </div>
               )}

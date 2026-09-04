@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
@@ -7,13 +8,14 @@ import { EmptyState } from '../components/EmptyState';
 import { formatMoney } from '../lib/format';
 
 export function SalonPage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState('services');
-  const tabs = [['services', 'Services & billing'], ['packages', 'Membership packages'], ['commissions', 'Commissions']];
+  const tabs = [['services', t('salon.servicesBilling')], ['packages', t('salon.membershipPackages')], ['commissions', t('salon.commissions')]];
   return (
     <div>
       <div className="mb-5">
-        <p className="eyebrow">Salon</p>
-        <h1 className="page-title">Manage salon</h1>
+        <p className="eyebrow">{t('salon.eyebrow')}</p>
+        <h1 className="page-title">{t('salon.manageSalon')}</h1>
       </div>
       <div className="flex flex-wrap gap-2 mb-5">
         {tabs.map(([key, label]) => (
@@ -30,6 +32,7 @@ export function SalonPage() {
 }
 
 function ServicesTab() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -43,10 +46,10 @@ function ServicesTab() {
   useEffect(load, []);
 
   async function handleDeactivate(s) {
-    if (!window.confirm(`Remove "${s.name}" from the menu? Past sales are unaffected.`)) return;
+    if (!window.confirm(t('salon.removeServiceConfirm', { name: s.name }))) return;
     try {
       await api.del(`/salon/services/${s._id}`);
-      toast('Service removed.', 'success');
+      toast(t('salon.serviceRemoved'), 'success');
       load();
     } catch (err) { toast(err.message, 'error'); }
   }
@@ -54,11 +57,11 @@ function ServicesTab() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-ink-muted">Services on the menu and what they bill against.</p>
-        <button className="btn-primary" onClick={() => setEditing({})}>New service</button>
+        <p className="text-sm text-ink-muted">{t('salon.servicesMenuHint')}</p>
+        <button className="btn-primary" onClick={() => setEditing({})}>{t('salon.newService')}</button>
       </div>
       {loading && <Loading />}
-      {!loading && services.length === 0 && <EmptyState title="No services yet" action={<button className="btn-primary" onClick={() => setEditing({})}>Add a service</button>} />}
+      {!loading && services.length === 0 && <EmptyState title={t('salon.noServicesYet')} action={<button className="btn-primary" onClick={() => setEditing({})}>{t('salon.addAService')}</button>} />}
       {!loading && services.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {services.map((s) => (
@@ -66,12 +69,12 @@ function ServicesTab() {
               <div>
                 <p className="text-sm font-semibold text-ink">{s.name}</p>
                 <p className="num text-sm text-accent-strong mt-1">{formatMoney(s.price)}</p>
-                <span className="chip-neutral mt-1">{s.commissionRate}{s.commissionType === 'percentage' ? '%' : ''} commission</span>
+                <span className="chip-neutral mt-1">{s.commissionRate}{s.commissionType === 'percentage' ? '%' : ''} {t('salon.commission')}</span>
               </div>
               <div className="flex items-center gap-3 mt-1 pt-2 border-t border-rule">
-                <button className="text-xs font-semibold text-accent hover:text-accent-strong" onClick={() => setBilling(s)}>Bill this service</button>
-                <button className="text-xs font-semibold text-ink-muted hover:text-ink" onClick={() => setEditing(s)}>Edit</button>
-                <button className="text-xs font-semibold text-danger hover:opacity-80" onClick={() => handleDeactivate(s)}>Remove</button>
+                <button className="text-xs font-semibold text-accent hover:text-accent-strong" onClick={() => setBilling(s)}>{t('salon.billThisService')}</button>
+                <button className="text-xs font-semibold text-ink-muted hover:text-ink" onClick={() => setEditing(s)}>{t('salon.edit')}</button>
+                <button className="text-xs font-semibold text-danger hover:opacity-80" onClick={() => handleDeactivate(s)}>{t('salon.remove')}</button>
               </div>
             </div>
           ))}
@@ -84,6 +87,7 @@ function ServicesTab() {
 }
 
 function ServiceForm({ service, onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const isNew = !service._id;
   const [products, setProducts] = useState([]);
@@ -101,14 +105,14 @@ function ServiceForm({ service, onClose, onSaved }) {
     try {
       if (isNew) {
         const product = products.find((p) => p._id === form.productId);
-        if (!product) throw new Error('Select a billing product.');
+        if (!product) throw new Error(t('salon.selectBillingProduct'));
         await api.post('/salon/services', { ...form, price: Number(form.price), commissionRate: Number(form.commissionRate) || 0, variantId: product.variants[0]?._id });
-        toast('Service created.', 'success');
+        toast(t('salon.serviceCreated'), 'success');
       } else {
         await api.put(`/salon/services/${service._id}`, {
           name: form.name, price: Number(form.price), commissionType: form.commissionType, commissionRate: Number(form.commissionRate) || 0,
         });
-        toast('Service updated.', 'success');
+        toast(t('salon.serviceUpdated'), 'success');
       }
       onSaved();
     } catch (err) {
@@ -121,34 +125,34 @@ function ServiceForm({ service, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg font-bold text-ink mb-4">{isNew ? 'New service' : 'Edit service'}</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">{isNew ? t('salon.newService') : t('salon.editService')}</p>
         <div className="space-y-3">
-          <div><label className="field-label">Name</label><input required autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Haircut" /></div>
+          <div><label className="field-label">{t('salon.name')}</label><input required autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t('salon.namePlaceholder')} /></div>
           {isNew && (
             <div>
-              <label className="field-label">Billing product (trackingMode "service")</label>
+              <label className="field-label">{t('salon.billingProductLabel')}</label>
               <select required className="field-input" value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })}>
-                <option value="">Select…</option>
+                <option value="">{t('salon.select')}</option>
                 {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
               </select>
-              {products.length === 0 && <p className="text-xs text-warning mt-1">Create a service-tracked product on the Products page first.</p>}
+              {products.length === 0 && <p className="text-xs text-warning mt-1">{t('salon.createServiceProductHint')}</p>}
             </div>
           )}
-          <div><label className="field-label">Price</label><input type="number" required className="field-input num" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} /></div>
+          <div><label className="field-label">{t('salon.price')}</label><input type="number" required className="field-input num" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} /></div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="field-label">Commission type</label>
+              <label className="field-label">{t('salon.commissionType')}</label>
               <select className="field-input" value={form.commissionType} onChange={(e) => setForm({ ...form, commissionType: e.target.value })}>
-                <option value="percentage">Percentage</option>
-                <option value="fixed">Fixed amount</option>
+                <option value="percentage">{t('salon.percentage')}</option>
+                <option value="fixed">{t('salon.fixedAmount')}</option>
               </select>
             </div>
-            <div><label className="field-label">Rate</label><input type="number" className="field-input num" value={form.commissionRate} onChange={(e) => setForm({ ...form, commissionRate: e.target.value })} /></div>
+            <div><label className="field-label">{t('salon.rate')}</label><input type="number" className="field-input num" value={form.commissionRate} onChange={(e) => setForm({ ...form, commissionRate: e.target.value })} /></div>
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('salon.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('salon.saving') : t('salon.save')}</button>
         </div>
       </form>
     </div>
@@ -156,6 +160,7 @@ function ServiceForm({ service, onClose, onSaved }) {
 }
 
 function BillServiceForm({ service, onClose }) {
+  const { t } = useTranslation();
   const { company } = useAuth();
   const toast = useToast();
   const [branches, setBranches] = useState([]);
@@ -179,7 +184,7 @@ function BillServiceForm({ service, onClose }) {
     setSaving(true);
     try {
       const result = await api.post('/salon/services/bill', { ...form, salonServiceId: service._id });
-      toast(`Billed ${formatMoney(result.sale.totalAmount, company?.currency)}: commission recorded.`, 'success');
+      toast(t('salon.billedCommissionRecorded', { amount: formatMoney(result.sale.totalAmount, company?.currency) }), 'success');
       onClose();
     } catch (err) {
       toast(err.message, 'error');
@@ -191,54 +196,54 @@ function BillServiceForm({ service, onClose }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg font-bold text-ink mb-1">Bill {service.name}</p>
+        <p className="font-display text-lg font-bold text-ink mb-1">{t('salon.billServiceName', { name: service.name })}</p>
         <p className="text-sm text-ink-muted mb-4 num">{formatMoney(service.price, company?.currency)}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Branch</label>
+            <label className="field-label">{t('salon.branch')}</label>
             <select required className="field-input" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('salon.select')}</option>
               {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Warehouse</label>
+            <label className="field-label">{t('salon.warehouse')}</label>
             <select required className="field-input" value={form.warehouseId} onChange={(e) => setForm({ ...form, warehouseId: e.target.value })} disabled={!form.branchId}>
-              <option value="">Select…</option>
+              <option value="">{t('salon.select')}</option>
               {warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Stylist</label>
+            <label className="field-label">{t('salon.stylist')}</label>
             <select required className="field-input" value={form.employeeId} onChange={(e) => setForm({ ...form, employeeId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('salon.select')}</option>
               {staff.map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Customer</label>
+            <label className="field-label">{t('salon.customer')}</label>
             <select required className="field-input" value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('salon.select')}</option>
               {customers.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
             </select>
           </div>
           <label className="flex items-center gap-2 text-sm text-ink">
             <input type="checkbox" checked={form.useMembership} onChange={(e) => setForm({ ...form, useMembership: e.target.checked })} />
-            Redeem from an active membership (no charge)
+            {t('salon.redeemFromMembership')}
           </label>
           {!form.useMembership && (
             <div>
-              <label className="field-label">Payment account</label>
+              <label className="field-label">{t('salon.paymentAccount')}</label>
               <select required className="field-input" value={form.paymentAccountId} onChange={(e) => setForm({ ...form, paymentAccountId: e.target.value })}>
-                <option value="">Select…</option>
+                <option value="">{t('salon.select')}</option>
                 {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
               </select>
             </div>
           )}
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Billing…' : 'Bill'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('salon.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('salon.billing') : t('salon.bill')}</button>
         </div>
       </form>
     </div>
@@ -246,6 +251,7 @@ function BillServiceForm({ service, onClose }) {
 }
 
 function PackagesTab() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [packages, setPackages] = useState([]);
   const [services, setServices] = useState([]);
@@ -262,10 +268,10 @@ function PackagesTab() {
   useEffect(load, []);
 
   async function handleDeactivate(p) {
-    if (!window.confirm(`Remove "${p.name}"? Customers who already bought it keep their remaining sessions.`)) return;
+    if (!window.confirm(t('salon.removePackageConfirm', { name: p.name }))) return;
     try {
       await api.del(`/salon/packages/${p._id}`);
-      toast('Package removed.', 'success');
+      toast(t('salon.packageRemoved'), 'success');
       load();
     } catch (err) { toast(err.message, 'error'); }
   }
@@ -273,24 +279,24 @@ function PackagesTab() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-ink-muted">Bundled sessions customers can buy and redeem over time.</p>
-        <button className="btn-primary" onClick={() => setEditing({})}>New package</button>
+        <p className="text-sm text-ink-muted">{t('salon.bundledSessionsHint')}</p>
+        <button className="btn-primary" onClick={() => setEditing({})}>{t('salon.newPackage')}</button>
       </div>
       {loading && <Loading />}
-      {!loading && packages.length === 0 && <EmptyState title="No membership packages yet" />}
+      {!loading && packages.length === 0 && <EmptyState title={t('salon.noPackagesYet')} />}
       {!loading && packages.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {packages.map((p) => (
             <div key={p._id} className="card p-4 flex flex-col gap-2">
               <div>
                 <p className="text-sm font-semibold text-ink">{p.name}</p>
-                <span className="chip-neutral mt-1 num">{p.totalSessions} sessions · {p.validityDays}d</span>
+                <span className="chip-neutral mt-1 num">{t('salon.sessionsValidity', { sessions: p.totalSessions, days: p.validityDays })}</span>
                 <p className="num text-sm text-accent-strong mt-1">{formatMoney(p.price)}</p>
               </div>
               <div className="flex items-center gap-3 mt-1 pt-2 border-t border-rule">
-                <button className="text-xs font-semibold text-accent hover:text-accent-strong" onClick={() => setSelling(p)}>Sell to a customer</button>
-                <button className="text-xs font-semibold text-ink-muted hover:text-ink" onClick={() => setEditing(p)}>Edit</button>
-                <button className="text-xs font-semibold text-danger hover:opacity-80" onClick={() => handleDeactivate(p)}>Remove</button>
+                <button className="text-xs font-semibold text-accent hover:text-accent-strong" onClick={() => setSelling(p)}>{t('salon.sellToCustomer')}</button>
+                <button className="text-xs font-semibold text-ink-muted hover:text-ink" onClick={() => setEditing(p)}>{t('salon.edit')}</button>
+                <button className="text-xs font-semibold text-danger hover:opacity-80" onClick={() => handleDeactivate(p)}>{t('salon.remove')}</button>
               </div>
             </div>
           ))}
@@ -303,6 +309,7 @@ function PackagesTab() {
 }
 
 function PackageForm({ services, pkg, onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const isNew = !pkg._id;
   const [products, setProducts] = useState([]);
@@ -320,14 +327,14 @@ function PackageForm({ services, pkg, onClose, onSaved }) {
     try {
       if (isNew) {
         const product = products.find((p) => p._id === form.productId);
-        if (!product) throw new Error('Select a billing product.');
+        if (!product) throw new Error(t('salon.selectBillingProduct'));
         await api.post('/salon/packages', { ...form, totalSessions: Number(form.totalSessions), price: Number(form.price), validityDays: Number(form.validityDays), variantId: product.variants[0]?._id });
-        toast('Package created.', 'success');
+        toast(t('salon.packageCreated'), 'success');
       } else {
         await api.put(`/salon/packages/${pkg._id}`, {
           name: form.name, totalSessions: Number(form.totalSessions), price: Number(form.price), validityDays: Number(form.validityDays),
         });
-        toast('Package updated.', 'success');
+        toast(t('salon.packageUpdated'), 'success');
       }
       onSaved();
     } catch (err) {
@@ -340,36 +347,36 @@ function PackageForm({ services, pkg, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg font-bold text-ink mb-4">{isNew ? 'New membership package' : 'Edit membership package'}</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">{isNew ? t('salon.newMembershipPackage') : t('salon.editMembershipPackage')}</p>
         <div className="space-y-3">
-          <div><label className="field-label">Name</label><input required autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+          <div><label className="field-label">{t('salon.name')}</label><input required autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
           {isNew && (
             <>
               <div>
-                <label className="field-label">Billing product (trackingMode "service")</label>
+                <label className="field-label">{t('salon.billingProductLabel')}</label>
                 <select required className="field-input" value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })}>
-                  <option value="">Select…</option>
+                  <option value="">{t('salon.select')}</option>
                   {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="field-label">Redeemable for</label>
+                <label className="field-label">{t('salon.redeemableFor')}</label>
                 <select required className="field-input" value={form.salonServiceId} onChange={(e) => setForm({ ...form, salonServiceId: e.target.value })}>
-                  <option value="">Select a service…</option>
+                  <option value="">{t('salon.selectAService')}</option>
                   {services.map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
                 </select>
               </div>
             </>
           )}
           <div className="grid grid-cols-2 gap-2">
-            <div><label className="field-label">Sessions</label><input type="number" required className="field-input num" value={form.totalSessions} onChange={(e) => setForm({ ...form, totalSessions: e.target.value })} /></div>
-            <div><label className="field-label">Price</label><input type="number" required className="field-input num" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} /></div>
+            <div><label className="field-label">{t('salon.sessions')}</label><input type="number" required className="field-input num" value={form.totalSessions} onChange={(e) => setForm({ ...form, totalSessions: e.target.value })} /></div>
+            <div><label className="field-label">{t('salon.price')}</label><input type="number" required className="field-input num" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} /></div>
           </div>
-          <div><label className="field-label">Valid for (days)</label><input type="number" className="field-input num" value={form.validityDays} onChange={(e) => setForm({ ...form, validityDays: e.target.value })} /></div>
+          <div><label className="field-label">{t('salon.validForDays')}</label><input type="number" className="field-input num" value={form.validityDays} onChange={(e) => setForm({ ...form, validityDays: e.target.value })} /></div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('salon.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('salon.saving') : t('salon.save')}</button>
         </div>
       </form>
     </div>
@@ -377,6 +384,7 @@ function PackageForm({ services, pkg, onClose, onSaved }) {
 }
 
 function SellPackageForm({ pkg, onClose }) {
+  const { t } = useTranslation();
   const { company } = useAuth();
   const toast = useToast();
   const [branches, setBranches] = useState([]);
@@ -398,7 +406,7 @@ function SellPackageForm({ pkg, onClose }) {
     setSaving(true);
     try {
       await api.post('/salon/packages/sell', { ...form, membershipPackageId: pkg._id });
-      toast('Membership sold.', 'success');
+      toast(t('salon.membershipSold'), 'success');
       onClose();
     } catch (err) {
       toast(err.message, 'error');
@@ -410,41 +418,41 @@ function SellPackageForm({ pkg, onClose }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg font-bold text-ink mb-1">Sell {pkg.name}</p>
+        <p className="font-display text-lg font-bold text-ink mb-1">{t('salon.sellPackageName', { name: pkg.name })}</p>
         <p className="text-sm text-ink-muted mb-4 num">{formatMoney(pkg.price, company?.currency)}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Branch</label>
+            <label className="field-label">{t('salon.branch')}</label>
             <select required className="field-input" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('salon.select')}</option>
               {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Warehouse</label>
+            <label className="field-label">{t('salon.warehouse')}</label>
             <select required className="field-input" value={form.warehouseId} onChange={(e) => setForm({ ...form, warehouseId: e.target.value })} disabled={!form.branchId}>
-              <option value="">Select…</option>
+              <option value="">{t('salon.select')}</option>
               {warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Customer</label>
+            <label className="field-label">{t('salon.customer')}</label>
             <select required className="field-input" value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('salon.select')}</option>
               {customers.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Payment account</label>
+            <label className="field-label">{t('salon.paymentAccount')}</label>
             <select required className="field-input" value={form.paymentAccountId} onChange={(e) => setForm({ ...form, paymentAccountId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('salon.select')}</option>
               {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
             </select>
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Selling…' : 'Sell'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('salon.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('salon.selling') : t('salon.sell')}</button>
         </div>
       </form>
     </div>
@@ -452,6 +460,7 @@ function SellPackageForm({ pkg, onClose }) {
 }
 
 function CommissionsTab() {
+  const { t } = useTranslation();
   const { company } = useAuth();
   const toast = useToast();
   const [rows, setRows] = useState([]);
@@ -463,7 +472,7 @@ function CommissionsTab() {
   }, []);
 
   if (loading) return <Loading />;
-  if (rows.length === 0) return <EmptyState title="No commissions recorded yet" />;
+  if (rows.length === 0) return <EmptyState title={t('salon.noCommissionsYet')} />;
 
   return (
     <div className="card overflow-hidden">
@@ -471,8 +480,8 @@ function CommissionsTab() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-              <th className="px-3 py-2 font-semibold">Amount</th>
-              <th className="px-3 py-2 font-semibold">Status</th>
+              <th className="px-3 py-2 font-semibold">{t('salon.amount')}</th>
+              <th className="px-3 py-2 font-semibold">{t('salon.status')}</th>
             </tr>
           </thead>
           <tbody>
@@ -485,7 +494,7 @@ function CommissionsTab() {
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-ink-muted p-3 border-t border-rule">Unpaid commissions get folded into the next payroll run automatically, see HR &amp; Payroll.</p>
+      <p className="text-xs text-ink-muted p-3 border-t border-rule">{t('salon.unpaidCommissionsHint')}</p>
     </div>
   );
 }

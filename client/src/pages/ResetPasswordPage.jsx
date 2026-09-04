@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 
 export function ResetPasswordPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') || '';
@@ -16,11 +18,11 @@ export function ResetPasswordPage() {
     setError('');
 
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError(t('resetPassword.passwordMismatch'));
       return;
     }
     if (!token) {
-      setError('This reset link is missing its token, please request a new one.');
+      setError(t('resetPassword.missingToken'));
       return;
     }
 
@@ -43,43 +45,43 @@ export function ResetPasswordPage() {
             M
           </div>
           <p className="font-display text-2xl font-bold text-ink mt-3">Muhasib</p>
-          <p className="eyebrow mt-1">Choose a new password</p>
+          <p className="eyebrow mt-1">{t('resetPassword.subtitle')}</p>
         </div>
 
         <div className="card overflow-hidden">
           <div className="h-1.5 bg-accent" />
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
-            <p className="page-title text-lg mb-1">Reset password</p>
+            <p className="page-title text-lg mb-1">{t('resetPassword.title')}</p>
 
             {error && (
               <div className="chip-danger !inline-block w-full !rounded-lg px-3 py-2 text-sm">{error}</div>
             )}
             <div>
-              <label className="field-label" htmlFor="newPassword">New password</label>
+              <label className="field-label" htmlFor="newPassword">{t('resetPassword.newPassword')}</label>
               <input
                 id="newPassword" type="password" required minLength={8} autoFocus
                 className="field-input"
                 value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="At least 8 characters"
+                placeholder={t('resetPassword.newPasswordPlaceholder')}
               />
             </div>
             <div>
-              <label className="field-label" htmlFor="confirmPassword">Confirm password</label>
+              <label className="field-label" htmlFor="confirmPassword">{t('resetPassword.confirmPassword')}</label>
               <input
                 id="confirmPassword" type="password" required minLength={8}
                 className="field-input"
                 value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Re-enter password"
+                placeholder={t('resetPassword.confirmPasswordPlaceholder')}
               />
             </div>
             <button type="submit" disabled={loading} className="btn-primary w-full">
-              {loading ? 'Resetting…' : 'Reset password'}
+              {loading ? t('resetPassword.resetting') : t('resetPassword.title')}
             </button>
           </form>
         </div>
 
         <p className="text-sm text-ink-muted text-center mt-5">
-          <Link to="/login" className="text-accent font-semibold underline">Back to sign in</Link>
+          <Link to="/login" className="text-accent font-semibold underline">{t('resetPassword.backToSignIn')}</Link>
         </p>
       </div>
     </div>

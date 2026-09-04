@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useToast } from '../components/Toast';
 import { Loading } from '../components/Loading';
@@ -16,9 +17,15 @@ const ALLOWED_TRANSITIONS = {
   returned: [],
 };
 
-function statusLabel(status) {
-  return status.split('_').map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
-}
+const STATUS_LABEL_KEYS = {
+  booked: 'courier.statusBooked',
+  picked_up: 'courier.statusPickedUp',
+  in_transit: 'courier.statusInTransit',
+  out_for_delivery: 'courier.statusOutForDelivery',
+  delivered: 'courier.statusDelivered',
+  failed: 'courier.statusFailed',
+  returned: 'courier.statusReturned',
+};
 
 function statusChipClass(status) {
   if (status === 'delivered') return 'chip-accent';
@@ -32,12 +39,14 @@ function generateTrackingNumber() {
 }
 
 export function CourierPage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState('shipments');
+  const TABS = [['shipments', t('courier.tabShipments')], ['track', t('courier.tabTrackPackage')]];
   return (
     <div>
-      <p className="page-title mb-4">Courier</p>
+      <p className="page-title mb-4">{t('courier.title')}</p>
       <div className="flex gap-2 mb-5">
-        {[['shipments', 'Shipments'], ['track', 'Track a package']].map(([key, label]) => (
+        {TABS.map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)} className={tab === key ? 'pill-active' : 'pill'}>
             {label}
           </button>
@@ -50,6 +59,7 @@ export function CourierPage() {
 }
 
 function TrackTab() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [trackingNumber, setTrackingNumber] = useState('');
   const [loading, setLoading] = useState(false);
@@ -77,32 +87,32 @@ function TrackTab() {
       <form onSubmit={handleSearch} className="card p-4 flex gap-2 max-w-lg">
         <input
           className="field-input"
-          placeholder="Enter tracking number…"
+          placeholder={t('courier.enterTrackingNumber')}
           value={trackingNumber}
           onChange={(e) => setTrackingNumber(e.target.value)}
           autoFocus
         />
-        <button type="submit" disabled={loading} className="btn-primary shrink-0">{loading ? 'Searching…' : 'Track'}</button>
+        <button type="submit" disabled={loading} className="btn-primary shrink-0">{loading ? t('courier.searching') : t('courier.track')}</button>
       </form>
 
       {loading && <div className="mt-4"><Loading /></div>}
       {!loading && searched && !result && (
-        <div className="mt-4"><EmptyState title="No shipment found" description="Check the tracking number and try again." /></div>
+        <div className="mt-4"><EmptyState title={t('courier.noShipmentFound')} description={t('courier.checkTrackingNumber')} /></div>
       )}
       {!loading && result && (
         <div className="card p-4 mt-4 max-w-lg">
           <div className="flex items-center justify-between mb-2">
             <p className="font-display text-lg num">{result.trackingNumber}</p>
-            <span className={statusChipClass(result.status)}>{statusLabel(result.status)}</span>
+            <span className={statusChipClass(result.status)}>{STATUS_LABEL_KEYS[result.status] ? t(STATUS_LABEL_KEYS[result.status]) : result.status}</span>
           </div>
           {(result.origin || result.destination) && (
             <p className="text-sm text-ink-muted mb-3">{result.origin || '-'} → {result.destination || '-'}</p>
           )}
-          <p className="field-label mb-2">History</p>
+          <p className="field-label mb-2">{t('courier.history')}</p>
           <div className="space-y-2">
             {(result.history || []).slice().reverse().map((ev, i) => (
               <div key={i} className="text-sm flex items-start gap-2">
-                <span className={`${statusChipClass(ev.status)} shrink-0`}>{statusLabel(ev.status)}</span>
+                <span className={`${statusChipClass(ev.status)} shrink-0`}>{STATUS_LABEL_KEYS[ev.status] ? t(STATUS_LABEL_KEYS[ev.status]) : ev.status}</span>
                 <div>
                   <p className="text-ink-muted">{ev.location || ''}{ev.note ? (ev.location ? ' · ' : '') + ev.note : ''}</p>
                   <p className="text-xs text-ink-muted">{ev.at ? new Date(ev.at).toLocaleString() : ''}</p>
@@ -117,6 +127,7 @@ function TrackTab() {
 }
 
 function ShipmentsTab() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [shipments, setShipments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -134,7 +145,7 @@ function ShipmentsTab() {
   async function advance(shipment, status) {
     try {
       await api.post(`/courier/shipments/${shipment._id}/advance`, { status });
-      toast(`Shipment moved to "${statusLabel(status)}".`, 'success');
+      toast(t('courier.shipmentMovedTo', { status: t(STATUS_LABEL_KEYS[status]) }), 'success');
       load();
     } catch (err) {
       toast(err.message, 'error');
@@ -145,26 +156,26 @@ function ShipmentsTab() {
     <div>
       <div className="flex justify-between items-center mb-3">
         <select className="field-input !w-auto" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-          <option value="">All statuses</option>
-          {STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
+          <option value="">{t('courier.allStatuses')}</option>
+          {STATUSES.map((s) => <option key={s} value={s}>{t(STATUS_LABEL_KEYS[s])}</option>)}
         </select>
-        <button className="btn-primary" onClick={() => setShowForm(true)}>New shipment</button>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>{t('courier.newShipment')}</button>
       </div>
 
       {loading && <Loading />}
       {!loading && shipments.length === 0 && (
-        <EmptyState title="No shipments yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Book a shipment</button>} />
+        <EmptyState title={t('courier.noShipmentsYet')} action={<button className="btn-primary" onClick={() => setShowForm(true)}>{t('courier.bookAShipment')}</button>} />
       )}
       {!loading && shipments.length > 0 && (
         <div className="card overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-rule text-left">
-                <th className="eyebrow px-4 py-3 font-semibold">Tracking No.</th>
-                <th className="eyebrow px-4 py-3 font-semibold">Customer</th>
-                <th className="eyebrow px-4 py-3 font-semibold">Destination</th>
-                <th className="eyebrow px-4 py-3 font-semibold">Status</th>
-                <th className="eyebrow px-4 py-3 font-semibold text-right">Action</th>
+                <th className="eyebrow px-4 py-3 font-semibold">{t('courier.trackingNo')}</th>
+                <th className="eyebrow px-4 py-3 font-semibold">{t('courier.customer')}</th>
+                <th className="eyebrow px-4 py-3 font-semibold">{t('courier.destination')}</th>
+                <th className="eyebrow px-4 py-3 font-semibold">{t('courier.status')}</th>
+                <th className="eyebrow px-4 py-3 font-semibold text-right">{t('courier.action')}</th>
               </tr>
             </thead>
             <tbody>
@@ -174,10 +185,10 @@ function ShipmentsTab() {
                 return (
                   <tr key={s._id} className="border-b border-rule last:border-b-0">
                     <td className="px-4 py-3 num font-medium">{s.trackingNumber}</td>
-                    <td className="px-4 py-3 text-ink-muted">{s.customerId?.name || 'Customer'}</td>
+                    <td className="px-4 py-3 text-ink-muted">{s.customerId?.name || t('courier.customer')}</td>
                     <td className="px-4 py-3 text-ink-muted">{s.destination || '-'}</td>
                     <td className="px-4 py-3">
-                      <span className={statusChipClass(s.status)}>{statusLabel(s.status)}</span>
+                      <span className={statusChipClass(s.status)}>{t(STATUS_LABEL_KEYS[s.status])}</span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">
@@ -187,12 +198,12 @@ function ShipmentsTab() {
                             value=""
                             onChange={(e) => { if (e.target.value) advance(s, e.target.value); }}
                           >
-                            <option value="">Advance status…</option>
-                            {nextOptions.map((opt) => <option key={opt} value={opt}>{statusLabel(opt)}</option>)}
+                            <option value="">{t('courier.advanceStatusPlaceholder')}</option>
+                            {nextOptions.map((opt) => <option key={opt} value={opt}>{t(STATUS_LABEL_KEYS[opt])}</option>)}
                           </select>
                         )}
                         {canDeliver && (
-                          <button className="btn-ghost !px-2 text-xs" onClick={() => setDelivering(s)}>Mark delivered</button>
+                          <button className="btn-ghost !px-2 text-xs" onClick={() => setDelivering(s)}>{t('courier.markDelivered')}</button>
                         )}
                       </div>
                     </td>
@@ -211,6 +222,7 @@ function ShipmentsTab() {
 }
 
 function ShipmentForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [branches, setBranches] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -234,7 +246,7 @@ function ShipmentForm({ onClose, onSaved }) {
         weight: form.weight === '' ? undefined : Number(form.weight),
         codAmount: form.codAmount === '' ? 0 : Number(form.codAmount),
       });
-      toast('Shipment booked.', 'success');
+      toast(t('courier.shipmentBooked'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -246,41 +258,41 @@ function ShipmentForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">New shipment</p>
+        <p className="font-display text-lg mb-4">{t('courier.newShipment')}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Branch</label>
+            <label className="field-label">{t('courier.branch')}</label>
             <select required className="field-input" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('courier.select')}</option>
               {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Customer</label>
+            <label className="field-label">{t('courier.customer')}</label>
             <select required className="field-input" value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('courier.select')}</option>
               {customers.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Tracking number</label>
+            <label className="field-label">{t('courier.trackingNumber')}</label>
             <div className="flex gap-2">
               <input required className="field-input num" value={form.trackingNumber} onChange={(e) => setForm({ ...form, trackingNumber: e.target.value })} />
-              <button type="button" className="btn-secondary shrink-0" onClick={() => setForm({ ...form, trackingNumber: generateTrackingNumber() })}>Generate</button>
+              <button type="button" className="btn-secondary shrink-0" onClick={() => setForm({ ...form, trackingNumber: generateTrackingNumber() })}>{t('courier.generate')}</button>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <div><label className="field-label">Origin</label><input className="field-input" value={form.origin} onChange={(e) => setForm({ ...form, origin: e.target.value })} /></div>
-            <div><label className="field-label">Destination</label><input className="field-input" value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} /></div>
+            <div><label className="field-label">{t('courier.origin')}</label><input className="field-input" value={form.origin} onChange={(e) => setForm({ ...form, origin: e.target.value })} /></div>
+            <div><label className="field-label">{t('courier.destination')}</label><input className="field-input" value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} /></div>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <div><label className="field-label">Weight (kg)</label><input type="number" className="field-input num" value={form.weight} onChange={(e) => setForm({ ...form, weight: e.target.value })} /></div>
-            <div><label className="field-label">COD amount</label><input type="number" className="field-input num" value={form.codAmount} onChange={(e) => setForm({ ...form, codAmount: e.target.value })} /></div>
+            <div><label className="field-label">{t('courier.weightKg')}</label><input type="number" className="field-input num" value={form.weight} onChange={(e) => setForm({ ...form, weight: e.target.value })} /></div>
+            <div><label className="field-label">{t('courier.codAmount')}</label><input type="number" className="field-input num" value={form.codAmount} onChange={(e) => setForm({ ...form, codAmount: e.target.value })} /></div>
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Booking…' : 'Book shipment'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('courier.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('courier.booking') : t('courier.bookShipment')}</button>
         </div>
       </form>
     </div>
@@ -288,6 +300,7 @@ function ShipmentForm({ onClose, onSaved }) {
 }
 
 function DeliverForm({ shipment, onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [proofOfDeliveryNote, setProofOfDeliveryNote] = useState('');
   const [saving, setSaving] = useState(false);
@@ -297,7 +310,7 @@ function DeliverForm({ shipment, onClose, onSaved }) {
     setSaving(true);
     try {
       await api.post(`/courier/shipments/${shipment._id}/deliver`, { proofOfDeliveryNote });
-      toast('Shipment marked delivered.', 'success');
+      toast(t('courier.shipmentMarkedDelivered'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -309,15 +322,15 @@ function DeliverForm({ shipment, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-1">Mark delivered</p>
+        <p className="font-display text-lg mb-1">{t('courier.markDelivered')}</p>
         <p className="text-sm text-ink-muted num mb-4">{shipment.trackingNumber}</p>
         <div>
-          <label className="field-label">Proof of delivery note (who signed, etc.)</label>
+          <label className="field-label">{t('courier.proofOfDeliveryNoteLabel')}</label>
           <input className="field-input" autoFocus value={proofOfDeliveryNote} onChange={(e) => setProofOfDeliveryNote(e.target.value)} />
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Confirm delivery'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('courier.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('courier.saving') : t('courier.confirmDelivery')}</button>
         </div>
       </form>
     </div>

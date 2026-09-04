@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
@@ -9,15 +10,16 @@ import { formatMoney, formatDate } from '../lib/format';
 const CLAIM_CHIP = { submitted: 'chip-warning', paid: 'chip-accent', rejected: 'chip-danger' };
 
 export function InsurancePage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState('policies');
   return (
     <div>
       <div className="mb-5">
-        <p className="page-title">Insurance &amp; Underwriting</p>
-        <p className="text-sm text-ink-muted mt-1">Policies, claims, and underwriting decisions.</p>
+        <p className="page-title">{t('insurance.title')}</p>
+        <p className="text-sm text-ink-muted mt-1">{t('insurance.subtitle')}</p>
       </div>
       <div className="flex gap-2 mb-5">
-        {[['policies', 'Policies'], ['claims', 'Claims']].map(([key, label]) => (
+        {[['policies', t('insurance.policies')], ['claims', t('insurance.claims')]].map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)} className={tab === key ? 'pill-active' : 'pill'}>
             {label}
           </button>
@@ -29,6 +31,7 @@ export function InsurancePage() {
 }
 
 function PoliciesTab() {
+  const { t } = useTranslation();
   const { company } = useAuth();
   const toast = useToast();
   const [policies, setPolicies] = useState([]);
@@ -45,20 +48,20 @@ function PoliciesTab() {
   return (
     <div>
       <div className="flex justify-end mb-3">
-        <button className="btn-primary" onClick={() => setShowForm(true)}>Sell a policy</button>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>{t('insurance.sellAPolicy')}</button>
       </div>
       {loading && <Loading />}
-      {!loading && policies.length === 0 && <EmptyState title="No policies yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Sell one</button>} />}
+      {!loading && policies.length === 0 && <EmptyState title={t('insurance.noPoliciesYet')} action={<button className="btn-primary" onClick={() => setShowForm(true)}>{t('insurance.sellOne')}</button>} />}
       {!loading && policies.length > 0 && (
         <div className="card overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-rule text-left">
-                <th className="px-3 py-2.5 eyebrow font-medium">Customer</th>
-                <th className="px-3 py-2.5 eyebrow font-medium">Type</th>
-                <th className="px-3 py-2.5 eyebrow font-medium text-right">Coverage</th>
-                <th className="px-3 py-2.5 eyebrow font-medium text-right">Premium</th>
-                <th className="px-3 py-2.5 eyebrow font-medium">Period</th>
+                <th className="px-3 py-2.5 eyebrow font-medium">{t('insurance.customer')}</th>
+                <th className="px-3 py-2.5 eyebrow font-medium">{t('insurance.type')}</th>
+                <th className="px-3 py-2.5 eyebrow font-medium text-right">{t('insurance.coverage')}</th>
+                <th className="px-3 py-2.5 eyebrow font-medium text-right">{t('insurance.premium')}</th>
+                <th className="px-3 py-2.5 eyebrow font-medium">{t('insurance.period')}</th>
                 <th className="px-3 py-2.5 eyebrow font-medium"></th>
               </tr>
             </thead>
@@ -71,7 +74,7 @@ function PoliciesTab() {
                   <td className="px-3 py-2.5 num text-right">{formatMoney(p.premiumAmount, company?.currency)}</td>
                   <td className="px-3 py-2.5 text-ink-muted">{formatDate(p.startDate)} – {formatDate(p.endDate)}</td>
                   <td className="px-3 py-2.5 text-right">
-                    <button className="btn-ghost !text-accent" onClick={() => setClaiming(p)}>File a claim</button>
+                    <button className="btn-ghost !text-accent" onClick={() => setClaiming(p)}>{t('insurance.fileAClaim')}</button>
                   </td>
                 </tr>
               ))}
@@ -86,6 +89,7 @@ function PoliciesTab() {
 }
 
 function PolicyForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [branches, setBranches] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -108,9 +112,9 @@ function PolicyForm({ onClose, onSaved }) {
     setSaving(true);
     try {
       const product = products.find((p) => p._id === form.billingProductId);
-      if (!product) throw new Error('Select a billing product: it must have trackingMode "service".');
+      if (!product) throw new Error(t('insurance.selectBillingProductError'));
       await api.post('/insurance/policies', { ...form, coverageAmount: Number(form.coverageAmount), premiumAmount: Number(form.premiumAmount), billingVariantId: product.variants[0]?._id });
-      toast('Policy sold.', 'success');
+      toast(t('insurance.policySold'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -122,56 +126,56 @@ function PolicyForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm max-h-[85vh] overflow-y-auto">
-        <p className="font-display text-lg font-bold text-ink mb-4">Sell a policy</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">{t('insurance.sellAPolicy')}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Branch</label>
+            <label className="field-label">{t('insurance.branch')}</label>
             <select required className="field-input" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value, warehouseId: '' })}>
-              <option value="">Select…</option>
+              <option value="">{t('insurance.selectPlaceholder')}</option>
               {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Customer</label>
+            <label className="field-label">{t('insurance.customer')}</label>
             <select required className="field-input" value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('insurance.selectPlaceholder')}</option>
               {customers.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
             </select>
           </div>
-          <div><label className="field-label">Policy type</label><input required className="field-input" value={form.policyType} onChange={(e) => setForm({ ...form, policyType: e.target.value })} placeholder="Motor, health, property…" /></div>
+          <div><label className="field-label">{t('insurance.policyType')}</label><input required className="field-input" value={form.policyType} onChange={(e) => setForm({ ...form, policyType: e.target.value })} placeholder={t('insurance.policyTypePlaceholder')} /></div>
           <div className="grid grid-cols-2 gap-2">
-            <div><label className="field-label">Coverage</label><input type="number" required className="field-input num" value={form.coverageAmount} onChange={(e) => setForm({ ...form, coverageAmount: e.target.value })} /></div>
-            <div><label className="field-label">Premium</label><input type="number" required className="field-input num" value={form.premiumAmount} onChange={(e) => setForm({ ...form, premiumAmount: e.target.value })} /></div>
+            <div><label className="field-label">{t('insurance.coverage')}</label><input type="number" required className="field-input num" value={form.coverageAmount} onChange={(e) => setForm({ ...form, coverageAmount: e.target.value })} /></div>
+            <div><label className="field-label">{t('insurance.premium')}</label><input type="number" required className="field-input num" value={form.premiumAmount} onChange={(e) => setForm({ ...form, premiumAmount: e.target.value })} /></div>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <div><label className="field-label">Start</label><input type="date" required className="field-input" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} /></div>
-            <div><label className="field-label">End</label><input type="date" required className="field-input" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} /></div>
+            <div><label className="field-label">{t('insurance.start')}</label><input type="date" required className="field-input" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} /></div>
+            <div><label className="field-label">{t('insurance.end')}</label><input type="date" required className="field-input" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} /></div>
           </div>
           <div>
-            <label className="field-label">Billing product (trackingMode "service")</label>
+            <label className="field-label">{t('insurance.billingProduct')}</label>
             <select required className="field-input" value={form.billingProductId} onChange={(e) => setForm({ ...form, billingProductId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('insurance.selectPlaceholder')}</option>
               {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Warehouse (for the Sale document)</label>
+            <label className="field-label">{t('insurance.warehouseForSale')}</label>
             <select required className="field-input" value={form.warehouseId} onChange={(e) => setForm({ ...form, warehouseId: e.target.value })} disabled={!form.branchId}>
-              <option value="">Select…</option>
+              <option value="">{t('insurance.selectPlaceholder')}</option>
               {warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Premium received into</label>
+            <label className="field-label">{t('insurance.premiumReceivedInto')}</label>
             <select required className="field-input" value={form.paymentAccountId} onChange={(e) => setForm({ ...form, paymentAccountId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('insurance.selectPlaceholder')}</option>
               {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
             </select>
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Selling…' : 'Sell policy'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('insurance.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('insurance.selling') : t('insurance.sellPolicy')}</button>
         </div>
       </form>
     </div>
@@ -179,6 +183,7 @@ function PolicyForm({ onClose, onSaved }) {
 }
 
 function ClaimForm({ policy, onClose, onSaved }) {
+  const { t } = useTranslation();
   const { company } = useAuth();
   const toast = useToast();
   const [form, setForm] = useState({ claimAmount: '', description: '' });
@@ -189,7 +194,7 @@ function ClaimForm({ policy, onClose, onSaved }) {
     setSaving(true);
     try {
       await api.post(`/insurance/policies/${policy._id}/claims`, { ...form, claimAmount: Number(form.claimAmount) });
-      toast('Claim submitted.', 'success');
+      toast(t('insurance.claimSubmitted'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -201,15 +206,15 @@ function ClaimForm({ policy, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg font-bold text-ink mb-1">File a claim</p>
-        <p className="text-sm text-ink-muted mb-4">Coverage ceiling: {formatMoney(policy.coverageAmount, company?.currency)}</p>
+        <p className="font-display text-lg font-bold text-ink mb-1">{t('insurance.fileAClaim')}</p>
+        <p className="text-sm text-ink-muted mb-4">{t('insurance.coverageCeiling', { amount: formatMoney(policy.coverageAmount, company?.currency) })}</p>
         <div className="space-y-3">
-          <div><label className="field-label">Claim amount</label><input type="number" required max={policy.coverageAmount} className="field-input num" value={form.claimAmount} onChange={(e) => setForm({ ...form, claimAmount: e.target.value })} /></div>
-          <div><label className="field-label">Description</label><textarea required rows={3} className="field-input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
+          <div><label className="field-label">{t('insurance.claimAmount')}</label><input type="number" required max={policy.coverageAmount} className="field-input num" value={form.claimAmount} onChange={(e) => setForm({ ...form, claimAmount: e.target.value })} /></div>
+          <div><label className="field-label">{t('insurance.description')}</label><textarea required rows={3} className="field-input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Submitting…' : 'Submit claim'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('insurance.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('insurance.submitting') : t('insurance.submitClaim')}</button>
         </div>
       </form>
     </div>
@@ -217,6 +222,7 @@ function ClaimForm({ policy, onClose, onSaved }) {
 }
 
 function ClaimsTab() {
+  const { t } = useTranslation();
   const { company } = useAuth();
   const toast = useToast();
   const [claims, setClaims] = useState([]);
@@ -232,15 +238,15 @@ function ClaimsTab() {
   return (
     <div>
       {loading && <Loading />}
-      {!loading && claims.length === 0 && <EmptyState title="No claims awaiting a decision" />}
+      {!loading && claims.length === 0 && <EmptyState title={t('insurance.noClaimsAwaiting')} />}
       {!loading && claims.length > 0 && (
         <div className="card overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-rule text-left">
-                <th className="px-3 py-2.5 eyebrow font-medium">Description</th>
-                <th className="px-3 py-2.5 eyebrow font-medium text-right">Amount</th>
-                <th className="px-3 py-2.5 eyebrow font-medium">Status</th>
+                <th className="px-3 py-2.5 eyebrow font-medium">{t('insurance.description')}</th>
+                <th className="px-3 py-2.5 eyebrow font-medium text-right">{t('insurance.amount')}</th>
+                <th className="px-3 py-2.5 eyebrow font-medium">{t('insurance.status')}</th>
                 <th className="px-3 py-2.5 eyebrow font-medium"></th>
               </tr>
             </thead>
@@ -251,7 +257,7 @@ function ClaimsTab() {
                   <td className="px-3 py-2.5 num text-right">{formatMoney(c.claimAmount, company?.currency)}</td>
                   <td className="px-3 py-2.5"><span className={CLAIM_CHIP[c.status]}>{c.status}</span></td>
                   <td className="px-3 py-2.5 text-right">
-                    <button className="btn-ghost !text-accent" onClick={() => setDeciding(c)}>Decide</button>
+                    <button className="btn-ghost !text-accent" onClick={() => setDeciding(c)}>{t('insurance.decide')}</button>
                   </td>
                 </tr>
               ))}
@@ -265,6 +271,7 @@ function ClaimsTab() {
 }
 
 function DecideForm({ claim, onClose, onDecided }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [accounts, setAccounts] = useState([]);
   const [approve, setApprove] = useState(true);
@@ -280,7 +287,7 @@ function DecideForm({ claim, onClose, onDecided }) {
     setSaving(true);
     try {
       await api.post(`/insurance/claims/${claim._id}/decide`, { approve, decisionNote, payoutAccountId: approve ? payoutAccountId : undefined, claimsExpenseAccountId: approve ? claimsExpenseAccountId : undefined });
-      toast(approve ? 'Claim approved and paid out.' : 'Claim rejected.', 'success');
+      toast(approve ? t('insurance.claimApproved') : t('insurance.claimRejected'), 'success');
       onDecided();
     } catch (err) {
       toast(err.message, 'error');
@@ -292,26 +299,26 @@ function DecideForm({ claim, onClose, onDecided }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg font-bold text-ink mb-4">Decide claim</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">{t('insurance.decideClaim')}</p>
         <div className="flex gap-2 mb-3">
-          <button type="button" onClick={() => setApprove(true)} className={approve ? 'btn-primary flex-1' : 'btn-secondary flex-1'}>Approve</button>
-          <button type="button" onClick={() => setApprove(false)} className={!approve ? 'btn-danger flex-1' : 'btn-secondary flex-1'}>Reject</button>
+          <button type="button" onClick={() => setApprove(true)} className={approve ? 'btn-primary flex-1' : 'btn-secondary flex-1'}>{t('insurance.approve')}</button>
+          <button type="button" onClick={() => setApprove(false)} className={!approve ? 'btn-danger flex-1' : 'btn-secondary flex-1'}>{t('insurance.reject')}</button>
         </div>
         <div className="space-y-3">
-          <div><label className="field-label">Decision note</label><input className="field-input" value={decisionNote} onChange={(e) => setDecisionNote(e.target.value)} /></div>
+          <div><label className="field-label">{t('insurance.decisionNote')}</label><input className="field-input" value={decisionNote} onChange={(e) => setDecisionNote(e.target.value)} /></div>
           {approve && (
             <>
               <div>
-                <label className="field-label">Pay out from</label>
+                <label className="field-label">{t('insurance.payOutFrom')}</label>
                 <select required className="field-input" value={payoutAccountId} onChange={(e) => setPayoutAccountId(e.target.value)}>
-                  <option value="">Select…</option>
+                  <option value="">{t('insurance.selectPlaceholder')}</option>
                   {accounts.filter((a) => a.isPaymentAccount).map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="field-label">Claims expense account</label>
+                <label className="field-label">{t('insurance.claimsExpenseAccount')}</label>
                 <select required className="field-input" value={claimsExpenseAccountId} onChange={(e) => setClaimsExpenseAccountId(e.target.value)}>
-                  <option value="">Select…</option>
+                  <option value="">{t('insurance.selectPlaceholder')}</option>
                   {accounts.filter((a) => a.type === 'expense').map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
                 </select>
               </div>
@@ -319,8 +326,8 @@ function DecideForm({ claim, onClose, onDecided }) {
           )}
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Confirm decision'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('insurance.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('insurance.saving') : t('insurance.confirmDecision')}</button>
         </div>
       </form>
     </div>

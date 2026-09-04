@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { INDUSTRY_MODULES } from '../industryModuleRegistry';
 
@@ -14,6 +15,7 @@ const BUSINESS_TYPES = [
 ];
 
 export function SignupPage() {
+  const { t } = useTranslation();
   const { register } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({
@@ -46,7 +48,7 @@ export function SignupPage() {
         <div className="text-center mb-8">
           <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-accent text-white font-display text-xl font-bold mb-3">M</div>
           <p className="font-display text-3xl text-ink">Muhasib</p>
-          <p className="text-sm text-ink-muted mt-1">Create your business's own account</p>
+          <p className="text-sm text-ink-muted mt-1">{t('signup.createBusinessAccount')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="card p-6 space-y-4">
@@ -55,26 +57,26 @@ export function SignupPage() {
           )}
 
           <div>
-            <p className="eyebrow mb-2">Business</p>
+            <p className="eyebrow mb-2">{t('signup.business')}</p>
             <div className="space-y-4">
               <div>
-                <label className="field-label" htmlFor="businessName">Business name</label>
+                <label className="field-label" htmlFor="businessName">{t('signup.businessName')}</label>
                 <input
                   id="businessName" required autoFocus className="field-input"
                   value={form.businessName} onChange={update('businessName')}
-                  placeholder="e.g. Al-Karam Traders"
+                  placeholder={t('signup.businessNamePlaceholder')}
                 />
               </div>
 
               <div>
-                <label className="field-label" htmlFor="industryType">Business type</label>
+                <label className="field-label" htmlFor="industryType">{t('signup.businessType')}</label>
                 <select id="industryType" required className="field-input" value={form.industryType} onChange={update('industryType')}>
-                  {BUSINESS_TYPES.map((t) => (
-                    <option key={t.key} value={t.key}>{t.label}</option>
+                  {BUSINESS_TYPES.map((bt) => (
+                    <option key={bt.key} value={bt.key}>{bt.label}</option>
                   ))}
                 </select>
                 <p className="text-xs text-ink-muted mt-1">
-                  This decides what your dashboard and sidebar show, pick the closest match.
+                  {t('signup.businessTypeHint')}
                 </p>
               </div>
             </div>
@@ -83,33 +85,33 @@ export function SignupPage() {
           <div className="tear-line" />
 
           <div>
-            <p className="eyebrow mb-2">Admin account</p>
+            <p className="eyebrow mb-2">{t('signup.adminAccount')}</p>
             <div className="space-y-4">
               <div>
-                <label className="field-label" htmlFor="adminName">Your name</label>
-                <input id="adminName" required className="field-input" value={form.adminName} onChange={update('adminName')} placeholder="Full name" />
+                <label className="field-label" htmlFor="adminName">{t('signup.yourName')}</label>
+                <input id="adminName" required className="field-input" value={form.adminName} onChange={update('adminName')} placeholder={t('signup.fullNamePlaceholder')} />
               </div>
               <div>
-                <label className="field-label" htmlFor="adminEmail">Email</label>
-                <input id="adminEmail" type="email" required className="field-input" value={form.adminEmail} onChange={update('adminEmail')} placeholder="you@business.com" />
+                <label className="field-label" htmlFor="adminEmail">{t('signup.email')}</label>
+                <input id="adminEmail" type="email" required className="field-input" value={form.adminEmail} onChange={update('adminEmail')} placeholder={t('signup.emailPlaceholder')} />
               </div>
               <div>
-                <label className="field-label" htmlFor="adminPassword">Password</label>
-                <input id="adminPassword" type="password" required minLength={8} className="field-input" value={form.adminPassword} onChange={update('adminPassword')} placeholder="At least 8 characters" />
+                <label className="field-label" htmlFor="adminPassword">{t('signup.password')}</label>
+                <input id="adminPassword" type="password" required minLength={8} className="field-input" value={form.adminPassword} onChange={update('adminPassword')} placeholder={t('signup.passwordPlaceholder')} />
               </div>
             </div>
           </div>
 
           <button type="submit" disabled={loading} className="btn-primary w-full">
-            {loading ? 'Creating your account…' : 'Create business account'}
+            {loading ? t('signup.creatingAccount') : t('signup.createBusinessAccountButton')}
           </button>
         </form>
 
         <p className="text-sm text-ink-muted text-center mt-4">
-          Already have an account? <Link to="/login" className="underline">Sign in</Link>
+          {t('signup.alreadyHaveAccount')} <Link to="/login" className="underline">{t('signup.signIn')}</Link>
         </p>
         <p className="text-xs text-ink-muted text-center mt-4">
-          Your business's data is completely private, no other business on this platform can see it, and you won't see theirs.
+          {t('signup.privacyNote')}
         </p>
       </div>
     </div>

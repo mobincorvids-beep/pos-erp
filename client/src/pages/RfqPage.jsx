@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
@@ -9,6 +10,7 @@ import { formatMoney } from '../lib/format';
 const STATUS_CHIP = { open: 'chip-accent', closed: 'chip-neutral' };
 
 export function RfqPage() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [rfqs, setRfqs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,47 +30,47 @@ export function RfqPage() {
         <>
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="page-title">RFQs</p>
-              <p className="text-sm text-ink-muted mt-1">Manage requests for quotation and compare supplier pricing.</p>
+              <p className="page-title">{t('rfq.title')}</p>
+              <p className="text-sm text-ink-muted mt-1">{t('rfq.subtitle')}</p>
             </div>
             <button className="btn-primary" onClick={() => setShowForm(true)}>
               <span className="material-symbols-outlined text-[18px]">add</span>
-              New RFQ
+              {t('rfq.newRfq')}
             </button>
           </div>
-          <EmptyState title="No RFQs yet" description="Send the same item list to several suppliers and let the system find the cheapest price per item, not just an overall winner." action={<button className="btn-primary" onClick={() => setShowForm(true)}>Create an RFQ</button>} />
+          <EmptyState title={t('rfq.noRfqsYet')} description={t('rfq.emptyStateDescription')} action={<button className="btn-primary" onClick={() => setShowForm(true)}>{t('rfq.createAnRfq')}</button>} />
         </>
       )}
       {!loading && rfqs.length > 0 && (
         <div className="card overflow-hidden flex flex-col min-h-[70vh]">
           <div className="p-6 border-b border-rule flex justify-between items-center bg-surface">
             <div>
-              <p className="page-title">Active Opportunities</p>
-              <p className="text-sm text-ink-muted mt-1">Manage current RFQs and compare supplier pricing.</p>
+              <p className="page-title">{t('rfq.activeOpportunities')}</p>
+              <p className="text-sm text-ink-muted mt-1">{t('rfq.manageDescription')}</p>
             </div>
             <button className="btn-primary" onClick={() => setShowForm(true)}>
               <span className="material-symbols-outlined text-[18px]">add</span>
-              New RFQ
+              {t('rfq.newRfq')}
             </button>
           </div>
           <div className="overflow-x-auto flex-1">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-surface-sunken border-b border-rule">
-                  <th className="py-3 px-6 eyebrow">Items</th>
-                  <th className="py-3 px-6 eyebrow">Status</th>
-                  <th className="py-3 px-6 eyebrow">Created</th>
+                  <th className="py-3 px-6 eyebrow">{t('rfq.items')}</th>
+                  <th className="py-3 px-6 eyebrow">{t('rfq.status')}</th>
+                  <th className="py-3 px-6 eyebrow">{t('rfq.created')}</th>
                   <th className="py-3 px-6"></th>
                 </tr>
               </thead>
               <tbody className="text-sm">
                 {rfqs.map((r) => (
                   <tr key={r._id} className="border-b border-rule last:border-0 hover:bg-accent-soft/30 transition-colors cursor-pointer group" onClick={() => setSelected(r)}>
-                    <td className="py-3 px-6 num text-ink">{r.items.length} item{r.items.length !== 1 ? 's' : ''}</td>
+                    <td className="py-3 px-6 num text-ink">{t('rfq.itemCount', { count: r.items.length })}</td>
                     <td className="py-3 px-6"><span className={STATUS_CHIP[r.status]}>{r.status}</span></td>
                     <td className="py-3 px-6 text-ink-muted">{new Date(r.createdAt).toLocaleDateString()}</td>
                     <td className="py-3 px-6 text-right">
-                      <button className="btn-ghost !text-accent opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => { e.stopPropagation(); setSelected(r); }}>Open</button>
+                      <button className="btn-ghost !text-accent opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => { e.stopPropagation(); setSelected(r); }}>{t('rfq.open')}</button>
                     </td>
                   </tr>
                 ))}
@@ -85,6 +87,7 @@ export function RfqPage() {
 }
 
 function RfqForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [branches, setBranches] = useState([]);
   const [products, setProducts] = useState([]);
@@ -113,7 +116,7 @@ function RfqForm({ onClose, onSaved }) {
         branchId,
         items: lines.filter((l) => l.productId).map((l) => ({ productId: l.productId, variantId: l.variantId, quantity: Number(l.quantity) })),
       });
-      toast('RFQ created.', 'success');
+      toast(t('rfq.rfqCreated'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -125,31 +128,31 @@ function RfqForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-6 w-full max-w-lg max-h-[85vh] overflow-y-auto">
-        <p className="font-display text-lg font-bold text-ink mb-4">New RFQ</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">{t('rfq.newRfq')}</p>
         <select required className="field-input mb-3" value={branchId} onChange={(e) => setBranchId(e.target.value)}>
-          <option value="">Branch…</option>
+          <option value="">{t('rfq.branch')}</option>
           {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
         </select>
 
-        <p className="field-label mb-1">Items requested</p>
+        <p className="field-label mb-1">{t('rfq.itemsRequested')}</p>
         <div className="space-y-2 mb-2">
           {lines.map((line, i) => (
             <div key={i} className="grid grid-cols-3 gap-2">
               <select className="field-input col-span-2" value={line.productId} onChange={(e) => pickProduct(i, e.target.value)}>
-                <option value="">Product…</option>
+                <option value="">{t('rfq.product')}</option>
                 {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
               </select>
-              <input type="number" min="1" className="field-input num" value={line.quantity} onChange={(e) => updateLine(i, { quantity: e.target.value })} placeholder="Qty" />
+              <input type="number" min="1" className="field-input num" value={line.quantity} onChange={(e) => updateLine(i, { quantity: e.target.value })} placeholder={t('rfq.qty')} />
             </div>
           ))}
         </div>
         <button type="button" className="btn-ghost !px-0 text-xs mb-4" onClick={() => setLines([...lines, { productId: '', variantId: '', quantity: 1 }])}>
-          + Add line
+          {t('rfq.addLine')}
         </button>
 
         <div className="flex justify-end gap-2">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Creating…' : 'Create RFQ'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('rfq.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('rfq.creating') : t('rfq.createRfq')}</button>
         </div>
       </form>
     </div>
@@ -157,6 +160,7 @@ function RfqForm({ onClose, onSaved }) {
 }
 
 function RfqDetail({ rfq, onClose, onChanged }) {
+  const { t } = useTranslation();
   const { company } = useAuth();
   const toast = useToast();
   const [quotations, setQuotations] = useState([]);
@@ -177,9 +181,9 @@ function RfqDetail({ rfq, onClose, onChanged }) {
       // warehouse prompt only picks which real warehouse within it receives
       // the resulting orders.
       const warehouses = await api.get(`/org/warehouses?branchId=${rfq.branchId}`);
-      if (!warehouses.length) throw new Error('This branch has no warehouse to receive into.');
+      if (!warehouses.length) throw new Error(t('rfq.noWarehouseError'));
       const orders = await api.post(`/rfqs/${rfq._id}/convert-to-orders`, { branchId: rfq.branchId, warehouseId: warehouses[0]._id });
-      toast(`Created ${orders.length} purchase order${orders.length !== 1 ? 's' : ''}, split by winning supplier.`, 'success');
+      toast(t('rfq.ordersCreated', { count: orders.length }), 'success');
       onChanged();
       onClose();
     } catch (err) {
@@ -194,28 +198,28 @@ function RfqDetail({ rfq, onClose, onChanged }) {
       <div className="card p-6 w-full max-w-2xl max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <p className="eyebrow mb-1">RFQ</p>
-            <p className="font-display text-lg font-bold text-ink">{rfq.items.length} item{rfq.items.length !== 1 ? 's' : ''} requested</p>
+            <p className="eyebrow mb-1">{t('rfq.eyebrow')}</p>
+            <p className="font-display text-lg font-bold text-ink">{t('rfq.itemsRequestedCount', { count: rfq.items.length })}</p>
           </div>
           <div className="flex items-center gap-3">
             <span className={STATUS_CHIP[rfq.status]}>{rfq.status}</span>
-            <button className="btn-ghost" onClick={onClose}>Close</button>
+            <button className="btn-ghost" onClick={onClose}>{t('rfq.close')}</button>
           </div>
         </div>
 
         {rfq.status === 'open' && (
-          <button className="btn-secondary text-xs mb-4" onClick={() => setShowQuoteForm(true)}>+ Submit a supplier quotation</button>
+          <button className="btn-secondary text-xs mb-4" onClick={() => setShowQuoteForm(true)}>{t('rfq.submitSupplierQuotation')}</button>
         )}
 
-        <p className="field-label mb-2">Quotations received ({quotations.length})</p>
-        {quotations.length === 0 && <p className="text-sm text-ink-muted mb-4">No quotations yet.</p>}
+        <p className="field-label mb-2">{t('rfq.quotationsReceived', { count: quotations.length })}</p>
+        {quotations.length === 0 && <p className="text-sm text-ink-muted mb-4">{t('rfq.noQuotationsYet')}</p>}
         {quotations.length > 0 && (
           <div className="card overflow-hidden mb-5">
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="bg-surface-sunken border-b border-rule">
-                  <th className="px-4 py-2.5 eyebrow">Supplier</th>
-                  <th className="px-4 py-2.5 eyebrow text-right">Total</th>
+                  <th className="px-4 py-2.5 eyebrow">{t('rfq.supplier')}</th>
+                  <th className="px-4 py-2.5 eyebrow text-right">{t('rfq.total')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -232,13 +236,13 @@ function RfqDetail({ rfq, onClose, onChanged }) {
 
         {comparison?.bestByItem?.length > 0 && (
           <>
-            <p className="field-label mb-2">Best price per item</p>
+            <p className="field-label mb-2">{t('rfq.bestPricePerItem')}</p>
             <div className="card overflow-hidden mb-5">
               <table className="w-full text-sm border-collapse">
                 <thead>
                   <tr className="bg-surface-sunken border-b border-rule">
-                    <th className="px-4 py-2.5 eyebrow">Winning supplier</th>
-                    <th className="px-4 py-2.5 eyebrow text-right">Unit price</th>
+                    <th className="px-4 py-2.5 eyebrow">{t('rfq.winningSupplier')}</th>
+                    <th className="px-4 py-2.5 eyebrow text-right">{t('rfq.unitPrice')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -253,7 +257,7 @@ function RfqDetail({ rfq, onClose, onChanged }) {
             </div>
             {rfq.status === 'open' && (
               <button className="btn-primary" onClick={convertToOrders} disabled={converting}>
-                {converting ? 'Converting…' : 'Convert to purchase orders'}
+                {converting ? t('rfq.converting') : t('rfq.convertToPurchaseOrders')}
               </button>
             )}
           </>
@@ -266,6 +270,7 @@ function RfqDetail({ rfq, onClose, onChanged }) {
 }
 
 function QuoteForm({ rfq, onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [suppliers, setSuppliers] = useState([]);
   const [supplierId, setSupplierId] = useState('');
@@ -282,7 +287,7 @@ function QuoteForm({ rfq, onClose, onSaved }) {
         supplierId,
         items: rfq.items.map((item, i) => ({ productId: item.productId, variantId: item.variantId, unitPrice: Number(prices[i]) })),
       });
-      toast('Quotation submitted.', 'success');
+      toast(t('rfq.quotationSubmitted'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -294,23 +299,23 @@ function QuoteForm({ rfq, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/30 flex items-center justify-center z-50 px-4">
       <form onSubmit={handleSubmit} className="card p-6 w-full max-w-sm">
-        <p className="font-display text-lg font-bold text-ink mb-4">Submit a quotation</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">{t('rfq.submitAQuotation')}</p>
         <select required className="field-input mb-3" value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
-          <option value="">Supplier…</option>
+          <option value="">{t('rfq.supplier')}</option>
           {suppliers.map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
         </select>
-        <p className="field-label mb-1">Unit price per requested item</p>
+        <p className="field-label mb-1">{t('rfq.unitPricePerItem')}</p>
         <div className="space-y-2">
           {rfq.items.map((item, i) => (
             <div key={i} className="grid grid-cols-2 gap-2 items-center">
-              <span className="text-sm text-ink-muted">Item {i + 1} (qty {item.quantity})</span>
-              <input required type="number" step="0.01" min="0.01" className="field-input num" value={prices[i]} onChange={(e) => setPrices((p) => p.map((v, idx) => idx === i ? e.target.value : v))} placeholder="Unit price" />
+              <span className="text-sm text-ink-muted">{t('rfq.itemN', { index: i + 1, qty: item.quantity })}</span>
+              <input required type="number" step="0.01" min="0.01" className="field-input num" value={prices[i]} onChange={(e) => setPrices((p) => p.map((v, idx) => idx === i ? e.target.value : v))} placeholder={t('rfq.unitPrice')} />
             </div>
           ))}
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Submitting…' : 'Submit quotation'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('rfq.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('rfq.submitting') : t('rfq.submitQuotation')}</button>
         </div>
       </form>
     </div>

@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 
 export function ForgotPasswordPage() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -32,29 +34,29 @@ export function ForgotPasswordPage() {
             M
           </div>
           <p className="font-display text-2xl font-bold text-ink mt-3">Muhasib</p>
-          <p className="eyebrow mt-1">Reset your password</p>
+          <p className="eyebrow mt-1">{t('forgotPassword.resetYourPassword')}</p>
         </div>
 
         {sent ? (
           <div className="card overflow-hidden">
             <div className="h-1.5 bg-accent" />
             <div className="p-6 space-y-4 text-center">
-              <p className="page-title text-lg mb-1">Check your email</p>
-              <p className="text-sm text-ink-muted">If that email exists, we've sent a link to reset your password.</p>
-              <Link to="/login" className="btn-primary w-full inline-flex">Back to sign in</Link>
+              <p className="page-title text-lg mb-1">{t('forgotPassword.checkYourEmail')}</p>
+              <p className="text-sm text-ink-muted">{t('forgotPassword.checkYourEmailDescription')}</p>
+              <Link to="/login" className="btn-primary w-full inline-flex">{t('forgotPassword.backToSignIn')}</Link>
             </div>
           </div>
         ) : (
           <div className="card overflow-hidden">
             <div className="h-1.5 bg-accent" />
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <p className="page-title text-lg mb-1">Forgot password</p>
+              <p className="page-title text-lg mb-1">{t('forgotPassword.forgotPassword')}</p>
 
               {error && (
                 <div className="chip-danger !inline-block w-full !rounded-lg px-3 py-2 text-sm">{error}</div>
               )}
               <div>
-                <label className="field-label" htmlFor="email">Email</label>
+                <label className="field-label" htmlFor="email">{t('forgotPassword.email')}</label>
                 <input
                   id="email" type="email" required autoFocus
                   className="field-input"
@@ -63,14 +65,14 @@ export function ForgotPasswordPage() {
                 />
               </div>
               <button type="submit" disabled={loading} className="btn-primary w-full">
-                {loading ? 'Sending…' : 'Send reset link'}
+                {loading ? t('forgotPassword.sendingEllipsis') : t('forgotPassword.sendResetLink')}
               </button>
             </form>
           </div>
         )}
 
         <p className="text-sm text-ink-muted text-center mt-5">
-          <Link to="/login" className="text-accent font-semibold underline">Back to sign in</Link>
+          <Link to="/login" className="text-accent font-semibold underline">{t('forgotPassword.backToSignIn')}</Link>
         </p>
       </div>
     </div>

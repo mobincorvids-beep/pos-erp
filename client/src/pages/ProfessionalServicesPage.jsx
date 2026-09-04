@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
@@ -7,6 +8,7 @@ import { EmptyState } from '../components/EmptyState';
 import { formatMoney, formatDate } from '../lib/format';
 
 export function ProfessionalServicesPage() {
+  const { t } = useTranslation();
   const { company } = useAuth();
   const toast = useToast();
   const [customers, setCustomers] = useState([]);
@@ -30,26 +32,26 @@ export function ProfessionalServicesPage() {
     <div>
       <div className="flex items-center justify-between mb-1">
         <div>
-          <p className="page-title">Time &amp; billing</p>
-          <p className="text-sm text-ink-muted mt-1">Track unbilled hours per client and turn them into an invoice.</p>
+          <p className="page-title">{t('professionalServices.title')}</p>
+          <p className="text-sm text-ink-muted mt-1">{t('professionalServices.subtitle')}</p>
         </div>
         <button className="btn-primary" onClick={() => setShowLogForm(true)}>
           <span className="font-icon text-base leading-none">add</span>
-          Log time
+          {t('professionalServices.logTime')}
         </button>
       </div>
 
       <div className="card p-4 mt-5 mb-5 max-w-md">
-        <label className="field-label">Client</label>
+        <label className="field-label">{t('professionalServices.client')}</label>
         <select className="field-input" value={clientCustomerId} onChange={(e) => setClientCustomerId(e.target.value)}>
-          <option value="">Select a client to view unbilled time…</option>
+          <option value="">{t('professionalServices.selectClientPlaceholder')}</option>
           {customers.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
         </select>
       </div>
 
-      {!clientCustomerId && <EmptyState title="Select a client" description="Unbilled time entries are viewed per client." />}
+      {!clientCustomerId && <EmptyState title={t('professionalServices.selectAClient')} description={t('professionalServices.selectAClientDescription')} />}
       {clientCustomerId && !entries && <Loading />}
-      {clientCustomerId && entries?.length === 0 && <EmptyState title="No unbilled time for this client" />}
+      {clientCustomerId && entries?.length === 0 && <EmptyState title={t('professionalServices.noUnbilledTime')} />}
       {clientCustomerId && entries?.length > 0 && (
         <>
           <div className="card overflow-hidden mb-4">
@@ -57,12 +59,12 @@ export function ProfessionalServicesPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken">
-                    <th className="px-4 py-2.5 font-semibold">Employee</th>
-                    <th className="px-4 py-2.5 font-semibold">Description</th>
-                    <th className="px-4 py-2.5 font-semibold">Date</th>
-                    <th className="px-4 py-2.5 font-semibold text-right">Hours</th>
-                    <th className="px-4 py-2.5 font-semibold text-right">Rate</th>
-                    <th className="px-4 py-2.5 font-semibold text-right">Amount</th>
+                    <th className="px-4 py-2.5 font-semibold">{t('professionalServices.employee')}</th>
+                    <th className="px-4 py-2.5 font-semibold">{t('professionalServices.description')}</th>
+                    <th className="px-4 py-2.5 font-semibold">{t('professionalServices.date')}</th>
+                    <th className="px-4 py-2.5 font-semibold text-right">{t('professionalServices.hours')}</th>
+                    <th className="px-4 py-2.5 font-semibold text-right">{t('professionalServices.rate')}</th>
+                    <th className="px-4 py-2.5 font-semibold text-right">{t('professionalServices.amount')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -82,12 +84,12 @@ export function ProfessionalServicesPage() {
           </div>
           <div className="card p-4 flex items-center justify-between max-w-md mb-4">
             <div>
-              <p className="eyebrow">Total</p>
-              <p className="text-sm text-ink-muted mt-0.5">{totalHours} hours: each entry billed at its own rate, never an averaged one</p>
+              <p className="eyebrow">{t('professionalServices.total')}</p>
+              <p className="text-sm text-ink-muted mt-0.5">{t('professionalServices.hoursBilledHint', { hours: totalHours })}</p>
             </div>
             <p className="font-display text-xl num font-bold text-ink">{formatMoney(totalAmount, company?.currency)}</p>
           </div>
-          <button className="btn-primary" onClick={() => setShowInvoiceForm(true)}>Generate invoice for this client</button>
+          <button className="btn-primary" onClick={() => setShowInvoiceForm(true)}>{t('professionalServices.generateInvoiceForClient')}</button>
         </>
       )}
 
@@ -98,6 +100,7 @@ export function ProfessionalServicesPage() {
 }
 
 function LogTimeForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [branches, setBranches] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -116,7 +119,7 @@ function LogTimeForm({ onClose, onSaved }) {
     setSaving(true);
     try {
       await api.post('/professional-services/time-entries', { ...form, hours: Number(form.hours), hourlyRate: Number(form.hourlyRate) });
-      toast('Time logged.', 'success');
+      toast(t('professionalServices.timeLogged'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -128,39 +131,39 @@ function LogTimeForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg font-bold text-ink mb-4">Log time</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">{t('professionalServices.logTime')}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Branch</label>
+            <label className="field-label">{t('professionalServices.branch')}</label>
             <select required className="field-input" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('professionalServices.selectPlaceholder')}</option>
               {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Employee</label>
+            <label className="field-label">{t('professionalServices.employee')}</label>
             <select required className="field-input" value={form.employeeId} onChange={(e) => setForm({ ...form, employeeId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('professionalServices.selectPlaceholder')}</option>
               {employees.map((e) => <option key={e._id} value={e._id}>{e.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Client</label>
+            <label className="field-label">{t('professionalServices.client')}</label>
             <select required className="field-input" value={form.clientCustomerId} onChange={(e) => setForm({ ...form, clientCustomerId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('professionalServices.selectPlaceholder')}</option>
               {customers.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
             </select>
           </div>
-          <div><label className="field-label">Description</label><input required className="field-input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
+          <div><label className="field-label">{t('professionalServices.description')}</label><input required className="field-input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
           <div className="grid grid-cols-3 gap-2">
-            <div><label className="field-label">Date</label><input type="date" required className="field-input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></div>
-            <div><label className="field-label">Hours</label><input type="number" step="0.25" required className="field-input num" value={form.hours} onChange={(e) => setForm({ ...form, hours: e.target.value })} /></div>
-            <div><label className="field-label">Rate</label><input type="number" required className="field-input num" value={form.hourlyRate} onChange={(e) => setForm({ ...form, hourlyRate: e.target.value })} /></div>
+            <div><label className="field-label">{t('professionalServices.date')}</label><input type="date" required className="field-input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></div>
+            <div><label className="field-label">{t('professionalServices.hours')}</label><input type="number" step="0.25" required className="field-input num" value={form.hours} onChange={(e) => setForm({ ...form, hours: e.target.value })} /></div>
+            <div><label className="field-label">{t('professionalServices.rate')}</label><input type="number" required className="field-input num" value={form.hourlyRate} onChange={(e) => setForm({ ...form, hourlyRate: e.target.value })} /></div>
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Logging…' : 'Log time'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('professionalServices.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('professionalServices.logging') : t('professionalServices.logTime')}</button>
         </div>
       </form>
     </div>
@@ -168,6 +171,7 @@ function LogTimeForm({ onClose, onSaved }) {
 }
 
 function InvoiceForm({ clientCustomerId, entryCount, totalAmount, onClose, onSaved }) {
+  const { t } = useTranslation();
   const { company } = useAuth();
   const toast = useToast();
   const [warehouses, setWarehouses] = useState([]);
@@ -187,9 +191,9 @@ function InvoiceForm({ clientCustomerId, entryCount, totalAmount, onClose, onSav
     setSaving(true);
     try {
       const product = products.find((p) => p._id === form.billingProductId);
-      if (!product) throw new Error('Select a billing product: it must have trackingMode "service".');
+      if (!product) throw new Error(t('professionalServices.selectBillingProductError'));
       const result = await api.post(`/professional-services/clients/${clientCustomerId}/generate-invoice`, { ...form, billingVariantId: product.variants[0]?._id, paymentAccountId: form.paymentAccountId || undefined });
-      toast(`Invoiced ${result.entriesInvoiced} entries: ${formatMoney(result.totalAmount, company?.currency)}.`, 'success');
+      toast(t('professionalServices.invoicedEntries', { count: result.entriesInvoiced, amount: formatMoney(result.totalAmount, company?.currency) }), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -201,34 +205,34 @@ function InvoiceForm({ clientCustomerId, entryCount, totalAmount, onClose, onSav
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg font-bold text-ink mb-1">Generate invoice</p>
-        <p className="text-sm text-ink-muted mb-4">{entryCount} unbilled entries: {formatMoney(totalAmount, company?.currency)}</p>
+        <p className="font-display text-lg font-bold text-ink mb-1">{t('professionalServices.generateInvoice')}</p>
+        <p className="text-sm text-ink-muted mb-4">{t('professionalServices.unbilledEntriesSummary', { count: entryCount, amount: formatMoney(totalAmount, company?.currency) })}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Warehouse (for the Sale document)</label>
+            <label className="field-label">{t('professionalServices.warehouseForSale')}</label>
             <select required className="field-input" value={form.warehouseId} onChange={(e) => setForm({ ...form, warehouseId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('professionalServices.selectPlaceholder')}</option>
               {warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Billing product (trackingMode "service")</label>
+            <label className="field-label">{t('professionalServices.billingProduct')}</label>
             <select required className="field-input" value={form.billingProductId} onChange={(e) => setForm({ ...form, billingProductId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('professionalServices.selectPlaceholder')}</option>
               {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Payment account (leave blank to invoice without collecting payment now)</label>
+            <label className="field-label">{t('professionalServices.paymentAccountOptional')}</label>
             <select className="field-input" value={form.paymentAccountId} onChange={(e) => setForm({ ...form, paymentAccountId: e.target.value })}>
-              <option value="">Bill as a receivable</option>
+              <option value="">{t('professionalServices.billAsReceivable')}</option>
               {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
             </select>
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Generating…' : 'Generate invoice'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('professionalServices.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('professionalServices.generating') : t('professionalServices.generateInvoice')}</button>
         </div>
       </form>
     </div>

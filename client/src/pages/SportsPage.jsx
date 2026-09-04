@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
@@ -9,13 +10,14 @@ import { formatMoney } from '../lib/format';
 const STATUS_CHIP = { booked: 'chip-accent', cancelled: 'chip-danger' };
 
 export function SportsPage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState('bookings');
   return (
     <div>
-      <p className="eyebrow mb-1">Sports & facilities</p>
-      <p className="page-title mb-5">Bookings & courts</p>
+      <p className="eyebrow mb-1">{t('sports.sportsAndFacilities')}</p>
+      <p className="page-title mb-5">{t('sports.title')}</p>
       <div className="flex gap-2 mb-5">
-        {[['bookings', 'Bookings'], ['facilities', 'Facilities']].map(([key, label]) => (
+        {[['bookings', t('sports.bookings')], ['facilities', t('sports.facilities')]].map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)} className={tab === key ? 'pill-active' : 'pill'}>
             {label}
           </button>
@@ -27,6 +29,7 @@ export function SportsPage() {
 }
 
 function BookingsTab() {
+  const { t } = useTranslation();
   const { company } = useAuth();
   const toast = useToast();
   const [bookings, setBookings] = useState([]);
@@ -42,7 +45,7 @@ function BookingsTab() {
   async function cancel(id) {
     try {
       await api.post(`/sports/bookings/${id}/cancel`, {});
-      toast('Booking cancelled.', 'success');
+      toast(t('sports.bookingCancelled'), 'success');
       load();
     } catch (err) { toast(err.message, 'error'); }
   }
@@ -50,19 +53,19 @@ function BookingsTab() {
   return (
     <div>
       <div className="flex justify-end mb-3">
-        <button className="btn-primary" onClick={() => setShowForm(true)}>+ Book a slot</button>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>{t('sports.bookASlot')}</button>
       </div>
       {loading && <Loading />}
-      {!loading && bookings.length === 0 && <EmptyState title="No bookings yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Book one</button>} />}
+      {!loading && bookings.length === 0 && <EmptyState title={t('sports.noBookingsYet')} action={<button className="btn-primary" onClick={() => setShowForm(true)}>{t('sports.bookOne')}</button>} />}
       {!loading && bookings.length > 0 && (
         <div className="card overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-rule text-left bg-surface-sunken">
-                <th className="px-4 py-2.5 eyebrow font-medium">Customer</th>
-                <th className="px-4 py-2.5 eyebrow font-medium">From</th>
-                <th className="px-4 py-2.5 eyebrow font-medium">To</th>
-                <th className="px-4 py-2.5 eyebrow font-medium">Status</th>
+                <th className="px-4 py-2.5 eyebrow font-medium">{t('sports.customer')}</th>
+                <th className="px-4 py-2.5 eyebrow font-medium">{t('sports.from')}</th>
+                <th className="px-4 py-2.5 eyebrow font-medium">{t('sports.to')}</th>
+                <th className="px-4 py-2.5 eyebrow font-medium">{t('sports.status')}</th>
                 <th className="px-4 py-2.5 eyebrow font-medium"></th>
               </tr>
             </thead>
@@ -74,7 +77,7 @@ function BookingsTab() {
                   <td className="px-4 py-2.5 num text-ink-muted">{new Date(b.endTime).toLocaleString()}</td>
                   <td className="px-4 py-2.5"><span className={STATUS_CHIP[b.status]}>{b.status}</span></td>
                   <td className="px-4 py-2.5 text-right">
-                    {b.status === 'booked' && <button className="btn-ghost !text-danger" onClick={() => cancel(b._id)}>Cancel</button>}
+                    {b.status === 'booked' && <button className="btn-ghost !text-danger" onClick={() => cancel(b._id)}>{t('sports.cancel')}</button>}
                   </td>
                 </tr>
               ))}
@@ -88,6 +91,7 @@ function BookingsTab() {
 }
 
 function BookingForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [facilities, setFacilities] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -112,10 +116,10 @@ function BookingForm({ onClose, onSaved }) {
     setSaving(true);
     try {
       const product = products.find((p) => p._id === form.billingProductId);
-      if (!product) throw new Error('Select a billing product: it must have trackingMode "service".');
+      if (!product) throw new Error(t('sports.selectBillingProductError'));
       const { facilityId, ...rest } = form;
       await api.post(`/sports/facilities/${facilityId}/book`, { ...rest, billingVariantId: product.variants[0]?._id });
-      toast('Slot booked.', 'success');
+      toast(t('sports.slotBooked'), 'success');
       onSaved();
     } catch (err) {
       // The real overlap-conflict message from the backend is shown as-is —
@@ -130,52 +134,52 @@ function BookingForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 backdrop-blur-[1px] flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm max-h-[85vh] overflow-y-auto">
-        <p className="eyebrow mb-1">Sports & facilities</p>
-        <p className="font-display text-lg font-bold text-ink mb-4">Book a slot</p>
+        <p className="eyebrow mb-1">{t('sports.sportsAndFacilities')}</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">{t('sports.bookASlot')}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Facility</label>
+            <label className="field-label">{t('sports.facility')}</label>
             <select required className="field-input" value={form.facilityId} onChange={(e) => setForm({ ...form, facilityId: e.target.value })}>
-              <option value="">Select…</option>
-              {facilities.map((f) => <option key={f._id} value={f._id}>{f.name}: {formatMoney(f.hourlyRate)}/hr</option>)}
+              <option value="">{t('sports.selectPlaceholder')}</option>
+              {facilities.map((f) => <option key={f._id} value={f._id}>{t('sports.facilityHourlyRate', { name: f.name, rate: formatMoney(f.hourlyRate) })}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Customer</label>
+            <label className="field-label">{t('sports.customer')}</label>
             <select required className="field-input" value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('sports.selectPlaceholder')}</option>
               {customers.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <div><label className="field-label">Start</label><input type="datetime-local" required className="field-input" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} /></div>
-            <div><label className="field-label">End</label><input type="datetime-local" required className="field-input" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} /></div>
+            <div><label className="field-label">{t('sports.start')}</label><input type="datetime-local" required className="field-input" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} /></div>
+            <div><label className="field-label">{t('sports.end')}</label><input type="datetime-local" required className="field-input" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} /></div>
           </div>
           <div>
-            <label className="field-label">Billing product (trackingMode "service")</label>
+            <label className="field-label">{t('sports.billingProduct')}</label>
             <select required className="field-input" value={form.billingProductId} onChange={(e) => setForm({ ...form, billingProductId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('sports.selectPlaceholder')}</option>
               {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Warehouse (for the Sale document)</label>
+            <label className="field-label">{t('sports.warehouseForSale')}</label>
             <select required className="field-input" value={form.warehouseId} onChange={(e) => setForm({ ...form, warehouseId: e.target.value })} disabled={!selectedFacility}>
-              <option value="">Select…</option>
+              <option value="">{t('sports.selectPlaceholder')}</option>
               {warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Payment account</label>
+            <label className="field-label">{t('sports.paymentAccount')}</label>
             <select required className="field-input" value={form.paymentAccountId} onChange={(e) => setForm({ ...form, paymentAccountId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('sports.selectPlaceholder')}</option>
               {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
             </select>
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Booking…' : 'Book'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('sports.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('sports.booking') : t('sports.book')}</button>
         </div>
       </form>
     </div>
@@ -183,6 +187,7 @@ function BookingForm({ onClose, onSaved }) {
 }
 
 function FacilitiesTab() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [facilities, setFacilities] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -197,10 +202,10 @@ function FacilitiesTab() {
   return (
     <div>
       <div className="flex justify-end mb-3">
-        <button className="btn-primary" onClick={() => setShowForm(true)}>+ Add facility</button>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>{t('sports.addFacility')}</button>
       </div>
       {loading && <Loading />}
-      {!loading && facilities.length === 0 && <EmptyState title="No facilities yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Add one</button>} />}
+      {!loading && facilities.length === 0 && <EmptyState title={t('sports.noFacilitiesYet')} action={<button className="btn-primary" onClick={() => setShowForm(true)}>{t('sports.addOne')}</button>} />}
       {!loading && facilities.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {facilities.map((f) => (
@@ -220,6 +225,7 @@ function FacilitiesTab() {
 }
 
 function FacilityForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [branches, setBranches] = useState([]);
   const [form, setForm] = useState({ branchId: '', name: '', hourlyRate: '' });
@@ -232,7 +238,7 @@ function FacilityForm({ onClose, onSaved }) {
     setSaving(true);
     try {
       await api.post('/sports/facilities', { ...form, hourlyRate: Number(form.hourlyRate) });
-      toast('Facility added.', 'success');
+      toast(t('sports.facilityAdded'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -244,22 +250,22 @@ function FacilityForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 backdrop-blur-[1px] flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="eyebrow mb-1">Sports & facilities</p>
-        <p className="font-display text-lg font-bold text-ink mb-4">Add facility</p>
+        <p className="eyebrow mb-1">{t('sports.sportsAndFacilities')}</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">{t('sports.addFacility')}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Branch</label>
+            <label className="field-label">{t('sports.branch')}</label>
             <select required className="field-input" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('sports.selectPlaceholder')}</option>
               {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
             </select>
           </div>
-          <div><label className="field-label">Name</label><input required className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Court 1, Field A…" /></div>
-          <div><label className="field-label">Hourly rate</label><input type="number" required className="field-input num" value={form.hourlyRate} onChange={(e) => setForm({ ...form, hourlyRate: e.target.value })} /></div>
+          <div><label className="field-label">{t('sports.name')}</label><input required className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t('sports.namePlaceholder')} /></div>
+          <div><label className="field-label">{t('sports.hourlyRate')}</label><input type="number" required className="field-input num" value={form.hourlyRate} onChange={(e) => setForm({ ...form, hourlyRate: e.target.value })} /></div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('sports.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('sports.saving') : t('sports.save')}</button>
         </div>
       </form>
     </div>

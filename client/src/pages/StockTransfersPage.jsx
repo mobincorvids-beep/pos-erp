@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useToast } from '../components/Toast';
 import { Loading } from '../components/Loading';
@@ -12,6 +13,7 @@ const STATUS_CHIP = {
 };
 
 export function StockTransfersPage() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [transfers, setTransfers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,7 +28,7 @@ export function StockTransfersPage() {
   async function receive(id) {
     try {
       await api.post(`/stock-transfers/${id}/receive`);
-      toast('Transfer received.', 'success');
+      toast(t('stockTransfers.transferReceived'), 'success');
       load();
     } catch (err) { toast(err.message, 'error'); }
   }
@@ -35,18 +37,18 @@ export function StockTransfersPage() {
     <div>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
-          <p className="page-title">Stock transfers</p>
-          <p className="text-sm text-ink-muted mt-1">Move stock between warehouses and track it in transit until confirmed received.</p>
+          <p className="page-title">{t('stockTransfers.title')}</p>
+          <p className="text-sm text-ink-muted mt-1">{t('stockTransfers.subtitle')}</p>
         </div>
         <button className="btn-primary" onClick={() => setShowNew(true)}>
           <span className="font-icon text-[18px] leading-none">add</span>
-          New transfer
+          {t('stockTransfers.newTransfer')}
         </button>
       </div>
 
       {loading && <Loading />}
       {!loading && transfers.length === 0 && (
-        <EmptyState title="No transfers yet" description="Move stock between two warehouses and track it in transit until confirmed received." />
+        <EmptyState title={t('stockTransfers.noTransfersYet')} description={t('stockTransfers.subtitle')} />
       )}
       {!loading && transfers.length > 0 && (
         <div className="card overflow-hidden">
@@ -54,20 +56,20 @@ export function StockTransfersPage() {
             <table className="w-full text-left border-collapse whitespace-nowrap">
               <thead className="bg-surface-sunken">
                 <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide">
-                  <th className="py-3 px-4 font-semibold">Date</th>
-                  <th className="py-3 px-4 font-semibold">Items</th>
-                  <th className="py-3 px-4 font-semibold">Status</th>
+                  <th className="py-3 px-4 font-semibold">{t('stockTransfers.date')}</th>
+                  <th className="py-3 px-4 font-semibold">{t('stockTransfers.items')}</th>
+                  <th className="py-3 px-4 font-semibold">{t('stockTransfers.status')}</th>
                   <th className="py-3 px-4 font-semibold"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-rule">
-                {transfers.map((t) => (
-                  <tr key={t._id} className="transition-colors hover:bg-accent-soft/20">
-                    <td className="py-3 px-4 text-ink-muted">{formatDate(t.createdAt)}</td>
-                    <td className="py-3 px-4 num text-ink">{t.items.reduce((s, i) => s + i.quantity, 0)} units, {t.items.length} line(s)</td>
-                    <td className="py-3 px-4"><span className={STATUS_CHIP[t.status] || 'chip-neutral'}>{t.status.replace('_', ' ')}</span></td>
+                {transfers.map((t2) => (
+                  <tr key={t2._id} className="transition-colors hover:bg-accent-soft/20">
+                    <td className="py-3 px-4 text-ink-muted">{formatDate(t2.createdAt)}</td>
+                    <td className="py-3 px-4 num text-ink">{t('stockTransfers.unitsLines', { units: t2.items.reduce((s, i) => s + i.quantity, 0), lines: t2.items.length })}</td>
+                    <td className="py-3 px-4"><span className={STATUS_CHIP[t2.status] || 'chip-neutral'}>{t2.status.replace('_', ' ')}</span></td>
                     <td className="py-3 px-4 text-right">
-                      {t.status === 'in_transit' && <button className="btn-ghost !text-accent" onClick={() => receive(t._id)}>Mark received</button>}
+                      {t2.status === 'in_transit' && <button className="btn-ghost !text-accent" onClick={() => receive(t2._id)}>{t('stockTransfers.markReceived')}</button>}
                     </td>
                   </tr>
                 ))}
@@ -82,6 +84,7 @@ export function StockTransfersPage() {
 }
 
 function NewTransferModal({ onClose, onCreated }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [warehouses, setWarehouses] = useState([]);
   const [products, setProducts] = useState([]);
@@ -107,8 +110,8 @@ function NewTransferModal({ onClose, onCreated }) {
   function removeLine(i) { setLines(lines.filter((_, idx) => idx !== i)); }
 
   async function submit() {
-    if (!fromWarehouseId || !toWarehouseId) return toast('Choose both warehouses.', 'error');
-    if (fromWarehouseId === toWarehouseId) return toast('Source and destination must be different.', 'error');
+    if (!fromWarehouseId || !toWarehouseId) return toast(t('stockTransfers.chooseBothWarehouses'), 'error');
+    if (fromWarehouseId === toWarehouseId) return toast(t('stockTransfers.sourceDestMustDiffer'), 'error');
     const items = lines
       .filter((l) => l.productId && Number(l.quantity) > 0)
       .map((l) => {
@@ -117,12 +120,12 @@ function NewTransferModal({ onClose, onCreated }) {
         return { productId: l.productId, variantId: variant?._id, quantity: Number(l.quantity) };
       })
       .filter((l) => l.variantId);
-    if (items.length === 0) return toast('Add at least one product and quantity.', 'error');
+    if (items.length === 0) return toast(t('stockTransfers.addAtLeastOneProduct'), 'error');
 
     setBusy(true);
     try {
       await api.post('/stock-transfers', { fromWarehouseId, toWarehouseId, items, receiveImmediately });
-      toast(receiveImmediately ? 'Transfer completed.' : 'Transfer initiated: mark it received once goods arrive.', 'success');
+      toast(receiveImmediately ? t('stockTransfers.transferCompleted') : t('stockTransfers.transferInitiated'), 'success');
       onCreated();
       onClose();
     } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }
@@ -131,35 +134,35 @@ function NewTransferModal({ onClose, onCreated }) {
   return (
     <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50" onClick={onClose}>
       <div className="card p-5 w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
-        <p className="font-display text-lg font-semibold mb-4">New stock transfer</p>
+        <p className="font-display text-lg font-semibold mb-4">{t('stockTransfers.newStockTransfer')}</p>
 
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div>
-            <label className="field-label">From warehouse</label>
+            <label className="field-label">{t('stockTransfers.fromWarehouse')}</label>
             <select className="field-input" value={fromWarehouseId} onChange={(e) => setFromWarehouseId(e.target.value)}>
-              <option value="">Select...</option>
+              <option value="">{t('stockTransfers.select')}</option>
               {warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">To warehouse</label>
+            <label className="field-label">{t('stockTransfers.toWarehouse')}</label>
             <select className="field-input" value={toWarehouseId} onChange={(e) => setToWarehouseId(e.target.value)}>
-              <option value="">Select...</option>
+              <option value="">{t('stockTransfers.select')}</option>
               {warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
             </select>
           </div>
         </div>
 
-        <label className="field-label">Items</label>
+        <label className="field-label">{t('stockTransfers.items')}</label>
         <div className="space-y-2 mb-3">
           {lines.map((line, i) => (
             <div key={i} className="flex gap-2">
               <select className="field-input flex-1" value={line.productId} onChange={(e) => updateLine(i, { productId: e.target.value })}>
-                <option value="">Select product...</option>
+                <option value="">{t('stockTransfers.selectProduct')}</option>
                 {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
               </select>
               <input
-                type="number" className="field-input w-24" placeholder="Qty"
+                type="number" className="field-input w-24" placeholder={t('stockTransfers.qty')}
                 value={line.quantity} onChange={(e) => updateLine(i, { quantity: e.target.value })}
               />
               {lines.length > 1 && <button className="btn-ghost !text-danger" onClick={() => removeLine(i)}>&times;</button>}
@@ -168,17 +171,17 @@ function NewTransferModal({ onClose, onCreated }) {
         </div>
         <button className="btn-ghost !text-accent mb-4" onClick={addLine}>
           <span className="font-icon text-[16px] leading-none">add</span>
-          Add another item
+          {t('stockTransfers.addAnotherItem')}
         </button>
 
         <label className="flex items-center gap-2 text-sm mb-4">
           <input type="checkbox" checked={receiveImmediately} onChange={(e) => setReceiveImmediately(e.target.checked)} />
-          Receive immediately (same-site transfer, skip the in-transit step)
+          {t('stockTransfers.receiveImmediately')}
         </label>
 
         <div className="flex gap-2 justify-end">
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn-primary" disabled={busy} onClick={submit}>Create transfer</button>
+          <button className="btn-secondary" onClick={onClose}>{t('stockTransfers.cancel')}</button>
+          <button className="btn-primary" disabled={busy} onClick={submit}>{t('stockTransfers.createTransfer')}</button>
         </div>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
@@ -7,6 +8,7 @@ import { EmptyState } from '../components/EmptyState';
 import { formatMoney } from '../lib/format';
 
 export function CostCentersPage() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [costCenters, setCostCenters] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,32 +25,32 @@ export function CostCentersPage() {
     <div>
       <div className="flex justify-between items-end flex-wrap gap-4 mb-6">
         <div>
-          <p className="page-title">Cost Centers</p>
-          <p className="text-sm text-ink-muted mt-1 max-w-2xl">Tag any voucher entry with a cost center (a department, a project, an arbitrary internal grouping) to see a real profit &amp; loss scoped to just that entry, even when it shares a voucher with untagged or differently-tagged money.</p>
+          <p className="page-title">{t('costCenters.title')}</p>
+          <p className="text-sm text-ink-muted mt-1 max-w-2xl">{t('costCenters.subtitle')}</p>
         </div>
         <button className="btn-primary" onClick={() => setShowForm(true)}>
           <span className="material-symbols-outlined text-sm">add</span>
-          New cost center
+          {t('costCenters.newCostCenter')}
         </button>
       </div>
 
       {loading && <Loading />}
       {!loading && costCenters.length === 0 && (
-        <EmptyState title="No cost centers yet" description="Create one, then tag it on voucher entries wherever your accounting flow supports it." action={<button className="btn-primary" onClick={() => setShowForm(true)}>New cost center</button>} />
+        <EmptyState title={t('costCenters.noCostCentersYet')} description={t('costCenters.noCostCentersDescription')} action={<button className="btn-primary" onClick={() => setShowForm(true)}>{t('costCenters.newCostCenter')}</button>} />
       )}
       {!loading && costCenters.length > 0 && (
         <div className="card overflow-hidden">
           <div className="px-5 py-4 border-b border-rule flex justify-between items-center bg-surface-sunken/40">
-            <p className="font-display text-lg font-semibold text-ink">Cost Centers</p>
-            <span className="eyebrow">{costCenters.length} centers</span>
+            <p className="font-display text-lg font-semibold text-ink">{t('costCenters.title')}</p>
+            <span className="eyebrow">{t('costCenters.centersCount', { count: costCenters.length })}</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[480px]">
               <thead>
                 <tr className="border-b border-rule bg-surface-sunken/60">
-                  <th className="py-3 px-5 eyebrow font-medium">Name</th>
-                  <th className="py-3 px-5 eyebrow font-medium">Code</th>
-                  <th className="py-3 px-5 eyebrow font-medium text-right">Actions</th>
+                  <th className="py-3 px-5 eyebrow font-medium">{t('costCenters.name')}</th>
+                  <th className="py-3 px-5 eyebrow font-medium">{t('costCenters.code')}</th>
+                  <th className="py-3 px-5 eyebrow font-medium text-right">{t('costCenters.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-rule">
@@ -64,7 +66,7 @@ export function CostCentersPage() {
                     </td>
                     <td className="py-3 px-5 text-sm text-ink-muted num">{c.code || '-'}</td>
                     <td className="py-3 px-5 text-right">
-                      <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => setViewing(c)}>View P&amp;L</button>
+                      <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => setViewing(c)}>{t('costCenters.viewPnl')}</button>
                     </td>
                   </tr>
                 ))}
@@ -81,6 +83,7 @@ export function CostCentersPage() {
 }
 
 function CostCenterForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [form, setForm] = useState({ name: '', code: '' });
   const [saving, setSaving] = useState(false);
@@ -90,7 +93,7 @@ function CostCenterForm({ onClose, onSaved }) {
     setSaving(true);
     try {
       await api.post('/cost-centers', form);
-      toast('Cost center created.', 'success');
+      toast(t('costCenters.costCenterCreated'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -102,20 +105,20 @@ function CostCenterForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg font-semibold text-accent mb-4">New cost center</p>
+        <p className="font-display text-lg font-semibold text-accent mb-4">{t('costCenters.newCostCenter')}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Name</label>
+            <label className="field-label">{t('costCenters.name')}</label>
             <input required className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </div>
           <div>
-            <label className="field-label">Code (optional)</label>
+            <label className="field-label">{t('costCenters.codeOptional')}</label>
             <input className="field-input" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Creating…' : 'Create'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('costCenters.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('costCenters.creating') : t('costCenters.create')}</button>
         </div>
       </form>
     </div>
@@ -123,6 +126,7 @@ function CostCenterForm({ onClose, onSaved }) {
 }
 
 function CostCenterPnl({ costCenter, onClose }) {
+  const { t } = useTranslation();
   const { company } = useAuth();
   const toast = useToast();
   const [from, setFrom] = useState(new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10));
@@ -140,8 +144,8 @@ function CostCenterPnl({ costCenter, onClose }) {
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <div className="card p-5 w-full max-w-lg max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
-          <p className="font-display text-lg font-semibold text-accent">{costCenter.name}: P&amp;L</p>
-          <button className="btn-ghost" onClick={onClose}>Close</button>
+          <p className="font-display text-lg font-semibold text-accent">{t('costCenters.pnlTitle', { name: costCenter.name })}</p>
+          <button className="btn-ghost" onClick={onClose}>{t('costCenters.close')}</button>
         </div>
         <div className="flex gap-2 mb-4">
           <input type="date" className="field-input" value={from} onChange={(e) => setFrom(e.target.value)} />
@@ -153,20 +157,20 @@ function CostCenterPnl({ costCenter, onClose }) {
           <>
             <div className="grid grid-cols-3 gap-3 mb-4">
               <div className="card p-3">
-                <p className="eyebrow">Income</p>
+                <p className="eyebrow">{t('costCenters.income')}</p>
                 <p className="font-display text-lg font-semibold mt-1 num text-ink">{formatMoney(report.totalIncome, company?.currency)}</p>
               </div>
               <div className="card p-3">
-                <p className="eyebrow">Expenses</p>
+                <p className="eyebrow">{t('costCenters.expenses')}</p>
                 <p className="font-display text-lg font-semibold mt-1 num text-ink">{formatMoney(report.totalExpenses, company?.currency)}</p>
               </div>
               <div className="card p-3">
-                <p className="eyebrow">Net</p>
+                <p className="eyebrow">{t('costCenters.net')}</p>
                 <p className={`font-display text-lg font-semibold mt-1 num ${report.netProfit < 0 ? 'text-danger' : 'text-accent-strong'}`}>{formatMoney(report.netProfit, company?.currency)}</p>
               </div>
             </div>
             {report.income.length === 0 && report.expenses.length === 0 && (
-              <p className="text-sm text-ink-muted">No voucher entries have been tagged to this cost center in this date range.</p>
+              <p className="text-sm text-ink-muted">{t('costCenters.noEntriesTagged')}</p>
             )}
             {[...report.income, ...report.expenses].length > 0 && (
               <div className="card overflow-hidden">

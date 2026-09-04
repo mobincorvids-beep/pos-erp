@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
@@ -7,19 +8,20 @@ import { EmptyState } from '../components/EmptyState';
 import { formatMoney, formatDate } from '../lib/format';
 
 export function SalesWorkflowPage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState('quotations');
   const [showForm, setShowForm] = useState(false);
   return (
     <div>
       <div className="flex items-end justify-between mb-6">
         <div>
-          <p className="page-title">Quotations &amp; orders</p>
-          <p className="text-sm text-ink-muted mt-1.5">Manage active quotes, track conversions, and monitor order fulfillment.</p>
+          <p className="page-title">{t('salesWorkflow.title')}</p>
+          <p className="text-sm text-ink-muted mt-1.5">{t('salesWorkflow.subtitle')}</p>
         </div>
-        <button className="btn-primary" onClick={() => setShowForm(true)}>New {tab === 'quotations' ? 'quotation' : 'sales order'}</button>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>{tab === 'quotations' ? t('salesWorkflow.newQuotation') : t('salesWorkflow.newSalesOrder')}</button>
       </div>
       <div className="flex gap-2 mb-5">
-        {[['quotations', 'Quotations'], ['sales-orders', 'Sales orders']].map(([key, label]) => (
+        {[['quotations', t('salesWorkflow.quotations')], ['sales-orders', t('salesWorkflow.salesOrders')]].map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)} className={tab === key ? 'pill-active' : 'pill'}>
             {label}
           </button>
@@ -43,6 +45,7 @@ function statusChipClass(status) {
 }
 
 function DocumentList({ kind, showForm, onCloseForm }) {
+  const { t } = useTranslation();
   const { company } = useAuth();
   const toast = useToast();
   const [docs, setDocs] = useState([]);
@@ -61,7 +64,7 @@ function DocumentList({ kind, showForm, onCloseForm }) {
   async function accept(id) {
     try {
       await api.post(`/sales-workflow/quotations/${id}/accept`);
-      toast('Quotation accepted: now a sales order.', 'success');
+      toast(t('salesWorkflow.quotationAccepted'), 'success');
       load();
     } catch (err) { toast(err.message, 'error'); }
   }
@@ -69,7 +72,7 @@ function DocumentList({ kind, showForm, onCloseForm }) {
   async function cancel(id) {
     try {
       await api.post(`/sales-workflow/${id}/cancel`);
-      toast('Cancelled.', 'success');
+      toast(t('salesWorkflow.cancelled'), 'success');
       load();
     } catch (err) { toast(err.message, 'error'); }
   }
@@ -86,23 +89,23 @@ function DocumentList({ kind, showForm, onCloseForm }) {
         />
       )}
       {loading ? <Loading /> : docs.length === 0 ? (
-        <EmptyState title={`No ${kind === 'quotations' ? 'quotations' : 'sales orders'} yet`} description="These don't touch stock or the ledger until converted to an invoice." />
+        <EmptyState title={kind === 'quotations' ? t('salesWorkflow.noQuotationsYet') : t('salesWorkflow.noSalesOrdersYet')} description={t('salesWorkflow.emptyStateDescription')} />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           {/* Ledger panel */}
           <div className="lg:col-span-8 card overflow-hidden flex flex-col">
             <div className="px-6 py-4 border-b border-rule flex items-center justify-between bg-surface-sunken/40">
-              <p className="font-display text-lg font-semibold text-accent">Active {kind === 'quotations' ? 'quotations' : 'sales orders'}</p>
-              <span className="chip-accent">{docs.length} active</span>
+              <p className="font-display text-lg font-semibold text-accent">{kind === 'quotations' ? t('salesWorkflow.activeQuotations') : t('salesWorkflow.activeSalesOrders')}</p>
+              <span className="chip-accent">{t('salesWorkflow.activeCount', { count: docs.length })}</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-surface-sunken text-left text-xs text-ink-muted uppercase tracking-wide border-b border-rule">
-                    <th className="px-6 py-3 font-semibold">Doc ref</th>
-                    <th className="px-6 py-3 font-semibold">Date</th>
-                    <th className="px-6 py-3 font-semibold">Status</th>
-                    <th className="px-6 py-3 font-semibold text-right">Total</th>
+                    <th className="px-6 py-3 font-semibold">{t('salesWorkflow.docRef')}</th>
+                    <th className="px-6 py-3 font-semibold">{t('salesWorkflow.date')}</th>
+                    <th className="px-6 py-3 font-semibold">{t('salesWorkflow.status')}</th>
+                    <th className="px-6 py-3 font-semibold text-right">{t('salesWorkflow.total')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -122,7 +125,7 @@ function DocumentList({ kind, showForm, onCloseForm }) {
               </table>
             </div>
             <p className="text-xs text-ink-muted px-6 py-3 border-t border-rule mt-auto">
-              Converting a sales order to an invoice (checkout) isn't yet wired into this UI, use <code className="num">POST /sales-workflow/:id/convert-to-invoice</code> directly for now.
+              {t('salesWorkflow.convertHint')} <code className="num">POST /sales-workflow/:id/convert-to-invoice</code> {t('salesWorkflow.convertHintSuffix')}
             </p>
           </div>
 
@@ -139,16 +142,16 @@ function DocumentList({ kind, showForm, onCloseForm }) {
                 </div>
 
                 <div className="flex items-center justify-between bg-surface-sunken rounded-lg px-4 py-3 mb-4">
-                  <span className="eyebrow text-accent-strong">Total ({company?.currency || 'amount'})</span>
+                  <span className="eyebrow text-accent-strong">{t('salesWorkflow.totalCurrency', { currency: company?.currency || t('salesWorkflow.amount') })}</span>
                   <span className="font-display text-xl font-bold text-accent num">{formatMoney(selected.totalAmount, company?.currency)}</span>
                 </div>
 
                 <div className="flex gap-2">
                   {kind === 'quotations' && selected.status === 'quotation' && (
-                    <button className="btn-primary flex-1" onClick={() => accept(selected._id)}>Accept</button>
+                    <button className="btn-primary flex-1" onClick={() => accept(selected._id)}>{t('salesWorkflow.accept')}</button>
                   )}
                   {(selected.status === 'quotation' || selected.status === 'sales_order') && (
-                    <button className="btn-secondary flex-1 !text-danger" onClick={() => cancel(selected._id)}>Cancel</button>
+                    <button className="btn-secondary flex-1 !text-danger" onClick={() => cancel(selected._id)}>{t('salesWorkflow.cancel')}</button>
                   )}
                 </div>
               </div>
@@ -157,26 +160,26 @@ function DocumentList({ kind, showForm, onCloseForm }) {
             {/* Lifecycle tracker */}
             {selected && (
               <div className="card p-5">
-                <p className="font-display text-base font-semibold text-accent mb-5">Lifecycle tracker</p>
+                <p className="font-display text-base font-semibold text-accent mb-5">{t('salesWorkflow.lifecycleTracker')}</p>
                 <div className="relative pl-7 space-y-6 before:absolute before:inset-y-0 before:left-[9px] before:w-px before:bg-rule">
-                  <LifecycleStep label={`${kind === 'quotations' ? 'Quotation' : 'Sales order'} created`} detail={formatDate(selected.createdAt)} done />
+                  <LifecycleStep label={kind === 'quotations' ? t('salesWorkflow.quotationCreated') : t('salesWorkflow.salesOrderCreated')} detail={formatDate(selected.createdAt)} done />
                   {kind === 'quotations' && (
                     <LifecycleStep
-                      label="Accepted → sales order"
-                      detail={selected.status === 'quotation' ? 'Awaiting acceptance' : 'Converted'}
+                      label={t('salesWorkflow.acceptedToSalesOrder')}
+                      detail={selected.status === 'quotation' ? t('salesWorkflow.awaitingAcceptance') : t('salesWorkflow.converted')}
                       done={selected.status !== 'quotation'}
                       active={selected.status === 'quotation'}
                     />
                   )}
                   <LifecycleStep
-                    label="Converted to invoice"
-                    detail={selected.status === 'invoiced' ? 'Invoiced' : 'Not yet converted'}
+                    label={t('salesWorkflow.convertedToInvoice')}
+                    detail={selected.status === 'invoiced' ? t('salesWorkflow.invoiced') : t('salesWorkflow.notYetConverted')}
                     done={selected.status === 'invoiced'}
                     active={selected.status === 'sales_order'}
                   />
                   <LifecycleStep
-                    label="Cancelled"
-                    detail={selected.status === 'cancelled' ? 'Cancelled' : '-'}
+                    label={t('salesWorkflow.cancelledLabel')}
+                    detail={selected.status === 'cancelled' ? t('salesWorkflow.cancelled') : '-'}
                     done={selected.status === 'cancelled'}
                     muted={selected.status !== 'cancelled'}
                   />
@@ -210,6 +213,7 @@ function LifecycleStep({ label, detail, done, active, muted }) {
 // quotation-creation path — kept consistent rather than inventing a
 // second UI convention for the same kind of document.
 function NewDocumentModal({ kind, onClose, onCreated }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [customers, setCustomers] = useState([]);
   const [branches, setBranches] = useState([]);
@@ -236,8 +240,8 @@ function NewDocumentModal({ kind, onClose, onCreated }) {
   function removeLine(i) { setLines(lines.filter((_, idx) => idx !== i)); }
 
   async function submit() {
-    if (!warehouseId) return toast('Choose a warehouse.', 'error');
-    if (kind === 'sales-orders' && !branchId) return toast('Choose a branch.', 'error');
+    if (!warehouseId) return toast(t('salesWorkflow.chooseWarehouse'), 'error');
+    if (kind === 'sales-orders' && !branchId) return toast(t('salesWorkflow.chooseBranch'), 'error');
     const items = lines
       .filter((l) => l.productId && Number(l.quantity) > 0)
       .map((l) => {
@@ -250,13 +254,13 @@ function NewDocumentModal({ kind, onClose, onCreated }) {
         };
       })
       .filter((l) => l.variantId);
-    if (items.length === 0) return toast('Add at least one product line.', 'error');
+    if (items.length === 0) return toast(t('salesWorkflow.addAtLeastOneLine'), 'error');
 
     setSaving(true);
     try {
       const path = kind === 'quotations' ? '/sales-workflow/quotations' : '/sales-workflow/sales-orders';
       await api.post(path, { branchId: branchId || undefined, warehouseId, customerId: customerId || undefined, items });
-      toast(kind === 'quotations' ? 'Quotation created.' : 'Sales order created.', 'success');
+      toast(kind === 'quotations' ? t('salesWorkflow.quotationCreatedMsg') : t('salesWorkflow.salesOrderCreatedMsg'), 'success');
       onCreated();
     } catch (err) { toast(err.message, 'error'); } finally { setSaving(false); }
   }
@@ -264,53 +268,53 @@ function NewDocumentModal({ kind, onClose, onCreated }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <div className="card p-5 w-full max-w-lg">
-        <p className="font-display text-lg mb-4">New {kind === 'quotations' ? 'quotation' : 'sales order'}</p>
+        <p className="font-display text-lg mb-4">{kind === 'quotations' ? t('salesWorkflow.newQuotation') : t('salesWorkflow.newSalesOrder')}</p>
 
         <div className="grid grid-cols-2 gap-3 mb-3">
           <div>
-            <label className="field-label">Customer (optional)</label>
+            <label className="field-label">{t('salesWorkflow.customerOptional')}</label>
             <select className="field-input" value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
-              <option value="">Walk-in</option>
+              <option value="">{t('salesWorkflow.walkIn')}</option>
               {customers.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Warehouse</label>
+            <label className="field-label">{t('salesWorkflow.warehouse')}</label>
             <select className="field-input" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
-              <option value="">Select...</option>
+              <option value="">{t('salesWorkflow.select')}</option>
               {warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
             </select>
           </div>
         </div>
         {kind === 'sales-orders' && (
           <div className="mb-3">
-            <label className="field-label">Branch</label>
+            <label className="field-label">{t('salesWorkflow.branch')}</label>
             <select className="field-input" value={branchId} onChange={(e) => setBranchId(e.target.value)}>
-              <option value="">Select...</option>
+              <option value="">{t('salesWorkflow.select')}</option>
               {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
             </select>
           </div>
         )}
 
-        <label className="field-label">Items</label>
+        <label className="field-label">{t('salesWorkflow.items')}</label>
         <div className="space-y-2 mb-3">
           {lines.map((line, i) => (
             <div key={i} className="flex gap-2">
               <select className="field-input flex-1" value={line.productId} onChange={(e) => updateLine(i, { productId: e.target.value })}>
-                <option value="">Select product...</option>
+                <option value="">{t('salesWorkflow.selectProduct')}</option>
                 {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
               </select>
-              <input type="number" min="1" className="field-input w-20" placeholder="Qty" value={line.quantity} onChange={(e) => updateLine(i, { quantity: e.target.value })} />
-              <input type="number" min="0" className="field-input w-28" placeholder="Unit price" value={line.unitPrice} onChange={(e) => updateLine(i, { unitPrice: e.target.value })} />
+              <input type="number" min="1" className="field-input w-20" placeholder={t('salesWorkflow.qty')} value={line.quantity} onChange={(e) => updateLine(i, { quantity: e.target.value })} />
+              <input type="number" min="0" className="field-input w-28" placeholder={t('salesWorkflow.unitPrice')} value={line.unitPrice} onChange={(e) => updateLine(i, { unitPrice: e.target.value })} />
               {lines.length > 1 && <button className="btn-ghost !text-danger" onClick={() => removeLine(i)}>&times;</button>}
             </div>
           ))}
         </div>
-        <button className="btn-ghost !text-accent mb-4" onClick={addLine}>+ Add another item</button>
+        <button className="btn-ghost !text-accent mb-4" onClick={addLine}>{t('salesWorkflow.addAnotherItem')}</button>
 
         <div className="flex justify-end gap-2">
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn-primary" disabled={saving} onClick={submit}>{saving ? 'Saving…' : 'Create'}</button>
+          <button className="btn-secondary" onClick={onClose}>{t('salesWorkflow.cancel')}</button>
+          <button className="btn-primary" disabled={saving} onClick={submit}>{saving ? t('salesWorkflow.saving') : t('salesWorkflow.create')}</button>
         </div>
       </div>
     </div>

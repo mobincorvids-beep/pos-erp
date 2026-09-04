@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
@@ -9,6 +10,7 @@ import { formatDate } from '../lib/format';
 const STATUS_CHIP = { draft: 'chip-neutral', published: 'chip-accent' };
 
 export function KnowledgeBasePage() {
+  const { t } = useTranslation();
   const { can } = useAuth();
   const toast = useToast();
   const canManage = can('knowledge_base.manage');
@@ -39,10 +41,10 @@ export function KnowledgeBasePage() {
   const categories = [...new Set(articles.map((a) => a.category).filter(Boolean))];
 
   async function remove(article) {
-    if (!window.confirm(`Delete "${article.title}"? This cannot be undone.`)) return;
+    if (!window.confirm(t('knowledgeBase.confirmDelete', { title: article.title }))) return;
     try {
       await api.del(`/knowledge-base/${article._id}`);
-      toast('Article deleted.', 'success');
+      toast(t('knowledgeBase.articleDeleted'), 'success');
       load();
     } catch (err) { toast(err.message, 'error'); }
   }
@@ -51,7 +53,7 @@ export function KnowledgeBasePage() {
     try {
       const action = article.status === 'published' ? 'unpublish' : 'publish';
       await api.post(`/knowledge-base/${article._id}/${action}`, {});
-      toast(action === 'publish' ? 'Article published.' : 'Article moved to draft.', 'success');
+      toast(action === 'publish' ? t('knowledgeBase.articlePublished') : t('knowledgeBase.articleMovedToDraft'), 'success');
       load();
     } catch (err) { toast(err.message, 'error'); }
   }
@@ -60,29 +62,29 @@ export function KnowledgeBasePage() {
     <div>
       <div className="flex items-end justify-between mb-6">
         <div>
-          <p className="page-title">Knowledge Base</p>
-          <p className="text-sm text-ink-muted mt-1">SOPs and how-to articles for staff — also used to suggest relevant articles when a Helpdesk ticket is raised.</p>
+          <p className="page-title">{t('knowledgeBase.title')}</p>
+          <p className="text-sm text-ink-muted mt-1">{t('knowledgeBase.subtitle')}</p>
         </div>
         {canManage && (
           <button className="btn-primary" onClick={() => { setEditing(null); setShowForm(true); }}>
             <span className="material-symbols-outlined text-base leading-none">add</span>
-            New article
+            {t('knowledgeBase.newArticle')}
           </button>
         )}
       </div>
 
       <div className="card overflow-hidden">
         <div className="flex flex-wrap items-center gap-2 px-5 py-4 border-b border-rule bg-surface-sunken/50">
-          <input className="field-input max-w-xs" placeholder="Search title, body, tags…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input className="field-input max-w-xs" placeholder={t('knowledgeBase.searchPlaceholder')} value={q} onChange={(e) => setQ(e.target.value)} />
           {categories.length > 0 && (
             <select className="field-input !w-auto" value={category} onChange={(e) => setCategory(e.target.value)}>
-              <option value="">All categories</option>
+              <option value="">{t('knowledgeBase.allCategories')}</option>
               {categories.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           )}
           {canManage && (
             <div className="flex gap-1.5 ml-auto">
-              {[['', 'All'], ['published', 'Published'], ['draft', 'Draft']].map(([key, label]) => (
+              {[['', t('knowledgeBase.all')], ['published', t('knowledgeBase.published')], ['draft', t('knowledgeBase.draft')]].map(([key, label]) => (
                 <button key={key} onClick={() => setStatusFilter(key)} className={statusFilter === key ? 'pill-active' : 'pill'}>
                   {label}
                 </button>
@@ -94,7 +96,7 @@ export function KnowledgeBasePage() {
         {loading && <div className="p-6"><Loading /></div>}
         {!loading && articles.length === 0 && (
           <div className="p-6">
-            <EmptyState title="No articles" description="Write down how your team does things once, and let it deflect repeat Helpdesk tickets forever." action={canManage && <button className="btn-primary" onClick={() => { setEditing(null); setShowForm(true); }}>New article</button>} />
+            <EmptyState title={t('knowledgeBase.noArticles')} description={t('knowledgeBase.noArticlesDescription')} action={canManage && <button className="btn-primary" onClick={() => { setEditing(null); setShowForm(true); }}>{t('knowledgeBase.newArticle')}</button>} />
           </div>
         )}
         {!loading && articles.length > 0 && (
@@ -107,19 +109,19 @@ export function KnowledgeBasePage() {
                     <span className={STATUS_CHIP[a.status]}>{a.status}</span>
                   </div>
                   <p className="text-ink-muted text-xs mt-0.5">
-                    {a.category ? `${a.category} · ` : ''}{a.viewCount} views · {a.helpfulCount} helpful · updated {formatDate(a.updatedAt)}
+                    {a.category ? `${a.category} · ` : ''}{t('knowledgeBase.viewsHelpfulUpdated', { views: a.viewCount, helpful: a.helpfulCount, date: formatDate(a.updatedAt) })}
                   </p>
                   {a.tags?.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1">
-                      {a.tags.map((t) => <span key={t} className="chip-neutral">{t}</span>)}
+                      {a.tags.map((tag) => <span key={tag} className="chip-neutral">{tag}</span>)}
                     </div>
                   )}
                 </button>
                 {canManage && (
                   <div className="flex gap-1 shrink-0">
-                    <button className="btn-ghost !text-accent" onClick={() => togglePublish(a)}>{a.status === 'published' ? 'Unpublish' : 'Publish'}</button>
-                    <button className="btn-ghost" onClick={() => { setEditing(a); setShowForm(true); }}>Edit</button>
-                    <button className="btn-ghost !text-danger" onClick={() => remove(a)}>Delete</button>
+                    <button className="btn-ghost !text-accent" onClick={() => togglePublish(a)}>{a.status === 'published' ? t('knowledgeBase.unpublish') : t('knowledgeBase.publish')}</button>
+                    <button className="btn-ghost" onClick={() => { setEditing(a); setShowForm(true); }}>{t('knowledgeBase.edit')}</button>
+                    <button className="btn-ghost !text-danger" onClick={() => remove(a)}>{t('knowledgeBase.delete')}</button>
                   </div>
                 )}
               </div>
@@ -146,6 +148,7 @@ export function KnowledgeBasePage() {
 }
 
 function ArticleForm({ article, onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [form, setForm] = useState({
     title: article?.title || '',
@@ -162,12 +165,12 @@ function ArticleForm({ article, onClose, onSaved }) {
       title: form.title,
       body: form.body,
       category: form.category || null,
-      tags: form.tags.split(',').map((t) => t.trim()).filter(Boolean),
+      tags: form.tags.split(',').map((tag) => tag.trim()).filter(Boolean),
     };
     try {
       if (article) await api.put(`/knowledge-base/${article._id}`, payload);
       else await api.post('/knowledge-base', payload);
-      toast(article ? 'Article updated.' : 'Article created.', 'success');
+      toast(article ? t('knowledgeBase.articleUpdated') : t('knowledgeBase.articleCreated'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -179,28 +182,28 @@ function ArticleForm({ article, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-lg">
-        <p className="font-display text-lg mb-4">{article ? 'Edit article' : 'New article'}</p>
+        <p className="font-display text-lg mb-4">{article ? t('knowledgeBase.editArticle') : t('knowledgeBase.newArticle')}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Title</label>
+            <label className="field-label">{t('knowledgeBase.titleField')}</label>
             <input required className="field-input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
           </div>
           <div>
-            <label className="field-label">Category</label>
-            <input className="field-input" placeholder="e.g. Sales, Returns, POS…" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
+            <label className="field-label">{t('knowledgeBase.category')}</label>
+            <input className="field-input" placeholder={t('knowledgeBase.categoryPlaceholder')} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
           </div>
           <div>
-            <label className="field-label">Tags (comma-separated)</label>
-            <input className="field-input" placeholder="return, refund, exchange…" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} />
+            <label className="field-label">{t('knowledgeBase.tagsCommaSeparated')}</label>
+            <input className="field-input" placeholder={t('knowledgeBase.tagsPlaceholder')} value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} />
           </div>
           <div>
-            <label className="field-label">Body (Markdown/plain text)</label>
+            <label className="field-label">{t('knowledgeBase.bodyField')}</label>
             <textarea required rows={10} className="field-input font-mono text-xs" value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} />
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('knowledgeBase.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('knowledgeBase.saving') : t('knowledgeBase.save')}</button>
         </div>
       </form>
     </div>
@@ -208,6 +211,7 @@ function ArticleForm({ article, onClose, onSaved }) {
 }
 
 function ArticleDetail({ articleId, onClose }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [article, setArticle] = useState(null);
   const [voted, setVoted] = useState(false);
@@ -223,7 +227,7 @@ function ArticleDetail({ articleId, onClose }) {
       const updated = await api.post(`/knowledge-base/${articleId}/vote`, { helpful });
       setArticle(updated);
       setVoted(true);
-      toast('Thanks for the feedback!', 'success');
+      toast(t('knowledgeBase.thanksForFeedback'), 'success');
     } catch (err) { toast(err.message, 'error'); }
   }
 
@@ -235,19 +239,19 @@ function ArticleDetail({ articleId, onClose }) {
           <>
             <div className="flex items-start justify-between mb-1">
               <p className="font-display text-xl">{article.title}</p>
-              <button className="btn-ghost" onClick={onClose}>Close</button>
+              <button className="btn-ghost" onClick={onClose}>{t('knowledgeBase.close')}</button>
             </div>
             <p className="text-ink-muted text-xs mb-4">
-              {article.category ? `${article.category} · ` : ''}{article.viewCount} views · updated {formatDate(article.updatedAt)}
+              {article.category ? `${article.category} · ` : ''}{t('knowledgeBase.viewsUpdated', { views: article.viewCount, date: formatDate(article.updatedAt) })}
             </p>
             <div className="whitespace-pre-wrap text-sm leading-relaxed">{article.body}</div>
             {article.tags?.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-4">
-                {article.tags.map((t) => <span key={t} className="chip-neutral">{t}</span>)}
+                {article.tags.map((tag) => <span key={tag} className="chip-neutral">{tag}</span>)}
               </div>
             )}
             <div className="flex items-center gap-3 mt-6 pt-4 border-t border-rule">
-              <span className="text-sm text-ink-muted">Was this helpful?</span>
+              <span className="text-sm text-ink-muted">{t('knowledgeBase.wasThisHelpful')}</span>
               <button className="btn-secondary" disabled={voted} onClick={() => vote(true)}>👍 {article.helpfulCount}</button>
               <button className="btn-secondary" disabled={voted} onClick={() => vote(false)}>👎 {article.notHelpfulCount}</button>
             </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
@@ -7,11 +8,12 @@ import { EmptyState } from '../components/EmptyState';
 import { formatMoney } from '../lib/format';
 
 export function Warehouse3plPage() {
+  const { t } = useTranslation();
   return (
     <div>
       <div className="mb-5">
-        <p className="page-title">Warehouse (3PL)</p>
-        <p className="text-sm text-ink-muted mt-1">Storage contracts, receiving, and billing for third-party logistics clients.</p>
+        <p className="page-title">{t('warehouse3pl.title')}</p>
+        <p className="text-sm text-ink-muted mt-1">{t('warehouse3pl.subtitle')}</p>
       </div>
       <ContractsTab />
     </div>
@@ -19,6 +21,7 @@ export function Warehouse3plPage() {
 }
 
 function ContractsTab() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -36,21 +39,21 @@ function ContractsTab() {
       <div className="flex justify-end mb-3">
         <button className="btn-primary" onClick={() => setShowForm(true)}>
           <span className="font-icon text-base leading-none">add</span>
-          New contract
+          {t('warehouse3pl.newContract')}
         </button>
       </div>
       {loading && <Loading />}
-      {!loading && contracts.length === 0 && <EmptyState title="No storage contracts yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Create a contract</button>} />}
+      {!loading && contracts.length === 0 && <EmptyState title={t('warehouse3pl.noContractsYet')} action={<button className="btn-primary" onClick={() => setShowForm(true)}>{t('warehouse3pl.createAContract')}</button>} />}
       {!loading && contracts.length > 0 && (
         <div className="card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken/60">
-                  <th className="px-4 py-2.5 font-semibold">Client</th>
-                  <th className="px-4 py-2.5 font-semibold">Product</th>
-                  <th className="px-4 py-2.5 font-semibold">Rate/unit/day</th>
-                  <th className="px-4 py-2.5 font-semibold">Stored qty</th>
+                  <th className="px-4 py-2.5 font-semibold">{t('warehouse3pl.client')}</th>
+                  <th className="px-4 py-2.5 font-semibold">{t('warehouse3pl.product')}</th>
+                  <th className="px-4 py-2.5 font-semibold">{t('warehouse3pl.ratePerUnitPerDay')}</th>
+                  <th className="px-4 py-2.5 font-semibold">{t('warehouse3pl.storedQty')}</th>
                   <th className="px-4 py-2.5 font-semibold"></th>
                 </tr>
               </thead>
@@ -64,7 +67,7 @@ function ContractsTab() {
                       <span className="chip-accent num">{c.storedQuantity ?? c.currentQuantity ?? 0}</span>
                     </td>
                     <td className="px-4 py-2.5 text-right">
-                      <button className="btn-ghost !px-2 !py-1 text-xs" onClick={() => setActive(c)}>Manage</button>
+                      <button className="btn-ghost !px-2 !py-1 text-xs" onClick={() => setActive(c)}>{t('warehouse3pl.manage')}</button>
                     </td>
                   </tr>
                 ))}
@@ -80,6 +83,7 @@ function ContractsTab() {
 }
 
 function ContractForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [branches, setBranches] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -107,7 +111,7 @@ function ContractForm({ onClose, onSaved }) {
         ...form,
         ratePerUnitPerDay: Number(form.ratePerUnitPerDay),
       });
-      toast('Contract created.', 'success');
+      toast(t('warehouse3pl.contractCreated'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -119,58 +123,58 @@ function ContractForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm max-h-[90vh] overflow-y-auto">
-        <p className="font-display text-lg font-semibold text-ink mb-4">New storage contract</p>
+        <p className="font-display text-lg font-semibold text-ink mb-4">{t('warehouse3pl.newStorageContract')}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Branch</label>
+            <label className="field-label">{t('warehouse3pl.branch')}</label>
             <select required className="field-input" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('warehouse3pl.select')}</option>
               {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Client</label>
+            <label className="field-label">{t('warehouse3pl.client')}</label>
             <select required className="field-input" value={form.clientCustomerId} onChange={(e) => setForm({ ...form, clientCustomerId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('warehouse3pl.select')}</option>
               {customers.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Stored product</label>
+            <label className="field-label">{t('warehouse3pl.storedProduct')}</label>
             <select required className="field-input" value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value, variantId: '' })}>
-              <option value="">Select…</option>
+              <option value="">{t('warehouse3pl.select')}</option>
               {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Variant</label>
+            <label className="field-label">{t('warehouse3pl.variant')}</label>
             <select required className="field-input" value={form.variantId} onChange={(e) => setForm({ ...form, variantId: e.target.value })} disabled={!storedProduct}>
-              <option value="">Select…</option>
+              <option value="">{t('warehouse3pl.select')}</option>
               {storedProduct?.variants?.map((v) => <option key={v._id} value={v._id}>{v.name || v.sku}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Rate per unit per day</label>
+            <label className="field-label">{t('warehouse3pl.ratePerUnitPerDay')}</label>
             <input type="number" step="any" required className="field-input num" value={form.ratePerUnitPerDay} onChange={(e) => setForm({ ...form, ratePerUnitPerDay: e.target.value })} />
           </div>
           <div>
-            <label className="field-label">Billing product (invoice line item)</label>
+            <label className="field-label">{t('warehouse3pl.billingProduct')}</label>
             <select required className="field-input" value={form.billingProductId} onChange={(e) => setForm({ ...form, billingProductId: e.target.value, billingVariantId: '' })}>
-              <option value="">Select…</option>
+              <option value="">{t('warehouse3pl.select')}</option>
               {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Billing variant</label>
+            <label className="field-label">{t('warehouse3pl.billingVariant')}</label>
             <select required className="field-input" value={form.billingVariantId} onChange={(e) => setForm({ ...form, billingVariantId: e.target.value })} disabled={!billingProduct}>
-              <option value="">Select…</option>
+              <option value="">{t('warehouse3pl.select')}</option>
               {billingProduct?.variants?.map((v) => <option key={v._id} value={v._id}>{v.name || v.sku}</option>)}
             </select>
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-rule">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('warehouse3pl.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('warehouse3pl.saving') : t('warehouse3pl.save')}</button>
         </div>
       </form>
     </div>
@@ -178,6 +182,7 @@ function ContractForm({ onClose, onSaved }) {
 }
 
 function ContractManage({ contract, onClose, onChanged }) {
+  const { t } = useTranslation();
   const { company } = useAuth();
   const toast = useToast();
   const [receiveQty, setReceiveQty] = useState('');
@@ -192,7 +197,7 @@ function ContractManage({ contract, onClose, onChanged }) {
     setBusy(true);
     try {
       await api.post(`/warehouse-3pl/contracts/${contract._id}/receive`, { quantity: Number(receiveQty) });
-      toast('Goods received.', 'success');
+      toast(t('warehouse3pl.goodsReceived'), 'success');
       setReceiveQty('');
       onChanged();
     } catch (err) {
@@ -207,7 +212,7 @@ function ContractManage({ contract, onClose, onChanged }) {
     setBusy(true);
     try {
       await api.post(`/warehouse-3pl/contracts/${contract._id}/release`, { quantity: Number(releaseQty) });
-      toast('Goods released.', 'success');
+      toast(t('warehouse3pl.goodsReleased'), 'success');
       setReleaseQty('');
       onChanged();
     } catch (err) {
@@ -236,7 +241,7 @@ function ContractManage({ contract, onClose, onChanged }) {
     setBusy(true);
     try {
       await api.post(`/warehouse-3pl/contracts/${contract._id}/bill`, bill);
-      toast('Period billed.', 'success');
+      toast(t('warehouse3pl.periodBilled'), 'success');
       onChanged();
     } catch (err) {
       toast(err.message, 'error');
@@ -248,54 +253,54 @@ function ContractManage({ contract, onClose, onChanged }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <div className="card p-5 w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <p className="font-display text-lg font-semibold text-ink mb-1">{contract.clientCustomerId?.name || 'Contract'}</p>
+        <p className="font-display text-lg font-semibold text-ink mb-1">{contract.clientCustomerId?.name || t('warehouse3pl.contractFallback')}</p>
         <p className="text-sm text-ink-muted mb-4">
-          {contract.productId?.name} <span className="text-rule-strong">·</span> <span className="num">{formatMoney(contract.ratePerUnitPerDay, company?.currency)}</span>/unit/day <span className="text-rule-strong">·</span> Stored: <span className="chip-accent num align-middle">{contract.storedQuantity ?? contract.currentQuantity ?? 0}</span>
+          {contract.productId?.name} <span className="text-rule-strong">·</span> <span className="num">{formatMoney(contract.ratePerUnitPerDay, company?.currency)}</span>{t('warehouse3pl.perUnitPerDay')} <span className="text-rule-strong">·</span> {t('warehouse3pl.stored')}: <span className="chip-accent num align-middle">{contract.storedQuantity ?? contract.currentQuantity ?? 0}</span>
         </p>
 
         <div className="space-y-5">
           <form onSubmit={handleReceive} className="border-t border-rule pt-4">
-            <p className="text-sm font-semibold text-ink mb-2">Receive goods</p>
+            <p className="text-sm font-semibold text-ink mb-2">{t('warehouse3pl.receiveGoods')}</p>
             <div className="flex gap-2">
-              <input type="number" step="any" required className="field-input num" placeholder="Quantity" value={receiveQty} onChange={(e) => setReceiveQty(e.target.value)} />
-              <button type="submit" disabled={busy} className="btn-secondary whitespace-nowrap">Receive</button>
+              <input type="number" step="any" required className="field-input num" placeholder={t('warehouse3pl.quantity')} value={receiveQty} onChange={(e) => setReceiveQty(e.target.value)} />
+              <button type="submit" disabled={busy} className="btn-secondary whitespace-nowrap">{t('warehouse3pl.receive')}</button>
             </div>
           </form>
 
           <form onSubmit={handleRelease} className="border-t border-rule pt-4">
-            <p className="text-sm font-semibold text-ink mb-2">Release goods</p>
+            <p className="text-sm font-semibold text-ink mb-2">{t('warehouse3pl.releaseGoods')}</p>
             <div className="flex gap-2">
-              <input type="number" step="any" required className="field-input num" placeholder="Quantity" value={releaseQty} onChange={(e) => setReleaseQty(e.target.value)} />
-              <button type="submit" disabled={busy} className="btn-secondary whitespace-nowrap">Release</button>
+              <input type="number" step="any" required className="field-input num" placeholder={t('warehouse3pl.quantity')} value={releaseQty} onChange={(e) => setReleaseQty(e.target.value)} />
+              <button type="submit" disabled={busy} className="btn-secondary whitespace-nowrap">{t('warehouse3pl.release')}</button>
             </div>
           </form>
 
           <form onSubmit={handleComputeFee} className="border-t border-rule pt-4">
-            <p className="text-sm font-semibold text-ink mb-2">Compute fee</p>
+            <p className="text-sm font-semibold text-ink mb-2">{t('warehouse3pl.computeFee')}</p>
             <div className="grid grid-cols-2 gap-2 mb-2">
-              <div><label className="field-label">Period start</label><input type="date" required className="field-input" value={fee.periodStart} onChange={(e) => setFee({ ...fee, periodStart: e.target.value })} /></div>
-              <div><label className="field-label">Period end</label><input type="date" required className="field-input" value={fee.periodEnd} onChange={(e) => setFee({ ...fee, periodEnd: e.target.value })} /></div>
+              <div><label className="field-label">{t('warehouse3pl.periodStart')}</label><input type="date" required className="field-input" value={fee.periodStart} onChange={(e) => setFee({ ...fee, periodStart: e.target.value })} /></div>
+              <div><label className="field-label">{t('warehouse3pl.periodEnd')}</label><input type="date" required className="field-input" value={fee.periodEnd} onChange={(e) => setFee({ ...fee, periodEnd: e.target.value })} /></div>
             </div>
-            <button type="submit" disabled={busy} className="btn-secondary">Compute</button>
+            <button type="submit" disabled={busy} className="btn-secondary">{t('warehouse3pl.compute')}</button>
             {feeResult && (
               <p className="text-sm mt-2 num font-semibold text-accent-strong bg-accent-soft rounded-lg px-3 py-2">
-                Fee: {formatMoney(feeResult.fee ?? feeResult.amount ?? feeResult.totalFee, company?.currency)}
+                {t('warehouse3pl.feeResult', { amount: formatMoney(feeResult.fee ?? feeResult.amount ?? feeResult.totalFee, company?.currency) })}
               </p>
             )}
           </form>
 
           <form onSubmit={handleBill} className="border-t border-rule pt-4">
-            <p className="text-sm font-semibold text-ink mb-2">Bill period</p>
+            <p className="text-sm font-semibold text-ink mb-2">{t('warehouse3pl.billPeriod')}</p>
             <div className="grid grid-cols-2 gap-2 mb-2">
-              <div><label className="field-label">Period start</label><input type="date" required className="field-input" value={bill.periodStart} onChange={(e) => setBill({ ...bill, periodStart: e.target.value })} /></div>
-              <div><label className="field-label">Period end</label><input type="date" required className="field-input" value={bill.periodEnd} onChange={(e) => setBill({ ...bill, periodEnd: e.target.value })} /></div>
+              <div><label className="field-label">{t('warehouse3pl.periodStart')}</label><input type="date" required className="field-input" value={bill.periodStart} onChange={(e) => setBill({ ...bill, periodStart: e.target.value })} /></div>
+              <div><label className="field-label">{t('warehouse3pl.periodEnd')}</label><input type="date" required className="field-input" value={bill.periodEnd} onChange={(e) => setBill({ ...bill, periodEnd: e.target.value })} /></div>
             </div>
-            <button type="submit" disabled={busy} className="btn-primary">{busy ? 'Billing…' : 'Bill'}</button>
+            <button type="submit" disabled={busy} className="btn-primary">{busy ? t('warehouse3pl.billing') : t('warehouse3pl.bill')}</button>
           </form>
         </div>
 
         <div className="flex justify-end mt-5 pt-4 border-t border-rule">
-          <button type="button" className="btn-secondary" onClick={onClose}>Close</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('warehouse3pl.close')}</button>
         </div>
       </div>
     </div>

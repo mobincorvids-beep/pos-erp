@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
@@ -7,6 +8,7 @@ import { EmptyState } from '../components/EmptyState';
 import { formatMoney } from '../lib/format';
 
 export function DistributionPage() {
+  const { t } = useTranslation();
   const { company } = useAuth();
   const toast = useToast();
   const [schedules, setSchedules] = useState([]);
@@ -24,32 +26,32 @@ export function DistributionPage() {
     <div>
       <div className="flex items-start justify-between mb-6 gap-4">
         <div>
-          <p className="page-title">Supply Chain &amp; Distribution</p>
-          <p className="text-sm text-ink-muted mt-1">Tiered price schedules and wholesale sales orders.</p>
+          <p className="page-title">{t('distribution.title')}</p>
+          <p className="text-sm text-ink-muted mt-1">{t('distribution.subtitle')}</p>
         </div>
         <div className="flex gap-2 shrink-0">
-          <button className="btn-secondary" onClick={() => setShowOrder(true)}>Create wholesale order</button>
-          <button className="btn-primary" onClick={() => setShowForm(true)}>New price schedule</button>
+          <button className="btn-secondary" onClick={() => setShowOrder(true)}>{t('distribution.createWholesaleOrder')}</button>
+          <button className="btn-primary" onClick={() => setShowForm(true)}>{t('distribution.newPriceSchedule')}</button>
         </div>
       </div>
 
       <div className="card p-5">
-        <p className="eyebrow mb-3">Tiered price schedules</p>
+        <p className="eyebrow mb-3">{t('distribution.tieredPriceSchedules')}</p>
         {loading && <Loading />}
-        {!loading && schedules.length === 0 && <EmptyState title="No tiered price schedules yet" description="Set quantity-based pricing per product." />}
+        {!loading && schedules.length === 0 && <EmptyState title={t('distribution.noTieredPriceSchedulesYet')} description={t('distribution.noTieredPriceSchedulesDescription')} />}
         {!loading && schedules.length > 0 && (
           <div className="grid grid-cols-2 gap-4">
             {schedules.map((s) => (
               <div key={s._id} className="rounded-lg border border-rule bg-paper p-4">
                 <div className="flex items-center justify-between mb-1">
-                  <p className="text-sm font-semibold text-ink">{s.productId?.name || 'Product'}</p>
-                  <span className="chip-neutral">MOQ {s.minimumOrderQuantity}</span>
+                  <p className="text-sm font-semibold text-ink">{s.productId?.name || t('distribution.product')}</p>
+                  <span className="chip-neutral">{t('distribution.moq', { qty: s.minimumOrderQuantity })}</span>
                 </div>
                 <div className="tear-line mt-2 pt-2 space-y-1">
-                  {s.tiers.map((t, i) => (
+                  {s.tiers.map((tr, i) => (
                     <div key={i} className="flex justify-between text-xs">
-                      <span className="text-ink-muted">{t.minQuantity}+ units</span>
-                      <span className="num text-ink">{formatMoney(t.unitPrice, company?.currency)}/unit</span>
+                      <span className="text-ink-muted">{t('distribution.unitsPlus', { qty: tr.minQuantity })}</span>
+                      <span className="num text-ink">{t('distribution.perUnit', { price: formatMoney(tr.unitPrice, company?.currency) })}</span>
                     </div>
                   ))}
                 </div>
@@ -65,6 +67,7 @@ export function DistributionPage() {
 }
 
 function ScheduleForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [products, setProducts] = useState([]);
   const [productId, setProductId] = useState('');
@@ -75,7 +78,7 @@ function ScheduleForm({ onClose, onSaved }) {
   useEffect(() => { api.get('/products').then(setProducts).catch(() => {}); }, []);
 
   function updateTier(i, patch) {
-    setTiers((prev) => prev.map((t, idx) => idx === i ? { ...t, ...patch } : t));
+    setTiers((prev) => prev.map((tr, idx) => idx === i ? { ...tr, ...patch } : tr));
   }
 
   async function handleSubmit(e) {
@@ -83,12 +86,12 @@ function ScheduleForm({ onClose, onSaved }) {
     setSaving(true);
     try {
       const product = products.find((p) => p._id === productId);
-      if (!product) throw new Error('Select a product.');
+      if (!product) throw new Error(t('distribution.selectProductError'));
       await api.post('/distribution/price-schedules', {
         productId, variantId: product.variants[0]?._id, minimumOrderQuantity: Number(minimumOrderQuantity),
-        tiers: tiers.filter((t) => t.minQuantity && t.unitPrice).map((t) => ({ minQuantity: Number(t.minQuantity), unitPrice: Number(t.unitPrice) })),
+        tiers: tiers.filter((tr) => tr.minQuantity && tr.unitPrice).map((tr) => ({ minQuantity: Number(tr.minQuantity), unitPrice: Number(tr.unitPrice) })),
       });
-      toast('Price schedule saved.', 'success');
+      toast(t('distribution.priceScheduleSaved'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -100,32 +103,32 @@ function ScheduleForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 backdrop-blur-[1px] flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-6 w-full max-w-sm">
-        <p className="font-display text-lg font-bold text-ink mb-4">New price schedule</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">{t('distribution.newPriceSchedule')}</p>
         <div className="space-y-3 mb-4">
           <div>
-            <label className="field-label">Product</label>
+            <label className="field-label">{t('distribution.product')}</label>
             <select required className="field-input" value={productId} onChange={(e) => setProductId(e.target.value)}>
-              <option value="">Select…</option>
+              <option value="">{t('distribution.select')}</option>
               {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
             </select>
           </div>
-          <div><label className="field-label">Minimum order quantity</label><input type="number" min="1" className="field-input num" value={minimumOrderQuantity} onChange={(e) => setMinimumOrderQuantity(e.target.value)} /></div>
+          <div><label className="field-label">{t('distribution.minimumOrderQuantity')}</label><input type="number" min="1" className="field-input num" value={minimumOrderQuantity} onChange={(e) => setMinimumOrderQuantity(e.target.value)} /></div>
         </div>
 
-        <p className="field-label mb-2">Tiers (ascending quantity)</p>
+        <p className="field-label mb-2">{t('distribution.tiersLabel')}</p>
         <div className="space-y-2 mb-2">
-          {tiers.map((t, i) => (
+          {tiers.map((tr, i) => (
             <div key={i} className="grid grid-cols-2 gap-2">
-              <input type="number" placeholder="Min qty" className="field-input num" value={t.minQuantity} onChange={(e) => updateTier(i, { minQuantity: e.target.value })} />
-              <input type="number" placeholder="Unit price" className="field-input num" value={t.unitPrice} onChange={(e) => updateTier(i, { unitPrice: e.target.value })} />
+              <input type="number" placeholder={t('distribution.minQty')} className="field-input num" value={tr.minQuantity} onChange={(e) => updateTier(i, { minQuantity: e.target.value })} />
+              <input type="number" placeholder={t('distribution.unitPrice')} className="field-input num" value={tr.unitPrice} onChange={(e) => updateTier(i, { unitPrice: e.target.value })} />
             </div>
           ))}
         </div>
-        <button type="button" className="btn-ghost !px-0 text-xs mb-5" onClick={() => setTiers([...tiers, { minQuantity: '', unitPrice: '' }])}>+ Add tier</button>
+        <button type="button" className="btn-ghost !px-0 text-xs mb-5" onClick={() => setTiers([...tiers, { minQuantity: '', unitPrice: '' }])}>{t('distribution.addTier')}</button>
 
         <div className="flex justify-end gap-2 pt-3 border-t border-rule">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('distribution.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('distribution.saving') : t('distribution.save')}</button>
         </div>
       </form>
     </div>
@@ -133,6 +136,7 @@ function ScheduleForm({ onClose, onSaved }) {
 }
 
 function OrderForm({ onClose }) {
+  const { t } = useTranslation();
   const { company } = useAuth();
   const toast = useToast();
   const [products, setProducts] = useState([]);
@@ -173,7 +177,7 @@ function OrderForm({ onClose }) {
         branchId: form.branchId, warehouseId: form.warehouseId, customerId: form.customerId,
         items: [{ productId: product._id, variantId: product.variants[0]?._id, quantity: Number(form.quantity) }],
       });
-      toast(`Sales order created at ${formatMoney(order.totalAmount, company?.currency)}.`, 'success');
+      toast(t('distribution.salesOrderCreated', { total: formatMoney(order.totalAmount, company?.currency) }), 'success');
       onClose();
     } catch (err) {
       toast(err.message, 'error');
@@ -185,53 +189,53 @@ function OrderForm({ onClose }) {
   return (
     <div className="fixed inset-0 bg-ink/20 backdrop-blur-[1px] flex items-center justify-center z-40 px-4">
       <div className="card p-6 w-full max-w-sm">
-        <p className="font-display text-lg font-bold text-ink mb-4">Create wholesale order</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">{t('distribution.createWholesaleOrder')}</p>
         <div className="space-y-3 mb-4">
           <div>
-            <label className="field-label">Branch</label>
+            <label className="field-label">{t('distribution.branch')}</label>
             <select className="field-input" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('distribution.select')}</option>
               {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Warehouse</label>
+            <label className="field-label">{t('distribution.warehouse')}</label>
             <select className="field-input" value={form.warehouseId} onChange={(e) => setForm({ ...form, warehouseId: e.target.value })} disabled={!form.branchId}>
-              <option value="">Select…</option>
+              <option value="">{t('distribution.select')}</option>
               {warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Customer</label>
+            <label className="field-label">{t('distribution.customer')}</label>
             <select className="field-input" value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('distribution.select')}</option>
               {customers.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="field-label">Product</label>
+              <label className="field-label">{t('distribution.product')}</label>
               <select className="field-input" value={form.productId} onChange={(e) => { setForm({ ...form, productId: e.target.value }); setQuote(null); }}>
-                <option value="">Select…</option>
+                <option value="">{t('distribution.select')}</option>
                 {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
               </select>
             </div>
-            <div><label className="field-label">Quantity</label><input type="number" className="field-input num" value={form.quantity} onChange={(e) => { setForm({ ...form, quantity: e.target.value }); setQuote(null); }} /></div>
+            <div><label className="field-label">{t('distribution.quantity')}</label><input type="number" className="field-input num" value={form.quantity} onChange={(e) => { setForm({ ...form, quantity: e.target.value }); setQuote(null); }} /></div>
           </div>
         </div>
         <button type="button" className="btn-secondary w-full mb-4" disabled={!form.productId || !form.quantity || quoting} onClick={getQuote}>
-          {quoting ? 'Quoting…' : 'Get tiered quote'}
+          {quoting ? t('distribution.quoting') : t('distribution.getTieredQuote')}
         </button>
         {quote && (
           <div className="tear-line pt-3 mb-4 flex justify-between text-base font-medium text-ink">
-            <span>{quote.unitPrice}/unit {quote.tierApplied && <span className="text-xs text-ink-muted font-normal">(tier {quote.tierApplied}+)</span>}</span>
+            <span>{t('distribution.quoteUnitLine', { price: quote.unitPrice })} {quote.tierApplied && <span className="text-xs text-ink-muted font-normal">{t('distribution.tierApplied', { tier: quote.tierApplied })}</span>}</span>
             <span className="num text-accent-strong">{formatMoney(quote.lineTotal, company?.currency)}</span>
           </div>
         )}
         <div className="flex justify-end gap-2 pt-3 border-t border-rule">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('distribution.cancel')}</button>
           <button type="button" disabled={!quote || !form.branchId || !form.warehouseId || !form.customerId || saving} className="btn-primary" onClick={createOrder}>
-            {saving ? 'Creating…' : 'Create sales order'}
+            {saving ? t('distribution.creating') : t('distribution.createSalesOrder')}
           </button>
         </div>
       </div>

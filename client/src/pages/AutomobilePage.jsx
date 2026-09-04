@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
@@ -7,16 +8,18 @@ import { EmptyState } from '../components/EmptyState';
 import { formatMoney } from '../lib/format';
 
 export function AutomobilePage() {
+  const { t } = useTranslation();
   return (
     <div>
-      <p className="eyebrow mb-1">Dealership</p>
-      <p className="page-title mb-4">Automobile</p>
+      <p className="eyebrow mb-1">{t('automobile.dealership')}</p>
+      <p className="page-title mb-4">{t('automobile.automobile')}</p>
       <TradeInsTab />
     </div>
   );
 }
 
 function TradeInsTab() {
+  const { t } = useTranslation();
   const { company } = useAuth();
   const toast = useToast();
   const [credits, setCredits] = useState([]);
@@ -33,25 +36,25 @@ function TradeInsTab() {
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <p className="text-sm text-ink-muted">Trade-in appraisals and credits applied against sales.</p>
+        <p className="text-sm text-ink-muted">{t('automobile.subtitle')}</p>
         <button className="btn-primary" onClick={() => setShowForm(true)}>
           <span className="font-icon text-base leading-none">add</span>
-          New trade-in
+          {t('automobile.newTradeIn')}
         </button>
       </div>
       {loading && <Loading />}
       {!loading && credits.length === 0 && (
-        <EmptyState title="No trade-ins yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Add a trade-in</button>} />
+        <EmptyState title={t('automobile.noTradeInsYet')} action={<button className="btn-primary" onClick={() => setShowForm(true)}>{t('automobile.addTradeIn')}</button>} />
       )}
       {!loading && credits.length > 0 && (
         <div className="card overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-surface-sunken text-left text-xs text-ink-muted uppercase tracking-wide">
-                <th className="px-4 py-2.5 font-semibold">Customer</th>
-                <th className="px-4 py-2.5 font-semibold">Vehicle</th>
-                <th className="px-4 py-2.5 font-semibold">Appraised value</th>
-                <th className="px-4 py-2.5 font-semibold">Status</th>
+                <th className="px-4 py-2.5 font-semibold">{t('automobile.customer')}</th>
+                <th className="px-4 py-2.5 font-semibold">{t('automobile.vehicle')}</th>
+                <th className="px-4 py-2.5 font-semibold">{t('automobile.appraisedValue')}</th>
+                <th className="px-4 py-2.5 font-semibold">{t('automobile.status')}</th>
                 <th className="px-4 py-2.5 font-semibold"></th>
               </tr>
             </thead>
@@ -66,7 +69,7 @@ function TradeInsTab() {
                   </td>
                   <td className="px-4 py-2.5 text-right">
                     {c.status === 'pending' && (
-                      <button className="btn-ghost !text-accent !px-0 text-xs font-semibold" onClick={() => setApplying(c)}>Apply to sale</button>
+                      <button className="btn-ghost !text-accent !px-0 text-xs font-semibold" onClick={() => setApplying(c)}>{t('automobile.applyToSale')}</button>
                     )}
                   </td>
                 </tr>
@@ -82,6 +85,7 @@ function TradeInsTab() {
 }
 
 function TradeInForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [customers, setCustomers] = useState([]);
   const [form, setForm] = useState({ customerId: '', vehicleDescription: '', appraisedValue: '' });
@@ -98,7 +102,7 @@ function TradeInForm({ onClose, onSaved }) {
         vehicleDescription: form.vehicleDescription,
         appraisedValue: Number(form.appraisedValue),
       });
-      toast('Trade-in recorded.', 'success');
+      toast(t('automobile.tradeInRecorded'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -110,27 +114,27 @@ function TradeInForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/30 backdrop-blur-sm flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm shadow-lg">
-        <p className="page-title text-lg mb-4">New trade-in</p>
+        <p className="page-title text-lg mb-4">{t('automobile.newTradeIn')}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Customer</label>
+            <label className="field-label">{t('automobile.customer')}</label>
             <select required className="field-input" value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('automobile.selectEllipsis')}</option>
               {customers.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Vehicle description</label>
-            <input className="field-input" autoFocus value={form.vehicleDescription} onChange={(e) => setForm({ ...form, vehicleDescription: e.target.value })} placeholder="e.g. 2018 Honda Civic, VIN ..." />
+            <label className="field-label">{t('automobile.vehicleDescription')}</label>
+            <input className="field-input" autoFocus value={form.vehicleDescription} onChange={(e) => setForm({ ...form, vehicleDescription: e.target.value })} placeholder={t('automobile.vehicleDescriptionPlaceholder')} />
           </div>
           <div>
-            <label className="field-label">Appraised value</label>
+            <label className="field-label">{t('automobile.appraisedValue')}</label>
             <input type="number" required min="0" step="0.01" className="field-input num" value={form.appraisedValue} onChange={(e) => setForm({ ...form, appraisedValue: e.target.value })} />
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('automobile.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('automobile.saving') : t('automobile.save')}</button>
         </div>
       </form>
     </div>
@@ -138,6 +142,7 @@ function TradeInForm({ onClose, onSaved }) {
 }
 
 function ApplyForm({ credit, onClose, onApplied }) {
+  const { t } = useTranslation();
   const { company } = useAuth();
   const toast = useToast();
   const [saleId, setSaleId] = useState('');
@@ -148,7 +153,7 @@ function ApplyForm({ credit, onClose, onApplied }) {
     setSaving(true);
     try {
       await api.post(`/automobile/trade-ins/${credit._id}/apply`, { saleId });
-      toast('Trade-in credit applied to sale.', 'success');
+      toast(t('automobile.tradeInApplied'), 'success');
       onApplied();
     } catch (err) {
       toast(err.message, 'error');
@@ -160,17 +165,17 @@ function ApplyForm({ credit, onClose, onApplied }) {
   return (
     <div className="fixed inset-0 bg-ink/30 backdrop-blur-sm flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm shadow-lg">
-        <p className="page-title text-lg mb-1">Apply trade-in credit</p>
+        <p className="page-title text-lg mb-1">{t('automobile.applyTradeInCredit')}</p>
         <p className="text-sm text-ink-muted mb-4 num">{formatMoney(credit.appraisedValue, company?.currency)}: {credit.customerId?.name}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Sale ID</label>
-            <input required autoFocus className="field-input" value={saleId} onChange={(e) => setSaleId(e.target.value)} placeholder="Sale _id to apply this credit to" />
+            <label className="field-label">{t('automobile.saleId')}</label>
+            <input required autoFocus className="field-input" value={saleId} onChange={(e) => setSaleId(e.target.value)} placeholder={t('automobile.saleIdPlaceholder')} />
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Applying…' : 'Apply'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('automobile.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('automobile.applying') : t('automobile.apply')}</button>
         </div>
       </form>
     </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useToast } from '../components/Toast';
 import { Loading } from '../components/Loading';
@@ -14,6 +15,7 @@ function initials(name) {
 }
 
 export function AppointmentsPage() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,7 +30,7 @@ export function AppointmentsPage() {
   async function updateStatus(id, status) {
     try {
       await api.patch(`/appointments/${id}/status`, { status });
-      toast('Status updated.', 'success');
+      toast(t('appointments.statusUpdated'), 'success');
       load();
     } catch (err) { toast(err.message, 'error'); }
   }
@@ -37,24 +39,24 @@ export function AppointmentsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <p className="page-title">Appointments</p>
-          <p className="text-sm text-ink-muted mt-1">Real-time scheduling and staff double-booking prevention.</p>
+          <p className="page-title">{t('appointments.title')}</p>
+          <p className="text-sm text-ink-muted mt-1">{t('appointments.subtitle')}</p>
         </div>
         <button className="btn-primary" onClick={() => setShowForm(true)}>
           <span className="material-symbols-outlined text-[18px]">add</span>
-          Book appointment
+          {t('appointments.bookAppointment')}
         </button>
       </div>
 
       {loading && <Loading />}
       {!loading && appointments.length === 0 && (
-        <EmptyState title="No appointments yet" description="Book appointments with automatic staff double-booking prevention." action={<button className="btn-primary" onClick={() => setShowForm(true)}>Book one</button>} />
+        <EmptyState title={t('appointments.noAppointmentsYet')} description={t('appointments.emptyDescription')} action={<button className="btn-primary" onClick={() => setShowForm(true)}>{t('appointments.bookOne')}</button>} />
       )}
       {!loading && appointments.length > 0 && (
         <div className="card overflow-hidden">
           <div className="px-5 py-4 border-b border-rule flex items-center justify-between bg-surface">
-            <p className="font-display text-lg font-semibold text-ink">Daily queue</p>
-            <span className="eyebrow">{appointments.length} total</span>
+            <p className="font-display text-lg font-semibold text-ink">{t('appointments.dailyQueue')}</p>
+            <span className="eyebrow">{appointments.length} {t('appointments.total')}</span>
           </div>
           <div className="divide-y divide-rule">
             {appointments.map((a) => {
@@ -81,14 +83,14 @@ export function AppointmentsPage() {
                   <div className="shrink-0 flex gap-2">
                     {a.status === 'scheduled' && (
                       <>
-                        <button className="btn-secondary !py-1.5 !px-3 text-xs" onClick={() => updateStatus(a._id, 'confirmed')}>Confirm</button>
-                        <button className="btn-ghost !text-danger !py-1.5 !px-3 text-xs" onClick={() => updateStatus(a._id, 'cancelled')}>Cancel</button>
+                        <button className="btn-secondary !py-1.5 !px-3 text-xs" onClick={() => updateStatus(a._id, 'confirmed')}>{t('appointments.confirm')}</button>
+                        <button className="btn-ghost !text-danger !py-1.5 !px-3 text-xs" onClick={() => updateStatus(a._id, 'cancelled')}>{t('appointments.cancel')}</button>
                       </>
                     )}
                     {a.status === 'confirmed' && (
                       <>
-                        <button className="btn-primary !py-1.5 !px-3 text-xs" onClick={() => updateStatus(a._id, 'completed')}>Complete</button>
-                        <button className="btn-ghost !text-warning !py-1.5 !px-3 text-xs" onClick={() => updateStatus(a._id, 'no_show')}>No-show</button>
+                        <button className="btn-primary !py-1.5 !px-3 text-xs" onClick={() => updateStatus(a._id, 'completed')}>{t('appointments.complete')}</button>
+                        <button className="btn-ghost !text-warning !py-1.5 !px-3 text-xs" onClick={() => updateStatus(a._id, 'no_show')}>{t('appointments.noShow')}</button>
                       </>
                     )}
                   </div>
@@ -105,6 +107,7 @@ export function AppointmentsPage() {
 }
 
 function AppointmentForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [branches, setBranches] = useState([]);
   const [staff, setStaff] = useState([]);
@@ -123,7 +126,7 @@ function AppointmentForm({ onClose, onSaved }) {
     setSaving(true);
     try {
       await api.post('/appointments', { ...form, customerId: form.customerId || undefined });
-      toast('Appointment booked.', 'success');
+      toast(t('appointments.appointmentBooked'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -135,38 +138,38 @@ function AppointmentForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg font-semibold text-ink mb-4">Book appointment</p>
+        <p className="font-display text-lg font-semibold text-ink mb-4">{t('appointments.bookAppointment')}</p>
         <div className="space-y-3">
-          <div><label className="field-label">Service</label><input required autoFocus className="field-input" value={form.serviceName} onChange={(e) => setForm({ ...form, serviceName: e.target.value })} placeholder="e.g. Haircut" /></div>
+          <div><label className="field-label">{t('appointments.service')}</label><input required autoFocus className="field-input" value={form.serviceName} onChange={(e) => setForm({ ...form, serviceName: e.target.value })} placeholder={t('appointments.servicePlaceholder')} /></div>
           <div>
-            <label className="field-label">Branch</label>
+            <label className="field-label">{t('appointments.branch')}</label>
             <select required className="field-input" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('appointments.selectEllipsis')}</option>
               {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Staff member</label>
+            <label className="field-label">{t('appointments.staffMember')}</label>
             <select required className="field-input" value={form.staffUserId} onChange={(e) => setForm({ ...form, staffUserId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('appointments.selectEllipsis')}</option>
               {staff.map((u) => <option key={u._id} value={u._id}>{u.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Customer</label>
+            <label className="field-label">{t('appointments.customer')}</label>
             <select className="field-input" value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })}>
-              <option value="">Walk-in</option>
+              <option value="">{t('appointments.walkIn')}</option>
               {customers.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <div><label className="field-label">Start</label><input type="datetime-local" required className="field-input" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} /></div>
-            <div><label className="field-label">End</label><input type="datetime-local" required className="field-input" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} /></div>
+            <div><label className="field-label">{t('appointments.start')}</label><input type="datetime-local" required className="field-input" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} /></div>
+            <div><label className="field-label">{t('appointments.end')}</label><input type="datetime-local" required className="field-input" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} /></div>
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Booking…' : 'Book'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('appointments.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('appointments.booking') : t('appointments.book')}</button>
         </div>
       </form>
     </div>

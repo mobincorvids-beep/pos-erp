@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useToast } from '../components/Toast';
 import { Loading } from '../components/Loading';
@@ -6,6 +7,7 @@ import { EmptyState } from '../components/EmptyState';
 import { formatQty } from '../lib/format';
 
 export function WarehouseZonesPage() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [tab, setTab] = useState('bins'); // bins | waves
   const [warehouses, setWarehouses] = useState([]);
@@ -22,8 +24,8 @@ export function WarehouseZonesPage() {
     <div>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
-          <p className="page-title">Warehouse locations</p>
-          <p className="text-sm text-ink-muted mt-1">Manage zones, bins, and bin-level pick waves for a warehouse.</p>
+          <p className="page-title">{t('warehouseZones.title')}</p>
+          <p className="text-sm text-ink-muted mt-1">{t('warehouseZones.subtitle')}</p>
         </div>
         <select className="field-input w-auto" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
           {warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
@@ -33,19 +35,19 @@ export function WarehouseZonesPage() {
       <div className="flex gap-2 mb-6">
         <button className={tab === 'bins' ? 'pill-active' : 'pill'} onClick={() => setTab('bins')}>
           <span className="material-symbols-outlined text-sm mr-1 align-middle">grid_view</span>
-          Zones &amp; bins
+          {t('warehouseZones.zonesAndBins')}
         </button>
         <button className={tab === 'waves' ? 'pill-active' : 'pill'} onClick={() => setTab('waves')}>
           <span className="material-symbols-outlined text-sm mr-1 align-middle">route</span>
-          Pick waves
+          {t('warehouseZones.pickWaves')}
         </button>
         <button className={tab === 'reorder' ? 'pill-active' : 'pill'} onClick={() => setTab('reorder')}>
           <span className="material-symbols-outlined text-sm mr-1 align-middle">inventory_2</span>
-          Reorder rules
+          {t('warehouseZones.reorderRules')}
         </button>
       </div>
 
-      {!warehouseId && <EmptyState title="No warehouse" description="Create a warehouse first to manage its locations." />}
+      {!warehouseId && <EmptyState title={t('warehouseZones.noWarehouse')} description={t('warehouseZones.noWarehouseDescription')} />}
       {warehouseId && tab === 'bins' && <BinsTab warehouseId={warehouseId} />}
       {warehouseId && tab === 'waves' && <WavesTab warehouseId={warehouseId} />}
       {warehouseId && tab === 'reorder' && <ReorderRulesTab warehouseId={warehouseId} />}
@@ -54,6 +56,7 @@ export function WarehouseZonesPage() {
 }
 
 function BinsTab({ warehouseId }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [zones, setZones] = useState([]);
   const [bins, setBins] = useState([]);
@@ -84,22 +87,22 @@ function BinsTab({ warehouseId }) {
       <div className="flex-1 min-w-0 flex flex-col gap-6">
         <div>
           <div className="flex items-center justify-between mb-3">
-            <p className="font-display text-base font-semibold text-ink">Zones</p>
+            <p className="font-display text-base font-semibold text-ink">{t('warehouseZones.zones')}</p>
             <button className="btn-secondary" onClick={() => setShowZoneModal(true)}>
               <span className="material-symbols-outlined text-sm">add</span>
-              Add zone
+              {t('warehouseZones.addZone')}
             </button>
           </div>
-          {zones.length === 0 && <EmptyState title="No zones yet" description="Zones group bins by function (receiving, storage, picking...)." />}
+          {zones.length === 0 && <EmptyState title={t('warehouseZones.noZonesYet')} description={t('warehouseZones.noZonesDescription')} />}
           {zones.length > 0 && (
             <div className="card overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-rule bg-surface-sunken/60">
-                      <th className="py-3 px-5 eyebrow font-medium">Name</th>
-                      <th className="py-3 px-5 eyebrow font-medium">Code</th>
-                      <th className="py-3 px-5 eyebrow font-medium">Type</th>
+                      <th className="py-3 px-5 eyebrow font-medium">{t('warehouseZones.name')}</th>
+                      <th className="py-3 px-5 eyebrow font-medium">{t('warehouseZones.code')}</th>
+                      <th className="py-3 px-5 eyebrow font-medium">{t('warehouseZones.type')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-rule">
@@ -119,25 +122,25 @@ function BinsTab({ warehouseId }) {
 
         <div>
           <div className="flex items-center justify-between mb-3">
-            <p className="font-display text-base font-semibold text-ink">Bins</p>
+            <p className="font-display text-base font-semibold text-ink">{t('warehouseZones.bins')}</p>
             <div className="flex gap-2">
-              <button className="btn-secondary" onClick={() => setShowAssignModal(true)}>Assign stock to bin</button>
+              <button className="btn-secondary" onClick={() => setShowAssignModal(true)}>{t('warehouseZones.assignStockToBin')}</button>
               <button className="btn-primary" onClick={() => setShowBinModal(true)}>
                 <span className="material-symbols-outlined text-sm">add</span>
-                Add bin
+                {t('warehouseZones.addBin')}
               </button>
             </div>
           </div>
-          {bins.length === 0 && <EmptyState title="No bins yet" description="Add bins to start locating stock within this warehouse." />}
+          {bins.length === 0 && <EmptyState title={t('warehouseZones.noBinsYet')} description={t('warehouseZones.noBinsDescription')} />}
           {bins.length > 0 && (
             <div className="card overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-rule bg-surface-sunken/60">
-                      <th className="py-3 px-5 eyebrow font-medium">Bin code</th>
-                      <th className="py-3 px-5 eyebrow font-medium">Zone</th>
-                      <th className="py-3 px-5 eyebrow font-medium text-right">Capacity</th>
+                      <th className="py-3 px-5 eyebrow font-medium">{t('warehouseZones.binCode')}</th>
+                      <th className="py-3 px-5 eyebrow font-medium">{t('warehouseZones.zone')}</th>
+                      <th className="py-3 px-5 eyebrow font-medium text-right">{t('warehouseZones.capacity')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-rule">
@@ -164,17 +167,17 @@ function BinsTab({ warehouseId }) {
       </div>
 
       <div className="w-full lg:w-96 shrink-0">
-        <p className="font-display text-base font-semibold text-ink mb-3">Bin stock</p>
-        {summary.length === 0 && <EmptyState title="No stock located yet" description="Assign existing on-hand stock to bins to see the breakdown here." />}
+        <p className="font-display text-base font-semibold text-ink mb-3">{t('warehouseZones.binStock')}</p>
+        {summary.length === 0 && <EmptyState title={t('warehouseZones.noStockLocatedYet')} description={t('warehouseZones.noStockLocatedDescription')} />}
         {summary.length > 0 && (
           <div className="card overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-rule bg-surface-sunken/60">
-                    <th className="py-3 px-4 eyebrow font-medium">Bin</th>
-                    <th className="py-3 px-4 eyebrow font-medium">Product</th>
-                    <th className="py-3 px-4 eyebrow font-medium text-right">Qty</th>
+                    <th className="py-3 px-4 eyebrow font-medium">{t('warehouseZones.bin')}</th>
+                    <th className="py-3 px-4 eyebrow font-medium">{t('warehouseZones.product')}</th>
+                    <th className="py-3 px-4 eyebrow font-medium text-right">{t('warehouseZones.qty')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-rule">
@@ -200,6 +203,7 @@ function BinsTab({ warehouseId }) {
 }
 
 function NewZoneModal({ warehouseId, onClose, onCreated }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
@@ -211,7 +215,7 @@ function NewZoneModal({ warehouseId, onClose, onCreated }) {
     setBusy(true);
     try {
       await api.post('/warehouse/zones', { warehouseId, name, code, type });
-      toast('Zone created.', 'success');
+      toast(t('warehouseZones.zoneCreated'), 'success');
       onCreated(); onClose();
     } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }
   }
@@ -219,26 +223,26 @@ function NewZoneModal({ warehouseId, onClose, onCreated }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4" onClick={onClose}>
       <div className="card p-5 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-        <p className="font-display text-lg mb-4">Add zone</p>
+        <p className="font-display text-lg mb-4">{t('warehouseZones.addZone')}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Name</label>
-            <input className="field-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Bulk storage" />
+            <label className="field-label">{t('warehouseZones.name')}</label>
+            <input className="field-input" value={name} onChange={(e) => setName(e.target.value)} placeholder={t('warehouseZones.zoneNamePlaceholder')} />
           </div>
           <div>
-            <label className="field-label">Code</label>
+            <label className="field-label">{t('warehouseZones.code')}</label>
             <input className="field-input" value={code} onChange={(e) => setCode(e.target.value)} placeholder="Z-A" />
           </div>
           <div>
-            <label className="field-label">Type</label>
+            <label className="field-label">{t('warehouseZones.type')}</label>
             <select className="field-input" value={type} onChange={(e) => setType(e.target.value)}>
-              {['receiving', 'storage', 'picking', 'packing', 'shipping', 'other'].map((t) => <option key={t} value={t}>{t}</option>)}
+              {['receiving', 'storage', 'picking', 'packing', 'shipping', 'other'].map((zt) => <option key={zt} value={zt}>{zt}</option>)}
             </select>
           </div>
         </div>
         <div className="flex gap-2 justify-end mt-5">
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn-primary" disabled={busy || !name} onClick={save}>Save</button>
+          <button className="btn-secondary" onClick={onClose}>{t('warehouseZones.cancel')}</button>
+          <button className="btn-primary" disabled={busy || !name} onClick={save}>{t('warehouseZones.save')}</button>
         </div>
       </div>
     </div>
@@ -246,6 +250,7 @@ function NewZoneModal({ warehouseId, onClose, onCreated }) {
 }
 
 function NewBinModal({ warehouseId, zones, onClose, onCreated }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [binCode, setBinCode] = useState('');
   const [zoneId, setZoneId] = useState('');
@@ -257,7 +262,7 @@ function NewBinModal({ warehouseId, zones, onClose, onCreated }) {
     setBusy(true);
     try {
       await api.post('/warehouse/bins', { warehouseId, binCode, zoneId: zoneId || null, capacity: capacity ? Number(capacity) : null });
-      toast('Bin created.', 'success');
+      toast(t('warehouseZones.binCreated'), 'success');
       onCreated(); onClose();
     } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }
   }
@@ -265,27 +270,27 @@ function NewBinModal({ warehouseId, zones, onClose, onCreated }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4" onClick={onClose}>
       <div className="card p-5 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-        <p className="font-display text-lg mb-4">Add bin</p>
+        <p className="font-display text-lg mb-4">{t('warehouseZones.addBin')}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Bin code</label>
+            <label className="field-label">{t('warehouseZones.binCode')}</label>
             <input className="field-input" value={binCode} onChange={(e) => setBinCode(e.target.value)} placeholder="A1-01" />
           </div>
           <div>
-            <label className="field-label">Zone (optional)</label>
+            <label className="field-label">{t('warehouseZones.zoneOptional')}</label>
             <select className="field-input" value={zoneId} onChange={(e) => setZoneId(e.target.value)}>
-              <option value="">Unassigned</option>
+              <option value="">{t('warehouseZones.unassigned')}</option>
               {zones.map((z) => <option key={z._id} value={z._id}>{z.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Capacity (optional)</label>
+            <label className="field-label">{t('warehouseZones.capacityOptional')}</label>
             <input className="field-input num" type="number" value={capacity} onChange={(e) => setCapacity(e.target.value)} />
           </div>
         </div>
         <div className="flex gap-2 justify-end mt-5">
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn-primary" disabled={busy || !binCode} onClick={save}>Save</button>
+          <button className="btn-secondary" onClick={onClose}>{t('warehouseZones.cancel')}</button>
+          <button className="btn-primary" disabled={busy || !binCode} onClick={save}>{t('warehouseZones.save')}</button>
         </div>
       </div>
     </div>
@@ -293,6 +298,7 @@ function NewBinModal({ warehouseId, zones, onClose, onCreated }) {
 }
 
 function AssignStockModal({ bins, onClose, onCreated }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [binId, setBinId] = useState(bins[0]?._id || '');
   const [productId, setProductId] = useState('');
@@ -304,7 +310,7 @@ function AssignStockModal({ bins, onClose, onCreated }) {
     setBusy(true);
     try {
       await api.post('/warehouse/bin-stock/assign', { binId, productId, quantity: Number(quantity) });
-      toast('Stock assigned to bin.', 'success');
+      toast(t('warehouseZones.stockAssigned'), 'success');
       onCreated(); onClose();
     } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }
   }
@@ -312,27 +318,27 @@ function AssignStockModal({ bins, onClose, onCreated }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4" onClick={onClose}>
       <div className="card p-5 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-        <p className="font-display text-lg mb-4">Assign stock to bin</p>
+        <p className="font-display text-lg mb-4">{t('warehouseZones.assignStockToBin')}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Bin</label>
+            <label className="field-label">{t('warehouseZones.bin')}</label>
             <select className="field-input" value={binId} onChange={(e) => setBinId(e.target.value)}>
               {bins.map((b) => <option key={b._id} value={b._id}>{b.binCode}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Product ID</label>
-            <input className="field-input" value={productId} onChange={(e) => setProductId(e.target.value)} placeholder="Paste product ID" />
+            <label className="field-label">{t('warehouseZones.productId')}</label>
+            <input className="field-input" value={productId} onChange={(e) => setProductId(e.target.value)} placeholder={t('warehouseZones.pasteProductId')} />
           </div>
           <div>
-            <label className="field-label">Quantity</label>
+            <label className="field-label">{t('warehouseZones.quantity')}</label>
             <input className="field-input num" type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
           </div>
         </div>
-        <p className="text-xs text-ink-muted mt-3">Cannot exceed the product's actual unassigned on-hand quantity at this warehouse.</p>
+        <p className="text-xs text-ink-muted mt-3">{t('warehouseZones.assignQtyHint')}</p>
         <div className="flex gap-2 justify-end mt-5">
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn-primary" disabled={busy || !binId || !productId || !quantity} onClick={save}>Assign</button>
+          <button className="btn-secondary" onClick={onClose}>{t('warehouseZones.cancel')}</button>
+          <button className="btn-primary" disabled={busy || !binId || !productId || !quantity} onClick={save}>{t('warehouseZones.assign')}</button>
         </div>
       </div>
     </div>
@@ -347,6 +353,7 @@ const WAVE_STATUS_CHIP = {
 };
 
 function WavesTab({ warehouseId }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [waves, setWaves] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -363,23 +370,23 @@ function WavesTab({ warehouseId }) {
     <div className="flex flex-col lg:flex-row gap-6">
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-4">
-          <p className="font-display text-base font-semibold text-ink">Pick waves</p>
+          <p className="font-display text-base font-semibold text-ink">{t('warehouseZones.pickWaves')}</p>
           <button className="btn-primary" onClick={() => setShowNew(true)}>
             <span className="material-symbols-outlined text-sm">add</span>
-            New pick wave
+            {t('warehouseZones.newPickWave')}
           </button>
         </div>
         {loading && <Loading />}
-        {!loading && waves.length === 0 && <EmptyState title="No pick waves yet" description="Create a wave from open sales orders to generate a bin-level pick list." />}
+        {!loading && waves.length === 0 && <EmptyState title={t('warehouseZones.noPickWavesYet')} description={t('warehouseZones.noPickWavesDescription')} />}
         {!loading && waves.length > 0 && (
           <div className="card overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-rule bg-surface-sunken/60">
-                    <th className="py-3 px-5 eyebrow font-medium">Wave #</th>
-                    <th className="py-3 px-5 eyebrow font-medium">Status</th>
-                    <th className="py-3 px-5 eyebrow font-medium text-right">Sales</th>
+                    <th className="py-3 px-5 eyebrow font-medium">{t('warehouseZones.waveNumber')}</th>
+                    <th className="py-3 px-5 eyebrow font-medium">{t('warehouseZones.status')}</th>
+                    <th className="py-3 px-5 eyebrow font-medium text-right">{t('warehouseZones.sales')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-rule">
@@ -407,6 +414,7 @@ function WavesTab({ warehouseId }) {
 }
 
 function NewWaveModal({ warehouseId, onClose, onCreated }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [saleIdsText, setSaleIdsText] = useState('');
   const [busy, setBusy] = useState(false);
@@ -417,7 +425,7 @@ function NewWaveModal({ warehouseId, onClose, onCreated }) {
     setBusy(true);
     try {
       await api.post('/pick-waves', { warehouseId, saleIds });
-      toast('Pick wave created.', 'success');
+      toast(t('warehouseZones.pickWaveCreated'), 'success');
       onCreated(); onClose();
     } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }
   }
@@ -425,13 +433,13 @@ function NewWaveModal({ warehouseId, onClose, onCreated }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4" onClick={onClose}>
       <div className="card p-5 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-        <p className="font-display text-lg mb-4">New pick wave</p>
-        <label className="field-label">Sales order IDs</label>
-        <textarea className="field-input" rows={4} value={saleIdsText} onChange={(e) => setSaleIdsText(e.target.value)} placeholder="One ID per line, or comma-separated" />
-        <p className="text-xs text-ink-muted mt-3">Allocates each line to whichever bin(s) currently hold enough stock, first-fit.</p>
+        <p className="font-display text-lg mb-4">{t('warehouseZones.newPickWave')}</p>
+        <label className="field-label">{t('warehouseZones.salesOrderIds')}</label>
+        <textarea className="field-input" rows={4} value={saleIdsText} onChange={(e) => setSaleIdsText(e.target.value)} placeholder={t('warehouseZones.salesOrderIdsPlaceholder')} />
+        <p className="text-xs text-ink-muted mt-3">{t('warehouseZones.waveAllocationHint')}</p>
         <div className="flex gap-2 justify-end mt-5">
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn-primary" disabled={busy || !saleIdsText.trim()} onClick={create}>Create</button>
+          <button className="btn-secondary" onClick={onClose}>{t('warehouseZones.cancel')}</button>
+          <button className="btn-primary" disabled={busy || !saleIdsText.trim()} onClick={create}>{t('warehouseZones.create')}</button>
         </div>
       </div>
     </div>
@@ -439,6 +447,7 @@ function NewWaveModal({ warehouseId, onClose, onCreated }) {
 }
 
 function WavePanel({ wave, onClose, onChanged }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [lines, setLines] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -455,7 +464,7 @@ function WavePanel({ wave, onClose, onChanged }) {
     setBusy(true);
     try {
       await api.post(`/pick-waves/${wave._id}/lines/${line._id}/pick`, { quantityPicked: remaining });
-      toast('Pick recorded.', 'success');
+      toast(t('warehouseZones.pickRecorded'), 'success');
       load(); onChanged();
     } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }
   }
@@ -464,7 +473,7 @@ function WavePanel({ wave, onClose, onChanged }) {
     setBusy(true);
     try {
       await api.post(`/pick-waves/${wave._id}/complete`);
-      toast('Wave completed.', 'success');
+      toast(t('warehouseZones.waveCompleted'), 'success');
       onChanged(); onClose();
     } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }
   }
@@ -478,30 +487,31 @@ function WavePanel({ wave, onClose, onChanged }) {
         </button>
       </div>
       {loading && <Loading />}
-      {!loading && lines.length === 0 && <EmptyState title="No lines" description="No bin stock could be allocated for this wave's products." />}
+      {!loading && lines.length === 0 && <EmptyState title={t('warehouseZones.noLines')} description={t('warehouseZones.noLinesDescription')} />}
       {!loading && lines.length > 0 && (
         <div className="divide-y divide-rule">
           {lines.map((l) => (
             <div key={l._id} className="flex items-center justify-between py-3 text-sm">
               <div>
                 <p className="text-ink">{l.productId?.name || l.productId}</p>
-                <p className="text-xs text-ink-muted num mt-0.5">Bin {l.binId?.binCode || l.binId}: {l.quantityPicked}/{l.quantityToPick}</p>
+                <p className="text-xs text-ink-muted num mt-0.5">{t('warehouseZones.binQtyProgress', { bin: l.binId?.binCode || l.binId, picked: l.quantityPicked, toPick: l.quantityToPick })}</p>
               </div>
               {l.status !== 'picked'
-                ? <button className="btn-secondary" disabled={busy} onClick={() => pick(l)}>Pick</button>
-                : <span className="chip-accent">Picked</span>}
+                ? <button className="btn-secondary" disabled={busy} onClick={() => pick(l)}>{t('warehouseZones.pick')}</button>
+                : <span className="chip-accent">{t('warehouseZones.picked')}</span>}
             </div>
           ))}
         </div>
       )}
       {!loading && lines.length > 0 && (
-        <button className="btn-primary w-full mt-4" disabled={busy || wave.status === 'completed'} onClick={complete}>Complete wave</button>
+        <button className="btn-primary w-full mt-4" disabled={busy || wave.status === 'completed'} onClick={complete}>{t('warehouseZones.completeWave')}</button>
       )}
     </div>
   );
 }
 
 function ReorderRulesTab({ warehouseId }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [rules, setRules] = useState([]);
   const [belowPoint, setBelowPoint] = useState([]);
@@ -522,7 +532,7 @@ function ReorderRulesTab({ warehouseId }) {
   async function removeRule(id) {
     try {
       await api.del(`/warehouse/rules/${id}`);
-      toast('Reorder rule removed.', 'success');
+      toast(t('warehouseZones.reorderRuleRemoved'), 'success');
       load();
     } catch (err) { toast(err.message, 'error'); }
   }
@@ -534,7 +544,7 @@ function ReorderRulesTab({ warehouseId }) {
       {belowPoint.length > 0 && (
         <div className="card overflow-hidden border-warning/40">
           <div className="px-4 py-3 border-b border-rule flex items-center justify-between">
-            <p className="font-display font-bold text-ink">Below reorder point at this warehouse</p>
+            <p className="font-display font-bold text-ink">{t('warehouseZones.belowReorderPoint')}</p>
             <span className="chip-warning">{belowPoint.length}</span>
           </div>
           <div className="divide-y divide-rule">
@@ -542,9 +552,9 @@ function ReorderRulesTab({ warehouseId }) {
               <div key={p.productId} className="flex items-center justify-between px-4 py-2.5 text-sm">
                 <div>
                   <p className="text-ink">{p.productName}{p.sku ? ` (${p.sku})` : ''}</p>
-                  <p className="text-xs text-ink-muted">{p.source === 'warehouse_rule' ? 'Per-warehouse rule' : 'Product default'}</p>
+                  <p className="text-xs text-ink-muted">{p.source === 'warehouse_rule' ? t('warehouseZones.perWarehouseRule') : t('warehouseZones.productDefault')}</p>
                 </div>
-                <span className="num text-ink-muted">{formatQty(p.onHand)} on hand · min {formatQty(p.minQty)}</span>
+                <span className="num text-ink-muted">{t('warehouseZones.onHandMin', { onHand: formatQty(p.onHand), min: formatQty(p.minQty) })}</span>
               </div>
             ))}
           </div>
@@ -554,20 +564,20 @@ function ReorderRulesTab({ warehouseId }) {
       <div className="card overflow-hidden">
         <div className="px-4 py-3 border-b border-rule flex items-center justify-between">
           <div>
-            <p className="font-display font-bold text-ink">Per-warehouse reorder rules</p>
-            <p className="text-xs text-ink-muted mt-0.5">Overrides the product's global reorder level, just for this warehouse.</p>
+            <p className="font-display font-bold text-ink">{t('warehouseZones.perWarehouseReorderRules')}</p>
+            <p className="text-xs text-ink-muted mt-0.5">{t('warehouseZones.overridesGlobalHint')}</p>
           </div>
-          <button className="btn-primary" onClick={() => setShowForm(true)}>Add rule</button>
+          <button className="btn-primary" onClick={() => setShowForm(true)}>{t('warehouseZones.addRule')}</button>
         </div>
         {rules.length === 0
-          ? <EmptyState title="No warehouse-specific rules" description="Products here fall back to their global reorder level." />
+          ? <EmptyState title={t('warehouseZones.noWarehouseSpecificRules')} description={t('warehouseZones.noWarehouseSpecificRulesDescription')} />
           : (
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken/50">
-                  <th className="px-4 py-2.5 font-medium">Product</th>
-                  <th className="px-4 py-2.5 font-medium">Min qty</th>
-                  <th className="px-4 py-2.5 font-medium">Max qty</th>
+                  <th className="px-4 py-2.5 font-medium">{t('warehouseZones.product')}</th>
+                  <th className="px-4 py-2.5 font-medium">{t('warehouseZones.minQty')}</th>
+                  <th className="px-4 py-2.5 font-medium">{t('warehouseZones.maxQty')}</th>
                   <th className="px-4 py-2.5 font-medium"></th>
                 </tr>
               </thead>
@@ -578,7 +588,7 @@ function ReorderRulesTab({ warehouseId }) {
                     <td className="px-4 py-2.5 num">{formatQty(r.minQty)}</td>
                     <td className="px-4 py-2.5 num">{r.maxQty != null ? formatQty(r.maxQty) : '—'}</td>
                     <td className="px-4 py-2.5 text-right">
-                      <button className="btn-ghost !text-danger" onClick={() => removeRule(r._id)}>Remove</button>
+                      <button className="btn-ghost !text-danger" onClick={() => removeRule(r._id)}>{t('warehouseZones.remove')}</button>
                     </td>
                   </tr>
                 ))}
@@ -593,6 +603,7 @@ function ReorderRulesTab({ warehouseId }) {
 }
 
 function ReorderRuleForm({ warehouseId, products, onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [productId, setProductId] = useState('');
   const [minQty, setMinQty] = useState(0);
@@ -607,7 +618,7 @@ function ReorderRuleForm({ warehouseId, products, onClose, onSaved }) {
         warehouseId, productId, minQty: Number(minQty),
         maxQty: maxQty === '' ? null : Number(maxQty),
       });
-      toast('Reorder rule saved.', 'success');
+      toast(t('warehouseZones.reorderRuleSaved'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -619,25 +630,25 @@ function ReorderRuleForm({ warehouseId, products, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg font-semibold text-ink mb-4">Add reorder rule</p>
-        <label className="field-label">Product</label>
+        <p className="font-display text-lg font-semibold text-ink mb-4">{t('warehouseZones.addReorderRule')}</p>
+        <label className="field-label">{t('warehouseZones.product')}</label>
         <select required className="field-input mb-3" value={productId} onChange={(e) => setProductId(e.target.value)}>
-          <option value="">Select a product</option>
+          <option value="">{t('warehouseZones.selectAProduct')}</option>
           {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
         </select>
         <div className="grid grid-cols-2 gap-2 mb-4">
           <div>
-            <label className="field-label">Min qty (reorder point)</label>
+            <label className="field-label">{t('warehouseZones.minQtyReorderPoint')}</label>
             <input required type="number" min="0" className="field-input num" value={minQty} onChange={(e) => setMinQty(e.target.value)} />
           </div>
           <div>
-            <label className="field-label">Max qty (optional)</label>
-            <input type="number" min="0" className="field-input num" value={maxQty} onChange={(e) => setMaxQty(e.target.value)} placeholder="2x min if blank" />
+            <label className="field-label">{t('warehouseZones.maxQtyOptional')}</label>
+            <input type="number" min="0" className="field-input num" value={maxQty} onChange={(e) => setMaxQty(e.target.value)} placeholder={t('warehouseZones.maxQtyPlaceholder')} />
           </div>
         </div>
         <div className="flex justify-end gap-2">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('warehouseZones.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('warehouseZones.saving') : t('warehouseZones.save')}</button>
         </div>
       </form>
     </div>

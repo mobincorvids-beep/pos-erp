@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
@@ -15,6 +16,7 @@ function initials(name) {
 }
 
 export function TicketsPage() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [tickets, setTickets] = useState([]);
   const [compliance, setCompliance] = useState(null);
@@ -36,12 +38,12 @@ export function TicketsPage() {
     <div>
       <div className="flex items-end justify-between mb-6">
         <div>
-          <p className="page-title">Helpdesk Overview</p>
-          <p className="text-sm text-ink-muted mt-1">Manage support requests and monitor performance.</p>
+          <p className="page-title">{t('tickets.title')}</p>
+          <p className="text-sm text-ink-muted mt-1">{t('tickets.subtitle')}</p>
         </div>
         <button className="btn-primary" onClick={() => setShowForm(true)}>
           <span className="material-symbols-outlined text-base leading-none">add_task</span>
-          New ticket
+          {t('tickets.newTicket')}
         </button>
       </div>
 
@@ -49,7 +51,7 @@ export function TicketsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <div className="card p-4">
             <div className="flex items-center justify-between mb-2">
-              <p className="eyebrow">Open tickets</p>
+              <p className="eyebrow">{t('tickets.openTickets')}</p>
               <div className="w-8 h-8 rounded-full bg-danger-soft text-danger flex items-center justify-center">
                 <span className="material-symbols-outlined text-base leading-none">warning</span>
               </div>
@@ -58,7 +60,7 @@ export function TicketsPage() {
           </div>
           <div className="card p-4">
             <div className="flex items-center justify-between mb-2">
-              <p className="eyebrow">SLA met</p>
+              <p className="eyebrow">{t('tickets.slaMet')}</p>
               <div className="w-8 h-8 rounded-full bg-accent-soft text-accent-strong flex items-center justify-center">
                 <span className="material-symbols-outlined text-base leading-none">check_circle</span>
               </div>
@@ -67,7 +69,7 @@ export function TicketsPage() {
           </div>
           <div className="card p-4">
             <div className="flex items-center justify-between mb-2">
-              <p className="eyebrow">Compliance</p>
+              <p className="eyebrow">{t('tickets.compliance')}</p>
               <div className="w-8 h-8 rounded-full bg-info-soft text-info flex items-center justify-center">
                 <span className="material-symbols-outlined text-base leading-none">timer</span>
               </div>
@@ -79,9 +81,9 @@ export function TicketsPage() {
 
       <div className="card overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-rule bg-surface-sunken/50">
-          <p className="font-display text-lg font-semibold">Ticket queue</p>
+          <p className="font-display text-lg font-semibold">{t('tickets.ticketQueue')}</p>
           <div className="flex gap-1.5">
-            {[['', 'All'], ['open', 'Open'], ['assigned', 'Assigned'], ['resolved', 'Resolved'], ['closed', 'Closed']].map(([key, label]) => (
+            {[['', t('tickets.all')], ['open', t('tickets.open')], ['assigned', t('tickets.assigned')], ['resolved', t('tickets.resolved')], ['closed', t('tickets.closed')]].map(([key, label]) => (
               <button key={key} onClick={() => setStatusFilter(key)} className={statusFilter === key ? 'pill-active' : 'pill'}>
                 {label}
               </button>
@@ -92,25 +94,25 @@ export function TicketsPage() {
         {loading && <div className="p-6"><Loading /></div>}
         {!loading && tickets.length === 0 && (
           <div className="p-6">
-            <EmptyState title="No tickets" description="Customer complaints and internal support requests both live here, with a real SLA clock running on each one." action={<button className="btn-primary" onClick={() => setShowForm(true)}>Raise a ticket</button>} />
+            <EmptyState title={t('tickets.noTickets')} description={t('tickets.noTicketsDescription')} action={<button className="btn-primary" onClick={() => setShowForm(true)}>{t('tickets.raiseATicket')}</button>} />
           </div>
         )}
         {!loading && tickets.length > 0 && (
           <>
             <div className="grid grid-cols-[1.6fr_100px_120px_120px_130px_110px_170px] gap-3 px-5 py-2.5 bg-surface-sunken border-b border-rule text-xs text-ink-muted uppercase tracking-wide font-semibold">
-              <div>Subject</div>
-              <div>Category</div>
-              <div>Priority</div>
-              <div>Status</div>
-              <div>SLA</div>
-              <div>Raised</div>
-              <div className="text-right">Action</div>
+              <div>{t('tickets.subject')}</div>
+              <div>{t('tickets.category')}</div>
+              <div>{t('tickets.priority')}</div>
+              <div>{t('tickets.status')}</div>
+              <div>{t('tickets.sla')}</div>
+              <div>{t('tickets.raised')}</div>
+              <div className="text-right">{t('tickets.action')}</div>
             </div>
             <div>
               {tickets.map((t) => <TicketRow key={t._id} ticket={t} onChanged={load} />)}
             </div>
             <div className="flex items-center justify-between px-5 py-3 border-t border-rule text-sm text-ink-muted">
-              <span>Showing {tickets.length} ticket{tickets.length === 1 ? '' : 's'}</span>
+              <span>{tickets.length === 1 ? t('tickets.showingCountOne', { count: tickets.length }) : t('tickets.showingCountOther', { count: tickets.length })}</span>
             </div>
           </>
         )}
@@ -121,14 +123,16 @@ export function TicketsPage() {
   );
 }
 
-function slaLabel(ticket) {
-  if (ticket.slaBreached === true) return <span className="chip-danger">Breached</span>;
-  if (ticket.slaBreached === false) return <span className="chip-accent">Met</span>;
+function SlaLabel({ ticket }) {
+  const { t } = useTranslation();
+  if (ticket.slaBreached === true) return <span className="chip-danger">{t('tickets.breached')}</span>;
+  if (ticket.slaBreached === false) return <span className="chip-accent">{t('tickets.met')}</span>;
   const overdue = new Date(ticket.slaDueAt) < new Date();
-  return overdue ? <span className="chip-danger">Overdue</span> : <span className="chip-neutral">Awaiting</span>;
+  return overdue ? <span className="chip-danger">{t('tickets.overdue')}</span> : <span className="chip-neutral">{t('tickets.awaiting')}</span>;
 }
 
 function TicketRow({ ticket, onChanged }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [assigning, setAssigning] = useState(false);
   const [resolving, setResolving] = useState(false);
@@ -142,7 +146,7 @@ function TicketRow({ ticket, onChanged }) {
     if (!assignee) return;
     try {
       await api.post(`/tickets/${ticket._id}/assign`, { assignedToUserId: assignee });
-      toast('Ticket assigned.', 'success');
+      toast(t('tickets.ticketAssigned'), 'success');
       setAssigning(false);
       onChanged();
     } catch (err) { toast(err.message, 'error'); }
@@ -151,7 +155,7 @@ function TicketRow({ ticket, onChanged }) {
     if (!resolutionNote.trim()) return;
     try {
       await api.post(`/tickets/${ticket._id}/resolve`, { resolutionNote });
-      toast('Ticket resolved.', 'success');
+      toast(t('tickets.ticketResolved'), 'success');
       setResolving(false);
       onChanged();
     } catch (err) { toast(err.message, 'error'); }
@@ -159,7 +163,7 @@ function TicketRow({ ticket, onChanged }) {
   async function close() {
     try {
       await api.post(`/tickets/${ticket._id}/close`);
-      toast('Ticket closed.', 'success');
+      toast(t('tickets.ticketClosed'), 'success');
       onChanged();
     } catch (err) { toast(err.message, 'error'); }
   }
@@ -175,19 +179,19 @@ function TicketRow({ ticket, onChanged }) {
       <div className="text-ink-muted text-sm pt-0.5">{ticket.category}</div>
       <div className="pt-0.5"><span className={PRIORITY_CHIP[ticket.priority]}>{ticket.priority}</span></div>
       <div className="pt-0.5"><span className={STATUS_CHIP[ticket.status]}>{ticket.status}</span></div>
-      <div className="pt-0.5">{slaLabel(ticket)}</div>
+      <div className="pt-0.5"><SlaLabel ticket={ticket} /></div>
       <div className="text-ink-muted text-sm pt-0.5">{formatDate(ticket.createdAt)}</div>
       <div className="text-right">
         {ticket.status === 'open' && !assigning && (
-          <button className="btn-ghost !text-accent" onClick={() => setAssigning(true)}>Assign</button>
+          <button className="btn-ghost !text-accent" onClick={() => setAssigning(true)}>{t('tickets.assign')}</button>
         )}
         {ticket.status === 'open' && assigning && (
           <div className="flex gap-1 justify-end items-center">
             <select className="field-input !py-1 !text-xs" value={assignee} onChange={(e) => setAssignee(e.target.value)}>
-              <option value="">Assign to…</option>
+              <option value="">{t('tickets.assignTo')}</option>
               {users.map((u) => <option key={u._id} value={u._id}>{u.name}</option>)}
             </select>
-            <button className="btn-ghost !text-accent" onClick={assign} disabled={!assignee}>Save</button>
+            <button className="btn-ghost !text-accent" onClick={assign} disabled={!assignee}>{t('tickets.save')}</button>
           </div>
         )}
         {ticket.status === 'assigned' && !resolving && (
@@ -198,17 +202,17 @@ function TicketRow({ ticket, onChanged }) {
                 {assigneeName}
               </span>
             )}
-            <button className="btn-ghost !text-accent" onClick={() => setResolving(true)}>Resolve</button>
+            <button className="btn-ghost !text-accent" onClick={() => setResolving(true)}>{t('tickets.resolve')}</button>
           </div>
         )}
         {ticket.status === 'assigned' && resolving && (
           <div className="flex gap-1 justify-end items-center">
-            <input className="field-input !py-1 !text-xs" placeholder="Resolution note…" value={resolutionNote} onChange={(e) => setResolutionNote(e.target.value)} />
-            <button className="btn-ghost !text-accent" onClick={resolve} disabled={!resolutionNote.trim()}>Save</button>
+            <input className="field-input !py-1 !text-xs" placeholder={t('tickets.resolutionNote')} value={resolutionNote} onChange={(e) => setResolutionNote(e.target.value)} />
+            <button className="btn-ghost !text-accent" onClick={resolve} disabled={!resolutionNote.trim()}>{t('tickets.save')}</button>
           </div>
         )}
         {ticket.status === 'resolved' && (
-          <button className="btn-ghost" onClick={close}>Close</button>
+          <button className="btn-ghost" onClick={close}>{t('tickets.close')}</button>
         )}
       </div>
     </div>
@@ -216,6 +220,7 @@ function TicketRow({ ticket, onChanged }) {
 }
 
 function TicketForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [branches, setBranches] = useState([]);
   const [form, setForm] = useState({ branchId: '', category: '', subject: '', description: '', priority: 'medium' });
@@ -244,7 +249,7 @@ function TicketForm({ onClose, onSaved }) {
     setSaving(true);
     try {
       await api.post('/tickets', form);
-      toast('Ticket raised.', 'success');
+      toast(t('tickets.ticketRaised'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -256,26 +261,26 @@ function TicketForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Raise a ticket</p>
+        <p className="font-display text-lg mb-4">{t('tickets.raiseATicket')}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Branch</label>
+            <label className="field-label">{t('tickets.branch')}</label>
             <select required className="field-input" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('tickets.select')}</option>
               {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Category</label>
-            <input required className="field-input" placeholder="Billing, technical, general…" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
+            <label className="field-label">{t('tickets.category')}</label>
+            <input required className="field-input" placeholder={t('tickets.categoryPlaceholder')} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
           </div>
           <div>
-            <label className="field-label">Subject</label>
+            <label className="field-label">{t('tickets.subject')}</label>
             <input required className="field-input" value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} />
           </div>
           {suggestedArticles.length > 0 && (
             <div className="rounded-lg bg-surface-sunken/60 border border-rule p-2.5">
-              <p className="text-xs font-semibold text-ink-muted mb-1.5">Suggested Knowledge Base articles</p>
+              <p className="text-xs font-semibold text-ink-muted mb-1.5">{t('tickets.suggestedArticles')}</p>
               <ul className="space-y-1">
                 {suggestedArticles.map((a) => (
                   <li key={a._id} className="text-xs">
@@ -286,22 +291,22 @@ function TicketForm({ onClose, onSaved }) {
             </div>
           )}
           <div>
-            <label className="field-label">Description</label>
+            <label className="field-label">{t('tickets.description')}</label>
             <textarea required rows={3} className="field-input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </div>
           <div>
-            <label className="field-label">Priority</label>
+            <label className="field-label">{t('tickets.priority')}</label>
             <select className="field-input" value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })}>
-              <option value="low">Low: 72h response target</option>
-              <option value="medium">Medium: 24h response target</option>
-              <option value="high">High: 4h response target</option>
-              <option value="emergency">Emergency: 1h response target</option>
+              <option value="low">{t('tickets.priorityLow')}</option>
+              <option value="medium">{t('tickets.priorityMedium')}</option>
+              <option value="high">{t('tickets.priorityHigh')}</option>
+              <option value="emergency">{t('tickets.priorityEmergency')}</option>
             </select>
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Raising…' : 'Raise ticket'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('tickets.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('tickets.raising') : t('tickets.raiseTicket')}</button>
         </div>
       </form>
     </div>

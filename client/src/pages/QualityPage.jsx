@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useToast } from '../components/Toast';
 import { Loading } from '../components/Loading';
@@ -7,12 +8,9 @@ import { formatDate } from '../lib/format';
 
 const SEVERITY_CHIP = { low: 'chip-neutral', medium: 'chip-warning', high: 'chip-danger', critical: 'chip-danger' };
 const STATUS_CHIP = { open: 'chip-neutral', investigating: 'chip-accent', corrective_action: 'chip-accent', closed: 'chip-neutral' };
-const SOURCE_LABEL = {
-  customer_complaint: 'Customer complaint', internal_inspection: 'Internal inspection',
-  supplier_defect: 'Supplier defect', production_defect: 'Production defect', other: 'Other',
-};
 
 export function QualityPage() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [ncrs, setNcrs] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -20,6 +18,11 @@ export function QualityPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [selected, setSelected] = useState(null);
+
+  const SOURCE_LABEL = {
+    customer_complaint: t('quality.customerComplaint'), internal_inspection: t('quality.internalInspection'),
+    supplier_defect: t('quality.supplierDefect'), production_defect: t('quality.productionDefect'), other: t('quality.other'),
+  };
 
   function load() {
     setLoading(true);
@@ -39,36 +42,36 @@ export function QualityPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-end justify-between">
         <div>
-          <p className="eyebrow mb-1">Quality</p>
-          <p className="page-title">Quality management</p>
-          <p className="text-sm text-ink-muted mt-1">Track non-conformances from report through corrective action to a verified close.</p>
+          <p className="eyebrow mb-1">{t('quality.eyebrow')}</p>
+          <p className="page-title">{t('quality.title')}</p>
+          <p className="text-sm text-ink-muted mt-1">{t('quality.subtitle')}</p>
         </div>
-        <button className="btn-primary" onClick={() => setShowForm(true)}>New NCR</button>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>{t('quality.newNcr')}</button>
       </div>
 
       {summary && summary.total > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl">
           <div className="card p-3">
-            <p className="eyebrow">Open</p>
+            <p className="eyebrow">{t('quality.open')}</p>
             <p className="font-display text-2xl font-bold text-ink mt-1">{summary.byStatus.open || 0}</p>
           </div>
           <div className="card p-3">
-            <p className="eyebrow">Critical</p>
+            <p className="eyebrow">{t('quality.critical')}</p>
             <p className="font-display text-2xl font-bold text-danger mt-1">{summary.bySeverity.critical || 0}</p>
           </div>
           <div className="card p-3">
-            <p className="eyebrow">Closed</p>
+            <p className="eyebrow">{t('quality.closed')}</p>
             <p className="font-display text-2xl font-bold text-ink mt-1">{summary.byStatus.closed || 0}</p>
           </div>
           <div className="card p-3">
-            <p className="eyebrow">Avg days to close</p>
+            <p className="eyebrow">{t('quality.avgDaysToClose')}</p>
             <p className="font-display text-2xl font-bold text-ink mt-1">{summary.avgDaysToClose ?? '-'}</p>
           </div>
         </div>
       )}
 
       <div className="flex gap-1 border-b border-rule">
-        {[['', 'All'], ['open', 'Open'], ['investigating', 'Investigating'], ['corrective_action', 'Corrective action'], ['closed', 'Closed']].map(([key, label]) => (
+        {[['', t('quality.all')], ['open', t('quality.open')], ['investigating', t('quality.investigating')], ['corrective_action', t('quality.correctiveAction')], ['closed', t('quality.closed')]].map(([key, label]) => (
           <button key={key} onClick={() => setStatusFilter(key)} className={`px-3 py-2 text-sm -mb-px border-b-2 transition-colors ${statusFilter === key ? 'border-accent text-accent-strong font-semibold' : 'border-transparent text-ink-muted hover:text-ink'}`}>
             {label}
           </button>
@@ -77,7 +80,7 @@ export function QualityPage() {
 
       {loading && <Loading />}
       {!loading && ncrs.length === 0 && (
-        <EmptyState title="No NCRs" description="Defective batches, failed inspections, and customer complaints about quality all live here, tracked through investigation to a verified corrective action." action={<button className="btn-primary" onClick={() => setShowForm(true)}>Log an NCR</button>} />
+        <EmptyState title={t('quality.noNcrs')} description={t('quality.noNcrsDescription')} action={<button className="btn-primary" onClick={() => setShowForm(true)}>{t('quality.logAnNcr')}</button>} />
       )}
       {!loading && ncrs.length > 0 && (
         <div className="card overflow-hidden">
@@ -85,13 +88,13 @@ export function QualityPage() {
             <table className="w-full text-left border-collapse text-sm">
               <thead>
                 <tr className="border-b border-rule bg-surface-sunken/60">
-                  <th className="px-5 py-3 eyebrow font-medium">NCR #</th>
-                  <th className="px-5 py-3 eyebrow font-medium">Title</th>
-                  <th className="px-5 py-3 eyebrow font-medium">Source</th>
-                  <th className="px-5 py-3 eyebrow font-medium">Severity</th>
-                  <th className="px-5 py-3 eyebrow font-medium">Status</th>
-                  <th className="px-5 py-3 eyebrow font-medium">Reported</th>
-                  <th className="px-5 py-3 eyebrow font-medium text-center">Actions</th>
+                  <th className="px-5 py-3 eyebrow font-medium">{t('quality.ncrNumber')}</th>
+                  <th className="px-5 py-3 eyebrow font-medium">{t('quality.titleColumn')}</th>
+                  <th className="px-5 py-3 eyebrow font-medium">{t('quality.source')}</th>
+                  <th className="px-5 py-3 eyebrow font-medium">{t('quality.severity')}</th>
+                  <th className="px-5 py-3 eyebrow font-medium">{t('quality.status')}</th>
+                  <th className="px-5 py-3 eyebrow font-medium">{t('quality.reported')}</th>
+                  <th className="px-5 py-3 eyebrow font-medium text-center">{t('quality.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-rule">
@@ -111,7 +114,7 @@ export function QualityPage() {
                         className="btn-ghost !text-accent opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={(e) => { e.stopPropagation(); setSelected(n._id); }}
                       >
-                        Open
+                        {t('quality.openAction')}
                       </button>
                     </td>
                   </tr>
@@ -128,6 +131,7 @@ export function QualityPage() {
 }
 
 function NCRForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [branches, setBranches] = useState([]);
   const [form, setForm] = useState({ branchId: '', title: '', description: '', source: 'internal_inspection', severity: 'medium' });
@@ -140,7 +144,7 @@ function NCRForm({ onClose, onSaved }) {
     setSaving(true);
     try {
       await api.post('/quality/ncrs', form);
-      toast('NCR logged.', 'success');
+      toast(t('quality.ncrLogged'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -152,46 +156,46 @@ function NCRForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg font-bold text-ink mb-4">Log a non-conformance</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">{t('quality.logNonConformance')}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Branch</label>
+            <label className="field-label">{t('quality.branch')}</label>
             <select required className="field-input" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('quality.select')}</option>
               {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Title</label>
+            <label className="field-label">{t('quality.titleColumn')}</label>
             <input required className="field-input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
           </div>
           <div>
-            <label className="field-label">Description</label>
+            <label className="field-label">{t('quality.description')}</label>
             <textarea required rows={3} className="field-input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </div>
           <div>
-            <label className="field-label">Source</label>
+            <label className="field-label">{t('quality.source')}</label>
             <select className="field-input" value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })}>
-              <option value="customer_complaint">Customer complaint</option>
-              <option value="internal_inspection">Internal inspection</option>
-              <option value="supplier_defect">Supplier defect</option>
-              <option value="production_defect">Production defect</option>
-              <option value="other">Other</option>
+              <option value="customer_complaint">{t('quality.customerComplaint')}</option>
+              <option value="internal_inspection">{t('quality.internalInspection')}</option>
+              <option value="supplier_defect">{t('quality.supplierDefect')}</option>
+              <option value="production_defect">{t('quality.productionDefect')}</option>
+              <option value="other">{t('quality.other')}</option>
             </select>
           </div>
           <div>
-            <label className="field-label">Severity</label>
+            <label className="field-label">{t('quality.severity')}</label>
             <select className="field-input" value={form.severity} onChange={(e) => setForm({ ...form, severity: e.target.value })}>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="critical">Critical</option>
+              <option value="low">{t('quality.low')}</option>
+              <option value="medium">{t('quality.medium')}</option>
+              <option value="high">{t('quality.high')}</option>
+              <option value="critical">{t('quality.critical')}</option>
             </select>
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Logging…' : 'Log NCR'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('quality.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('quality.logging') : t('quality.logNcr')}</button>
         </div>
       </form>
     </div>
@@ -199,6 +203,7 @@ function NCRForm({ onClose, onSaved }) {
 }
 
 function NCRDetail({ ncrId, onBack }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [ncr, setNcr] = useState(null);
   const [actions, setActions] = useState([]);
@@ -219,7 +224,7 @@ function NCRDetail({ ncrId, onBack }) {
     if (!rootCause.trim()) return;
     try {
       await api.post(`/quality/ncrs/${ncrId}/root-cause`, { rootCause });
-      toast('Root cause saved.', 'success');
+      toast(t('quality.rootCauseSaved'), 'success');
       load();
     } catch (err) { toast(err.message, 'error'); }
   }
@@ -227,7 +232,7 @@ function NCRDetail({ ncrId, onBack }) {
   async function advanceStatus(status) {
     try {
       await api.post(`/quality/ncrs/${ncrId}/status`, { status });
-      toast('Status updated.', 'success');
+      toast(t('quality.statusUpdated'), 'success');
       load();
     } catch (err) { toast(err.message, 'error'); }
   }
@@ -236,10 +241,11 @@ function NCRDetail({ ncrId, onBack }) {
   if (!ncr) return null;
 
   const nextStatus = { open: 'investigating', investigating: 'corrective_action', corrective_action: 'closed' }[ncr.status];
+  const NEXT_STATUS_LABEL = { investigating: t('quality.investigating'), corrective_action: t('quality.correctiveAction'), closed: t('quality.closed') };
 
   return (
     <div className="flex flex-col gap-6">
-      <button className="btn-ghost self-start" onClick={onBack}>← Back to NCRs</button>
+      <button className="btn-ghost self-start" onClick={onBack}>{t('quality.backToNcrs')}</button>
 
       <div className="card overflow-hidden">
         <div className="bg-surface-sunken/60 px-5 py-4 border-b border-rule flex items-start justify-between">
@@ -256,18 +262,18 @@ function NCRDetail({ ncrId, onBack }) {
 
         <div className="p-5 flex flex-col gap-4">
           <div>
-            <label className="field-label">Root cause</label>
-            <textarea rows={2} className="field-input" placeholder="What actually caused this?" value={rootCause} onChange={(e) => setRootCause(e.target.value)} />
-            <button className="btn-secondary mt-2" onClick={saveRootCause} disabled={!rootCause.trim()}>Save root cause</button>
+            <label className="field-label">{t('quality.rootCause')}</label>
+            <textarea rows={2} className="field-input" placeholder={t('quality.rootCausePlaceholder')} value={rootCause} onChange={(e) => setRootCause(e.target.value)} />
+            <button className="btn-secondary mt-2" onClick={saveRootCause} disabled={!rootCause.trim()}>{t('quality.saveRootCause')}</button>
           </div>
 
           {nextStatus && (
             <div className="border-t border-rule pt-4">
               <button className="btn-primary" onClick={() => advanceStatus(nextStatus)}>
-                {nextStatus === 'closed' ? 'Close NCR' : `Move to ${nextStatus.replace('_', ' ')}`}
+                {nextStatus === 'closed' ? t('quality.closeNcr') : t('quality.moveTo', { status: NEXT_STATUS_LABEL[nextStatus] })}
               </button>
               {nextStatus === 'closed' && (
-                <p className="text-xs text-ink-muted mt-2">Requires at least one corrective action verified as effective.</p>
+                <p className="text-xs text-ink-muted mt-2">{t('quality.closeNcrRequirement')}</p>
               )}
             </div>
           )}
@@ -276,22 +282,22 @@ function NCRDetail({ ncrId, onBack }) {
 
       <div>
         <div className="flex items-end justify-between mb-3">
-          <p className="page-title !text-lg">Corrective / preventive actions</p>
-          <button className="btn-secondary" onClick={() => setShowActionForm(true)}>Add action</button>
+          <p className="page-title !text-lg">{t('quality.correctivePreventiveActions')}</p>
+          <button className="btn-secondary" onClick={() => setShowActionForm(true)}>{t('quality.addAction')}</button>
         </div>
 
-        {actions.length === 0 && <EmptyState title="No actions yet" description="Add a corrective or preventive action and track it to a verified close." />}
+        {actions.length === 0 && <EmptyState title={t('quality.noActionsYet')} description={t('quality.noActionsDescription')} />}
         {actions.length > 0 && (
           <div className="card overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-rule bg-surface-sunken/60">
-                    <th className="px-5 py-3 eyebrow font-medium">Type</th>
-                    <th className="px-5 py-3 eyebrow font-medium">Description</th>
-                    <th className="px-5 py-3 eyebrow font-medium">Due</th>
-                    <th className="px-5 py-3 eyebrow font-medium">Status</th>
-                    <th className="px-5 py-3 eyebrow font-medium text-right">Actions</th>
+                    <th className="px-5 py-3 eyebrow font-medium">{t('quality.type')}</th>
+                    <th className="px-5 py-3 eyebrow font-medium">{t('quality.description')}</th>
+                    <th className="px-5 py-3 eyebrow font-medium">{t('quality.due')}</th>
+                    <th className="px-5 py-3 eyebrow font-medium">{t('quality.status')}</th>
+                    <th className="px-5 py-3 eyebrow font-medium text-right">{t('quality.actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-rule">
@@ -309,6 +315,7 @@ function NCRDetail({ ncrId, onBack }) {
 }
 
 function ActionRow({ action, onChanged }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [note, setNote] = useState('');
   const [effectivenessNote, setEffectivenessNote] = useState('');
@@ -317,7 +324,7 @@ function ActionRow({ action, onChanged }) {
   async function advance(status, extra) {
     try {
       await api.post(`/quality/actions/${action._id}/status`, { status, ...extra });
-      toast('Action updated.', 'success');
+      toast(t('quality.actionUpdated'), 'success');
       setEditing(false);
       onChanged();
     } catch (err) { toast(err.message, 'error'); }
@@ -331,33 +338,34 @@ function ActionRow({ action, onChanged }) {
       <td className="px-5 py-4"><span className="chip-neutral">{action.status.replace('_', ' ')}</span></td>
       <td className="px-5 py-4 text-right">
         {action.status === 'open' && !editing && (
-          <button className="btn-ghost !text-accent" onClick={() => advance('in_progress')}>Start</button>
+          <button className="btn-ghost !text-accent" onClick={() => advance('in_progress')}>{t('quality.start')}</button>
         )}
         {action.status === 'in_progress' && !editing && (
-          <button className="btn-ghost !text-accent" onClick={() => setEditing('complete')}>Complete</button>
+          <button className="btn-ghost !text-accent" onClick={() => setEditing('complete')}>{t('quality.complete')}</button>
         )}
         {editing === 'complete' && (
           <div className="flex gap-1 justify-end items-center">
-            <input className="field-input !py-1 !text-xs" placeholder="Completion note…" value={note} onChange={(e) => setNote(e.target.value)} />
-            <button className="btn-ghost !text-accent" onClick={() => advance('completed', { note })} disabled={!note.trim()}>Save</button>
+            <input className="field-input !py-1 !text-xs" placeholder={t('quality.completionNotePlaceholder')} value={note} onChange={(e) => setNote(e.target.value)} />
+            <button className="btn-ghost !text-accent" onClick={() => advance('completed', { note })} disabled={!note.trim()}>{t('quality.save')}</button>
           </div>
         )}
         {action.status === 'completed' && !editing && (
-          <button className="btn-ghost !text-accent" onClick={() => setEditing('verify')}>Verify</button>
+          <button className="btn-ghost !text-accent" onClick={() => setEditing('verify')}>{t('quality.verify')}</button>
         )}
         {editing === 'verify' && (
           <div className="flex gap-1 justify-end items-center">
-            <input className="field-input !py-1 !text-xs" placeholder="Effectiveness note…" value={effectivenessNote} onChange={(e) => setEffectivenessNote(e.target.value)} />
-            <button className="btn-ghost !text-accent" onClick={() => advance('verified', { effectivenessNote })} disabled={!effectivenessNote.trim()}>Save</button>
+            <input className="field-input !py-1 !text-xs" placeholder={t('quality.effectivenessNotePlaceholder')} value={effectivenessNote} onChange={(e) => setEffectivenessNote(e.target.value)} />
+            <button className="btn-ghost !text-accent" onClick={() => advance('verified', { effectivenessNote })} disabled={!effectivenessNote.trim()}>{t('quality.save')}</button>
           </div>
         )}
-        {action.status === 'verified' && <span className="chip-accent">Verified</span>}
+        {action.status === 'verified' && <span className="chip-accent">{t('quality.verified')}</span>}
       </td>
     </tr>
   );
 }
 
 function ActionForm({ ncrId, onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [form, setForm] = useState({ actionType: 'corrective', description: '', dueDate: '' });
   const [saving, setSaving] = useState(false);
@@ -367,7 +375,7 @@ function ActionForm({ ncrId, onClose, onSaved }) {
     setSaving(true);
     try {
       await api.post(`/quality/ncrs/${ncrId}/actions`, form);
-      toast('Corrective action added.', 'success');
+      toast(t('quality.correctiveActionAdded'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -379,27 +387,27 @@ function ActionForm({ ncrId, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg font-bold text-ink mb-4">Add corrective/preventive action</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">{t('quality.addCorrectivePreventiveAction')}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Type</label>
+            <label className="field-label">{t('quality.type')}</label>
             <select className="field-input" value={form.actionType} onChange={(e) => setForm({ ...form, actionType: e.target.value })}>
-              <option value="corrective">Corrective</option>
-              <option value="preventive">Preventive</option>
+              <option value="corrective">{t('quality.corrective')}</option>
+              <option value="preventive">{t('quality.preventive')}</option>
             </select>
           </div>
           <div>
-            <label className="field-label">Description</label>
+            <label className="field-label">{t('quality.description')}</label>
             <textarea required rows={3} className="field-input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </div>
           <div>
-            <label className="field-label">Due date</label>
+            <label className="field-label">{t('quality.due')}</label>
             <input type="date" className="field-input" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} />
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Add action'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('quality.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('quality.saving') : t('quality.addAction')}</button>
         </div>
       </form>
     </div>

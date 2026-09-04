@@ -1,44 +1,46 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { Loading } from '../components/Loading';
 import { formatMoney, toDateInputValue } from '../lib/format';
 
-const TABS = [
-  { key: 'sales-summary', label: 'Sales summary' },
-  { key: 'stock-valuation', label: 'Stock valuation' },
-  { key: 'trial-balance', label: 'Trial balance' },
-  { key: 'profit-and-loss', label: 'Profit & loss' },
-  { key: 'balance-sheet', label: 'Balance sheet' },
-  { key: 'low-stock', label: 'Low stock' },
-  { key: 'top-products', label: 'Top products' },
-  { key: 'top-customers', label: 'Top customers' },
-  { key: 'salesperson-performance', label: 'Salesperson performance' },
-  { key: 'branch-comparison', label: 'Branch comparison' },
-  { key: 'stock-movement', label: 'Stock movement' },
-  { key: 'expense-report', label: 'Expenses' },
-  { key: 'cash-bank-book', label: 'Cash/bank book' },
-  { key: 'consolidated', label: 'Multi-company' },
-];
-
 export function ReportsPage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState('sales-summary');
+
+  const TABS = [
+    { key: 'sales-summary', label: t('reports.salesSummary') },
+    { key: 'stock-valuation', label: t('reports.stockValuation') },
+    { key: 'trial-balance', label: t('reports.trialBalance') },
+    { key: 'profit-and-loss', label: t('reports.profitAndLoss') },
+    { key: 'balance-sheet', label: t('reports.balanceSheet') },
+    { key: 'low-stock', label: t('reports.lowStock') },
+    { key: 'top-products', label: t('reports.topProducts') },
+    { key: 'top-customers', label: t('reports.topCustomers') },
+    { key: 'salesperson-performance', label: t('reports.salespersonPerformance') },
+    { key: 'branch-comparison', label: t('reports.branchComparison') },
+    { key: 'stock-movement', label: t('reports.stockMovement') },
+    { key: 'expense-report', label: t('reports.expenses') },
+    { key: 'cash-bank-book', label: t('reports.cashBankBook') },
+    { key: 'consolidated', label: t('reports.multiCompany') },
+  ];
 
   return (
     <div>
       <div className="mb-5">
-        <p className="page-title">Reports</p>
-        <p className="text-sm text-ink-muted mt-1">Real-time financial performance and operational metrics.</p>
+        <p className="page-title">{t('reports.title')}</p>
+        <p className="text-sm text-ink-muted mt-1">{t('reports.subtitle')}</p>
       </div>
 
       <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
-        {TABS.map((t) => (
+        {TABS.map((tb) => (
           <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`shrink-0 ${tab === t.key ? 'pill-active' : 'pill'}`}
+            key={tb.key}
+            onClick={() => setTab(tb.key)}
+            className={`shrink-0 ${tab === tb.key ? 'pill-active' : 'pill'}`}
           >
-            {t.label}
+            {tb.label}
           </button>
         ))}
       </div>
@@ -62,16 +64,17 @@ export function ReportsPage() {
 }
 
 function ConsolidatedView({ data }) {
+  const { t } = useTranslation();
   const { company } = useAuth();
   return (
     <div>
-      <p className="text-xs text-ink-muted mb-3">Every company in your group (this company plus any sharing the same parent), configured by your platform admin.</p>
+      <p className="text-xs text-ink-muted mb-3">{t('reports.consolidatedDescription')}</p>
       <ReportTable
-        columns={['Company', 'Invoices', 'Net sales']}
+        columns={[t('reports.company'), t('reports.invoices'), t('reports.netSales')]}
         rows={data.companies.map((c) => [c.companyName, String(c.invoiceCount), formatMoney(c.netSales, company?.currency)])}
       />
       <div className="tear-line mt-3 pt-3 flex justify-between text-base font-medium">
-        <span>Group total</span>
+        <span>{t('reports.groupTotal')}</span>
         <span className="num">{formatMoney(data.totals.netSales, company?.currency)}</span>
       </div>
     </div>
@@ -94,6 +97,7 @@ function SimpleReport({ path, render: Render }) {
 }
 
 function DateRangeReport({ path, render: Render }) {
+  const { t } = useTranslation();
   const [from, setFrom] = useState(() => toDateInputValue(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)));
   const [to, setTo] = useState(() => toDateInputValue());
   const [data, setData] = useState(null);
@@ -110,9 +114,9 @@ function DateRangeReport({ path, render: Render }) {
   return (
     <div>
       <div className="card flex flex-wrap items-end gap-3 p-4 mb-5">
-        <div><label className="field-label">From</label><input type="date" className="field-input" value={from} onChange={(e) => setFrom(e.target.value)} /></div>
-        <div><label className="field-label">To</label><input type="date" className="field-input" value={to} onChange={(e) => setTo(e.target.value)} /></div>
-        <button className="btn-primary" onClick={load}>Update</button>
+        <div><label className="field-label">{t('reports.from')}</label><input type="date" className="field-input" value={from} onChange={(e) => setFrom(e.target.value)} /></div>
+        <div><label className="field-label">{t('reports.to')}</label><input type="date" className="field-input" value={to} onChange={(e) => setTo(e.target.value)} /></div>
+        <button className="btn-primary" onClick={load}>{t('reports.update')}</button>
       </div>
       {loading && <Loading />}
       {error && <p className="text-sm text-danger">{error}</p>}
@@ -144,19 +148,20 @@ function StatTile({ label, value, icon, caption, tone }) {
 }
 
 function SalesSummaryView({ data }) {
+  const { t } = useTranslation();
   const { company } = useAuth();
   const s = data.summary;
   return (
     <div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-        <StatTile label="Net sales" value={formatMoney(s.netSales, company?.currency)} icon="payments" />
-        <StatTile label="Invoices" value={String(s.invoiceCount)} icon="receipt_long" />
-        <StatTile label="Discounts" value={formatMoney(s.totalDiscount, company?.currency)} icon="sell" />
-        <StatTile label="Outstanding" value={formatMoney(s.totalDue, company?.currency)} icon="hourglass_top" tone="warning" />
+        <StatTile label={t('reports.netSales')} value={formatMoney(s.netSales, company?.currency)} icon="payments" />
+        <StatTile label={t('reports.invoices')} value={String(s.invoiceCount)} icon="receipt_long" />
+        <StatTile label={t('reports.discounts')} value={formatMoney(s.totalDiscount, company?.currency)} icon="sell" />
+        <StatTile label={t('reports.outstanding')} value={formatMoney(s.totalDue, company?.currency)} icon="hourglass_top" tone="warning" />
       </div>
-      <p className="text-sm font-semibold mb-2">By day</p>
+      <p className="text-sm font-semibold mb-2">{t('reports.byDay')}</p>
       <ReportTable
-        columns={['Date', 'Invoices', 'Net sales']}
+        columns={[t('reports.date'), t('reports.invoices'), t('reports.netSales')]}
         rows={data.byDay.map((d) => [d.date, String(d.invoiceCount), formatMoney(d.netSales, company?.currency)])}
       />
     </div>
@@ -164,14 +169,15 @@ function SalesSummaryView({ data }) {
 }
 
 function StockValuationView({ data }) {
+  const { t } = useTranslation();
   const { company } = useAuth();
   return (
     <div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-        <StatTile label="Total inventory value" value={formatMoney(data.totalValue, company?.currency)} icon="inventory_2" />
+        <StatTile label={t('reports.totalInventoryValue')} value={formatMoney(data.totalValue, company?.currency)} icon="inventory_2" />
       </div>
       <ReportTable
-        columns={['Product', 'Qty', 'Unit cost', 'Value']}
+        columns={[t('reports.product'), t('reports.qty'), t('reports.unitCost'), t('reports.value')]}
         rows={data.rows.map((r) => [r.productName, r.quantity, formatMoney(r.unitCost, company?.currency), formatMoney(r.value, company?.currency)])}
       />
     </div>
@@ -179,14 +185,15 @@ function StockValuationView({ data }) {
 }
 
 function TrialBalanceView({ data }) {
+  const { t } = useTranslation();
   const { company } = useAuth();
   return (
     <div>
       <div className={`chip-${data.balanced ? 'accent' : 'danger'} !inline-block mb-4`}>
-        {data.balanced ? 'Balanced' : 'Not balanced: check ledger entries'}
+        {data.balanced ? t('reports.balanced') : t('reports.notBalanced')}
       </div>
       <ReportTable
-        columns={['Account', 'Type', 'Debit', 'Credit']}
+        columns={[t('reports.account'), t('reports.type'), t('reports.debit'), t('reports.credit')]}
         rows={data.accounts.map((a) => [a.name, a.type, formatMoney(a.debit, company?.currency), formatMoney(a.credit, company?.currency)])}
       />
     </div>
@@ -194,19 +201,20 @@ function TrialBalanceView({ data }) {
 }
 
 function ProfitAndLossView({ data }) {
+  const { t } = useTranslation();
   const { company } = useAuth();
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
       <div>
-        <p className="eyebrow mb-2">Income</p>
-        <ReportTable columns={['Account', 'Amount']} rows={data.income.map((r) => [r.name, formatMoney(r.amount, company?.currency)])} />
+        <p className="eyebrow mb-2">{t('reports.income')}</p>
+        <ReportTable columns={[t('reports.account'), t('reports.amount')]} rows={data.income.map((r) => [r.name, formatMoney(r.amount, company?.currency)])} />
       </div>
       <div>
-        <p className="eyebrow mb-2">Expenses</p>
-        <ReportTable columns={['Account', 'Amount']} rows={data.expenses.map((r) => [r.name, formatMoney(r.amount, company?.currency)])} />
+        <p className="eyebrow mb-2">{t('reports.expenses')}</p>
+        <ReportTable columns={[t('reports.account'), t('reports.amount')]} rows={data.expenses.map((r) => [r.name, formatMoney(r.amount, company?.currency)])} />
       </div>
       <div className="col-span-2 tear-line pt-3 flex justify-between text-base font-medium">
-        <span>Net profit</span>
+        <span>{t('reports.netProfit')}</span>
         <span className={`num ${data.netProfit >= 0 ? 'text-accent-strong' : 'text-danger'}`}>{formatMoney(data.netProfit, company?.currency)}</span>
       </div>
     </div>
@@ -214,26 +222,27 @@ function ProfitAndLossView({ data }) {
 }
 
 function BalanceSheetView({ data }) {
+  const { t } = useTranslation();
   const { company } = useAuth();
   return (
     <div>
       <div className={`chip-${data.balanced ? 'accent' : 'danger'} !inline-block mb-4`}>
-        {data.balanced ? 'Balanced' : 'Not balanced'}
+        {data.balanced ? t('reports.balanced') : t('reports.notBalancedShort')}
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         <div>
-          <p className="eyebrow mb-2">Assets</p>
-          <ReportTable columns={['Account', 'Balance']} rows={data.assets.map((r) => [r.name, formatMoney(r.balance, company?.currency)])} />
+          <p className="eyebrow mb-2">{t('reports.assets')}</p>
+          <ReportTable columns={[t('reports.account'), t('reports.balance')]} rows={data.assets.map((r) => [r.name, formatMoney(r.balance, company?.currency)])} />
           <p className="num text-sm font-medium mt-2 text-right">{formatMoney(data.totalAssets, company?.currency)}</p>
         </div>
         <div>
-          <p className="eyebrow mb-2">Liabilities</p>
-          <ReportTable columns={['Account', 'Balance']} rows={data.liabilities.map((r) => [r.name, formatMoney(r.balance, company?.currency)])} />
+          <p className="eyebrow mb-2">{t('reports.liabilities')}</p>
+          <ReportTable columns={[t('reports.account'), t('reports.balance')]} rows={data.liabilities.map((r) => [r.name, formatMoney(r.balance, company?.currency)])} />
           <p className="num text-sm font-medium mt-2 text-right">{formatMoney(data.totalLiabilities, company?.currency)}</p>
         </div>
         <div>
-          <p className="eyebrow mb-2">Equity</p>
-          <ReportTable columns={['Account', 'Balance']} rows={data.equity.map((r) => [r.name, formatMoney(r.balance, company?.currency)])} />
+          <p className="eyebrow mb-2">{t('reports.equity')}</p>
+          <ReportTable columns={[t('reports.account'), t('reports.balance')]} rows={data.equity.map((r) => [r.name, formatMoney(r.balance, company?.currency)])} />
           <p className="num text-sm font-medium mt-2 text-right">{formatMoney(data.totalEquity, company?.currency)}</p>
         </div>
       </div>
@@ -242,58 +251,64 @@ function BalanceSheetView({ data }) {
 }
 
 function LowStockView({ data }) {
+  const { t } = useTranslation();
   return (
     <ReportTable
-      columns={['Product', 'Warehouse', 'On hand', 'Reorder level', 'Min stock']}
+      columns={[t('reports.product'), t('reports.warehouse'), t('reports.onHand'), t('reports.reorderLevel'), t('reports.minStock')]}
       rows={data.map((r) => [r.productName, r.warehouseId, String(r.quantityOnHand), String(r.reorderLevel ?? '-'), String(r.minStock ?? '-')])}
     />
   );
 }
 
 function TopProductsView({ data }) {
+  const { t } = useTranslation();
   const { company } = useAuth();
   return (
     <ReportTable
-      columns={['Product', 'Qty sold', 'Revenue']}
+      columns={[t('reports.product'), t('reports.qtySold'), t('reports.revenue')]}
       rows={data.map((r) => [r.productName, String(r.quantitySold), formatMoney(r.revenue, company?.currency)])}
     />
   );
 }
 
 function TopCustomersView({ data }) {
+  const { t } = useTranslation();
   const { company } = useAuth();
   return (
     <ReportTable
-      columns={['Customer', 'Invoices', 'Total spend']}
+      columns={[t('reports.customer'), t('reports.invoices'), t('reports.totalSpend')]}
       rows={data.map((r) => [r.customerName, String(r.invoiceCount), formatMoney(r.totalSpend, company?.currency)])}
     />
   );
 }
 
 function SalespersonPerformanceView({ data }) {
+  const { t } = useTranslation();
   const { company } = useAuth();
   return (
     <ReportTable
-      columns={['Salesperson', 'Invoices', 'Net sales', 'Average sale']}
+      columns={[t('reports.salesperson'), t('reports.invoices'), t('reports.netSales'), t('reports.averageSale')]}
       rows={data.map((r) => [r.userName, String(r.invoiceCount), formatMoney(r.netSales, company?.currency), formatMoney(r.averageSale, company?.currency)])}
     />
   );
 }
 
 function BranchComparisonView({ data }) {
+  const { t } = useTranslation();
   const { company } = useAuth();
   return (
     <ReportTable
-      columns={['Branch', 'Invoices', 'Net sales']}
+      columns={[t('reports.branch'), t('reports.invoices'), t('reports.netSales')]}
       rows={data.map((r) => [r.branchName, String(r.invoiceCount), formatMoney(r.netSales, company?.currency)])}
     />
   );
 }
 
 function StockMovementView({ data }) {
+  const { t } = useTranslation();
   return (
     <ReportTable
-      columns={['Date', 'Product', 'Type', 'Quantity']}
+      columns={[t('reports.date'), t('reports.product'), t('reports.type'), t('reports.quantity')]}
       rows={data.map((m) => [
         m.createdAt ? new Date(m.createdAt).toLocaleString() : '-',
         m.productId?.name || m.productId?.sku || '-',
@@ -305,15 +320,16 @@ function StockMovementView({ data }) {
 }
 
 function ExpenseReportView({ data }) {
+  const { t } = useTranslation();
   const { company } = useAuth();
   return (
     <div>
       <ReportTable
-        columns={['Category', 'Count', 'Total']}
+        columns={[t('reports.category'), t('reports.count'), t('reports.total')]}
         rows={data.rows.map((r) => [r.categoryName, String(r.count), formatMoney(r.total, company?.currency)])}
       />
       <div className="tear-line mt-3 pt-3 flex justify-between text-base font-medium">
-        <span>Grand total</span>
+        <span>{t('reports.grandTotal')}</span>
         <span className="num">{formatMoney(data.grandTotal, company?.currency)}</span>
       </div>
     </div>
@@ -321,16 +337,17 @@ function ExpenseReportView({ data }) {
 }
 
 function CashBankBookView({ data }) {
+  const { t } = useTranslation();
   const { company } = useAuth();
   return (
     <div>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
-        <StatTile label="Account" value={data.accountName} icon="account_balance" />
-        <StatTile label="Opening balance" value={formatMoney(data.openingBalance, company?.currency)} icon="north_east" />
-        <StatTile label="Closing balance" value={formatMoney(data.closingBalance, company?.currency)} icon="south_west" />
+        <StatTile label={t('reports.account')} value={data.accountName} icon="account_balance" />
+        <StatTile label={t('reports.openingBalance')} value={formatMoney(data.openingBalance, company?.currency)} icon="north_east" />
+        <StatTile label={t('reports.closingBalance')} value={formatMoney(data.closingBalance, company?.currency)} icon="south_west" />
       </div>
       <ReportTable
-        columns={['Date', 'Voucher #', 'Type', 'Narration', 'Debit', 'Credit', 'Balance']}
+        columns={[t('reports.date'), t('reports.voucherNumber'), t('reports.type'), t('reports.narration'), t('reports.debit'), t('reports.credit'), t('reports.balance')]}
         rows={data.entries.map((e) => [
           e.date ? new Date(e.date).toLocaleDateString() : '-',
           e.voucherNumber || '-',
@@ -350,6 +367,7 @@ function CashBankBookView({ data }) {
  * account list from /account-settings (same endpoint the Default Accounts
  * settings page uses), defaults to the first account once loaded. */
 function CashBankBookReport() {
+  const { t } = useTranslation();
   const [accounts, setAccounts] = useState([]);
   const [accountId, setAccountId] = useState('');
   const [accountsError, setAccountsError] = useState('');
@@ -367,7 +385,7 @@ function CashBankBookReport() {
   return (
     <div>
       <div className="card p-4 mb-5 max-w-xs">
-        <label className="field-label">Account</label>
+        <label className="field-label">{t('reports.account')}</label>
         <select className="field-input" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
           {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
         </select>
@@ -380,7 +398,8 @@ function CashBankBookReport() {
 }
 
 function ReportTable({ columns, rows }) {
-  if (rows.length === 0) return <p className="text-sm text-ink-muted">No data for this period.</p>;
+  const { t } = useTranslation();
+  if (rows.length === 0) return <p className="text-sm text-ink-muted">{t('reports.noDataForPeriod')}</p>;
   return (
     <div className="card overflow-hidden overflow-x-auto">
       <table className="w-full text-sm">

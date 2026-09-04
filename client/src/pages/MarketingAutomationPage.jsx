@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, Users2, Play, Pause, ArrowUp, ArrowDown, Mail, MessageSquare, Clock3 } from 'lucide-react';
 import { api } from '../api/client';
 import { useToast } from '../components/Toast';
@@ -6,16 +7,16 @@ import { Loading } from '../components/Loading';
 import { EmptyState } from '../components/EmptyState';
 
 const CONDITION_FIELDS = [
-  { value: 'tags', label: 'Tag', operators: [{ value: 'contains', label: 'is' }], valueType: 'text' },
-  { value: 'totalSpend', label: 'Total spend', operators: [{ value: 'gte', label: 'at least' }, { value: 'lte', label: 'at most' }], valueType: 'number' },
-  { value: 'lastPurchaseDate', label: 'Last purchase', operators: [{ value: 'after', label: 'on/after' }, { value: 'before', label: 'before' }], valueType: 'date' },
-  { value: 'loyaltyTier', label: 'Loyalty tier', operators: [{ value: 'equals', label: 'is' }], valueType: 'tier' },
+  { value: 'tags', labelKey: 'marketingAutomation.fieldTag', operators: [{ value: 'contains', labelKey: 'marketingAutomation.operatorIs' }], valueType: 'text' },
+  { value: 'totalSpend', labelKey: 'marketingAutomation.fieldTotalSpend', operators: [{ value: 'gte', labelKey: 'marketingAutomation.operatorAtLeast' }, { value: 'lte', labelKey: 'marketingAutomation.operatorAtMost' }], valueType: 'number' },
+  { value: 'lastPurchaseDate', labelKey: 'marketingAutomation.fieldLastPurchase', operators: [{ value: 'after', labelKey: 'marketingAutomation.operatorOnAfter' }, { value: 'before', labelKey: 'marketingAutomation.operatorBefore' }], valueType: 'date' },
+  { value: 'loyaltyTier', labelKey: 'marketingAutomation.fieldLoyaltyTier', operators: [{ value: 'equals', labelKey: 'marketingAutomation.operatorIs' }], valueType: 'tier' },
 ];
 const TIER_OPTIONS = ['none', 'bronze', 'silver', 'gold'];
 const STEP_TYPES = [
-  { value: 'send_email', label: 'Send email', icon: Mail },
-  { value: 'send_sms', label: 'Send SMS', icon: MessageSquare },
-  { value: 'wait', label: 'Wait', icon: Clock3 },
+  { value: 'send_email', labelKey: 'marketingAutomation.stepSendEmail', icon: Mail },
+  { value: 'send_sms', labelKey: 'marketingAutomation.stepSendSms', icon: MessageSquare },
+  { value: 'wait', labelKey: 'marketingAutomation.stepWait', icon: Clock3 },
 ];
 
 function fieldMeta(field) {
@@ -23,18 +24,19 @@ function fieldMeta(field) {
 }
 
 export function MarketingAutomationPage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState('journeys');
 
   return (
     <div>
       <div className="mb-4">
-        <p className="eyebrow mb-1">Marketing</p>
-        <p className="page-title">Marketing Automation</p>
-        <p className="text-sm text-ink-muted mt-1">Build audience segments, then automate multi-step email/SMS journeys that enroll customers and send on a schedule.</p>
+        <p className="eyebrow mb-1">{t('marketingAutomation.marketing')}</p>
+        <p className="page-title">{t('marketingAutomation.title')}</p>
+        <p className="text-sm text-ink-muted mt-1">{t('marketingAutomation.subtitle')}</p>
       </div>
 
       <div className="flex gap-2 mb-4 border-b border-rule">
-        {[['journeys', 'Journeys'], ['segments', 'Segments']].map(([key, label]) => (
+        {[['journeys', t('marketingAutomation.journeys')], ['segments', t('marketingAutomation.segments')]].map(([key, label]) => (
           <button
             key={key}
             className={`px-3 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors ${tab === key ? 'border-accent text-ink' : 'border-transparent text-ink-muted hover:text-ink'}`}
@@ -53,6 +55,7 @@ export function MarketingAutomationPage() {
 // ============================================================= Segments ===
 
 function SegmentsTab() {
+  const { t } = useTranslation();
   const [segments, setSegments] = useState(null);
   const [editing, setEditing] = useState(null); // segment object or 'new'
   const toast = useToast();
@@ -73,15 +76,15 @@ function SegmentsTab() {
   return (
     <div>
       <div className="flex justify-end mb-3">
-        <button className="btn-primary" onClick={() => setEditing('new')}><Plus size={16} /> New segment</button>
+        <button className="btn-primary" onClick={() => setEditing('new')}><Plus size={16} /> {t('marketingAutomation.newSegment')}</button>
       </div>
       {segments === null ? (
         <Loading />
       ) : segments.length === 0 ? (
         <EmptyState
-          title="No segments yet"
-          description="Segments filter your customers by tag, spend, last purchase, or loyalty tier — build one, then target it with a journey."
-          action={<button className="btn-primary" onClick={() => setEditing('new')}>Create your first segment</button>}
+          title={t('marketingAutomation.noSegmentsYet')}
+          description={t('marketingAutomation.noSegmentsDescription')}
+          action={<button className="btn-primary" onClick={() => setEditing('new')}>{t('marketingAutomation.createFirstSegment')}</button>}
         />
       ) : (
         <div className="grid gap-3">
@@ -95,6 +98,7 @@ function SegmentsTab() {
 }
 
 function SegmentRow({ segment, onEdit, onChanged, toast }) {
+  const { t } = useTranslation();
   const [count, setCount] = useState(null);
 
   useEffect(() => {
@@ -102,10 +106,10 @@ function SegmentRow({ segment, onEdit, onChanged, toast }) {
   }, [segment._id]);
 
   async function remove() {
-    if (!window.confirm(`Delete segment "${segment.name}"?`)) return;
+    if (!window.confirm(t('marketingAutomation.deleteSegmentConfirm', { name: segment.name }))) return;
     try {
       await api.del(`/marketing/segments/${segment._id}`);
-      toast('Segment deleted.', 'success');
+      toast(t('marketingAutomation.segmentDeleted'), 'success');
       onChanged();
     } catch (err) {
       toast(err.message, 'error');
@@ -116,10 +120,10 @@ function SegmentRow({ segment, onEdit, onChanged, toast }) {
     <div className="card p-4 flex items-center justify-between gap-3 flex-wrap">
       <div>
         <button className="font-display font-bold text-ink hover:text-accent transition-colors" onClick={onEdit}>{segment.name}</button>
-        <p className="text-xs text-ink-muted mt-1">{segment.description || `${segment.conditions.length} condition${segment.conditions.length === 1 ? '' : 's'}`}</p>
+        <p className="text-xs text-ink-muted mt-1">{segment.description || t('marketingAutomation.conditionCount', { count: segment.conditions.length })}</p>
       </div>
       <div className="flex items-center gap-3 shrink-0">
-        <span className="text-xs text-ink-muted flex items-center gap-1"><Users2 size={13} /> {count === null ? '…' : count} member{count === 1 ? '' : 's'}</span>
+        <span className="text-xs text-ink-muted flex items-center gap-1"><Users2 size={13} /> {count === null ? '…' : count} {t('marketingAutomation.membersSuffix', { count: count ?? 0 })}</span>
         <button className="text-danger hover:opacity-70" onClick={remove}><Trash2 size={15} /></button>
       </div>
     </div>
@@ -127,6 +131,7 @@ function SegmentRow({ segment, onEdit, onChanged, toast }) {
 }
 
 function SegmentEditor({ segment, onClose, onSaved }) {
+  const { t } = useTranslation();
   const isNew = !segment;
   const [name, setName] = useState(segment?.name || '');
   const [description, setDescription] = useState(segment?.description || '');
@@ -156,7 +161,7 @@ function SegmentEditor({ segment, onClose, onSaved }) {
 
   async function previewLive() {
     if (isNew) {
-      toast('Save the segment first to preview live membership.', 'error');
+      toast(t('marketingAutomation.saveSegmentFirst'), 'error');
       return;
     }
     try {
@@ -172,10 +177,10 @@ function SegmentEditor({ segment, onClose, onSaved }) {
     try {
       if (isNew) {
         await api.post('/marketing/segments', { name, description, conditions });
-        toast('Segment created.', 'success');
+        toast(t('marketingAutomation.segmentCreated'), 'success');
       } else {
         await api.put(`/marketing/segments/${segment._id}`, { name, description, conditions });
-        toast('Segment saved.', 'success');
+        toast(t('marketingAutomation.segmentSaved'), 'success');
       }
       onSaved();
     } catch (err) {
@@ -189,45 +194,45 @@ function SegmentEditor({ segment, onClose, onSaved }) {
     <div className="max-w-2xl">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <p className="eyebrow mb-1">Segments</p>
-          <p className="page-title">{isNew ? 'New segment' : `Edit: ${segment.name}`}</p>
+          <p className="eyebrow mb-1">{t('marketingAutomation.segments')}</p>
+          <p className="page-title">{isNew ? t('marketingAutomation.newSegment') : t('marketingAutomation.editPrefix', { name: segment.name })}</p>
         </div>
         <div className="flex gap-2">
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn-primary" onClick={save} disabled={saving || !name.trim()}>{saving ? 'Saving…' : 'Save'}</button>
+          <button className="btn-secondary" onClick={onClose}>{t('marketingAutomation.cancel')}</button>
+          <button className="btn-primary" onClick={save} disabled={saving || !name.trim()}>{saving ? t('marketingAutomation.saving') : t('marketingAutomation.save')}</button>
         </div>
       </div>
 
       <div className="card p-5 grid gap-4">
         <div>
-          <label className="field-label">Name</label>
-          <input className="field-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="High-value VIPs" />
+          <label className="field-label">{t('marketingAutomation.name')}</label>
+          <input className="field-input" value={name} onChange={(e) => setName(e.target.value)} placeholder={t('marketingAutomation.segmentNamePlaceholder')} />
         </div>
         <div>
-          <label className="field-label">Description (optional)</label>
-          <input className="field-input" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Customers tagged VIP who spent 10k+" />
+          <label className="field-label">{t('marketingAutomation.descriptionOptional')}</label>
+          <input className="field-input" value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t('marketingAutomation.segmentDescriptionPlaceholder')} />
         </div>
 
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="field-label mb-0">Conditions (all must match)</label>
-            <button className="text-xs text-accent font-semibold flex items-center gap-1 hover:text-accent-strong" onClick={addCondition}><Plus size={13} /> Add condition</button>
+            <label className="field-label mb-0">{t('marketingAutomation.conditionsAllMustMatch')}</label>
+            <button className="text-xs text-accent font-semibold flex items-center gap-1 hover:text-accent-strong" onClick={addCondition}><Plus size={13} /> {t('marketingAutomation.addCondition')}</button>
           </div>
-          {conditions.length === 0 && <p className="text-xs text-ink-muted">No conditions — this segment includes every customer.</p>}
+          {conditions.length === 0 && <p className="text-xs text-ink-muted">{t('marketingAutomation.noConditions')}</p>}
           <div className="grid gap-2">
             {conditions.map((cond, idx) => {
               const meta = fieldMeta(cond.field);
               return (
                 <div key={idx} className="flex items-center gap-2 bg-surface-sunken border border-rule rounded-lg p-2 flex-wrap">
                   <select className="field-input" value={cond.field} onChange={(e) => updateCondition(idx, { field: e.target.value })}>
-                    {CONDITION_FIELDS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+                    {CONDITION_FIELDS.map((f) => <option key={f.value} value={f.value}>{t(f.labelKey)}</option>)}
                   </select>
                   <select className="field-input" value={cond.operator} onChange={(e) => updateCondition(idx, { operator: e.target.value })}>
-                    {meta.operators.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    {meta.operators.map((o) => <option key={o.value} value={o.value}>{t(o.labelKey)}</option>)}
                   </select>
                   {meta.valueType === 'tier' ? (
                     <select className="field-input flex-1" value={cond.value} onChange={(e) => updateCondition(idx, { value: e.target.value })}>
-                      {TIER_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
+                      {TIER_OPTIONS.map((tier) => <option key={tier} value={tier}>{tier}</option>)}
                     </select>
                   ) : (
                     <input
@@ -235,7 +240,7 @@ function SegmentEditor({ segment, onClose, onSaved }) {
                       type={meta.valueType === 'number' ? 'number' : meta.valueType === 'date' ? 'date' : 'text'}
                       value={cond.value}
                       onChange={(e) => updateCondition(idx, { value: e.target.value })}
-                      placeholder={meta.valueType === 'text' ? 'VIP' : ''}
+                      placeholder={meta.valueType === 'text' ? t('marketingAutomation.conditionValuePlaceholder') : ''}
                     />
                   )}
                   <button className="text-danger hover:opacity-70" onClick={() => removeCondition(idx)}><Trash2 size={15} /></button>
@@ -246,8 +251,8 @@ function SegmentEditor({ segment, onClose, onSaved }) {
         </div>
 
         <div className="pt-2 border-t border-rule">
-          <button className="btn-secondary" onClick={previewLive}><Users2 size={14} /> Preview live member count</button>
-          {preview !== null && <p className="text-sm text-ink mt-2 num">{preview.count} matching customer{preview.count === 1 ? '' : 's'}</p>}
+          <button className="btn-secondary" onClick={previewLive}><Users2 size={14} /> {t('marketingAutomation.previewLiveMemberCount')}</button>
+          {preview !== null && <p className="text-sm text-ink mt-2 num">{t('marketingAutomation.matchingCustomerCount', { count: preview.count })}</p>}
         </div>
       </div>
     </div>
@@ -257,6 +262,7 @@ function SegmentEditor({ segment, onClose, onSaved }) {
 // ============================================================== Journeys ===
 
 function JourneysTab() {
+  const { t } = useTranslation();
   const [journeys, setJourneys] = useState(null);
   const [segments, setSegments] = useState([]);
   const [editing, setEditing] = useState(null); // journey object or 'new'
@@ -287,15 +293,15 @@ function JourneysTab() {
   return (
     <div>
       <div className="flex justify-end mb-3">
-        <button className="btn-primary" onClick={() => setEditing('new')}><Plus size={16} /> New journey</button>
+        <button className="btn-primary" onClick={() => setEditing('new')}><Plus size={16} /> {t('marketingAutomation.newJourney')}</button>
       </div>
       {journeys === null ? (
         <Loading />
       ) : journeys.length === 0 ? (
         <EmptyState
-          title="No journeys yet"
-          description="A journey is an ordered sequence of send/wait steps that automatically walks enrolled customers through — a welcome email, then a wait, then a follow-up SMS, for example."
-          action={<button className="btn-primary" onClick={() => setEditing('new')}>Create your first journey</button>}
+          title={t('marketingAutomation.noJourneysYet')}
+          description={t('marketingAutomation.noJourneysDescription')}
+          action={<button className="btn-primary" onClick={() => setEditing('new')}>{t('marketingAutomation.createFirstJourney')}</button>}
         />
       ) : (
         <div className="grid gap-3">
@@ -309,6 +315,7 @@ function JourneysTab() {
 }
 
 function JourneyRow({ journey, segments, onEdit, onChanged, toast }) {
+  const { t } = useTranslation();
   const [stats, setStats] = useState(null);
   const [showStats, setShowStats] = useState(false);
   const segment = segments.find((s) => String(s._id) === String(journey.trigger?.segmentId));
@@ -329,10 +336,10 @@ function JourneyRow({ journey, segments, onEdit, onChanged, toast }) {
     try {
       if (journey.status === 'active') {
         await api.post(`/marketing/journeys/${journey._id}/pause`);
-        toast('Journey paused.', 'success');
+        toast(t('marketingAutomation.journeyPaused'), 'success');
       } else {
         await api.post(`/marketing/journeys/${journey._id}/start`);
-        toast('Journey started.', 'success');
+        toast(t('marketingAutomation.journeyStarted'), 'success');
       }
       onChanged();
     } catch (err) {
@@ -342,12 +349,12 @@ function JourneyRow({ journey, segments, onEdit, onChanged, toast }) {
 
   async function enrollNow() {
     if (!journey.trigger?.segmentId) {
-      toast('This journey has no trigger segment to enroll from.', 'error');
+      toast(t('marketingAutomation.noTriggerSegment'), 'error');
       return;
     }
     try {
       const result = await api.post(`/marketing/journeys/${journey._id}/enroll-segment`, { segmentId: journey.trigger.segmentId });
-      toast(`Enrolled ${result.enrolledCount} of ${result.totalMembers} segment member(s).`, 'success');
+      toast(t('marketingAutomation.enrolledSummary', { enrolled: result.enrolledCount, total: result.totalMembers }), 'success');
       setStats(null);
       onChanged();
     } catch (err) {
@@ -362,17 +369,17 @@ function JourneyRow({ journey, segments, onEdit, onChanged, toast }) {
           <button className="font-display font-bold text-ink hover:text-accent transition-colors" onClick={onEdit}>{journey.name}</button>
           <p className="text-xs text-ink-muted mt-1 flex items-center gap-2 flex-wrap">
             <span className={journey.status === 'active' ? 'chip-accent' : 'chip-neutral'}>{journey.status}</span>
-            {journey.steps.length} step{journey.steps.length === 1 ? '' : 's'}
-            {segment && <span>· triggered by segment "{segment.name}"</span>}
+            {t('marketingAutomation.stepCount', { count: journey.steps.length })}
+            {segment && <span>{t('marketingAutomation.triggeredBySegment', { name: segment.name })}</span>}
           </p>
         </div>
         <div className="flex items-center gap-3 shrink-0">
-          <button className="text-xs text-ink-muted font-semibold hover:text-ink" onClick={toggleStats}>Stats</button>
+          <button className="text-xs text-ink-muted font-semibold hover:text-ink" onClick={toggleStats}>{t('marketingAutomation.stats')}</button>
           {journey.trigger?.segmentId && (
-            <button className="text-xs text-accent font-semibold hover:text-accent-strong" onClick={enrollNow}>Enroll segment now</button>
+            <button className="text-xs text-accent font-semibold hover:text-accent-strong" onClick={enrollNow}>{t('marketingAutomation.enrollSegmentNow')}</button>
           )}
           <button className="btn-secondary !px-2.5 !py-1.5 text-xs flex items-center gap-1" onClick={toggleActive}>
-            {journey.status === 'active' ? <><Pause size={13} /> Pause</> : <><Play size={13} /> Start</>}
+            {journey.status === 'active' ? <><Pause size={13} /> {t('marketingAutomation.pause')}</> : <><Play size={13} /> {t('marketingAutomation.start')}</>}
           </button>
         </div>
       </div>
@@ -380,21 +387,21 @@ function JourneyRow({ journey, segments, onEdit, onChanged, toast }) {
       {showStats && stats && (
         <div className="mt-3 pt-3 border-t border-rule grid grid-cols-3 gap-3">
           <div>
-            <p className="eyebrow mb-1">Total enrolled</p>
+            <p className="eyebrow mb-1">{t('marketingAutomation.totalEnrolled')}</p>
             <p className="font-display font-bold num text-ink">{stats.totalEnrolled}</p>
           </div>
           <div>
-            <p className="eyebrow mb-1">Active</p>
+            <p className="eyebrow mb-1">{t('marketingAutomation.active')}</p>
             <p className="font-display font-bold num text-ink">{stats.active}</p>
           </div>
           <div>
-            <p className="eyebrow mb-1">Completed</p>
+            <p className="eyebrow mb-1">{t('marketingAutomation.completed')}</p>
             <p className="font-display font-bold num text-ink">{stats.completed}</p>
           </div>
           {stats.activeByStepIndex.length > 0 && (
             <div className="col-span-3 flex flex-wrap gap-2 mt-1">
               {stats.activeByStepIndex.map(({ stepIndex, count }) => (
-                <span key={stepIndex} className="chip-neutral">Step {stepIndex + 1}: {count}</span>
+                <span key={stepIndex} className="chip-neutral">{t('marketingAutomation.stepIndexCount', { index: stepIndex + 1, count })}</span>
               ))}
             </div>
           )}
@@ -409,6 +416,7 @@ function emptyStep(type = 'send_email') {
 }
 
 function JourneyEditor({ journey, segments, onClose, onSaved }) {
+  const { t } = useTranslation();
   const isNew = !journey;
   const [name, setName] = useState(journey?.name || '');
   const [triggerType, setTriggerType] = useState(journey?.trigger?.type || 'manual');
@@ -451,10 +459,10 @@ function JourneyEditor({ journey, segments, onClose, onSaved }) {
       };
       if (isNew) {
         await api.post('/marketing/journeys', payload);
-        toast('Journey created.', 'success');
+        toast(t('marketingAutomation.journeyCreated'), 'success');
       } else {
         await api.put(`/marketing/journeys/${journey._id}`, payload);
-        toast('Journey saved.', 'success');
+        toast(t('marketingAutomation.journeySaved'), 'success');
       }
       onSaved();
     } catch (err) {
@@ -468,42 +476,42 @@ function JourneyEditor({ journey, segments, onClose, onSaved }) {
     <div className="max-w-2xl">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <p className="eyebrow mb-1">Journeys</p>
-          <p className="page-title">{isNew ? 'New journey' : `Edit: ${journey.name}`}</p>
+          <p className="eyebrow mb-1">{t('marketingAutomation.journeys')}</p>
+          <p className="page-title">{isNew ? t('marketingAutomation.newJourney') : t('marketingAutomation.editPrefix', { name: journey.name })}</p>
         </div>
         <div className="flex gap-2">
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn-primary" onClick={save} disabled={saving || !name.trim() || !steps.length}>{saving ? 'Saving…' : 'Save'}</button>
+          <button className="btn-secondary" onClick={onClose}>{t('marketingAutomation.cancel')}</button>
+          <button className="btn-primary" onClick={save} disabled={saving || !name.trim() || !steps.length}>{saving ? t('marketingAutomation.saving') : t('marketingAutomation.save')}</button>
         </div>
       </div>
 
       <div className="card p-5 grid gap-4">
         <div>
-          <label className="field-label">Name</label>
-          <input className="field-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="VIP Welcome Drip" />
+          <label className="field-label">{t('marketingAutomation.name')}</label>
+          <input className="field-input" value={name} onChange={(e) => setName(e.target.value)} placeholder={t('marketingAutomation.journeyNamePlaceholder')} />
         </div>
 
         <div>
-          <label className="field-label">Trigger</label>
+          <label className="field-label">{t('marketingAutomation.trigger')}</label>
           <div className="flex gap-2 items-center flex-wrap">
             <select className="field-input" value={triggerType} onChange={(e) => setTriggerType(e.target.value)}>
-              <option value="manual">Manual (vendor starts it against a chosen segment)</option>
-              <option value="segment_entry">Segment entry (enroll a segment's current members on Start)</option>
+              <option value="manual">{t('marketingAutomation.triggerManual')}</option>
+              <option value="segment_entry">{t('marketingAutomation.triggerSegmentEntry')}</option>
             </select>
             {triggerType === 'segment_entry' && (
               <select className="field-input" value={segmentId} onChange={(e) => setSegmentId(e.target.value)}>
-                <option value="">Choose a segment…</option>
+                <option value="">{t('marketingAutomation.chooseASegmentEllipsis')}</option>
                 {segments.map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
               </select>
             )}
           </div>
-          <p className="text-xs text-ink-muted mt-1">Regardless of trigger, you can always manually enroll a segment's members from the journey list once it's saved.</p>
+          <p className="text-xs text-ink-muted mt-1">{t('marketingAutomation.triggerNote')}</p>
         </div>
 
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="field-label mb-0">Steps (in order)</label>
-            <button className="text-xs text-accent font-semibold flex items-center gap-1 hover:text-accent-strong" onClick={addStep}><Plus size={13} /> Add step</button>
+            <label className="field-label mb-0">{t('marketingAutomation.stepsInOrder')}</label>
+            <button className="text-xs text-accent font-semibold flex items-center gap-1 hover:text-accent-strong" onClick={addStep}><Plus size={13} /> {t('marketingAutomation.addStep')}</button>
           </div>
           <div className="grid gap-2">
             {steps.map((step, idx) => (
@@ -511,13 +519,13 @@ function JourneyEditor({ journey, segments, onClose, onSaved }) {
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-xs font-bold text-ink-muted w-5">{idx + 1}.</span>
                   <select className="field-input" value={step.stepType} onChange={(e) => updateStep(idx, { stepType: e.target.value })}>
-                    {STEP_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                    {STEP_TYPES.map((st) => <option key={st.value} value={st.value}>{t(st.labelKey)}</option>)}
                   </select>
                   <label className="text-xs text-ink-muted flex items-center gap-1">
-                    Wait
+                    {t('marketingAutomation.wait')}
                     <input className="field-input !w-20" type="number" min="0" value={step.delayHours}
                       onChange={(e) => updateStep(idx, { delayHours: e.target.value })} />
-                    hours{step.stepType === 'wait' ? ' then continue' : ' before sending'}
+                    {step.stepType === 'wait' ? t('marketingAutomation.hoursThenContinue') : t('marketingAutomation.hoursBeforeSending')}
                   </label>
                   <div className="flex items-center gap-1 ml-auto">
                     <button className="text-ink-muted hover:text-ink disabled:opacity-30" disabled={idx === 0} onClick={() => moveStep(idx, -1)}><ArrowUp size={14} /></button>
@@ -526,11 +534,11 @@ function JourneyEditor({ journey, segments, onClose, onSaved }) {
                   </div>
                 </div>
                 {step.stepType === 'send_email' && (
-                  <input className="field-input" placeholder="Subject — supports {{customerName}}"
+                  <input className="field-input" placeholder={t('marketingAutomation.subjectPlaceholder')}
                     value={step.templateSubject} onChange={(e) => updateStep(idx, { templateSubject: e.target.value })} />
                 )}
                 {(step.stepType === 'send_email' || step.stepType === 'send_sms') && (
-                  <textarea className="field-input" rows={2} placeholder="Message — supports {{customerName}}, {{customerEmail}}, {{customerPhone}}, {{companyName}}"
+                  <textarea className="field-input" rows={2} placeholder={t('marketingAutomation.messagePlaceholder')}
                     value={step.templateBody} onChange={(e) => updateStep(idx, { templateBody: e.target.value })} />
                 )}
               </div>

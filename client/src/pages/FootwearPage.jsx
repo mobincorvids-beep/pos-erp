@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useToast } from '../components/Toast';
 import { Loading } from '../components/Loading';
 import { EmptyState } from '../components/EmptyState';
 
 export function FootwearPage() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [curves, setCurves] = useState([]);
   const [products, setProducts] = useState([]);
@@ -34,17 +36,17 @@ export function FootwearPage() {
     <div>
       <div className="flex items-center justify-between mb-5">
         <div>
-          <p className="eyebrow mb-1">Footwear operations</p>
-          <p className="page-title">Size curves</p>
+          <p className="eyebrow mb-1">{t('footwear.footwearOperations')}</p>
+          <p className="page-title">{t('footwear.sizeCurves')}</p>
         </div>
         <button className="btn-primary" onClick={() => setShowForm(true)}>
           <span className="material-symbols-outlined text-sm">add</span>
-          New curve
+          {t('footwear.newCurve')}
         </button>
       </div>
 
       {loading && <Loading />}
-      {!loading && curves.length === 0 && <EmptyState title="No size curves yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Add one</button>} />}
+      {!loading && curves.length === 0 && <EmptyState title={t('footwear.noSizeCurvesYet')} action={<button className="btn-primary" onClick={() => setShowForm(true)}>{t('footwear.addOne')}</button>} />}
       {!loading && curves.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {curves.map((c) => (
@@ -56,12 +58,12 @@ export function FootwearPage() {
               <div className="divide-y divide-rule">
                 {c.ratios.map((r, i) => (
                   <div key={i} className="flex justify-between items-center py-1.5 text-xs">
-                    <span className="text-ink-muted">Size {r.sizeLabel}</span>
+                    <span className="text-ink-muted">{t('footwear.size', { size: r.sizeLabel })}</span>
                     <span className="chip-neutral num">{r.percent}%</span>
                   </div>
                 ))}
               </div>
-              <button className="btn-ghost !text-accent !px-0 text-xs mt-3" onClick={() => { setApplying(c); setResult(null); }}>Apply to order</button>
+              <button className="btn-ghost !text-accent !px-0 text-xs mt-3" onClick={() => { setApplying(c); setResult(null); }}>{t('footwear.applyToOrder')}</button>
             </div>
           ))}
         </div>
@@ -72,33 +74,33 @@ export function FootwearPage() {
           <form onSubmit={apply} className="card p-5 w-full max-w-sm">
             <p className="font-display text-lg font-bold text-ink mb-4 flex items-center gap-2">
               <span className="material-symbols-outlined text-accent">straighten</span>
-              Apply {applying.name}
+              {t('footwear.apply', { name: applying.name })}
             </p>
             <div className="space-y-3 mb-3">
               <div>
-                <label className="field-label">Product</label>
+                <label className="field-label">{t('footwear.product')}</label>
                 <select required className="field-input" value={productId} onChange={(e) => setProductId(e.target.value)}>
-                  <option value="">Select…</option>
+                  <option value="">{t('footwear.selectEllipsis')}</option>
                   {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="field-label">Total quantity to order</label>
+                <label className="field-label">{t('footwear.totalQuantityToOrder')}</label>
                 <input type="number" required className="field-input num" value={totalQuantity} onChange={(e) => setTotalQuantity(e.target.value)} />
               </div>
             </div>
-            <button type="submit" className="btn-primary w-full mb-3">Compute split</button>
+            <button type="submit" className="btn-primary w-full mb-3">{t('footwear.computeSplit')}</button>
             {result && (
               <div className="text-sm space-y-1 mb-1">
                 {result.map((r, i) => (
                   <div key={i} className="flex justify-between items-center py-1.5 text-xs border-b border-rule last:border-b-0">
-                    <span className="text-ink-muted">Size {r.sizeLabel}</span>
+                    <span className="text-ink-muted">{t('footwear.size', { size: r.sizeLabel })}</span>
                     <span className="num text-ink font-semibold">{r.quantity}</span>
                   </div>
                 ))}
               </div>
             )}
-            <button type="button" className="btn-secondary w-full mt-3" onClick={() => setApplying(null)}>Close</button>
+            <button type="button" className="btn-secondary w-full mt-3" onClick={() => setApplying(null)}>{t('footwear.close')}</button>
           </form>
         </div>
       )}
@@ -107,6 +109,7 @@ export function FootwearPage() {
 }
 
 function CurveForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [name, setName] = useState('');
   const [ratios, setRatios] = useState([{ sizeLabel: '', percent: '' }]);
@@ -118,7 +121,7 @@ function CurveForm({ onClose, onSaved }) {
     setSaving(true);
     try {
       await api.post('/footwear/size-curves', { name, ratios: ratios.map((r) => ({ sizeLabel: r.sizeLabel, percent: Number(r.percent) })) });
-      toast('Curve saved.', 'success');
+      toast(t('footwear.curveSaved'), 'success');
       onSaved();
     } catch (err) { toast(err.message, 'error'); } finally { setSaving(false); }
   }
@@ -128,25 +131,25 @@ function CurveForm({ onClose, onSaved }) {
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
         <p className="font-display text-lg font-bold text-ink mb-4 flex items-center gap-2">
           <span className="material-symbols-outlined text-accent">straighten</span>
-          New size curve
+          {t('footwear.newSizeCurve')}
         </p>
         <div className="mb-4">
-          <label className="field-label">Name</label>
+          <label className="field-label">{t('footwear.name')}</label>
           <input required className="field-input" value={name} onChange={(e) => setName(e.target.value)} />
         </div>
-        <p className="field-label mb-2">Sizes</p>
+        <p className="field-label mb-2">{t('footwear.sizes')}</p>
         <div className="space-y-2 mb-2">
           {ratios.map((r, i) => (
             <div key={i} className="grid grid-cols-2 gap-2">
-              <input placeholder="Size label" className="field-input" value={r.sizeLabel} onChange={(e) => update(i, { sizeLabel: e.target.value })} />
-              <input type="number" placeholder="Percent" className="field-input num" value={r.percent} onChange={(e) => update(i, { percent: e.target.value })} />
+              <input placeholder={t('footwear.sizeLabel')} className="field-input" value={r.sizeLabel} onChange={(e) => update(i, { sizeLabel: e.target.value })} />
+              <input type="number" placeholder={t('footwear.percent')} className="field-input num" value={r.percent} onChange={(e) => update(i, { percent: e.target.value })} />
             </div>
           ))}
         </div>
-        <button type="button" className="btn-ghost !px-0 text-xs mb-4" onClick={() => setRatios([...ratios, { sizeLabel: '', percent: '' }])}>+ Add size</button>
+        <button type="button" className="btn-ghost !px-0 text-xs mb-4" onClick={() => setRatios([...ratios, { sizeLabel: '', percent: '' }])}>{t('footwear.addSize')}</button>
         <div className="flex justify-end gap-2">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('footwear.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('footwear.savingEllipsis') : t('footwear.save')}</button>
         </div>
       </form>
     </div>

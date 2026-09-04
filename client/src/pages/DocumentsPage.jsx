@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useToast } from '../components/Toast';
 import { Loading } from '../components/Loading';
@@ -44,6 +45,7 @@ function openDocument(version) {
 }
 
 export function DocumentsPage() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -64,42 +66,42 @@ export function DocumentsPage() {
     <div>
       <div className="flex justify-between items-end flex-wrap gap-4 mb-6">
         <div>
-          <p className="page-title">Documents</p>
-          <p className="text-sm text-ink-muted mt-1">Contracts, invoices, ID copies, licenses — attached to any record, fully versioned.</p>
+          <p className="page-title">{t('documents.title')}</p>
+          <p className="text-sm text-ink-muted mt-1">{t('documents.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
           <select className="field-input" value={filterEntityType} onChange={(e) => setFilterEntityType(e.target.value)}>
-            <option value="">All types</option>
-            {ENTITY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            <option value="">{t('documents.allTypes')}</option>
+            {ENTITY_TYPES.map((et) => <option key={et} value={et}>{et}</option>)}
           </select>
           <button className="btn-primary" onClick={() => setShowForm(true)}>
             <span className="material-symbols-outlined text-sm">upload</span>
-            Upload document
+            {t('documents.uploadDocument')}
           </button>
         </div>
       </div>
 
       {loading && <Loading />}
       {!loading && documents.length === 0 && (
-        <EmptyState title="No documents uploaded yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Upload one</button>} />
+        <EmptyState title={t('documents.emptyTitle')} action={<button className="btn-primary" onClick={() => setShowForm(true)}>{t('documents.uploadOne')}</button>} />
       )}
 
       {!loading && documents.length > 0 && (
         <div className="card overflow-hidden">
           <div className="px-5 py-4 border-b border-rule flex justify-between items-center bg-surface-sunken/40">
-            <p className="font-display text-lg font-semibold text-ink">Document register</p>
-            <span className="eyebrow">{documents.length} document{documents.length === 1 ? '' : 's'}</span>
+            <p className="font-display text-lg font-semibold text-ink">{t('documents.documentRegister')}</p>
+            <span className="eyebrow">{t('documents.documentCount', { count: documents.length })}</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[760px]">
               <thead>
                 <tr className="border-b border-rule bg-surface-sunken/60">
-                  <th className="py-3 px-5 eyebrow font-medium">File</th>
-                  <th className="py-3 px-5 eyebrow font-medium">Category</th>
-                  <th className="py-3 px-5 eyebrow font-medium">Attached to</th>
-                  <th className="py-3 px-5 eyebrow font-medium">Version</th>
-                  <th className="py-3 px-5 eyebrow font-medium">Expiry</th>
-                  <th className="py-3 px-5 eyebrow font-medium text-right">Actions</th>
+                  <th className="py-3 px-5 eyebrow font-medium">{t('documents.file')}</th>
+                  <th className="py-3 px-5 eyebrow font-medium">{t('documents.category')}</th>
+                  <th className="py-3 px-5 eyebrow font-medium">{t('documents.attachedTo')}</th>
+                  <th className="py-3 px-5 eyebrow font-medium">{t('documents.version')}</th>
+                  <th className="py-3 px-5 eyebrow font-medium">{t('documents.expiry')}</th>
+                  <th className="py-3 px-5 eyebrow font-medium text-right">{t('documents.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-rule">
@@ -116,8 +118,8 @@ export function DocumentsPage() {
                       <td className="py-3 px-5">v{v?.versionNumber}</td>
                       <td className="py-3 px-5 text-ink-muted">{doc.expiryDate ? new Date(doc.expiryDate).toLocaleDateString() : '—'}</td>
                       <td className="py-3 px-5 text-right whitespace-nowrap">
-                        <button className="btn-secondary text-xs px-3 py-1.5" onClick={() => openDocument(v)}>Open</button>
-                        <button className="btn-secondary text-xs px-3 py-1.5 ml-2" onClick={() => setVersioningFor(doc)}>New version</button>
+                        <button className="btn-secondary text-xs px-3 py-1.5" onClick={() => openDocument(v)}>{t('documents.open')}</button>
+                        <button className="btn-secondary text-xs px-3 py-1.5 ml-2" onClick={() => setVersioningFor(doc)}>{t('documents.newVersion')}</button>
                       </td>
                     </tr>
                   );
@@ -135,6 +137,7 @@ export function DocumentsPage() {
 }
 
 function UploadForm({ existingDoc, onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [entityType, setEntityType] = useState(existingDoc?.entityType || ENTITY_TYPES[0]);
   const [entityId, setEntityId] = useState(existingDoc?.entityId || '');
@@ -149,7 +152,7 @@ function UploadForm({ existingDoc, onClose, onSaved }) {
     e.target.value = ''; // allow re-selecting the same file later
     if (!selected) return;
     if (selected.size > MAX_FILE_BYTES) {
-      toast(`"${selected.name}" is ${(selected.size / (1024 * 1024)).toFixed(1)}MB — the limit is ${MAX_FILE_BYTES / (1024 * 1024)}MB per document.`, 'error');
+      toast(t('documents.fileTooLarge', { name: selected.name, size: (selected.size / (1024 * 1024)).toFixed(1), limit: MAX_FILE_BYTES / (1024 * 1024) }), 'error');
       return;
     }
     try {
@@ -162,16 +165,16 @@ function UploadForm({ existingDoc, onClose, onSaved }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!file) { toast('Choose a file to upload.', 'error'); return; }
+    if (!file) { toast(t('documents.chooseFile'), 'error'); return; }
     setSaving(true);
     try {
       if (existingDoc) {
         await api.post(`/documents/${existingDoc._id}/versions`, { ...file, note });
-        toast('New version uploaded.', 'success');
+        toast(t('documents.newVersionUploaded'), 'success');
       } else {
-        if (!entityId.trim()) { toast('entityId is required.', 'error'); setSaving(false); return; }
+        if (!entityId.trim()) { toast(t('documents.entityIdRequired'), 'error'); setSaving(false); return; }
         await api.post('/documents', { entityType, entityId: entityId.trim(), category, expiryDate: expiryDate || null, note, ...file });
-        toast('Document uploaded.', 'success');
+        toast(t('documents.documentUploaded'), 'success');
       }
       onSaved();
     } catch (err) {
@@ -184,36 +187,36 @@ function UploadForm({ existingDoc, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4 py-8 overflow-y-auto">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm max-h-[85vh] overflow-y-auto">
-        <p className="font-display text-lg mb-4">{existingDoc ? `New version — ${existingDoc.category}` : 'Upload a document'}</p>
+        <p className="font-display text-lg mb-4">{existingDoc ? t('documents.newVersionFor', { category: existingDoc.category }) : t('documents.uploadADocument')}</p>
         <div className="space-y-3">
           {!existingDoc && (
             <>
               <div>
-                <label className="field-label">Attached to (type)</label>
+                <label className="field-label">{t('documents.attachedToType')}</label>
                 <select className="field-input" value={entityType} onChange={(e) => setEntityType(e.target.value)}>
-                  {ENTITY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                  {ENTITY_TYPES.map((et) => <option key={et} value={et}>{et}</option>)}
                 </select>
               </div>
-              <input required className="field-input" placeholder="Entity ID (e.g. the Supplier's or Employee's _id)" value={entityId} onChange={(e) => setEntityId(e.target.value)} />
-              <input required className="field-input" placeholder="Category (Contract, ID Copy, Invoice, License...)" value={category} onChange={(e) => setCategory(e.target.value)} />
+              <input required className="field-input" placeholder={t('documents.entityIdPlaceholder')} value={entityId} onChange={(e) => setEntityId(e.target.value)} />
+              <input required className="field-input" placeholder={t('documents.categoryPlaceholder')} value={category} onChange={(e) => setCategory(e.target.value)} />
               <div>
-                <label className="field-label">Expiry date (optional)</label>
+                <label className="field-label">{t('documents.expiryDateOptional')}</label>
                 <input type="date" className="field-input" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} />
               </div>
             </>
           )}
           <div>
-            <label className="field-label">File (any type, up to {MAX_FILE_BYTES / (1024 * 1024)}MB)</label>
+            <label className="field-label">{t('documents.fileFieldLabel', { limit: MAX_FILE_BYTES / (1024 * 1024) })}</label>
             <input type="file" className="field-input" onChange={handleFileChange} />
             {file && (
               <p className="text-xs text-ink-muted mt-1">{file.fileName} · {formatBytes(file.fileSizeBytes)}</p>
             )}
           </div>
-          <input className="field-input" placeholder="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
+          <input className="field-input" placeholder={t('documents.noteOptional')} value={note} onChange={(e) => setNote(e.target.value)} />
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving || !file} className="btn-primary">{saving ? 'Uploading…' : 'Upload'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('documents.cancel')}</button>
+          <button type="submit" disabled={saving || !file} className="btn-primary">{saving ? t('documents.uploading') : t('documents.upload')}</button>
         </div>
       </form>
     </div>

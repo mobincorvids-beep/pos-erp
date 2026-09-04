@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
@@ -19,6 +20,7 @@ function StatusChip({ status }) {
 }
 
 export function PeriodsPage() {
+  const { t } = useTranslation();
   const { can } = useAuth();
   const toast = useToast();
   const [fiscalYears, setFiscalYears] = useState([]);
@@ -39,7 +41,7 @@ export function PeriodsPage() {
   async function toggle(id, action) {
     try {
       await api.post(`/accounting-periods/periods/${id}/${action}`, {});
-      toast(`Period ${action === 'close' ? 'closed' : 'reopened'}.`, 'success');
+      toast(action === 'close' ? t('periods.periodClosed') : t('periods.periodReopened'), 'success');
       load();
     } catch (err) {
       toast(err.message, 'error');
@@ -50,37 +52,37 @@ export function PeriodsPage() {
     <div>
       <div className="flex justify-between items-end flex-wrap gap-4 mb-6">
         <div>
-          <p className="page-title">Fiscal Years &amp; Periods</p>
-          <p className="text-sm text-ink-muted mt-1 max-w-2xl">Closing a period is a real accounting control, once closed, no voucher can be posted with a date inside it, anywhere in the system, until it's reopened.</p>
+          <p className="page-title">{t('periods.title')}</p>
+          <p className="text-sm text-ink-muted mt-1 max-w-2xl">{t('periods.subtitle')}</p>
         </div>
         <div className="flex gap-2">
-          <button className="btn-secondary" onClick={() => setShowFyForm(true)}>New fiscal year</button>
+          <button className="btn-secondary" onClick={() => setShowFyForm(true)}>{t('periods.newFiscalYear')}</button>
           <button className="btn-primary" onClick={() => setShowPeriodForm(true)} disabled={fiscalYears.length === 0}>
             <span className="material-symbols-outlined text-sm">add</span>
-            New period
+            {t('periods.newPeriod')}
           </button>
         </div>
       </div>
 
       {loading && <Loading />}
       {!loading && periods.length === 0 && (
-        <EmptyState title="No accounting periods yet" description="Create a fiscal year first, then periods inside it, to start locking finalized months." action={fiscalYears.length === 0 ? <button className="btn-secondary" onClick={() => setShowFyForm(true)}>New fiscal year</button> : <button className="btn-primary" onClick={() => setShowPeriodForm(true)}>New period</button>} />
+        <EmptyState title={t('periods.noPeriodsYet')} description={t('periods.noPeriodsDescription')} action={fiscalYears.length === 0 ? <button className="btn-secondary" onClick={() => setShowFyForm(true)}>{t('periods.newFiscalYear')}</button> : <button className="btn-primary" onClick={() => setShowPeriodForm(true)}>{t('periods.newPeriod')}</button>} />
       )}
       {!loading && periods.length > 0 && (
         <div className="card overflow-hidden">
           <div className="px-5 py-4 border-b border-rule flex justify-between items-center bg-surface-sunken/40">
-            <p className="font-display text-lg font-semibold text-ink">Periods</p>
-            <span className="eyebrow">{periods.length} periods</span>
+            <p className="font-display text-lg font-semibold text-ink">{t('periods.periods')}</p>
+            <span className="eyebrow">{t('periods.periodsCount', { count: periods.length })}</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[720px]">
               <thead>
                 <tr className="border-b border-rule bg-surface-sunken/60">
-                  <th className="py-3 px-5 eyebrow font-medium">Period</th>
-                  <th className="py-3 px-5 eyebrow font-medium">Fiscal Year</th>
-                  <th className="py-3 px-5 eyebrow font-medium">Dates</th>
-                  <th className="py-3 px-5 eyebrow font-medium">Status</th>
-                  <th className="py-3 px-5 eyebrow font-medium text-right">Actions</th>
+                  <th className="py-3 px-5 eyebrow font-medium">{t('periods.period')}</th>
+                  <th className="py-3 px-5 eyebrow font-medium">{t('periods.fiscalYear')}</th>
+                  <th className="py-3 px-5 eyebrow font-medium">{t('periods.dates')}</th>
+                  <th className="py-3 px-5 eyebrow font-medium">{t('periods.status')}</th>
+                  <th className="py-3 px-5 eyebrow font-medium text-right">{t('periods.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-rule">
@@ -93,8 +95,8 @@ export function PeriodsPage() {
                     <td className="py-3 px-5 text-right">
                       {can('reports.financial') && (
                         p.status === 'open'
-                          ? <button className="btn-ghost !text-danger !px-0 text-xs" onClick={() => toggle(p._id, 'close')}>Close</button>
-                          : <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => toggle(p._id, 'reopen')}>Reopen</button>
+                          ? <button className="btn-ghost !text-danger !px-0 text-xs" onClick={() => toggle(p._id, 'close')}>{t('periods.close')}</button>
+                          : <button className="btn-ghost !text-accent !px-0 text-xs" onClick={() => toggle(p._id, 'reopen')}>{t('periods.reopen')}</button>
                       )}
                     </td>
                   </tr>
@@ -112,6 +114,7 @@ export function PeriodsPage() {
 }
 
 function FiscalYearForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [form, setForm] = useState({ name: '', startDate: '', endDate: '' });
   const [saving, setSaving] = useState(false);
@@ -121,7 +124,7 @@ function FiscalYearForm({ onClose, onSaved }) {
     setSaving(true);
     try {
       await api.post('/accounting-periods/fiscal-years', form);
-      toast('Fiscal year created.', 'success');
+      toast(t('periods.fiscalYearCreated'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -133,26 +136,26 @@ function FiscalYearForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg font-semibold text-accent mb-4">New fiscal year</p>
+        <p className="font-display text-lg font-semibold text-accent mb-4">{t('periods.newFiscalYear')}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Name</label>
-            <input required placeholder="FY2026" className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <label className="field-label">{t('periods.name')}</label>
+            <input required placeholder={t('periods.fiscalYearNamePlaceholder')} className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="field-label">Start date</label>
+              <label className="field-label">{t('periods.startDate')}</label>
               <input type="date" required className="field-input" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} />
             </div>
             <div>
-              <label className="field-label">End date</label>
+              <label className="field-label">{t('periods.endDate')}</label>
               <input type="date" required className="field-input" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} />
             </div>
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Creating…' : 'Create'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('periods.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('periods.creating') : t('periods.create')}</button>
         </div>
       </form>
     </div>
@@ -160,6 +163,7 @@ function FiscalYearForm({ onClose, onSaved }) {
 }
 
 function PeriodForm({ fiscalYears, onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [form, setForm] = useState({ fiscalYearId: '', name: '', startDate: '', endDate: '' });
   const [saving, setSaving] = useState(false);
@@ -169,7 +173,7 @@ function PeriodForm({ fiscalYears, onClose, onSaved }) {
     setSaving(true);
     try {
       await api.post('/accounting-periods/periods', form);
-      toast('Period created.', 'success');
+      toast(t('periods.periodCreated'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -181,33 +185,33 @@ function PeriodForm({ fiscalYears, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg font-semibold text-accent mb-4">New period</p>
+        <p className="font-display text-lg font-semibold text-accent mb-4">{t('periods.newPeriod')}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Fiscal year</label>
+            <label className="field-label">{t('periods.fiscalYear')}</label>
             <select required className="field-input" value={form.fiscalYearId} onChange={(e) => setForm({ ...form, fiscalYearId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('periods.selectEllipsis')}</option>
               {fiscalYears.map((fy) => <option key={fy._id} value={fy._id}>{fy.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Name</label>
-            <input required placeholder="January 2026" className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <label className="field-label">{t('periods.name')}</label>
+            <input required placeholder={t('periods.periodNamePlaceholder')} className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="field-label">Start date</label>
+              <label className="field-label">{t('periods.startDate')}</label>
               <input type="date" required className="field-input" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} />
             </div>
             <div>
-              <label className="field-label">End date</label>
+              <label className="field-label">{t('periods.endDate')}</label>
               <input type="date" required className="field-input" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} />
             </div>
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Creating…' : 'Create'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('periods.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('periods.creating') : t('periods.create')}</button>
         </div>
       </form>
     </div>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
@@ -22,6 +23,7 @@ function fileToDataUri(file) {
 }
 
 export function ChatPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const toast = useToast();
   const [channels, setChannels] = useState([]);
@@ -47,7 +49,7 @@ export function ChatPage() {
   function channelLabel(c) {
     if (c.type === 'channel') return `# ${c.name}`;
     const other = c.memberIds.find((m) => m._id !== user._id);
-    return other ? other.name : '(direct message)';
+    return other ? other.name : t('chat.directMessage');
   }
 
   function channelInitials(c) {
@@ -81,40 +83,40 @@ export function ChatPage() {
     <div>
       <div className="mb-4 flex items-end justify-between gap-3">
         <div>
-          <p className="eyebrow mb-1">Team messaging</p>
-          <p className="page-title">Chat</p>
+          <p className="eyebrow mb-1">{t('chat.teamMessaging')}</p>
+          <p className="page-title">{t('chat.chat')}</p>
         </div>
-        <button className="btn-secondary text-xs" onClick={() => setSearchOpen(true)}>Search messages</button>
+        <button className="btn-secondary text-xs" onClick={() => setSearchOpen(true)}>{t('chat.searchMessages')}</button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-4 h-[calc(100vh-200px)]">
         <div className="card p-3 flex flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto -mx-1 px-1">
             {loadingChannels && <Loading />}
-            {!loadingChannels && channels.length === 0 && <p className="text-xs text-ink-muted px-2">No channels yet: create one to get started.</p>}
+            {!loadingChannels && channels.length === 0 && <p className="text-xs text-ink-muted px-2">{t('chat.noChannelsYetCreate')}</p>}
 
             <div className="flex justify-between items-center mb-2 px-1 mt-1">
-              <p className="font-display font-bold text-sm text-ink">Channels</p>
-              <button className="text-xs font-semibold text-accent hover:text-accent-strong" onClick={() => setShowNewChannel(true)}>+ Channel</button>
+              <p className="font-display font-bold text-sm text-ink">{t('chat.channels')}</p>
+              <button className="text-xs font-semibold text-accent hover:text-accent-strong" onClick={() => setShowNewChannel(true)}>+ {t('chat.channel')}</button>
             </div>
             <div className="space-y-1 mb-4">
               {namedChannels.map((c) => <SidebarRow key={c._id} c={c} />)}
-              {!loadingChannels && namedChannels.length === 0 && <p className="text-xs text-ink-muted px-2">No channels yet.</p>}
+              {!loadingChannels && namedChannels.length === 0 && <p className="text-xs text-ink-muted px-2">{t('chat.noChannelsYet')}</p>}
             </div>
 
             <div className="flex justify-between items-center mb-2 px-1">
-              <p className="font-display font-bold text-sm text-ink">Direct Messages</p>
-              <button className="text-xs font-semibold text-accent hover:text-accent-strong" onClick={() => setShowNewDM(true)}>+ DM</button>
+              <p className="font-display font-bold text-sm text-ink">{t('chat.directMessages')}</p>
+              <button className="text-xs font-semibold text-accent hover:text-accent-strong" onClick={() => setShowNewDM(true)}>+ {t('chat.dm')}</button>
             </div>
             <div className="space-y-1">
               {dmChannels.map((c) => <SidebarRow key={c._id} c={c} />)}
-              {!loadingChannels && dmChannels.length === 0 && <p className="text-xs text-ink-muted px-2">No direct messages yet.</p>}
+              {!loadingChannels && dmChannels.length === 0 && <p className="text-xs text-ink-muted px-2">{t('chat.noDirectMessagesYet')}</p>}
             </div>
           </div>
         </div>
 
         <div className="card p-0 flex flex-col overflow-hidden">
-          {!activeChannel && <EmptyState title="No channel selected" />}
+          {!activeChannel && <EmptyState title={t('chat.noChannelSelected')} />}
           {activeChannel && <ChannelView channel={activeChannel} label={channelLabel(activeChannel)} onChannelsChanged={loadChannels} />}
         </div>
       </div>
@@ -127,6 +129,7 @@ export function ChatPage() {
 }
 
 function SearchPanel({ onClose, onJump }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [q, setQ] = useState('');
   const [results, setResults] = useState([]);
@@ -149,20 +152,20 @@ function SearchPanel({ onClose, onJump }) {
   }
 
   function channelLabel(row) {
-    if (!row.channel) return '(unknown channel)';
-    return row.channel.type === 'channel' ? `#${row.channel.name}` : 'Direct message';
+    if (!row.channel) return t('chat.unknownChannel');
+    return row.channel.type === 'channel' ? `#${row.channel.name}` : t('chat.directMessage');
   }
 
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-start justify-center z-40 px-4 pt-20">
       <div className="card p-5 w-full max-w-lg max-h-[70vh] flex flex-col">
-        <p className="font-display font-bold text-lg text-ink mb-3">Search messages</p>
+        <p className="font-display font-bold text-lg text-ink mb-3">{t('chat.searchMessages')}</p>
         <form onSubmit={handleSearch} className="flex gap-2 mb-3">
-          <input autoFocus className="field-input flex-1" placeholder="Search message text…" value={q} onChange={(e) => setQ(e.target.value)} />
-          <button type="submit" disabled={loading || !q.trim()} className="btn-primary">{loading ? 'Searching…' : 'Search'}</button>
+          <input autoFocus className="field-input flex-1" placeholder={t('chat.searchMessageTextPlaceholder')} value={q} onChange={(e) => setQ(e.target.value)} />
+          <button type="submit" disabled={loading || !q.trim()} className="btn-primary">{loading ? t('chat.searching') : t('chat.search')}</button>
         </form>
         <div className="flex-1 overflow-y-auto space-y-2">
-          {searched && !loading && results.length === 0 && <p className="text-xs text-ink-muted">No messages matched.</p>}
+          {searched && !loading && results.length === 0 && <p className="text-xs text-ink-muted">{t('chat.noMessagesMatched')}</p>}
           {results.map((r) => (
             <button
               key={r._id}
@@ -178,9 +181,9 @@ function SearchPanel({ onClose, onJump }) {
             </button>
           ))}
         </div>
-        <p className="text-[10px] text-ink-muted mt-2">Jumping opens the channel scrolled to its most recent messages, not the exact match.</p>
+        <p className="text-[10px] text-ink-muted mt-2">{t('chat.jumpingNote')}</p>
         <div className="flex justify-end mt-3">
-          <button className="btn-secondary" onClick={onClose}>Close</button>
+          <button className="btn-secondary" onClick={onClose}>{t('chat.close')}</button>
         </div>
       </div>
     </div>
@@ -188,6 +191,7 @@ function SearchPanel({ onClose, onJump }) {
 }
 
 function ChannelView({ channel, label, onChannelsChanged }) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const toast = useToast();
   const [messages, setMessages] = useState([]);
@@ -218,7 +222,7 @@ function ChannelView({ channel, label, onChannelsChanged }) {
     e.target.value = '';
     if (!file) return;
     if (file.size > MAX_ATTACHMENT_BYTES) {
-      toast(`File is too large: ${(file.size / (1024 * 1024)).toFixed(1)}MB exceeds the 10MB limit.`, 'error');
+      toast(t('chat.fileTooLarge', { size: (file.size / (1024 * 1024)).toFixed(1) }), 'error');
       return;
     }
     const fileData = await fileToDataUri(file);
@@ -231,7 +235,7 @@ function ChannelView({ channel, label, onChannelsChanged }) {
     setSending(true);
     try {
       await api.post(`/chat/channels/${channel._id}/messages`, {
-        text: text.trim() || (pendingFile ? `Shared a file: ${pendingFile.fileName}` : ''),
+        text: text.trim() || (pendingFile ? t('chat.sharedAFile', { name: pendingFile.fileName }) : ''),
         attachments: pendingFile ? [pendingFile] : undefined,
       });
       setText('');
@@ -263,7 +267,7 @@ function ChannelView({ channel, label, onChannelsChanged }) {
   }
 
   async function handleDelete(m) {
-    if (!confirm('Delete this message?')) return;
+    if (!confirm(t('chat.confirmDeleteMessage'))) return;
     try { await api.del(`/chat/messages/${m._id}`); load(); }
     catch (err) { toast(err.message, 'error'); }
   }
@@ -282,7 +286,7 @@ function ChannelView({ channel, label, onChannelsChanged }) {
 
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
         {loading && <Loading />}
-        {!loading && messages.length === 0 && <p className="text-xs text-ink-muted">No messages yet: say hello.</p>}
+        {!loading && messages.length === 0 && <p className="text-xs text-ink-muted">{t('chat.noMessagesYet')}</p>}
         {messages.map((m) => {
           const isMine = m.senderId?._id === user._id;
           return (
@@ -292,10 +296,10 @@ function ChannelView({ channel, label, onChannelsChanged }) {
               </span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-sm font-semibold text-ink">{m.senderId?.name || 'Unknown'}</span>
+                  <span className="text-sm font-semibold text-ink">{m.senderId?.name || t('chat.unknown')}</span>
                   <span className="text-[10px] text-ink-muted">{new Date(m.createdAt).toLocaleString()}</span>
-                  {m.editedAt && <span className="text-[10px] text-ink-muted">(edited)</span>}
-                  {m.pinned && <span className="chip-accent text-[10px] px-1.5">Pinned</span>}
+                  {m.editedAt && <span className="text-[10px] text-ink-muted">({t('chat.edited')})</span>}
+                  {m.pinned && <span className="chip-accent text-[10px] px-1.5">{t('chat.pinned')}</span>}
                 </div>
                 <div className="inline-block mt-1 max-w-full rounded-2xl rounded-tl-sm bg-surface-sunken px-3.5 py-2">
                   <p className="text-sm text-ink whitespace-pre-wrap break-words">{m.text}</p>
@@ -332,10 +336,10 @@ function ChannelView({ channel, label, onChannelsChanged }) {
                 )}
 
                 <div className="flex gap-3 mt-1 opacity-0 group-hover:opacity-100 transition-opacity relative">
-                  <button className="text-[11px] font-semibold text-accent hover:text-accent-strong" onClick={() => setOpenThreadId(openThreadId === m._id ? null : m._id)}>Reply</button>
-                  <button className="text-[11px] font-semibold text-accent hover:text-accent-strong" onClick={() => setOpenReactionsId(openReactionsId === m._id ? null : m._id)}>React</button>
-                  <button className="text-[11px] font-semibold text-accent hover:text-accent-strong" onClick={() => togglePin(m)}>{m.pinned ? 'Unpin' : 'Pin'}</button>
-                  {isMine && <button className="text-[11px] font-semibold text-danger hover:opacity-80" onClick={() => handleDelete(m)}>Delete</button>}
+                  <button className="text-[11px] font-semibold text-accent hover:text-accent-strong" onClick={() => setOpenThreadId(openThreadId === m._id ? null : m._id)}>{t('chat.reply')}</button>
+                  <button className="text-[11px] font-semibold text-accent hover:text-accent-strong" onClick={() => setOpenReactionsId(openReactionsId === m._id ? null : m._id)}>{t('chat.react')}</button>
+                  <button className="text-[11px] font-semibold text-accent hover:text-accent-strong" onClick={() => togglePin(m)}>{m.pinned ? t('chat.unpin') : t('chat.pin')}</button>
+                  {isMine && <button className="text-[11px] font-semibold text-danger hover:opacity-80" onClick={() => handleDelete(m)}>{t('chat.delete')}</button>}
                   {openReactionsId === m._id && (
                     <div className="absolute top-5 left-0 z-10 card p-1.5 flex gap-1 shadow-md">
                       {REACTION_EMOJI.map((emoji) => (
@@ -357,25 +361,26 @@ function ChannelView({ channel, label, onChannelsChanged }) {
       {pendingFile && (
         <div className="px-3 pt-2 flex items-center gap-2 text-xs text-ink-muted">
           <span className="chip">{pendingFile.fileName}</span>
-          <button type="button" className="text-danger font-semibold" onClick={() => setPendingFile(null)}>Remove</button>
+          <button type="button" className="text-danger font-semibold" onClick={() => setPendingFile(null)}>{t('chat.remove')}</button>
         </div>
       )}
       <form onSubmit={handleSend} className="p-3 border-t border-rule flex gap-2">
         <input ref={fileInputRef} type="file" className="hidden" onChange={handleFilePick} />
-        <button type="button" className="btn-secondary shrink-0" title="Attach a file" onClick={() => fileInputRef.current?.click()}>📎</button>
+        <button type="button" className="btn-secondary shrink-0" title={t('chat.attachAFile')} onClick={() => fileInputRef.current?.click()}>📎</button>
         <input
           className="field-input flex-1"
-          placeholder="Message… (use @Name to mention someone)"
+          placeholder={t('chat.messagePlaceholder')}
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
-        <button type="submit" disabled={sending || (!text.trim() && !pendingFile)} className="btn-primary">Send</button>
+        <button type="submit" disabled={sending || (!text.trim() && !pendingFile)} className="btn-primary">{t('chat.send')}</button>
       </form>
     </>
   );
 }
 
 function ThreadPanel({ rootMessage, channelId, onSent }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [replies, setReplies] = useState([]);
   const [text, setText] = useState('');
@@ -419,14 +424,15 @@ function ThreadPanel({ rootMessage, channelId, onSent }) {
         </div>
       ))}
       <form onSubmit={handleReply} className="flex gap-2">
-        <input className="field-input flex-1 !py-1 !text-xs" placeholder="Reply in thread…" value={text} onChange={(e) => setText(e.target.value)} />
-        <button type="submit" disabled={sending || !text.trim()} className="btn-secondary !py-1 !text-xs">Reply</button>
+        <input className="field-input flex-1 !py-1 !text-xs" placeholder={t('chat.replyInThreadPlaceholder')} value={text} onChange={(e) => setText(e.target.value)} />
+        <button type="submit" disabled={sending || !text.trim()} className="btn-secondary !py-1 !text-xs">{t('chat.reply')}</button>
       </form>
     </div>
   );
 }
 
 function NewChannelForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [users, setUsers] = useState([]);
   const [name, setName] = useState('');
@@ -446,7 +452,7 @@ function NewChannelForm({ onClose, onSaved }) {
     setSaving(true);
     try {
       const channel = await api.post('/chat/channels', { name, purpose, isPrivate, memberIds });
-      toast('Channel created.', 'success');
+      toast(t('chat.channelCreated'), 'success');
       onSaved(channel);
     } catch (err) {
       toast(err.message, 'error');
@@ -458,13 +464,13 @@ function NewChannelForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display font-bold text-lg text-ink mb-4">New channel</p>
+        <p className="font-display font-bold text-lg text-ink mb-4">{t('chat.newChannel')}</p>
         <div className="space-y-3">
-          <div><label className="field-label">Name</label><input required className="field-input" value={name} onChange={(e) => setName(e.target.value)} /></div>
-          <div><label className="field-label">Purpose (optional)</label><input className="field-input" value={purpose} onChange={(e) => setPurpose(e.target.value)} /></div>
-          <label className="flex items-center gap-2 text-sm text-ink"><input type="checkbox" checked={isPrivate} onChange={(e) => setIsPrivate(e.target.checked)} /> Private channel</label>
+          <div><label className="field-label">{t('chat.name')}</label><input required className="field-input" value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div><label className="field-label">{t('chat.purposeOptional')}</label><input className="field-input" value={purpose} onChange={(e) => setPurpose(e.target.value)} /></div>
+          <label className="flex items-center gap-2 text-sm text-ink"><input type="checkbox" checked={isPrivate} onChange={(e) => setIsPrivate(e.target.checked)} /> {t('chat.privateChannel')}</label>
           <div>
-            <label className="field-label">Members</label>
+            <label className="field-label">{t('chat.members')}</label>
             <div className="max-h-32 overflow-y-auto border border-rule-strong rounded-lg p-2 space-y-1">
               {users.map((u) => (
                 <label key={u._id} className="flex items-center gap-2 text-sm text-ink">
@@ -475,8 +481,8 @@ function NewChannelForm({ onClose, onSaved }) {
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Creating…' : 'Create'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('chat.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('chat.creating') : t('chat.create')}</button>
         </div>
       </form>
     </div>
@@ -484,6 +490,7 @@ function NewChannelForm({ onClose, onSaved }) {
 }
 
 function NewDMForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const toast = useToast();
   const [users, setUsers] = useState([]);
@@ -511,11 +518,11 @@ function NewDMForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <div className="card p-5 w-full max-w-xs">
-        <p className="font-display font-bold text-lg text-ink mb-4">New direct message</p>
+        <p className="font-display font-bold text-lg text-ink mb-4">{t('chat.newDirectMessage')}</p>
         <input
           autoFocus
           className="field-input mb-2"
-          placeholder="Search people…"
+          placeholder={t('chat.searchPeoplePlaceholder')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -531,13 +538,13 @@ function NewDMForm({ onClose, onSaved }) {
                 {initialsOf(u.name)}
               </span>
               <span className="truncate">{u.name}</span>
-              {saving && otherUserId === u._id && <span className="text-[10px] text-ink-muted ml-auto">Opening…</span>}
+              {saving && otherUserId === u._id && <span className="text-[10px] text-ink-muted ml-auto">{t('chat.opening')}</span>}
             </button>
           ))}
-          {filtered.length === 0 && <p className="text-xs text-ink-muted px-2 py-1">No matching people.</p>}
+          {filtered.length === 0 && <p className="text-xs text-ink-muted px-2 py-1">{t('chat.noMatchingPeople')}</p>}
         </div>
         <div className="flex justify-end mt-4">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('chat.cancel')}</button>
         </div>
       </div>
     </div>

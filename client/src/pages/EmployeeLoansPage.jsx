@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
@@ -9,6 +10,7 @@ import { formatMoney, formatDate } from '../lib/format';
 const STATUS_CHIP = { active: 'chip-accent', settled: 'chip-neutral' };
 
 export function EmployeeLoansPage() {
+  const { t } = useTranslation();
   const { company } = useAuth();
   const toast = useToast();
   const [loans, setLoans] = useState([]);
@@ -33,41 +35,41 @@ export function EmployeeLoansPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <p className="page-title">Employee loans</p>
-          <p className="text-sm text-ink-muted mt-1">Overview of active employee advances and repayment progress.</p>
+          <p className="page-title">{t('employeeLoans.title')}</p>
+          <p className="text-sm text-ink-muted mt-1">{t('employeeLoans.subtitle')}</p>
         </div>
-        <button className="btn-primary" onClick={() => setShowForm(true)}>Disburse a loan</button>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>{t('employeeLoans.disburseALoan')}</button>
       </div>
 
       {loading && <Loading />}
 
       {!loading && loans.length === 0 && (
-        <EmptyState title="No loans yet" description="A loan's monthly installment is deducted automatically the next time payroll runs for that employee." action={<button className="btn-primary" onClick={() => setShowForm(true)}>Disburse a loan</button>} />
+        <EmptyState title={t('employeeLoans.noLoansYet')} description={t('employeeLoans.noLoansDescription')} action={<button className="btn-primary" onClick={() => setShowForm(true)}>{t('employeeLoans.disburseALoan')}</button>} />
       )}
 
       {!loading && loans.length > 0 && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="card p-5 flex flex-col justify-between">
-              <span className="eyebrow">Total outstanding balance</span>
+              <span className="eyebrow">{t('employeeLoans.totalOutstandingBalance')}</span>
               <p className="font-display num text-4xl font-bold text-accent mt-2">{formatMoney(totalOutstanding, company?.currency)}</p>
-              <p className="text-xs text-ink-muted mt-3">{activeLoans.length} active loan{activeLoans.length === 1 ? '' : 's'}</p>
+              <p className="text-xs text-ink-muted mt-3">{t('employeeLoans.activeLoansCount', { count: activeLoans.length })}</p>
             </div>
             <div className="card p-5 flex flex-col justify-between">
-              <span className="eyebrow">Next installment due</span>
+              <span className="eyebrow">{t('employeeLoans.nextInstallmentDue')}</span>
               <p className="font-display num text-2xl font-bold text-ink mt-2">{nextDue ? formatMoney(nextDue.monthlyInstallment, company?.currency) : '-'}</p>
-              <p className="text-xs text-ink-muted mt-1">{nextDue ? (nextDue.employeeId?.name || '-') : 'No active loans'}</p>
-              {nextDue && <button className="btn-secondary mt-4 self-start" onClick={() => setRepaying(nextDue)}>Record repayment</button>}
+              <p className="text-xs text-ink-muted mt-1">{nextDue ? (nextDue.employeeId?.name || '-') : t('employeeLoans.noActiveLoans')}</p>
+              {nextDue && <button className="btn-secondary mt-4 self-start" onClick={() => setRepaying(nextDue)}>{t('employeeLoans.recordRepayment')}</button>}
             </div>
             <div className="card p-5 flex flex-col justify-between">
-              <span className="eyebrow">Repaid to date</span>
+              <span className="eyebrow">{t('employeeLoans.repaidToDate')}</span>
               <p className="font-display num text-2xl font-bold text-ink mt-2">{formatMoney(totalRepaid, company?.currency)}</p>
               <div className="mt-4 w-full bg-surface-sunken h-2 rounded-full overflow-hidden">
                 <div className="bg-accent h-full rounded-full" style={{ width: `${repaidPct}%` }} />
               </div>
               <div className="flex justify-between mt-1 text-xs text-ink-muted">
-                <span>Repaid: {formatMoney(totalRepaid, company?.currency)}</span>
-                <span>Total: {formatMoney(totalPrincipal, company?.currency)}</span>
+                <span>{t('employeeLoans.repaidColon')} {formatMoney(totalRepaid, company?.currency)}</span>
+                <span>{t('employeeLoans.totalColon')} {formatMoney(totalPrincipal, company?.currency)}</span>
               </div>
             </div>
           </div>
@@ -86,22 +88,22 @@ export function EmployeeLoansPage() {
                       </div>
                       <div>
                         <p className="font-display text-lg font-semibold text-ink">{l.employeeId?.name || '-'}</p>
-                        <p className="text-ink-muted text-sm">Disbursed {formatDate(l.disbursedAt)}</p>
+                        <p className="text-ink-muted text-sm">{t('employeeLoans.disbursed')} {formatDate(l.disbursedAt)}</p>
                       </div>
                     </div>
                     <span className={STATUS_CHIP[l.status]}>{l.status}</span>
                   </div>
                   <div className="grid grid-cols-3 gap-4 py-4 border-t border-b border-rule mb-4">
                     <div>
-                      <span className="eyebrow block mb-1">Principal</span>
+                      <span className="eyebrow block mb-1">{t('employeeLoans.principal')}</span>
                       <span className="num text-ink">{formatMoney(l.principalAmount, company?.currency)}</span>
                     </div>
                     <div>
-                      <span className="eyebrow block mb-1">Monthly installment</span>
+                      <span className="eyebrow block mb-1">{t('employeeLoans.monthlyInstallment')}</span>
                       <span className="num text-ink">{formatMoney(l.monthlyInstallment, company?.currency)}</span>
                     </div>
                     <div>
-                      <span className="eyebrow block mb-1">Remaining</span>
+                      <span className="eyebrow block mb-1">{t('employeeLoans.remaining')}</span>
                       <span className="num text-ink">{formatMoney(l.remainingBalance, company?.currency)}</span>
                     </div>
                   </div>
@@ -109,10 +111,10 @@ export function EmployeeLoansPage() {
                     <div className="w-full bg-surface-sunken h-1.5 rounded-full overflow-hidden">
                       <div className="bg-accent h-full rounded-full" style={{ width: `${paidPct}%` }} />
                     </div>
-                    <p className="text-xs text-ink-muted mt-1">{paidPct}% repaid</p>
+                    <p className="text-xs text-ink-muted mt-1">{t('employeeLoans.percentRepaid', { percent: paidPct })}</p>
                   </div>
                   <div className="flex justify-end">
-                    {l.status === 'active' && <button className="btn-ghost !text-accent" onClick={() => setRepaying(l)}>Record repayment →</button>}
+                    {l.status === 'active' && <button className="btn-ghost !text-accent" onClick={() => setRepaying(l)}>{t('employeeLoans.recordRepaymentArrow')}</button>}
                   </div>
                 </div>
               );
@@ -128,6 +130,7 @@ export function EmployeeLoansPage() {
 }
 
 function LoanForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [employees, setEmployees] = useState([]);
   const [branches, setBranches] = useState([]);
@@ -150,7 +153,7 @@ function LoanForm({ onClose, onSaved }) {
         principalAmount: Number(form.principalAmount),
         monthlyInstallment: Number(form.monthlyInstallment),
       });
-      toast('Loan disbursed.', 'success');
+      toast(t('employeeLoans.loanDisbursed'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -162,51 +165,51 @@ function LoanForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-6 w-full max-w-sm max-h-[85vh] overflow-y-auto">
-        <p className="font-display text-lg font-semibold text-ink mb-4">Disburse a loan</p>
+        <p className="font-display text-lg font-semibold text-ink mb-4">{t('employeeLoans.disburseALoan')}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Employee</label>
+            <label className="field-label">{t('employeeLoans.employee')}</label>
             <select required className="field-input" value={form.employeeId} onChange={(e) => setForm({ ...form, employeeId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('employeeLoans.selectEllipsis')}</option>
               {employees.map((e) => <option key={e._id} value={e._id}>{e.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Branch</label>
+            <label className="field-label">{t('employeeLoans.branch')}</label>
             <select required className="field-input" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('employeeLoans.selectEllipsis')}</option>
               {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="field-label">Principal</label>
+              <label className="field-label">{t('employeeLoans.principal')}</label>
               <input type="number" step="0.01" min="0.01" required className="field-input num" value={form.principalAmount} onChange={(e) => setForm({ ...form, principalAmount: e.target.value })} />
             </div>
             <div>
-              <label className="field-label">Monthly installment</label>
+              <label className="field-label">{t('employeeLoans.monthlyInstallment')}</label>
               <input type="number" step="0.01" min="0.01" required className="field-input num" value={form.monthlyInstallment} onChange={(e) => setForm({ ...form, monthlyInstallment: e.target.value })} />
             </div>
           </div>
           <div>
-            <label className="field-label">Loan receivable account</label>
+            <label className="field-label">{t('employeeLoans.loanReceivableAccount')}</label>
             <select required className="field-input" value={form.loanReceivableAccountId} onChange={(e) => setForm({ ...form, loanReceivableAccountId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('employeeLoans.selectEllipsis')}</option>
               {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Disburse from</label>
+            <label className="field-label">{t('employeeLoans.disburseFrom')}</label>
             <select required className="field-input" value={form.disbursingAccountId} onChange={(e) => setForm({ ...form, disbursingAccountId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('employeeLoans.selectEllipsis')}</option>
               {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
             </select>
           </div>
         </div>
-        <p className="text-xs text-ink-muted mt-3">An employee can only have one active loan at a time, settle the existing one before issuing another.</p>
+        <p className="text-xs text-ink-muted mt-3">{t('employeeLoans.oneActiveLoanNote')}</p>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Disbursing…' : 'Disburse'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('employeeLoans.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('employeeLoans.disbursingEllipsis') : t('employeeLoans.disburse')}</button>
         </div>
       </form>
     </div>
@@ -214,6 +217,7 @@ function LoanForm({ onClose, onSaved }) {
 }
 
 function RepaymentForm({ loan, onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [branches, setBranches] = useState([]);
   const [accounts, setAccounts] = useState([]);
@@ -232,7 +236,7 @@ function RepaymentForm({ loan, onClose, onSaved }) {
     setSaving(true);
     try {
       await api.post(`/employee-loans/${loan.employeeId?._id || loan.employeeId}/repay`, { amount: Number(amount), branchId, salaryPayableAccountId });
-      toast('Repayment recorded.', 'success');
+      toast(t('employeeLoans.repaymentRecorded'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -244,31 +248,31 @@ function RepaymentForm({ loan, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-6 w-full max-w-sm">
-        <p className="font-display text-lg font-semibold text-ink mb-1">Record repayment</p>
-        <p className="text-sm text-ink-muted mb-4">{loan.employeeId?.name}: <span className="num">{loan.remainingBalance}</span> remaining</p>
+        <p className="font-display text-lg font-semibold text-ink mb-1">{t('employeeLoans.recordRepayment')}</p>
+        <p className="text-sm text-ink-muted mb-4">{loan.employeeId?.name}: <span className="num">{loan.remainingBalance}</span> {t('employeeLoans.remainingLower')}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Amount</label>
+            <label className="field-label">{t('employeeLoans.amount')}</label>
             <input type="number" step="0.01" min="0.01" max={loan.remainingBalance} required className="field-input num" value={amount} onChange={(e) => setAmount(e.target.value)} />
           </div>
           <div>
-            <label className="field-label">Branch</label>
+            <label className="field-label">{t('employeeLoans.branch')}</label>
             <select required className="field-input" value={branchId} onChange={(e) => setBranchId(e.target.value)}>
-              <option value="">Select…</option>
+              <option value="">{t('employeeLoans.selectEllipsis')}</option>
               {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Salary payable account</label>
+            <label className="field-label">{t('employeeLoans.salaryPayableAccount')}</label>
             <select required className="field-input" value={salaryPayableAccountId} onChange={(e) => setSalaryPayableAccountId(e.target.value)}>
-              <option value="">Select…</option>
+              <option value="">{t('employeeLoans.selectEllipsis')}</option>
               {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
             </select>
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Recording…' : 'Record repayment'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('employeeLoans.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('employeeLoans.recordingEllipsis') : t('employeeLoans.recordRepayment')}</button>
         </div>
       </form>
     </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Star, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -8,7 +9,10 @@ import { EmptyState } from '../components/EmptyState';
 import { formatDate, formatMoney } from '../lib/format';
 
 const STAGES = ['new', 'contacted', 'proposal', 'negotiation', 'won', 'lost'];
-const STAGE_LABELS = { new: 'New', contacted: 'Contacted', proposal: 'Proposal', negotiation: 'Negotiation', won: 'Won', lost: 'Lost' };
+const STAGE_LABEL_KEYS = {
+  new: 'crm.stageNew', contacted: 'crm.stageContacted', proposal: 'crm.stageProposal',
+  negotiation: 'crm.stageNegotiation', won: 'crm.stageWon', lost: 'crm.stageLost',
+};
 
 function RatingStars({ rating }) {
   return (
@@ -21,16 +25,22 @@ function RatingStars({ rating }) {
 }
 
 export function CrmPage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState('pipeline');
+  const TABS = [
+    ['pipeline', t('crm.tabPipeline')], ['leads', t('crm.tabLeads')], ['campaigns', t('crm.tabCampaigns')],
+    ['automation', t('crm.tabAutomation')], ['feedback', t('crm.tabFeedback')], ['follow-ups', t('crm.tabFollowUps')],
+    ['tags', t('crm.tabCustomerTags')],
+  ];
   return (
     <div>
       <div className="mb-4">
-        <p className="eyebrow mb-1">Sales &amp; CRM Hub</p>
-        <p className="page-title">CRM</p>
-        <p className="text-sm text-ink-muted mt-1">Overview of pipeline and performance</p>
+        <p className="eyebrow mb-1">{t('crm.hubEyebrow')}</p>
+        <p className="page-title">{t('crm.title')}</p>
+        <p className="text-sm text-ink-muted mt-1">{t('crm.subtitle')}</p>
       </div>
       <div className="flex gap-1 border-b border-rule mb-5">
-        {[['pipeline', 'Pipeline'], ['leads', 'Leads'], ['campaigns', 'Campaigns'], ['automation', 'Automation'], ['feedback', 'Feedback'], ['follow-ups', 'Follow-ups'], ['tags', 'Customer tags']].map(([key, label]) => (
+        {TABS.map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)} className={`px-3 py-2 text-sm -mb-px border-b-2 ${tab === key ? 'border-accent text-accent-strong font-medium' : 'border-transparent text-ink-muted hover:text-ink'}`}>
             {label}
           </button>
@@ -48,6 +58,7 @@ export function CrmPage() {
 }
 
 function CampaignsTab() {
+  const { t } = useTranslation();
   const { can } = useAuth();
   const toast = useToast();
   const [campaigns, setCampaigns] = useState([]);
@@ -63,7 +74,7 @@ function CampaignsTab() {
   async function send(id) {
     try {
       const result = await api.post(`/crm/campaigns/${id}/send`);
-      toast(`Sent via ${result.campaign.provider}: ${result.campaign.successCount} succeeded, ${result.campaign.failureCount} failed.`, result.campaign.failureCount > 0 ? 'error' : 'success');
+      toast(t('crm.sentViaProvider', { provider: result.campaign.provider, succeeded: result.campaign.successCount, failed: result.campaign.failureCount }), result.campaign.failureCount > 0 ? 'error' : 'success');
       load();
     } catch (err) { toast(err.message, 'error'); }
   }
@@ -72,23 +83,23 @@ function CampaignsTab() {
     <div>
       {can('crm.manage') && (
         <div className="flex justify-end mb-3">
-          <button className="btn-primary" onClick={() => setShowForm(true)}>New campaign</button>
+          <button className="btn-primary" onClick={() => setShowForm(true)}>{t('crm.newCampaign')}</button>
         </div>
       )}
       {loading && <Loading />}
-      {!loading && campaigns.length === 0 && <EmptyState title="No campaigns yet" description="Target customers by tag with an SMS or email message." />}
+      {!loading && campaigns.length === 0 && <EmptyState title={t('crm.noCampaignsYet')} description={t('crm.noCampaignsDescription')} />}
       {!loading && campaigns.length > 0 && (
         <div className="card overflow-hidden">
           <div className="px-4 py-3 border-b border-rule">
-            <p className="font-display font-bold text-ink">Campaigns ledger</p>
+            <p className="font-display font-bold text-ink">{t('crm.campaignsLedger')}</p>
           </div>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken/50">
-                <th className="px-3 py-2 font-medium">Name</th>
-                <th className="px-3 py-2 font-medium">Channel</th>
-                <th className="px-3 py-2 font-medium">Target tags</th>
-                <th className="px-3 py-2 font-medium">Status</th>
+                <th className="px-3 py-2 font-medium">{t('crm.name')}</th>
+                <th className="px-3 py-2 font-medium">{t('crm.channel')}</th>
+                <th className="px-3 py-2 font-medium">{t('crm.targetTags')}</th>
+                <th className="px-3 py-2 font-medium">{t('crm.status')}</th>
                 <th className="px-3 py-2 font-medium"></th>
               </tr>
             </thead>
@@ -97,10 +108,10 @@ function CampaignsTab() {
                 <tr key={c._id} className="border-b border-rule last:border-0 hover:bg-accent-soft/30 transition-colors">
                   <td className="px-3 py-2">{c.name}</td>
                   <td className="px-3 py-2 uppercase text-xs text-ink-muted">{c.channel}</td>
-                  <td className="px-3 py-2">{c.targetTags?.map((t) => <span key={t} className="chip-neutral mr-1">{t}</span>) || 'All'}</td>
-                  <td className="px-3 py-2"><span className={c.status === 'sent' ? (c.failureCount > 0 ? 'chip-warning' : 'chip-accent') : 'chip-neutral'}>{c.status}{c.status === 'sent' ? ` (${c.successCount}/${c.recipientCount} via ${c.provider})` : ''}</span></td>
+                  <td className="px-3 py-2">{c.targetTags?.map((tg) => <span key={tg} className="chip-neutral mr-1">{tg}</span>) || t('crm.all')}</td>
+                  <td className="px-3 py-2"><span className={c.status === 'sent' ? (c.failureCount > 0 ? 'chip-warning' : 'chip-accent') : 'chip-neutral'}>{c.status}{c.status === 'sent' ? ` (${c.successCount}/${c.recipientCount} ${t('crm.viaProviderSuffix', { provider: c.provider })})` : ''}</span></td>
                   <td className="px-3 py-2 text-right">
-                    {c.status === 'draft' && can('crm.manage') && <button className="btn-ghost !text-accent" onClick={() => send(c._id)}>Send</button>}
+                    {c.status === 'draft' && can('crm.manage') && <button className="btn-ghost !text-accent" onClick={() => send(c._id)}>{t('crm.send')}</button>}
                   </td>
                 </tr>
               ))}
@@ -114,6 +125,7 @@ function CampaignsTab() {
 }
 
 function CampaignForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [form, setForm] = useState({ name: '', channel: 'sms', message: '', targetTags: '' });
   const [saving, setSaving] = useState(false);
@@ -124,9 +136,9 @@ function CampaignForm({ onClose, onSaved }) {
     try {
       await api.post('/crm/campaigns', {
         name: form.name, channel: form.channel, message: form.message,
-        targetTags: form.targetTags ? form.targetTags.split(',').map((t) => t.trim()).filter(Boolean) : [],
+        targetTags: form.targetTags ? form.targetTags.split(',').map((tg) => tg.trim()).filter(Boolean) : [],
       });
-      toast('Campaign created as a draft.', 'success');
+      toast(t('crm.campaignCreatedAsDraft'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -138,23 +150,23 @@ function CampaignForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">New campaign</p>
+        <p className="font-display text-lg mb-4">{t('crm.newCampaign')}</p>
         <div className="space-y-3">
-          <div><label className="field-label">Name</label><input required autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+          <div><label className="field-label">{t('crm.name')}</label><input required autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
           <div>
-            <label className="field-label">Channel</label>
+            <label className="field-label">{t('crm.channel')}</label>
             <select className="field-input" value={form.channel} onChange={(e) => setForm({ ...form, channel: e.target.value })}>
-              <option value="sms">SMS</option>
-              <option value="email">Email</option>
+              <option value="sms">{t('crm.sms')}</option>
+              <option value="email">{t('crm.email')}</option>
             </select>
           </div>
-          <div><label className="field-label">Target tags (comma-separated, empty = everyone)</label><input className="field-input" value={form.targetTags} onChange={(e) => setForm({ ...form, targetTags: e.target.value })} placeholder="VIP, Wholesale" /></div>
-          <div><label className="field-label">Message</label><textarea required rows={3} className="field-input" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} /></div>
+          <div><label className="field-label">{t('crm.targetTagsFieldLabel')}</label><input className="field-input" value={form.targetTags} onChange={(e) => setForm({ ...form, targetTags: e.target.value })} placeholder={t('crm.targetTagsPlaceholder')} /></div>
+          <div><label className="field-label">{t('crm.message')}</label><textarea required rows={3} className="field-input" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} /></div>
         </div>
-        <p className="text-xs text-ink-muted mt-2">Targeting is real (matches actual customers). Sending goes through a real provider abstraction, Twilio for SMS / SendGrid for email if configured, otherwise a working console/log transport so this still functions with zero setup.</p>
+        <p className="text-xs text-ink-muted mt-2">{t('crm.campaignSendingNote')}</p>
         <div className="flex justify-end gap-2 mt-3">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save draft'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('crm.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('crm.saving') : t('crm.saveDraft')}</button>
         </div>
       </form>
     </div>
@@ -162,6 +174,7 @@ function CampaignForm({ onClose, onSaved }) {
 }
 
 function FeedbackTab() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -175,26 +188,26 @@ function FeedbackTab() {
   async function resolve(id) {
     try {
       await api.post(`/crm/feedback/${id}/resolve`, { resolutionNote: 'Resolved from dashboard' });
-      toast('Marked resolved.', 'success');
+      toast(t('crm.markedResolved'), 'success');
       load();
     } catch (err) { toast(err.message, 'error'); }
   }
 
   if (loading) return <Loading />;
-  if (rows.length === 0) return <EmptyState title="No feedback logged yet" />;
+  if (rows.length === 0) return <EmptyState title={t('crm.noFeedbackLoggedYet')} />;
 
   return (
     <div className="card overflow-hidden">
       <div className="px-4 py-3 border-b border-rule">
-        <p className="font-display font-bold text-ink">Feedback ledger</p>
+        <p className="font-display font-bold text-ink">{t('crm.feedbackLedger')}</p>
       </div>
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken/50">
-            <th className="px-3 py-2 font-medium">Date</th>
-            <th className="px-3 py-2 font-medium">Rating</th>
-            <th className="px-3 py-2 font-medium">Comment</th>
-            <th className="px-3 py-2 font-medium">Status</th>
+            <th className="px-3 py-2 font-medium">{t('crm.date')}</th>
+            <th className="px-3 py-2 font-medium">{t('crm.rating')}</th>
+            <th className="px-3 py-2 font-medium">{t('crm.comment')}</th>
+            <th className="px-3 py-2 font-medium">{t('crm.status')}</th>
             <th className="px-3 py-2 font-medium"></th>
           </tr>
         </thead>
@@ -205,7 +218,7 @@ function FeedbackTab() {
               <td className="px-3 py-2"><RatingStars rating={f.rating} /></td>
               <td className="px-3 py-2">{f.comment || '-'}</td>
               <td className="px-3 py-2"><span className={f.status === 'resolved' ? 'chip-accent' : 'chip-warning'}>{f.status}</span></td>
-              <td className="px-3 py-2 text-right">{f.status !== 'resolved' && <button className="btn-ghost !text-accent" onClick={() => resolve(f._id)}>Resolve</button>}</td>
+              <td className="px-3 py-2 text-right">{f.status !== 'resolved' && <button className="btn-ghost !text-accent" onClick={() => resolve(f._id)}>{t('crm.resolve')}</button>}</td>
             </tr>
           ))}
         </tbody>
@@ -215,6 +228,7 @@ function FeedbackTab() {
 }
 
 function FollowUpsTab() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -228,24 +242,24 @@ function FollowUpsTab() {
   async function complete(id) {
     try {
       await api.post(`/crm/follow-ups/${id}/complete`, { completionNote: 'Done' });
-      toast('Follow-up completed.', 'success');
+      toast(t('crm.followUpCompleted'), 'success');
       load();
     } catch (err) { toast(err.message, 'error'); }
   }
 
   if (loading) return <Loading />;
-  if (rows.length === 0) return <EmptyState title="No pending follow-ups" />;
+  if (rows.length === 0) return <EmptyState title={t('crm.noPendingFollowUps')} />;
 
   return (
     <div className="card overflow-hidden">
       <div className="px-4 py-3 border-b border-rule">
-        <p className="font-display font-bold text-ink">Follow-ups ledger</p>
+        <p className="font-display font-bold text-ink">{t('crm.followUpsLedger')}</p>
       </div>
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken/50">
-            <th className="px-3 py-2 font-medium">Due</th>
-            <th className="px-3 py-2 font-medium">Note</th>
+            <th className="px-3 py-2 font-medium">{t('crm.due')}</th>
+            <th className="px-3 py-2 font-medium">{t('crm.note')}</th>
             <th className="px-3 py-2 font-medium"></th>
           </tr>
         </thead>
@@ -254,7 +268,7 @@ function FollowUpsTab() {
             <tr key={f._id} className="border-b border-rule last:border-0 hover:bg-accent-soft/30 transition-colors">
               <td className="px-3 py-2 text-ink-muted">{formatDate(f.dueDate)}</td>
               <td className="px-3 py-2">{f.note}</td>
-              <td className="px-3 py-2 text-right"><button className="btn-ghost !text-accent" onClick={() => complete(f._id)}>Mark done</button></td>
+              <td className="px-3 py-2 text-right"><button className="btn-ghost !text-accent" onClick={() => complete(f._id)}>{t('crm.markDone')}</button></td>
             </tr>
           ))}
         </tbody>
@@ -264,6 +278,7 @@ function FollowUpsTab() {
 }
 
 function TagsTab() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -290,25 +305,25 @@ function TagsTab() {
   return (
     <div className="card overflow-hidden">
       <div className="px-4 py-3 border-b border-rule">
-        <p className="font-display font-bold text-ink">Customer tags ledger</p>
+        <p className="font-display font-bold text-ink">{t('crm.customerTagsLedger')}</p>
       </div>
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken/50">
-            <th className="px-3 py-2 font-medium">Customer</th>
-            <th className="px-3 py-2 font-medium">Tags</th>
-            <th className="px-3 py-2 font-medium">Add tag</th>
+            <th className="px-3 py-2 font-medium">{t('crm.customer')}</th>
+            <th className="px-3 py-2 font-medium">{t('crm.tags')}</th>
+            <th className="px-3 py-2 font-medium">{t('crm.addTag')}</th>
           </tr>
         </thead>
         <tbody>
           {customers.map((c) => (
             <tr key={c._id} className="border-b border-rule last:border-0 hover:bg-accent-soft/30 transition-colors">
               <td className="px-3 py-2">{c.name}</td>
-              <td className="px-3 py-2">{c.tags?.map((t) => <span key={t} className="chip-neutral mr-1">{t}</span>)}</td>
+              <td className="px-3 py-2">{c.tags?.map((tg) => <span key={tg} className="chip-neutral mr-1">{tg}</span>)}</td>
               <td className="px-3 py-2">
                 <div className="flex gap-1">
-                  <input className="field-input !py-1 !text-xs w-28" value={newTag[c._id] || ''} onChange={(e) => setNewTag({ ...newTag, [c._id]: e.target.value })} placeholder="VIP" />
-                  <button className="btn-ghost !text-accent !text-xs" onClick={() => addTag(c._id)}>Add</button>
+                  <input className="field-input !py-1 !text-xs w-28" value={newTag[c._id] || ''} onChange={(e) => setNewTag({ ...newTag, [c._id]: e.target.value })} placeholder={t('crm.tagPlaceholder')} />
+                  <button className="btn-ghost !text-accent !text-xs" onClick={() => addTag(c._id)}>{t('crm.add')}</button>
                 </div>
               </td>
             </tr>
@@ -321,7 +336,13 @@ function TagsTab() {
 
 // --- Leads ------------------------------------------------------------------
 
+const LEAD_STATUS_KEYS = {
+  new: 'crm.leadStatusNew', contacted: 'crm.leadStatusContacted', qualified: 'crm.leadStatusQualified',
+  unqualified: 'crm.leadStatusUnqualified', converted: 'crm.leadStatusConverted',
+};
+
 function LeadsTab() {
+  const { t } = useTranslation();
   const { can } = useAuth();
   const toast = useToast();
   const [leads, setLeads] = useState([]);
@@ -339,7 +360,7 @@ function LeadsTab() {
   async function changeStatus(id, status) {
     try {
       await api.post(`/crm/leads/${id}/status`, { status });
-      toast('Lead status updated.', 'success');
+      toast(t('crm.leadStatusUpdated'), 'success');
       load();
     } catch (err) { toast(err.message, 'error'); }
   }
@@ -348,25 +369,25 @@ function LeadsTab() {
     <div>
       <div className="flex justify-between items-center mb-3">
         <select className="field-input !w-48" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-          <option value="">All statuses</option>
-          {['new', 'contacted', 'qualified', 'unqualified', 'converted'].map((s) => <option key={s} value={s}>{s}</option>)}
+          <option value="">{t('crm.allStatuses')}</option>
+          {['new', 'contacted', 'qualified', 'unqualified', 'converted'].map((s) => <option key={s} value={s}>{t(LEAD_STATUS_KEYS[s])}</option>)}
         </select>
-        <button className="btn-primary" onClick={() => setShowForm(true)}>New lead</button>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>{t('crm.newLead')}</button>
       </div>
       {loading && <Loading />}
-      {!loading && leads.length === 0 && <EmptyState title="No leads yet" description="Track prospects here before they become opportunities and customers." />}
+      {!loading && leads.length === 0 && <EmptyState title={t('crm.noLeadsYet')} description={t('crm.noLeadsDescription')} />}
       {!loading && leads.length > 0 && (
         <div className="card overflow-hidden">
           <div className="px-4 py-3 border-b border-rule">
-            <p className="font-display font-bold text-ink">Leads ledger</p>
+            <p className="font-display font-bold text-ink">{t('crm.leadsLedger')}</p>
           </div>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken/50">
-                <th className="px-3 py-2 font-medium">Name</th>
-                <th className="px-3 py-2 font-medium">Contact</th>
-                <th className="px-3 py-2 font-medium">Source</th>
-                <th className="px-3 py-2 font-medium">Status</th>
+                <th className="px-3 py-2 font-medium">{t('crm.name')}</th>
+                <th className="px-3 py-2 font-medium">{t('crm.contact')}</th>
+                <th className="px-3 py-2 font-medium">{t('crm.source')}</th>
+                <th className="px-3 py-2 font-medium">{t('crm.status')}</th>
                 <th className="px-3 py-2 font-medium"></th>
               </tr>
             </thead>
@@ -378,16 +399,16 @@ function LeadsTab() {
                   <td className="px-3 py-2 uppercase text-xs text-ink-muted">{l.source}</td>
                   <td className="px-3 py-2">
                     {l.status === 'converted'
-                      ? <span className="chip-accent">converted</span>
+                      ? <span className="chip-accent">{t('crm.leadStatusConverted')}</span>
                       : (
                         <select className="field-input !py-1 !text-xs !w-32" value={l.status} onChange={(e) => changeStatus(l._id, e.target.value)}>
-                          {['new', 'contacted', 'qualified', 'unqualified'].map((s) => <option key={s} value={s}>{s}</option>)}
+                          {['new', 'contacted', 'qualified', 'unqualified'].map((s) => <option key={s} value={s}>{t(LEAD_STATUS_KEYS[s])}</option>)}
                         </select>
                       )}
                   </td>
                   <td className="px-3 py-2 text-right">
                     {l.status !== 'converted' && can('crm.manage') && (
-                      <button className="btn-ghost !text-accent" onClick={() => setConverting(l)}>Convert to customer</button>
+                      <button className="btn-ghost !text-accent" onClick={() => setConverting(l)}>{t('crm.convertToCustomer')}</button>
                     )}
                   </td>
                 </tr>
@@ -403,16 +424,17 @@ function LeadsTab() {
 }
 
 function NewLeadModal({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [form, setForm] = useState({ name: '', contactName: '', phone: '', email: '', source: 'website', notes: '' });
   const [saving, setSaving] = useState(false);
 
   async function submit() {
-    if (!form.name.trim()) return toast('Name is required.', 'error');
+    if (!form.name.trim()) return toast(t('crm.nameRequired'), 'error');
     setSaving(true);
     try {
       await api.post('/crm/leads', form);
-      toast('Lead created.', 'success');
+      toast(t('crm.leadCreated'), 'success');
       onSaved();
     } catch (err) { toast(err.message, 'error'); } finally { setSaving(false); }
   }
@@ -420,25 +442,25 @@ function NewLeadModal({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <div className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">New lead</p>
+        <p className="font-display text-lg mb-4">{t('crm.newLead')}</p>
         <div className="space-y-3">
-          <div><label className="field-label">Name / business</label><input autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-          <div><label className="field-label">Contact person</label><input className="field-input" value={form.contactName} onChange={(e) => setForm({ ...form, contactName: e.target.value })} /></div>
+          <div><label className="field-label">{t('crm.nameOrBusiness')}</label><input autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+          <div><label className="field-label">{t('crm.contactPerson')}</label><input className="field-input" value={form.contactName} onChange={(e) => setForm({ ...form, contactName: e.target.value })} /></div>
           <div className="grid grid-cols-2 gap-3">
-            <div><label className="field-label">Phone</label><input className="field-input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
-            <div><label className="field-label">Email</label><input className="field-input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+            <div><label className="field-label">{t('crm.phone')}</label><input className="field-input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
+            <div><label className="field-label">{t('crm.email')}</label><input className="field-input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
           </div>
           <div>
-            <label className="field-label">Source</label>
+            <label className="field-label">{t('crm.source')}</label>
             <select className="field-input" value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })}>
               {['website', 'referral', 'walk-in', 'social', 'other'].map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
-          <div><label className="field-label">Notes</label><textarea rows={2} className="field-input" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+          <div><label className="field-label">{t('crm.notes')}</label><textarea rows={2} className="field-input" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
         </div>
         <div className="flex justify-end gap-2 mt-4">
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn-primary" disabled={saving} onClick={submit}>{saving ? 'Saving…' : 'Create lead'}</button>
+          <button className="btn-secondary" onClick={onClose}>{t('crm.cancel')}</button>
+          <button className="btn-primary" disabled={saving} onClick={submit}>{saving ? t('crm.saving') : t('crm.createLead')}</button>
         </div>
       </div>
     </div>
@@ -446,6 +468,7 @@ function NewLeadModal({ onClose, onSaved }) {
 }
 
 function ConvertLeadModal({ lead, onClose, onConverted }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [form, setForm] = useState({ name: lead.name, phone: lead.phone || '', email: lead.email || '', address: '' });
   const [saving, setSaving] = useState(false);
@@ -454,7 +477,7 @@ function ConvertLeadModal({ lead, onClose, onConverted }) {
     setSaving(true);
     try {
       await api.post(`/crm/leads/${lead._id}/convert`, form);
-      toast('Lead converted to customer.', 'success');
+      toast(t('crm.leadConvertedToCustomer'), 'success');
       onConverted();
     } catch (err) { toast(err.message, 'error'); } finally { setSaving(false); }
   }
@@ -462,18 +485,18 @@ function ConvertLeadModal({ lead, onClose, onConverted }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <div className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Convert lead to customer</p>
+        <p className="font-display text-lg mb-4">{t('crm.convertLeadToCustomer')}</p>
         <div className="space-y-3">
-          <div><label className="field-label">Customer name</label><input autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+          <div><label className="field-label">{t('crm.customerName')}</label><input autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
           <div className="grid grid-cols-2 gap-3">
-            <div><label className="field-label">Phone</label><input className="field-input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
-            <div><label className="field-label">Email</label><input className="field-input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+            <div><label className="field-label">{t('crm.phone')}</label><input className="field-input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
+            <div><label className="field-label">{t('crm.email')}</label><input className="field-input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
           </div>
-          <div><label className="field-label">Address</label><input className="field-input" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
+          <div><label className="field-label">{t('crm.address')}</label><input className="field-input" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
         </div>
         <div className="flex justify-end gap-2 mt-4">
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn-primary" disabled={saving} onClick={submit}>{saving ? 'Converting…' : 'Convert'}</button>
+          <button className="btn-secondary" onClick={onClose}>{t('crm.cancel')}</button>
+          <button className="btn-primary" disabled={saving} onClick={submit}>{saving ? t('crm.converting') : t('crm.convert')}</button>
         </div>
       </div>
     </div>
@@ -504,6 +527,7 @@ function PipelineStat({ label, value, icon, trend, trendLabel }) {
 // --- Pipeline -----------------------------------------------------------------
 
 function PipelineTab() {
+  const { t } = useTranslation();
   const { can, company } = useAuth();
   const toast = useToast();
   const [board, setBoard] = useState(null);
@@ -534,7 +558,7 @@ function PipelineTab() {
       // dropdown used before — drag-and-drop is a different interaction on
       // the same call.
       await api.post(`/crm/opportunities/${opportunity._id}/stage`, { stage });
-      toast(`Moved to ${STAGE_LABELS[stage]}.`, 'success');
+      toast(t('crm.movedToStage', { stage: t(STAGE_LABEL_KEYS[stage]) }), 'success');
       load();
     } catch (err) { toast(err.message, 'error'); }
   }
@@ -556,15 +580,15 @@ function PipelineTab() {
   return (
     <div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
-        <PipelineStat label="Open pipeline value" value={formatMoney(summary?.openPipelineValue, company?.currency)} icon="💰" trend="neutral" trendLabel={summary ? `${summary.periodDays}d window` : ''} />
-        <PipelineStat label={`Win rate (${summary?.periodDays ?? ''}d)`} value={summary ? `${(summary.winRate * 100).toFixed(0)}%` : '-'} icon="🎯" trend={summary?.winRate >= 0.5 ? 'up' : 'down'} trendLabel={summary ? `${summary.wonCount} won this period` : ''} />
-        <PipelineStat label={`Won deals (${summary?.periodDays ?? ''}d)`} value={summary?.wonCount ?? 0} icon="🤝" trend="up" trendLabel="closed-won" />
-        <PipelineStat label="Average won deal size" value={formatMoney(summary?.averageWonDealSize, company?.currency)} icon="📈" trend="neutral" trendLabel="per closed deal" />
+        <PipelineStat label={t('crm.openPipelineValue')} value={formatMoney(summary?.openPipelineValue, company?.currency)} icon="💰" trend="neutral" trendLabel={summary ? t('crm.periodDaysWindow', { days: summary.periodDays }) : ''} />
+        <PipelineStat label={t('crm.winRateLabel', { days: summary?.periodDays ?? '' })} value={summary ? `${(summary.winRate * 100).toFixed(0)}%` : '-'} icon="🎯" trend={summary?.winRate >= 0.5 ? 'up' : 'down'} trendLabel={summary ? t('crm.wonThisPeriod', { count: summary.wonCount }) : ''} />
+        <PipelineStat label={t('crm.wonDealsLabel', { days: summary?.periodDays ?? '' })} value={summary?.wonCount ?? 0} icon="🤝" trend="up" trendLabel={t('crm.closedWon')} />
+        <PipelineStat label={t('crm.averageWonDealSize')} value={formatMoney(summary?.averageWonDealSize, company?.currency)} icon="📈" trend="neutral" trendLabel={t('crm.perClosedDeal')} />
       </div>
 
       {can('crm.manage') && (
         <div className="flex justify-end mb-3">
-          <button className="btn-primary" onClick={() => setShowNewOpp(true)}>New opportunity</button>
+          <button className="btn-primary" onClick={() => setShowNewOpp(true)}>{t('crm.newOpportunity')}</button>
         </div>
       )}
 
@@ -583,10 +607,10 @@ function PipelineTab() {
               >
                 <div className="flex items-baseline justify-between px-1 mb-0.5">
                   <p className="eyebrow flex items-baseline gap-1.5">
-                    {STAGE_LABELS[stage]} <span className="text-ink-muted normal-case tracking-normal font-medium">({deals.length})</span>
+                    {t(STAGE_LABEL_KEYS[stage])} <span className="text-ink-muted normal-case tracking-normal font-medium">({deals.length})</span>
                   </p>
                 </div>
-                <p className="px-1 mb-2 text-xs num text-ink-muted">{formatMoney(columnTotal, company?.currency)} total</p>
+                <p className="px-1 mb-2 text-xs num text-ink-muted">{t('crm.columnTotal', { amount: formatMoney(columnTotal, company?.currency) })}</p>
                 <div className="space-y-2 min-h-[2rem]">
                   {deals.map((opp) => (
                     <div
@@ -596,7 +620,7 @@ function PipelineTab() {
                       onDragStart={(e) => handleDragStart(e, opp)}
                     >
                       <p className="text-sm font-medium mb-1">{opp.title}</p>
-                      <p className="text-xs text-ink-muted mb-1">{opp.customerId?.name || opp.leadId?.name || 'Unassigned'}</p>
+                      <p className="text-xs text-ink-muted mb-1">{opp.customerId?.name || opp.leadId?.name || t('crm.unassigned')}</p>
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-sm num text-accent-strong font-semibold">{formatMoney(opp.estimatedValue, company?.currency)}</p>
                         {opp.expectedCloseDate && <p className="text-xs text-ink-muted">{formatDate(opp.expectedCloseDate)}</p>}
@@ -608,17 +632,17 @@ function PipelineTab() {
                             value=""
                             onChange={(e) => e.target.value && moveStage(opp, e.target.value)}
                           >
-                            <option value="">Move to…</option>
-                            {STAGES.filter((s) => s !== stage).map((s) => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}
+                            <option value="">{t('crm.moveToPlaceholder')}</option>
+                            {STAGES.filter((s) => s !== stage).map((s) => <option key={s} value={s}>{t(STAGE_LABEL_KEYS[s])}</option>)}
                           </select>
-                          <button className="btn-ghost !text-accent !text-xs !px-1.5" title="Generate quote" onClick={() => setQuoting(opp)}>Quote</button>
+                          <button className="btn-ghost !text-accent !text-xs !px-1.5" title={t('crm.generateQuote')} onClick={() => setQuoting(opp)}>{t('crm.quote')}</button>
                         </div>
                       )}
-                      {opp.quoteSaleId && stage !== 'won' && <p className="text-xs text-ink-muted mt-1">Quote generated</p>}
+                      {opp.quoteSaleId && stage !== 'won' && <p className="text-xs text-ink-muted mt-1">{t('crm.quoteGenerated')}</p>}
                       {stage === 'lost' && opp.lostReason && <p className="text-xs text-danger mt-1">{opp.lostReason}</p>}
                     </div>
                   ))}
-                  {deals.length === 0 && <p className="text-xs text-ink-muted px-1 py-2">No deals here — drop a card to move it in.</p>}
+                  {deals.length === 0 && <p className="text-xs text-ink-muted px-1 py-2">{t('crm.noDealsHere')}</p>}
                 </div>
               </div>
             );
@@ -644,6 +668,7 @@ function PipelineTab() {
  * but creates a standalone quote without changing the opportunity's stage.
  */
 function GenerateQuoteModal({ opportunity, onClose, onDone }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [branches, setBranches] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
@@ -666,7 +691,7 @@ function GenerateQuoteModal({ opportunity, onClose, onDone }) {
   function removeLine(i) { setLines(lines.filter((_, idx) => idx !== i)); }
 
   async function submit() {
-    if (!branchId || !warehouseId) return toast('Choose a branch and warehouse.', 'error');
+    if (!branchId || !warehouseId) return toast(t('crm.chooseBranchWarehouse'), 'error');
     const items = lines
       .filter((l) => l.productId && Number(l.quantity) > 0)
       .map((l) => {
@@ -679,12 +704,12 @@ function GenerateQuoteModal({ opportunity, onClose, onDone }) {
         };
       })
       .filter((l) => l.variantId);
-    if (items.length === 0) return toast('Add at least one product line for the quote.', 'error');
+    if (items.length === 0) return toast(t('crm.addAtLeastOneProductLineQuote'), 'error');
 
     setSaving(true);
     try {
       await api.post(`/crm/opportunities/${opportunity._id}/quote`, { branchId, warehouseId, items });
-      toast('Quote generated for this opportunity.', 'success');
+      toast(t('crm.quoteGeneratedForOpportunity'), 'success');
       onDone();
     } catch (err) { toast(err.message, 'error'); } finally { setSaving(false); }
   }
@@ -692,45 +717,45 @@ function GenerateQuoteModal({ opportunity, onClose, onDone }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <div className="card p-5 w-full max-w-lg">
-        <p className="font-display text-lg mb-1">Generate quote for "{opportunity.title}"</p>
-        <p className="text-xs text-ink-muted mb-4">Pre-filled from this deal's customer — pick branch, warehouse, and products, this creates a real quotation without changing the deal's stage.</p>
+        <p className="font-display text-lg mb-1">{t('crm.generateQuoteFor', { title: opportunity.title })}</p>
+        <p className="text-xs text-ink-muted mb-4">{t('crm.generateQuoteNote')}</p>
 
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div>
-            <label className="field-label">Branch</label>
+            <label className="field-label">{t('crm.branch')}</label>
             <select className="field-input" value={branchId} onChange={(e) => setBranchId(e.target.value)}>
-              <option value="">Select...</option>
+              <option value="">{t('crm.selectEllipsis')}</option>
               {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Warehouse</label>
+            <label className="field-label">{t('crm.warehouse')}</label>
             <select className="field-input" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
-              <option value="">Select...</option>
+              <option value="">{t('crm.selectEllipsis')}</option>
               {warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
             </select>
           </div>
         </div>
 
-        <label className="field-label">Items</label>
+        <label className="field-label">{t('crm.items')}</label>
         <div className="space-y-2 mb-3">
           {lines.map((line, i) => (
             <div key={i} className="flex gap-2">
               <select className="field-input flex-1" value={line.productId} onChange={(e) => updateLine(i, { productId: e.target.value })}>
-                <option value="">Select product...</option>
+                <option value="">{t('crm.selectProductEllipsis')}</option>
                 {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
               </select>
-              <input type="number" min="1" className="field-input w-20" placeholder="Qty" value={line.quantity} onChange={(e) => updateLine(i, { quantity: e.target.value })} />
-              <input type="number" min="0" className="field-input w-28" placeholder="Unit price" value={line.unitPrice} onChange={(e) => updateLine(i, { unitPrice: e.target.value })} />
+              <input type="number" min="1" className="field-input w-20" placeholder={t('crm.qty')} value={line.quantity} onChange={(e) => updateLine(i, { quantity: e.target.value })} />
+              <input type="number" min="0" className="field-input w-28" placeholder={t('crm.unitPrice')} value={line.unitPrice} onChange={(e) => updateLine(i, { unitPrice: e.target.value })} />
               {lines.length > 1 && <button className="btn-ghost !text-danger" onClick={() => removeLine(i)}>&times;</button>}
             </div>
           ))}
         </div>
-        <button className="btn-ghost !text-accent mb-4" onClick={addLine}>+ Add another item</button>
+        <button className="btn-ghost !text-accent mb-4" onClick={addLine}>{t('crm.addAnotherItem')}</button>
 
         <div className="flex justify-end gap-2">
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn-primary" disabled={saving} onClick={submit}>{saving ? 'Generating…' : 'Generate quote'}</button>
+          <button className="btn-secondary" onClick={onClose}>{t('crm.cancel')}</button>
+          <button className="btn-primary" disabled={saving} onClick={submit}>{saving ? t('crm.generating') : t('crm.generateQuote')}</button>
         </div>
       </div>
     </div>
@@ -740,9 +765,9 @@ function GenerateQuoteModal({ opportunity, onClose, onDone }) {
 // --- Sales automation rules ----------------------------------------------------
 
 const TRIGGER_STAGE_OPTIONS = STAGES;
-const ACTION_TYPES = [['send_email', 'Send an email'], ['create_task', 'Create a follow-up task']];
 
 function AutomationTab() {
+  const { t } = useTranslation();
   const { can } = useAuth();
   const toast = useToast();
   const [rules, setRules] = useState([]);
@@ -765,30 +790,30 @@ function AutomationTab() {
   async function remove(id) {
     try {
       await api.del(`/crm/automation-rules/${id}`);
-      toast('Rule deleted.', 'success');
+      toast(t('crm.ruleDeleted'), 'success');
       load();
     } catch (err) { toast(err.message, 'error'); }
   }
 
   return (
     <div>
-      <p className="text-sm text-ink-muted mb-3">When a deal moves to a stage, automatically send an email or create a follow-up task — simple trigger-and-action rules, evaluated the moment a stage change happens.</p>
+      <p className="text-sm text-ink-muted mb-3">{t('crm.automationDescription')}</p>
       {can('crm.manage') && (
         <div className="flex justify-end mb-3">
-          <button className="btn-primary" onClick={() => setShowForm(true)}>New rule</button>
+          <button className="btn-primary" onClick={() => setShowForm(true)}>{t('crm.newRule')}</button>
         </div>
       )}
       {loading && <Loading />}
-      {!loading && rules.length === 0 && <EmptyState title="No automation rules yet" description="Automatically email or task your team when a deal changes stage." />}
+      {!loading && rules.length === 0 && <EmptyState title={t('crm.noAutomationRulesYet')} description={t('crm.noAutomationRulesDescription')} />}
       {!loading && rules.length > 0 && (
         <div className="card overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken/50">
-                <th className="px-3 py-2 font-medium">Name</th>
-                <th className="px-3 py-2 font-medium">When stage becomes</th>
-                <th className="px-3 py-2 font-medium">Then</th>
-                <th className="px-3 py-2 font-medium">Active</th>
+                <th className="px-3 py-2 font-medium">{t('crm.name')}</th>
+                <th className="px-3 py-2 font-medium">{t('crm.whenStageBecomes')}</th>
+                <th className="px-3 py-2 font-medium">{t('crm.then')}</th>
+                <th className="px-3 py-2 font-medium">{t('crm.active')}</th>
                 <th className="px-3 py-2 font-medium"></th>
               </tr>
             </thead>
@@ -796,15 +821,15 @@ function AutomationTab() {
               {rules.map((r) => (
                 <tr key={r._id} className="border-b border-rule last:border-0 hover:bg-accent-soft/30 transition-colors">
                   <td className="px-3 py-2">{r.name}</td>
-                  <td className="px-3 py-2"><span className="chip-neutral">{STAGE_LABELS[r.trigger?.toStage] || r.trigger?.toStage}</span></td>
-                  <td className="px-3 py-2 text-ink-muted">{r.action?.type === 'send_email' ? `Email: ${r.action.subject || '(no subject)'}` : `Task: ${r.action?.taskNote || '(no note)'}`}</td>
+                  <td className="px-3 py-2"><span className="chip-neutral">{STAGE_LABEL_KEYS[r.trigger?.toStage] ? t(STAGE_LABEL_KEYS[r.trigger?.toStage]) : r.trigger?.toStage}</span></td>
+                  <td className="px-3 py-2 text-ink-muted">{r.action?.type === 'send_email' ? t('crm.emailSubjectSummary', { subject: r.action.subject || t('crm.noSubject') }) : t('crm.taskNoteSummary', { note: r.action?.taskNote || t('crm.noNote') })}</td>
                   <td className="px-3 py-2">
                     {can('crm.manage')
-                      ? <button className={r.active ? 'chip-accent' : 'chip-neutral'} onClick={() => toggleActive(r)}>{r.active ? 'Active' : 'Paused'}</button>
-                      : <span className={r.active ? 'chip-accent' : 'chip-neutral'}>{r.active ? 'Active' : 'Paused'}</span>}
+                      ? <button className={r.active ? 'chip-accent' : 'chip-neutral'} onClick={() => toggleActive(r)}>{r.active ? t('crm.active') : t('crm.paused')}</button>
+                      : <span className={r.active ? 'chip-accent' : 'chip-neutral'}>{r.active ? t('crm.active') : t('crm.paused')}</span>}
                   </td>
                   <td className="px-3 py-2 text-right">
-                    {can('crm.manage') && <button className="btn-ghost !text-danger" onClick={() => remove(r._id)}>Delete</button>}
+                    {can('crm.manage') && <button className="btn-ghost !text-danger" onClick={() => remove(r._id)}>{t('crm.delete')}</button>}
                   </td>
                 </tr>
               ))}
@@ -818,7 +843,9 @@ function AutomationTab() {
 }
 
 function AutomationRuleForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
+  const ACTION_TYPES = [['send_email', t('crm.actionSendEmail')], ['create_task', t('crm.actionCreateTask')]];
   const [form, setForm] = useState({
     name: '', toStage: 'proposal', actionType: 'send_email',
     subject: '', message: '', taskNote: '', taskDueInDays: 3,
@@ -826,7 +853,7 @@ function AutomationRuleForm({ onClose, onSaved }) {
   const [saving, setSaving] = useState(false);
 
   async function submit() {
-    if (!form.name.trim()) return toast('Rule name is required.', 'error');
+    if (!form.name.trim()) return toast(t('crm.ruleNameRequired'), 'error');
     setSaving(true);
     try {
       const action = form.actionType === 'send_email'
@@ -837,7 +864,7 @@ function AutomationRuleForm({ onClose, onSaved }) {
         trigger: { type: 'stage_changed', toStage: form.toStage },
         action,
       });
-      toast('Automation rule created.', 'success');
+      toast(t('crm.automationRuleCreated'), 'success');
       onSaved();
     } catch (err) { toast(err.message, 'error'); } finally { setSaving(false); }
   }
@@ -845,37 +872,37 @@ function AutomationRuleForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <div className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">New automation rule</p>
+        <p className="font-display text-lg mb-4">{t('crm.newAutomationRule')}</p>
         <div className="space-y-3">
-          <div><label className="field-label">Rule name</label><input autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Thank proposal-stage deals" /></div>
+          <div><label className="field-label">{t('crm.ruleName')}</label><input autoFocus className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t('crm.ruleNamePlaceholder')} /></div>
           <div>
-            <label className="field-label">When a deal's stage becomes</label>
+            <label className="field-label">{t('crm.whenDealStageBecomes')}</label>
             <select className="field-input" value={form.toStage} onChange={(e) => setForm({ ...form, toStage: e.target.value })}>
-              {TRIGGER_STAGE_OPTIONS.map((s) => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}
+              {TRIGGER_STAGE_OPTIONS.map((s) => <option key={s} value={s}>{t(STAGE_LABEL_KEYS[s])}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Then</label>
+            <label className="field-label">{t('crm.then')}</label>
             <select className="field-input" value={form.actionType} onChange={(e) => setForm({ ...form, actionType: e.target.value })}>
               {ACTION_TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
           {form.actionType === 'send_email' ? (
             <>
-              <div><label className="field-label">Email subject</label><input className="field-input" value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} placeholder="Thanks for considering {{title}}" /></div>
-              <div><label className="field-label">Email message</label><textarea rows={3} className="field-input" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} placeholder="Hi {{customerName}}, ..." /></div>
-              <p className="text-xs text-ink-muted">Placeholders: {'{{title}}'}, {'{{customerName}}'}, {'{{estimatedValue}}'}, {'{{stage}}'}.</p>
+              <div><label className="field-label">{t('crm.emailSubject')}</label><input className="field-input" value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} placeholder={t('crm.emailSubjectPlaceholder')} /></div>
+              <div><label className="field-label">{t('crm.emailMessage')}</label><textarea rows={3} className="field-input" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} placeholder={t('crm.emailMessagePlaceholder')} /></div>
+              <p className="text-xs text-ink-muted">{t('crm.placeholders')}: {'{{title}}'}, {'{{customerName}}'}, {'{{estimatedValue}}'}, {'{{stage}}'}.</p>
             </>
           ) : (
             <>
-              <div><label className="field-label">Task note</label><input className="field-input" value={form.taskNote} onChange={(e) => setForm({ ...form, taskNote: e.target.value })} placeholder="Follow up on {{title}}" /></div>
-              <div><label className="field-label">Due in (days)</label><input type="number" min="0" className="field-input" value={form.taskDueInDays} onChange={(e) => setForm({ ...form, taskDueInDays: e.target.value })} /></div>
+              <div><label className="field-label">{t('crm.taskNote')}</label><input className="field-input" value={form.taskNote} onChange={(e) => setForm({ ...form, taskNote: e.target.value })} placeholder={t('crm.taskNotePlaceholder')} /></div>
+              <div><label className="field-label">{t('crm.dueInDays')}</label><input type="number" min="0" className="field-input" value={form.taskDueInDays} onChange={(e) => setForm({ ...form, taskDueInDays: e.target.value })} /></div>
             </>
           )}
         </div>
         <div className="flex justify-end gap-2 mt-4">
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn-primary" disabled={saving} onClick={submit}>{saving ? 'Saving…' : 'Create rule'}</button>
+          <button className="btn-secondary" onClick={onClose}>{t('crm.cancel')}</button>
+          <button className="btn-primary" disabled={saving} onClick={submit}>{saving ? t('crm.saving') : t('crm.createRule')}</button>
         </div>
       </div>
     </div>
@@ -883,6 +910,7 @@ function AutomationRuleForm({ onClose, onSaved }) {
 }
 
 function NewOpportunityModal({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [leads, setLeads] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -895,10 +923,10 @@ function NewOpportunityModal({ onClose, onSaved }) {
   }, []);
 
   async function submit() {
-    if (!form.title.trim()) return toast('Title is required.', 'error');
-    if (!form.estimatedValue || Number(form.estimatedValue) < 0) return toast('Enter a valid estimated value.', 'error');
-    if (form.source === 'lead' && !form.leadId) return toast('Select a lead.', 'error');
-    if (form.source === 'customer' && !form.customerId) return toast('Select a customer.', 'error');
+    if (!form.title.trim()) return toast(t('crm.titleRequired'), 'error');
+    if (!form.estimatedValue || Number(form.estimatedValue) < 0) return toast(t('crm.enterValidEstimatedValue'), 'error');
+    if (form.source === 'lead' && !form.leadId) return toast(t('crm.selectALead'), 'error');
+    if (form.source === 'customer' && !form.customerId) return toast(t('crm.selectACustomer'), 'error');
     setSaving(true);
     try {
       await api.post('/crm/opportunities', {
@@ -908,7 +936,7 @@ function NewOpportunityModal({ onClose, onSaved }) {
         customerId: form.source === 'customer' ? form.customerId : undefined,
         expectedCloseDate: form.expectedCloseDate || undefined,
       });
-      toast('Opportunity created.', 'success');
+      toast(t('crm.opportunityCreated'), 'success');
       onSaved();
     } catch (err) { toast(err.message, 'error'); } finally { setSaving(false); }
   }
@@ -916,39 +944,39 @@ function NewOpportunityModal({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <div className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">New opportunity</p>
+        <p className="font-display text-lg mb-4">{t('crm.newOpportunity')}</p>
         <div className="space-y-3">
-          <div><label className="field-label">Title</label><input autoFocus className="field-input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
-          <div><label className="field-label">Estimated value</label><input type="number" min="0" className="field-input" value={form.estimatedValue} onChange={(e) => setForm({ ...form, estimatedValue: e.target.value })} /></div>
+          <div><label className="field-label">{t('crm.opportunityTitle')}</label><input autoFocus className="field-input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
+          <div><label className="field-label">{t('crm.estimatedValue')}</label><input type="number" min="0" className="field-input" value={form.estimatedValue} onChange={(e) => setForm({ ...form, estimatedValue: e.target.value })} /></div>
           <div>
-            <label className="field-label">Linked to</label>
+            <label className="field-label">{t('crm.linkedTo')}</label>
             <select className="field-input" value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })}>
-              <option value="lead">A lead</option>
-              <option value="customer">An existing customer</option>
+              <option value="lead">{t('crm.linkedToLead')}</option>
+              <option value="customer">{t('crm.linkedToCustomer')}</option>
             </select>
           </div>
           {form.source === 'lead' ? (
             <div>
-              <label className="field-label">Lead</label>
+              <label className="field-label">{t('crm.lead')}</label>
               <select className="field-input" value={form.leadId} onChange={(e) => setForm({ ...form, leadId: e.target.value })}>
-                <option value="">Select...</option>
+                <option value="">{t('crm.selectEllipsis')}</option>
                 {leads.map((l) => <option key={l._id} value={l._id}>{l.name}</option>)}
               </select>
             </div>
           ) : (
             <div>
-              <label className="field-label">Customer</label>
+              <label className="field-label">{t('crm.customer')}</label>
               <select className="field-input" value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })}>
-                <option value="">Select...</option>
+                <option value="">{t('crm.selectEllipsis')}</option>
                 {customers.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
               </select>
             </div>
           )}
-          <div><label className="field-label">Expected close date</label><input type="date" className="field-input" value={form.expectedCloseDate} onChange={(e) => setForm({ ...form, expectedCloseDate: e.target.value })} /></div>
+          <div><label className="field-label">{t('crm.expectedCloseDate')}</label><input type="date" className="field-input" value={form.expectedCloseDate} onChange={(e) => setForm({ ...form, expectedCloseDate: e.target.value })} /></div>
         </div>
         <div className="flex justify-end gap-2 mt-4">
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn-primary" disabled={saving} onClick={submit}>{saving ? 'Saving…' : 'Create opportunity'}</button>
+          <button className="btn-secondary" onClick={onClose}>{t('crm.cancel')}</button>
+          <button className="btn-primary" disabled={saving} onClick={submit}>{saving ? t('crm.saving') : t('crm.createOpportunity')}</button>
         </div>
       </div>
     </div>
@@ -956,16 +984,17 @@ function NewOpportunityModal({ onClose, onSaved }) {
 }
 
 function LoseOpportunityModal({ opportunity, onClose, onDone }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [reason, setReason] = useState('');
   const [saving, setSaving] = useState(false);
 
   async function submit() {
-    if (!reason.trim()) return toast('A reason is required.', 'error');
+    if (!reason.trim()) return toast(t('crm.reasonRequired'), 'error');
     setSaving(true);
     try {
       await api.post(`/crm/opportunities/${opportunity._id}/stage`, { stage: 'lost', lostReason: reason });
-      toast('Opportunity marked lost.', 'success');
+      toast(t('crm.opportunityMarkedLost'), 'success');
       onDone();
     } catch (err) { toast(err.message, 'error'); } finally { setSaving(false); }
   }
@@ -973,12 +1002,12 @@ function LoseOpportunityModal({ opportunity, onClose, onDone }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <div className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">Mark "{opportunity.title}" as lost</p>
-        <label className="field-label">Reason</label>
-        <textarea autoFocus rows={3} className="field-input" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Chose a competitor, budget cut, went cold…" />
+        <p className="font-display text-lg mb-4">{t('crm.markOpportunityAsLost', { title: opportunity.title })}</p>
+        <label className="field-label">{t('crm.reason')}</label>
+        <textarea autoFocus rows={3} className="field-input" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t('crm.lostReasonPlaceholder')} />
         <div className="flex justify-end gap-2 mt-4">
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn-primary" disabled={saving} onClick={submit}>{saving ? 'Saving…' : 'Mark lost'}</button>
+          <button className="btn-secondary" onClick={onClose}>{t('crm.cancel')}</button>
+          <button className="btn-primary" disabled={saving} onClick={submit}>{saving ? t('crm.saving') : t('crm.markLost')}</button>
         </div>
       </div>
     </div>
@@ -991,6 +1020,7 @@ function LoseOpportunityModal({ opportunity, onClose, onDone }) {
  * quotation needs: branch, warehouse, and real product lines.
  */
 function WinOpportunityModal({ opportunity, onClose, onDone }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [branches, setBranches] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
@@ -1013,7 +1043,7 @@ function WinOpportunityModal({ opportunity, onClose, onDone }) {
   function removeLine(i) { setLines(lines.filter((_, idx) => idx !== i)); }
 
   async function submit() {
-    if (!branchId || !warehouseId) return toast('Choose a branch and warehouse.', 'error');
+    if (!branchId || !warehouseId) return toast(t('crm.chooseBranchWarehouse'), 'error');
     const items = lines
       .filter((l) => l.productId && Number(l.quantity) > 0)
       .map((l) => {
@@ -1026,12 +1056,12 @@ function WinOpportunityModal({ opportunity, onClose, onDone }) {
         };
       })
       .filter((l) => l.variantId);
-    if (items.length === 0) return toast('Add at least one product line for the quotation.', 'error');
+    if (items.length === 0) return toast(t('crm.addAtLeastOneProductLineQuotation'), 'error');
 
     setSaving(true);
     try {
       await api.post(`/crm/opportunities/${opportunity._id}/stage`, { stage: 'won', branchId, warehouseId, items });
-      toast('Opportunity won: a quotation has been created.', 'success');
+      toast(t('crm.opportunityWonQuotationCreated'), 'success');
       onDone();
     } catch (err) { toast(err.message, 'error'); } finally { setSaving(false); }
   }
@@ -1039,45 +1069,45 @@ function WinOpportunityModal({ opportunity, onClose, onDone }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <div className="card p-5 w-full max-w-lg">
-        <p className="font-display text-lg mb-1">Win "{opportunity.title}"</p>
-        <p className="text-xs text-ink-muted mb-4">This creates a real quotation for the deal, pick the branch, warehouse, and products.</p>
+        <p className="font-display text-lg mb-1">{t('crm.winOpportunity', { title: opportunity.title })}</p>
+        <p className="text-xs text-ink-muted mb-4">{t('crm.winOpportunityNote')}</p>
 
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div>
-            <label className="field-label">Branch</label>
+            <label className="field-label">{t('crm.branch')}</label>
             <select className="field-input" value={branchId} onChange={(e) => setBranchId(e.target.value)}>
-              <option value="">Select...</option>
+              <option value="">{t('crm.selectEllipsis')}</option>
               {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Warehouse</label>
+            <label className="field-label">{t('crm.warehouse')}</label>
             <select className="field-input" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
-              <option value="">Select...</option>
+              <option value="">{t('crm.selectEllipsis')}</option>
               {warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
             </select>
           </div>
         </div>
 
-        <label className="field-label">Items</label>
+        <label className="field-label">{t('crm.items')}</label>
         <div className="space-y-2 mb-3">
           {lines.map((line, i) => (
             <div key={i} className="flex gap-2">
               <select className="field-input flex-1" value={line.productId} onChange={(e) => updateLine(i, { productId: e.target.value })}>
-                <option value="">Select product...</option>
+                <option value="">{t('crm.selectProductEllipsis')}</option>
                 {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
               </select>
-              <input type="number" min="1" className="field-input w-20" placeholder="Qty" value={line.quantity} onChange={(e) => updateLine(i, { quantity: e.target.value })} />
-              <input type="number" min="0" className="field-input w-28" placeholder="Unit price" value={line.unitPrice} onChange={(e) => updateLine(i, { unitPrice: e.target.value })} />
+              <input type="number" min="1" className="field-input w-20" placeholder={t('crm.qty')} value={line.quantity} onChange={(e) => updateLine(i, { quantity: e.target.value })} />
+              <input type="number" min="0" className="field-input w-28" placeholder={t('crm.unitPrice')} value={line.unitPrice} onChange={(e) => updateLine(i, { unitPrice: e.target.value })} />
               {lines.length > 1 && <button className="btn-ghost !text-danger" onClick={() => removeLine(i)}>&times;</button>}
             </div>
           ))}
         </div>
-        <button className="btn-ghost !text-accent mb-4" onClick={addLine}>+ Add another item</button>
+        <button className="btn-ghost !text-accent mb-4" onClick={addLine}>{t('crm.addAnotherItem')}</button>
 
         <div className="flex justify-end gap-2">
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn-primary" disabled={saving} onClick={submit}>{saving ? 'Saving…' : 'Mark won & create quotation'}</button>
+          <button className="btn-secondary" onClick={onClose}>{t('crm.cancel')}</button>
+          <button className="btn-primary" disabled={saving} onClick={submit}>{saving ? t('crm.saving') : t('crm.markWonCreateQuotation')}</button>
         </div>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useToast } from '../components/Toast';
 import { Loading } from '../components/Loading';
@@ -8,13 +9,14 @@ import { formatDate } from '../lib/format';
 const STATUS_CHIP = { growing: 'chip-warning', harvested: 'chip-accent', failed: 'chip-danger' };
 
 export function AgriculturePage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState('cycles');
   return (
     <div>
-      <p className="eyebrow mb-1">Agriculture</p>
-      <p className="page-title mb-5">Farm operations</p>
+      <p className="eyebrow mb-1">{t('agriculture.agriculture')}</p>
+      <p className="page-title mb-5">{t('agriculture.farmOperations')}</p>
       <div className="flex gap-2 mb-5">
-        {[['cycles', 'Crop cycles'], ['fields', 'Fields']].map(([key, label]) => (
+        {[['cycles', t('agriculture.cropCycles')], ['fields', t('agriculture.fields')]].map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)} className={tab === key ? 'pill-active' : 'pill'}>
             {label}
           </button>
@@ -26,6 +28,7 @@ export function AgriculturePage() {
 }
 
 function CropCyclesTab() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [cycles, setCycles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -43,20 +46,20 @@ function CropCyclesTab() {
       <div className="flex justify-end mb-3">
         <button className="btn-primary" onClick={() => setShowForm(true)}>
           <span className="material-symbols-outlined text-base">add</span>
-          Start a crop cycle
+          {t('agriculture.startCropCycle')}
         </button>
       </div>
       {loading && <Loading />}
-      {!loading && cycles.length === 0 && <EmptyState title="No crop cycles yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Plant one</button>} />}
+      {!loading && cycles.length === 0 && <EmptyState title={t('agriculture.noCropCyclesYet')} action={<button className="btn-primary" onClick={() => setShowForm(true)}>{t('agriculture.plantOne')}</button>} />}
       {!loading && cycles.length > 0 && (
         <div className="card overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-rule bg-surface-sunken text-left text-xs text-ink-muted uppercase tracking-wide">
-                <th className="px-4 py-3 font-semibold">Crop</th>
-                <th className="px-4 py-3 font-semibold">Planted</th>
-                <th className="px-4 py-3 font-semibold text-right">Expected yield</th>
-                <th className="px-4 py-3 font-semibold">Status</th>
+                <th className="px-4 py-3 font-semibold">{t('agriculture.crop')}</th>
+                <th className="px-4 py-3 font-semibold">{t('agriculture.planted')}</th>
+                <th className="px-4 py-3 font-semibold text-right">{t('agriculture.expectedYield')}</th>
+                <th className="px-4 py-3 font-semibold">{t('agriculture.status')}</th>
                 <th className="px-4 py-3 font-semibold"></th>
               </tr>
             </thead>
@@ -68,7 +71,7 @@ function CropCyclesTab() {
                   <td className="px-4 py-3 num text-right">{c.expectedYield}</td>
                   <td className="px-4 py-3"><span className={STATUS_CHIP[c.status]}>{c.status}</span></td>
                   <td className="px-4 py-3 text-right">
-                    {c.status === 'growing' && <button className="btn-ghost !text-accent" onClick={() => setHarvesting(c)}>Complete harvest</button>}
+                    {c.status === 'growing' && <button className="btn-ghost !text-accent" onClick={() => setHarvesting(c)}>{t('agriculture.completeHarvest')}</button>}
                   </td>
                 </tr>
               ))}
@@ -83,6 +86,7 @@ function CropCyclesTab() {
 }
 
 function CropCycleForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [branches, setBranches] = useState([]);
   const [fields, setFields] = useState([]);
@@ -103,7 +107,7 @@ function CropCycleForm({ onClose, onSaved }) {
     setSaving(true);
     try {
       await api.post('/agriculture/crop-cycles', { ...form, expectedYield: Number(form.expectedYield) });
-      toast('Crop cycle started: raw materials consumed against the BOM.', 'success');
+      toast(t('agriculture.cropCycleStarted'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -115,45 +119,45 @@ function CropCycleForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm max-h-[85vh] overflow-y-auto">
-        <p className="font-display text-lg font-bold text-ink mb-4">Start a crop cycle</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">{t('agriculture.startCropCycle')}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Branch</label>
+            <label className="field-label">{t('agriculture.branch')}</label>
             <select required className="field-input" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value, warehouseId: '' })}>
-              <option value="">Select…</option>
+              <option value="">{t('agriculture.selectEllipsis')}</option>
               {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Field</label>
+            <label className="field-label">{t('agriculture.field')}</label>
             <select required className="field-input" value={form.fieldId} onChange={(e) => setForm({ ...form, fieldId: e.target.value })}>
-              <option value="">Select…</option>
-              {fields.map((f) => <option key={f._id} value={f._id}>{f.name}: {f.areaAcres} acres</option>)}
+              <option value="">{t('agriculture.selectEllipsis')}</option>
+              {fields.map((f) => <option key={f._id} value={f._id}>{f.name}: {f.areaAcres} {t('agriculture.acres')}</option>)}
             </select>
           </div>
-          <div><label className="field-label">Crop name</label><input required className="field-input" value={form.cropName} onChange={(e) => setForm({ ...form, cropName: e.target.value })} /></div>
+          <div><label className="field-label">{t('agriculture.cropName')}</label><input required className="field-input" value={form.cropName} onChange={(e) => setForm({ ...form, cropName: e.target.value })} /></div>
           <div>
-            <label className="field-label">BOM (seeds, fertilizer: consumed immediately)</label>
+            <label className="field-label">{t('agriculture.bomSeedsFertilizer')}</label>
             <select required className="field-input" value={form.bomId} onChange={(e) => setForm({ ...form, bomId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('agriculture.selectEllipsis')}</option>
               {boms.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Warehouse (raw materials consumed from)</label>
+            <label className="field-label">{t('agriculture.warehouseConsumedFrom')}</label>
             <select required className="field-input" value={form.warehouseId} onChange={(e) => setForm({ ...form, warehouseId: e.target.value })} disabled={!form.branchId}>
-              <option value="">Select…</option>
+              <option value="">{t('agriculture.selectEllipsis')}</option>
               {warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <div><label className="field-label">Planted date</label><input type="date" required className="field-input" value={form.plantedDate} onChange={(e) => setForm({ ...form, plantedDate: e.target.value })} /></div>
-            <div><label className="field-label">Expected yield</label><input type="number" required className="field-input num" value={form.expectedYield} onChange={(e) => setForm({ ...form, expectedYield: e.target.value })} /></div>
+            <div><label className="field-label">{t('agriculture.plantedDate')}</label><input type="date" required className="field-input" value={form.plantedDate} onChange={(e) => setForm({ ...form, plantedDate: e.target.value })} /></div>
+            <div><label className="field-label">{t('agriculture.expectedYield')}</label><input type="number" required className="field-input num" value={form.expectedYield} onChange={(e) => setForm({ ...form, expectedYield: e.target.value })} /></div>
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Planting…' : 'Start cycle'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('agriculture.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('agriculture.planting') : t('agriculture.startCycle')}</button>
         </div>
       </form>
     </div>
@@ -161,6 +165,7 @@ function CropCycleForm({ onClose, onSaved }) {
 }
 
 function HarvestForm({ cycle, onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [form, setForm] = useState({ actualYield: '', actualLaborCost: '', actualOverheadCost: '', wastageNote: '' });
   const [saving, setSaving] = useState(false);
@@ -175,7 +180,7 @@ function HarvestForm({ cycle, onClose, onSaved }) {
         actualOverheadCost: form.actualOverheadCost ? Number(form.actualOverheadCost) : undefined,
         wastageNote: form.wastageNote || undefined,
       });
-      toast('Harvest completed.', 'success');
+      toast(t('agriculture.harvestCompleted'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -187,19 +192,19 @@ function HarvestForm({ cycle, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg font-bold text-ink mb-1">Complete harvest</p>
-        <p className="text-sm text-ink-muted mb-4">{cycle.cropName}: expected {cycle.expectedYield}</p>
+        <p className="font-display text-lg font-bold text-ink mb-1">{t('agriculture.completeHarvest')}</p>
+        <p className="text-sm text-ink-muted mb-4">{cycle.cropName}: {t('agriculture.expected')} {cycle.expectedYield}</p>
         <div className="space-y-3">
-          <div><label className="field-label">Actual yield</label><input type="number" required className="field-input num" value={form.actualYield} onChange={(e) => setForm({ ...form, actualYield: e.target.value })} /></div>
+          <div><label className="field-label">{t('agriculture.actualYield')}</label><input type="number" required className="field-input num" value={form.actualYield} onChange={(e) => setForm({ ...form, actualYield: e.target.value })} /></div>
           <div className="grid grid-cols-2 gap-2">
-            <div><label className="field-label">Labor cost</label><input type="number" className="field-input num" value={form.actualLaborCost} onChange={(e) => setForm({ ...form, actualLaborCost: e.target.value })} /></div>
-            <div><label className="field-label">Overhead cost</label><input type="number" className="field-input num" value={form.actualOverheadCost} onChange={(e) => setForm({ ...form, actualOverheadCost: e.target.value })} /></div>
+            <div><label className="field-label">{t('agriculture.laborCost')}</label><input type="number" className="field-input num" value={form.actualLaborCost} onChange={(e) => setForm({ ...form, actualLaborCost: e.target.value })} /></div>
+            <div><label className="field-label">{t('agriculture.overheadCost')}</label><input type="number" className="field-input num" value={form.actualOverheadCost} onChange={(e) => setForm({ ...form, actualOverheadCost: e.target.value })} /></div>
           </div>
-          <div><label className="field-label">Wastage note (optional)</label><input className="field-input" value={form.wastageNote} onChange={(e) => setForm({ ...form, wastageNote: e.target.value })} /></div>
+          <div><label className="field-label">{t('agriculture.wastageNoteOptional')}</label><input className="field-input" value={form.wastageNote} onChange={(e) => setForm({ ...form, wastageNote: e.target.value })} /></div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Completing…' : 'Complete harvest'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('agriculture.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('agriculture.completing') : t('agriculture.completeHarvest')}</button>
         </div>
       </form>
     </div>
@@ -207,6 +212,7 @@ function HarvestForm({ cycle, onClose, onSaved }) {
 }
 
 function FieldsTab() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [fields, setFields] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -224,11 +230,11 @@ function FieldsTab() {
       <div className="flex justify-end mb-3">
         <button className="btn-primary" onClick={() => setShowForm(true)}>
           <span className="material-symbols-outlined text-base">add</span>
-          Add field
+          {t('agriculture.addField')}
         </button>
       </div>
       {loading && <Loading />}
-      {!loading && fields.length === 0 && <EmptyState title="No fields yet" action={<button className="btn-primary" onClick={() => setShowForm(true)}>Add one</button>} />}
+      {!loading && fields.length === 0 && <EmptyState title={t('agriculture.noFieldsYet')} action={<button className="btn-primary" onClick={() => setShowForm(true)}>{t('agriculture.addOne')}</button>} />}
       {!loading && fields.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {fields.map((f) => (
@@ -239,8 +245,8 @@ function FieldsTab() {
                 </div>
                 <p className="text-sm font-semibold text-ink">{f.name}</p>
               </div>
-              <p className="num text-sm text-ink-muted">{f.areaAcres} acres</p>
-              <p className="text-xs font-semibold text-accent-strong mt-2">View yield history →</p>
+              <p className="num text-sm text-ink-muted">{f.areaAcres} {t('agriculture.acres')}</p>
+              <p className="text-xs font-semibold text-accent-strong mt-2">{t('agriculture.viewYieldHistory')}</p>
             </div>
           ))}
         </div>
@@ -252,6 +258,7 @@ function FieldsTab() {
 }
 
 function FieldForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [branches, setBranches] = useState([]);
   const [form, setForm] = useState({ branchId: '', name: '', areaAcres: '' });
@@ -264,7 +271,7 @@ function FieldForm({ onClose, onSaved }) {
     setSaving(true);
     try {
       await api.post('/agriculture/fields', { ...form, areaAcres: Number(form.areaAcres) });
-      toast('Field added.', 'success');
+      toast(t('agriculture.fieldAdded'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -276,21 +283,21 @@ function FieldForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg font-bold text-ink mb-4">Add field</p>
+        <p className="font-display text-lg font-bold text-ink mb-4">{t('agriculture.addField')}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Branch</label>
+            <label className="field-label">{t('agriculture.branch')}</label>
             <select required className="field-input" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('agriculture.selectEllipsis')}</option>
               {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
             </select>
           </div>
-          <div><label className="field-label">Name</label><input required className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-          <div><label className="field-label">Area (acres)</label><input type="number" required className="field-input num" value={form.areaAcres} onChange={(e) => setForm({ ...form, areaAcres: e.target.value })} /></div>
+          <div><label className="field-label">{t('agriculture.name')}</label><input required className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+          <div><label className="field-label">{t('agriculture.areaAcres')}</label><input type="number" required className="field-input num" value={form.areaAcres} onChange={(e) => setForm({ ...form, areaAcres: e.target.value })} /></div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('agriculture.cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('agriculture.saving') : t('agriculture.save')}</button>
         </div>
       </form>
     </div>
@@ -298,6 +305,7 @@ function FieldForm({ onClose, onSaved }) {
 }
 
 function YieldHistoryPanel({ field, onClose }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [data, setData] = useState(null);
 
@@ -309,26 +317,26 @@ function YieldHistoryPanel({ field, onClose }) {
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <div className="card p-5 w-full max-w-lg max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
-          <p className="font-display text-lg font-bold text-ink">{field.name}: yield history</p>
-          <button className="btn-ghost" onClick={onClose}>Close</button>
+          <p className="font-display text-lg font-bold text-ink">{field.name}: {t('agriculture.yieldHistory')}</p>
+          <button className="btn-ghost" onClick={onClose}>{t('agriculture.close')}</button>
         </div>
         {!data && <Loading />}
-        {data && data.history.length === 0 && <EmptyState title="No harvested cycles yet" />}
+        {data && data.history.length === 0 && <EmptyState title={t('agriculture.noHarvestedCyclesYet')} />}
         {data && data.history.length > 0 && (
           <>
             {data.latestVsHistoryPercent !== null && (
               <p className={`text-sm mb-3 ${data.latestVsHistoryPercent >= 0 ? 'text-accent-strong' : 'text-danger'}`}>
-                Latest harvest is {data.latestVsHistoryPercent >= 0 ? 'up' : 'down'} {Math.abs(data.latestVsHistoryPercent)}% per acre vs. the historical average ({data.historicalAverageYieldPerAcre}/acre).
+                {t('agriculture.latestHarvestIs')} {data.latestVsHistoryPercent >= 0 ? t('agriculture.up') : t('agriculture.down')} {Math.abs(data.latestVsHistoryPercent)}% {t('agriculture.perAcreVsHistorical')} ({data.historicalAverageYieldPerAcre}/{t('agriculture.acre')}).
               </p>
             )}
             <div className="card overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-rule bg-surface-sunken text-left text-xs text-ink-muted uppercase tracking-wide">
-                    <th className="px-4 py-3 font-semibold">Crop</th>
-                    <th className="px-4 py-3 font-semibold">Planted</th>
-                    <th className="px-4 py-3 font-semibold text-right">Yield</th>
-                    <th className="px-4 py-3 font-semibold text-right">Per acre</th>
+                    <th className="px-4 py-3 font-semibold">{t('agriculture.crop')}</th>
+                    <th className="px-4 py-3 font-semibold">{t('agriculture.planted')}</th>
+                    <th className="px-4 py-3 font-semibold text-right">{t('agriculture.yield')}</th>
+                    <th className="px-4 py-3 font-semibold text-right">{t('agriculture.perAcre')}</th>
                   </tr>
                 </thead>
                 <tbody>

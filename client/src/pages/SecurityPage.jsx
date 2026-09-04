@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
@@ -6,13 +7,14 @@ import { Loading } from '../components/Loading';
 import { formatDate } from '../lib/format';
 
 export function SecurityPage() {
+  const { t } = useTranslation();
   const { user, refreshUser } = useAuth();
 
   return (
     <div className="max-w-3xl">
-      <p className="eyebrow mb-1">Account</p>
-      <p className="page-title mb-1">Security</p>
-      <p className="text-sm text-ink-muted mb-6">Manage two-factor authentication, active sessions, and recent login activity.</p>
+      <p className="eyebrow mb-1">{t('security.account')}</p>
+      <p className="page-title mb-1">{t('security.security')}</p>
+      <p className="text-sm text-ink-muted mb-6">{t('security.subtitle')}</p>
       <div className="space-y-6">
         <TwoFactorSection user={user} refreshUser={refreshUser} />
         <SessionsSection />
@@ -23,6 +25,7 @@ export function SecurityPage() {
 }
 
 function TwoFactorSection({ user, refreshUser }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [setupData, setSetupData] = useState(null);
   const [code, setCode] = useState('');
@@ -52,7 +55,7 @@ function TwoFactorSection({ user, refreshUser }) {
       setSetupData(null);
       setCode('');
       await refreshUser();
-      toast('Two-factor authentication enabled.', 'success');
+      toast(t('security.twoFactorEnabled'), 'success');
     } catch (err) {
       toast(err.message, 'error');
     } finally {
@@ -68,7 +71,7 @@ function TwoFactorSection({ user, refreshUser }) {
       setShowDisable(false);
       setPassword('');
       await refreshUser();
-      toast('Two-factor authentication disabled.', 'success');
+      toast(t('security.twoFactorDisabled'), 'success');
     } catch (err) {
       toast(err.message, 'error');
     } finally {
@@ -87,49 +90,49 @@ function TwoFactorSection({ user, refreshUser }) {
             </svg>
           </div>
           <div>
-            <p className="font-display text-lg font-semibold text-ink">Two-factor authentication</p>
-            <p className="text-sm text-ink-muted mt-0.5">Require a code from an authenticator app in addition to your password.</p>
+            <p className="font-display text-lg font-semibold text-ink">{t('security.twoFactorAuthentication')}</p>
+            <p className="text-sm text-ink-muted mt-0.5">{t('security.twoFactorDescription')}</p>
           </div>
         </div>
         {user?.twoFactorEnabled
-          ? <span className="chip-accent shrink-0">Enabled</span>
-          : <span className="chip-neutral shrink-0">Not enabled</span>}
+          ? <span className="chip-accent shrink-0">{t('security.enabled')}</span>
+          : <span className="chip-neutral shrink-0">{t('security.notEnabled')}</span>}
       </div>
 
       {!user?.twoFactorEnabled && !setupData && !backupCodes && (
-        <button className="btn-primary mt-4" onClick={startSetup} disabled={busy}>Enable 2FA</button>
+        <button className="btn-primary mt-4" onClick={startSetup} disabled={busy}>{t('security.enable2fa')}</button>
       )}
 
       {setupData && (
         <div className="mt-4 border-t border-rule pt-4">
-          <p className="text-sm mb-3">Scan this with your authenticator app, then enter the 6-digit code it shows.</p>
-          <img src={setupData.qrCodeDataUrl} alt="2FA QR code" className="border border-rule rounded-lg" width={180} height={180} />
-          <p className="text-xs text-ink-muted mt-2 font-mono break-all">Or enter manually: {setupData.secret}</p>
+          <p className="text-sm mb-3">{t('security.scanQrHint')}</p>
+          <img src={setupData.qrCodeDataUrl} alt={t('security.qrCodeAlt')} className="border border-rule rounded-lg" width={180} height={180} />
+          <p className="text-xs text-ink-muted mt-2 font-mono break-all">{t('security.orEnterManually')} {setupData.secret}</p>
           <form onSubmit={confirm} className="flex gap-2 mt-3 max-w-xs">
             <input required autoFocus placeholder="000000" className="field-input" value={code} onChange={(e) => setCode(e.target.value)} />
-            <button type="submit" className="btn-primary shrink-0" disabled={busy}>Confirm</button>
+            <button type="submit" className="btn-primary shrink-0" disabled={busy}>{t('security.confirm')}</button>
           </form>
         </div>
       )}
 
       {backupCodes && (
         <div className="mt-4 border-t border-rule pt-4">
-          <p className="text-sm font-medium text-danger">Save these backup codes now: they won't be shown again.</p>
-          <p className="text-xs text-ink-muted mt-1 mb-3">Each one can be used once to sign in if you lose access to your authenticator app.</p>
+          <p className="text-sm font-medium text-danger">{t('security.saveBackupCodesNow')}</p>
+          <p className="text-xs text-ink-muted mt-1 mb-3">{t('security.backupCodesHint')}</p>
           <div className="grid grid-cols-2 gap-2 font-mono text-sm bg-surface-sunken rounded-lg p-3">
             {backupCodes.map((c) => <span key={c}>{c}</span>)}
           </div>
-          <button className="btn-secondary mt-3" onClick={() => setBackupCodes(null)}>I've saved these</button>
+          <button className="btn-secondary mt-3" onClick={() => setBackupCodes(null)}>{t('security.iveSavedThese')}</button>
         </div>
       )}
 
       {user?.twoFactorEnabled && !showDisable && (
-        <button className="btn-ghost !text-danger mt-4" onClick={() => setShowDisable(true)}>Disable 2FA</button>
+        <button className="btn-ghost !text-danger mt-4" onClick={() => setShowDisable(true)}>{t('security.disable2fa')}</button>
       )}
       {showDisable && (
         <form onSubmit={disable} className="mt-4 border-t border-rule pt-4 flex gap-2 max-w-xs">
-          <input required type="password" autoFocus placeholder="Confirm your password" className="field-input" value={password} onChange={(e) => setPassword(e.target.value)} />
-          <button type="submit" className="btn-secondary !text-danger shrink-0" disabled={busy}>Disable</button>
+          <input required type="password" autoFocus placeholder={t('security.confirmYourPassword')} className="field-input" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <button type="submit" className="btn-secondary !text-danger shrink-0" disabled={busy}>{t('security.disable')}</button>
         </form>
       )}
     </div>
@@ -137,6 +140,7 @@ function TwoFactorSection({ user, refreshUser }) {
 }
 
 function SessionsSection() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [sessions, setSessions] = useState(null);
 
@@ -148,7 +152,7 @@ function SessionsSection() {
   async function revoke(id) {
     try {
       await api.post(`/auth/sessions/${id}/revoke`, {});
-      toast('Session signed out.', 'success');
+      toast(t('security.sessionSignedOut'), 'success');
       load();
     } catch (err) {
       toast(err.message, 'error');
@@ -158,32 +162,32 @@ function SessionsSection() {
   return (
     <div className="card overflow-hidden">
       <div className="p-6 border-b border-rule">
-        <p className="font-display text-lg font-semibold text-ink">Active sessions</p>
-        <p className="text-sm text-ink-muted mt-0.5">Devices currently signed in to your account.</p>
+        <p className="font-display text-lg font-semibold text-ink">{t('security.activeSessions')}</p>
+        <p className="text-sm text-ink-muted mt-0.5">{t('security.activeSessionsDescription')}</p>
       </div>
 
       {!sessions && <div className="p-6"><Loading /></div>}
-      {sessions?.length === 0 && <p className="text-sm text-ink-muted p-6">No other active sessions.</p>}
+      {sessions?.length === 0 && <p className="text-sm text-ink-muted p-6">{t('security.noOtherActiveSessions')}</p>}
 
       {sessions?.length > 0 && (
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead className="bg-surface-sunken">
               <tr>
-                <th className="px-6 py-3 eyebrow font-semibold">Device</th>
-                <th className="px-6 py-3 eyebrow font-semibold">IP Address</th>
-                <th className="px-6 py-3 eyebrow font-semibold">Last Active</th>
+                <th className="px-6 py-3 eyebrow font-semibold">{t('security.device')}</th>
+                <th className="px-6 py-3 eyebrow font-semibold">{t('security.ipAddress')}</th>
+                <th className="px-6 py-3 eyebrow font-semibold">{t('security.lastActive')}</th>
                 <th className="px-6 py-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-rule text-sm">
               {sessions.map((s) => (
                 <tr key={s._id} className="hover:bg-surface-sunken/60 transition-colors">
-                  <td className="px-6 py-4 text-ink">{s.userAgent || 'Unknown device'}</td>
-                  <td className="px-6 py-4 num text-ink-muted">{s.ipAddress || 'Unknown IP'}</td>
+                  <td className="px-6 py-4 text-ink">{s.userAgent || t('security.unknownDevice')}</td>
+                  <td className="px-6 py-4 num text-ink-muted">{s.ipAddress || t('security.unknownIp')}</td>
                   <td className="px-6 py-4 text-ink-muted">{formatDate(s.lastUsedAt)}</td>
                   <td className="px-6 py-4 text-right">
-                    <button className="btn-ghost !text-danger" onClick={() => revoke(s._id)}>Sign out</button>
+                    <button className="btn-ghost !text-danger" onClick={() => revoke(s._id)}>{t('security.signOut')}</button>
                   </td>
                 </tr>
               ))}
@@ -196,6 +200,7 @@ function SessionsSection() {
 }
 
 function LoginHistorySection() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [history, setHistory] = useState(null);
 
@@ -206,30 +211,30 @@ function LoginHistorySection() {
   return (
     <div className="card overflow-hidden">
       <div className="p-6 border-b border-rule">
-        <p className="font-display text-lg font-semibold text-ink">Recent login activity</p>
-        <p className="text-sm text-ink-muted mt-0.5">Every login attempt on your account, successful or not.</p>
+        <p className="font-display text-lg font-semibold text-ink">{t('security.recentLoginActivity')}</p>
+        <p className="text-sm text-ink-muted mt-0.5">{t('security.loginHistoryDescription')}</p>
       </div>
 
       {!history && <div className="p-6"><Loading /></div>}
-      {history?.length === 0 && <p className="text-sm text-ink-muted p-6">No login history yet.</p>}
+      {history?.length === 0 && <p className="text-sm text-ink-muted p-6">{t('security.noLoginHistoryYet')}</p>}
 
       {history?.length > 0 && (
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead className="bg-surface-sunken">
               <tr>
-                <th className="px-6 py-3 eyebrow font-semibold">Timestamp</th>
-                <th className="px-6 py-3 eyebrow font-semibold">IP Address</th>
-                <th className="px-6 py-3 eyebrow font-semibold">Status</th>
+                <th className="px-6 py-3 eyebrow font-semibold">{t('security.timestamp')}</th>
+                <th className="px-6 py-3 eyebrow font-semibold">{t('security.ipAddress')}</th>
+                <th className="px-6 py-3 eyebrow font-semibold">{t('security.status')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-rule text-sm">
               {history.map((h) => (
                 <tr key={h._id} className={h.success ? 'hover:bg-surface-sunken/60 transition-colors' : 'bg-danger-soft/30 hover:bg-danger-soft/50 transition-colors'}>
                   <td className={`px-6 py-3 num whitespace-nowrap ${h.success ? 'text-ink' : 'text-danger'}`}>{formatDate(h.createdAt)}</td>
-                  <td className="px-6 py-3 num text-ink-muted">{h.ipAddress || 'Unknown IP'}</td>
+                  <td className="px-6 py-3 num text-ink-muted">{h.ipAddress || t('security.unknownIp')}</td>
                   <td className="px-6 py-3">
-                    <span className={h.success ? 'chip-accent' : 'chip-danger'}>{h.success ? 'Success' : (h.failureReason || 'Failed')}</span>
+                    <span className={h.success ? 'chip-accent' : 'chip-danger'}>{h.success ? t('security.success') : (h.failureReason || t('security.failed'))}</span>
                   </td>
                 </tr>
               ))}
