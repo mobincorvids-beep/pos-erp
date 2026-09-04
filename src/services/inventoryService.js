@@ -153,6 +153,25 @@ async function recordMovement(params, session) {
     console.error('BinStock sync failed (stock movement itself still succeeded):', err.message);
   }
 
+  // Consignment liability recognition — best-effort, same posture as the
+  // BinStock sync above: any stock consumed here MIGHT be consignment
+  // stock (most won't be — consumeConsignmentStock() is a no-op read when
+  // there's nothing outstanding for this product/warehouse). Only makes
+  // sense on a genuine decrease (a sale/consumption), never on receipt —
+  // consignment goods going ON-hand is handled directly by
+  // purchaseService.receiveGoods() opening the ConsignmentStock row.
+  if (quantity < 0) {
+    try {
+      const consignmentService = require('./consignmentService');
+      await consignmentService.consumeConsignmentStock(
+        companyId, warehouseId, productId, variantId, -quantity,
+        { referenceType, referenceId, userId, session }
+      );
+    } catch (err) {
+      console.error('Consignment liability recognition failed (stock movement itself still succeeded):', err.message);
+    }
+  }
+
   // Only worth checking when stock just went DOWN — a low-stock condition
   // can only newly arise from a decreasing movement, never an incoming one.
   // Wrapped so a notification failure can never break the actual stock

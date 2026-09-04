@@ -110,6 +110,15 @@ const purchaseOrderSchema = new Schema({
   dropShipCustomerId: { type: Schema.Types.ObjectId, ref: 'Customer', default: null },
   dropShipAddress: { type: String, default: null },
 
+  // Consignment stock — this PO's goods physically arrive and go on hand
+  // (a normal stock-in, unlike drop-ship above) but create no AP liability
+  // at receipt time; instead a ConsignmentStock row is opened, and the
+  // liability is created incrementally as the stock is actually consumed
+  // (see consignmentService). Defaults to false, completely unaffected for
+  // every existing PurchaseOrder — an ordinary PO still posts AP at receipt
+  // exactly as before.
+  isConsignment: { type: Boolean, default: false },
+
   userId: { type: Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 

@@ -83,6 +83,8 @@ router.use('/drp', require('./drpRoutes'));
 router.use('/stock-allocation', require('./stockAllocationRoutes'));
 router.use('/custom-reports', require('./customReportRoutes'));
 router.use('/project-billing', require('./projectBillingRoutes'));
+router.use('/route-optimization', require('./routeOptimizationRoutes'));
+router.use('/consignment-stock', require('./consignmentRoutes'));
 router.use('/pack-ship', require('./packShipRoutes'));
 router.use('/warehouse/scan', require('./scanRoutes'));
 router.use('/asns', require('./asnRoutes'));

@@ -69,6 +69,12 @@ const addressSchema = new Schema({
   postalCode: { type: String, default: '' },
   country: { type: String, default: '' },
   phone: { type: String, default: '' },
+  // Optional — only populated when a caller supplies real coordinates (a
+  // saved customer location, or a one-off geocode from elsewhere). Nothing
+  // in this codebase auto-geocodes a free-text address; routeOptimizationService
+  // simply skips a stop with no lat/lng rather than guessing one.
+  lat: { type: Number, default: null },
+  lng: { type: Number, default: null },
 }, { _id: false });
 
 // 'packed' and 'shipped' were added for the warehouse pack/ship workflow
@@ -123,6 +129,12 @@ const shipmentSchema = new Schema({
   packedAt: { type: Date, default: null },
   shippedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   shippedAt: { type: Date, default: null },
+
+  // Set by routeOptimizationService.optimizeVehicleRoute() — this
+  // shipment's position (1-based) in its assigned vehicle's optimized
+  // multi-stop delivery order for the day. Null until a route has been
+  // computed; purely advisory (nothing enforces delivering in this order).
+  stopSequence: { type: Number, default: null },
 }, { timestamps: true });
 
 shipmentSchema.index({ companyId: 1, shipmentNumber: 1 }, { unique: true });

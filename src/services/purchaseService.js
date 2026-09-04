@@ -15,6 +15,7 @@ const GoodsReceivedNote = require('../models/GoodsReceivedNote');
 const ProductBatch = require('../models/ProductBatch');
 const ProductSerial = require('../models/ProductSerial');
 const ProjectCost = require('../models/ProjectCost');
+const ConsignmentStock = require('../models/ConsignmentStock');
 const Account = require('../models/Account');
 const inventoryService = require('./inventoryService');
 const accountingService = require('./accountingService');
@@ -376,6 +377,12 @@ async function receiveGoods(input) {
         { session }
       );
 
+      // Consignment stock — collected as lines are received below, then
+      // written as ConsignmentStock rows after the loop (see
+      // consignmentService for how they're later consumed/settled).
+      // Supplier-owned goods sitting in our warehouse, unpaid until sold.
+      const consignmentEntries = [];
+
       // 1. Increase inventory for each received line.
       for (const item of resolvedItems) {
         const line = po.items.id(item.purchaseOrderItemId);
@@ -433,6 +440,25 @@ async function receiveGoods(input) {
           }, session);
         }
 
+        // Consignment: goods just went physically on-hand above (normal
+        // stock-in, unlike drop-ship) but no AP liability exists yet — it's
+        // created incrementally as this batch is actually consumed (see
+        // consignmentService.consumeConsignmentStock). Collect one entry per
+        // received line; written as ConsignmentStock rows after the loop.
+        if (po.isConsignment) {
+          consignmentEntries.push({
+            companyId: po.companyId,
+            supplierId: po.supplierId,
+            purchaseOrderId: po._id,
+            warehouseId,
+            productId: item.productId,
+            variantId: item.variantId,
+            unitCost: effectiveUnitCost,
+            qtyReceived: item.quantity,
+            qtyOnHand: item.quantity,
+          });
+        }
+
         // The payable/AP posting and job-costing below still reflect what's
         // actually owed to the supplier (vendor unit price only) — landed
         // costs like freight are typically owed to a different party and
@@ -449,12 +475,22 @@ async function receiveGoods(input) {
       // The payable is owed as soon as goods are received (accrual basis),
       // unless this GRN was paid for immediately (paymentAccountId given),
       // in which case it's already settled and never becomes a due balance.
-      if (input.paymentAccountId) {
-        po.paidAmount += receivedTotal;
-      } else {
-        po.dueAmount += receivedTotal;
+      // Consignment POs skip this entirely — no liability exists yet at
+      // receipt time, so paidAmount/dueAmount stay untouched here; the
+      // liability is created and cleared later, per ConsignmentStock row,
+      // as the stock is actually consumed and settled.
+      if (!po.isConsignment) {
+        if (input.paymentAccountId) {
+          po.paidAmount += receivedTotal;
+        } else {
+          po.dueAmount += receivedTotal;
+        }
       }
       await po.save({ session });
+
+      if (consignmentEntries.length) {
+        await ConsignmentStock.create(consignmentEntries, { session });
+      }
 
       // Job costing interlink: a PO tagged with a project gets a
       // ProjectCost for exactly what THIS GRN brought in — not the whole
@@ -489,14 +525,17 @@ async function receiveGoods(input) {
       }
 
       // 3. Post the accounting voucher: Dr Inventory Asset, Cr Accounts Payable
-      // (or Cr Cash/Bank instead of Payable if paid on receipt).
+      // (or Cr Cash/Bank instead of Payable if paid on receipt). Skipped
+      // entirely for consignment POs — no liability exists yet, so nothing
+      // is owed to post; consignmentService posts its own Dr COGS/Expense,
+      // Cr Accounts Payable voucher as the stock is consumed instead.
       const inventoryAsset = await defaultAccountsService.resolve(po.companyId, 'inventoryAssetId', session);
 
       const creditAccount = paymentAccountId
         || payableAccountId
         || (await defaultAccountsService.resolve(po.companyId, 'accountsPayableId', session));
 
-      if (inventoryAsset && creditAccount && receivedTotal > 0) {
+      if (!po.isConsignment && inventoryAsset && creditAccount && receivedTotal > 0) {
         await accountingService.postVoucher({
           companyId: po.companyId,
           branchId: po.branchId,

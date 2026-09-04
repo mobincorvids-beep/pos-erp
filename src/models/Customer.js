@@ -14,6 +14,12 @@ const customerSchema = new Schema({
   phone: String,
   email: String,
   address: String,
+  // Optional geocoordinates for this customer's delivery location — used
+  // by routeOptimizationService to sequence multi-stop delivery routes.
+  // Nothing here auto-geocodes the free-text `address` above; these stay
+  // null until explicitly set.
+  lat: { type: Number, default: null },
+  lng: { type: Number, default: null },
   creditLimit: { type: Number, default: 0 },
   openingBalance: { type: Number, default: 0 }, // +ve = customer owes company
   loyaltyPoints: { type: Number, default: 0 },
