@@ -181,6 +181,16 @@ const saleSchema = new Schema({
   // document created by a split, pointing back at the order it was split
   // from, e.g. for partial-warehouse-fulfillment.
   splitFromOrderId: { type: Schema.Types.ObjectId, ref: 'Sale', default: null },
+
+  // Backorder handling (salesOrderService.fulfillPartially): when an order
+  // can only be partly fulfilled from current stock, the fulfillable
+  // quantities stay on the original document (invoiced immediately, same
+  // path as any other order) and the shortfall is split off — via the same
+  // splitOrder() mechanism as splitFromOrderId above — into a new
+  // 'sales_order' document flagged here, to be invoiced later once stock
+  // arrives (through this same fulfillPartially/convertToInvoice path).
+  isBackorder: { type: Boolean, default: false },
+  backorderOfSaleId: { type: Schema.Types.ObjectId, ref: 'Sale', default: null },
 }, { timestamps: true });
 
 saleSchema.statics.PAYMENT_METHODS = SALE_PAYMENT_METHODS;

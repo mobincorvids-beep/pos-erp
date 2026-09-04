@@ -424,6 +424,12 @@ async function receiveGoods(input) {
             referenceId: grn._id,
             userId,
             note: `GRN ${grn.grnNumber}`,
+            // Putaway bin the receiver actually chose (defaults to the
+            // suggestion from putawayService.suggestPutawayBin if they took
+            // it as-is) — when present, this is what keeps BinStock accurate
+            // for received stock instead of leaving it unlocated until
+            // someone manually calls assignStockToBin later.
+            binId: item.binId || null,
           }, session);
         }
 

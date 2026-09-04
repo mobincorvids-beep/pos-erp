@@ -114,6 +114,70 @@ async function moveBinStock(fromBinId, toBinId, productId, quantity) {
   return { fromBinId, toBinId, productId, quantity };
 }
 
+/**
+ * Session-aware, non-throwing bin-quantity delta used by inventoryService.
+ * recordMovement() so BinStock stops being a shadow ledger that only moves
+ * when someone remembers to call assignStockToBin/moveBinStock: every real
+ * stock movement now nudges BinStock too, positive or negative, for
+ * whichever bin it names. It never rejects on insufficient bin quantity —
+ * clamping at zero and returning how much was actually applied — because
+ * this runs as a best-effort side-channel to the movement that already
+ * happened in StockLevel (which stays the true on-hand source of truth);
+ * refusing the whole stock movement over a stale bin row would be worse
+ * than a bin count that's briefly a little behind.
+ */
+async function adjustBinStock({ binId, productId, quantity, companyId, warehouseId }, session) {
+  if (!binId || !quantity) return null;
+  const bin = await WarehouseBin.findById(binId).session(session || null);
+  if (!bin) return null;
+
+  if (quantity > 0) {
+    return BinStock.findOneAndUpdate(
+      { binId, productId },
+      { $inc: { quantity }, $setOnInsert: { companyId: companyId || bin.companyId, warehouseId: warehouseId || bin.warehouseId } },
+      { upsert: true, new: true, session }
+    );
+  }
+
+  const existing = await BinStock.findOne({ binId, productId }).session(session || null);
+  const currentQty = existing?.quantity || 0;
+  const applied = Math.min(currentQty, -quantity); // clamp — never drive a bin negative
+  if (applied <= 0) return existing || null;
+  return BinStock.findOneAndUpdate(
+    { binId, productId },
+    { $inc: { quantity: -applied } },
+    { new: true, session }
+  );
+}
+
+/**
+ * Greedily plans which existing bin rows to draw a quantity down from when
+ * the caller (a sale, an adjustment, a manufacturing consumption — anything
+ * that goes through recordMovement without already knowing a specific bin)
+ * doesn't know or care which bin the units physically leave from. Oldest-
+ * touched bin first is an arbitrary but reasonable default in the absence
+ * of a real FEFO-at-bin-level policy. Returns whatever plan is coverable —
+ * a product with less bin-located stock than the movement quantity (e.g.
+ * some of it was never putaway'd to a bin) simply leaves the shortfall
+ * untracked at bin level, same as today.
+ */
+async function planBinConsumption(warehouseId, productId, quantityNeeded, session) {
+  const rows = await BinStock.find({ warehouseId, productId, quantity: { $gt: 0 } })
+    .sort({ updatedAt: 1 })
+    .session(session || null);
+  let remaining = quantityNeeded;
+  const plan = [];
+  for (const row of rows) {
+    if (remaining <= 0) break;
+    const take = Math.min(row.quantity, remaining);
+    if (take > 0) {
+      plan.push({ binId: row.binId, quantity: take });
+      remaining -= take;
+    }
+  }
+  return plan;
+}
+
 /** Bin-by-bin stock breakdown for a warehouse, with bin/zone details attached. */
 async function binStockSummary(warehouseId) {
   const rows = await BinStock.find({ warehouseId, quantity: { $gt: 0 } })
@@ -141,4 +205,6 @@ module.exports = {
   binStockSummary,
   productOnHandAtWarehouse,
   binAssignedTotal,
+  adjustBinStock,
+  planBinConsumption,
 };

@@ -21,6 +21,7 @@ const Product = require('../models/Product');
 const ProductBatch = require('../models/ProductBatch');
 const Role = require('../models/Role');
 const notificationService = require('./notificationService');
+const warehouseZoneService = require('./warehouseZoneService');
 
 // 'adjustment' is included so an opening-stock or stock-count adjustment
 // that carries an explicit unitCost (e.g. "I'm entering 100 units at cost
@@ -46,12 +47,20 @@ const COSTED_INCOMING_TYPES = ['purchase', 'production_output', 'adjustment'];
  * @param {String} [params.referenceId]
  * @param {String} [params.userId]
  * @param {String} [params.note]
+ * @param {String} [params.binId] - when the caller already knows which bin the
+ *   units are moving into/out of (GRN putaway, a bin-aware pick), BinStock is
+ *   nudged by exactly this movement at that bin. When omitted on an outgoing
+ *   movement, an existing bin breakdown for this product/warehouse (if any)
+ *   is drawn down automatically (see warehouseZoneService.planBinConsumption)
+ *   so BinStock keeps tracking reality across every stock-decreasing path —
+ *   sale, transfer, manufacturing consumption, adjustment — not only the
+ *   ones that remembered to call assignStockToBin/moveBinStock directly.
  * @param {import('mongoose').ClientSession} [session]
  */
 async function recordMovement(params, session) {
   const {
     companyId, warehouseId, productId, variantId, batchId = null,
-    type, quantity, unitCost, referenceType, referenceId, userId, note,
+    type, quantity, unitCost, referenceType, referenceId, userId, note, binId,
   } = params;
 
   if (!quantity || quantity === 0) {
@@ -121,6 +130,27 @@ async function recordMovement(params, session) {
       { $inc: { quantity }, $setOnInsert: { companyId, productId, avgCost: 0 } },
       { upsert: true, session }
     );
+  }
+
+  // BinStock sync — see the binId param doc above. Best-effort and never
+  // allowed to fail the movement itself: a bin-location breakdown that's
+  // briefly stale is a real but recoverable problem, same posture as the
+  // low-stock notification check just below.
+  try {
+    if (quantity > 0 && binId) {
+      await warehouseZoneService.adjustBinStock({ binId, productId, quantity, companyId, warehouseId }, session);
+    } else if (quantity < 0) {
+      if (binId) {
+        await warehouseZoneService.adjustBinStock({ binId, productId, quantity, companyId, warehouseId }, session);
+      } else {
+        const plan = await warehouseZoneService.planBinConsumption(warehouseId, productId, -quantity, session);
+        for (const step of plan) {
+          await warehouseZoneService.adjustBinStock({ binId: step.binId, productId, quantity: -step.quantity, companyId, warehouseId }, session);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('BinStock sync failed (stock movement itself still succeeded):', err.message);
   }
 
   // Only worth checking when stock just went DOWN — a low-stock condition

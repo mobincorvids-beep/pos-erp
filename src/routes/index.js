@@ -75,6 +75,8 @@ router.use('/fleet', require('./fleetAnalyticsRoutes')); // fuel efficiency, fre
 router.use('/fleet/incidents', require('./vehicleIncidentRoutes'));
 router.use('/fleet/drivers', require('./driverRoutes'));
 router.use('/bin-transfers', require('./binTransferRoutes'));
+router.use('/license-plates', require('./licensePlateRoutes'));
+router.use('/supplier-invoices', require('./supplierInvoiceRoutes'));
 router.use('/pack-ship', require('./packShipRoutes'));
 router.use('/warehouse/scan', require('./scanRoutes'));
 router.use('/asns', require('./asnRoutes'));

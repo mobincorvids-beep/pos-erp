@@ -40,4 +40,9 @@ router.post('/:id/release-hold', requirePermission(ORDER_HOLDS_MANAGE), controll
 router.post('/:id/split', controller.splitOrder);
 router.post('/merge', controller.mergeOrders);
 
+// Partial fulfillment / backorder: invoices whatever's available now and
+// splits the shortfall into a new linked backorder sales_order. Body:
+// { warehouseId?, itemFulfillments?: [{variantId,batchId,quantity}], invoiceInput?: {...} }
+router.post('/:id/fulfill-partially', controller.fulfillPartially);
+
 module.exports = router;

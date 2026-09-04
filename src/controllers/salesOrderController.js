@@ -116,6 +116,15 @@ async function splitOrder(req, res) {
   }
 }
 
+async function fulfillPartially(req, res) {
+  try {
+    const result = await salesOrderService.fulfillPartially(req.params.id, req.body);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
 async function mergeOrders(req, res) {
   try {
     const doc = await salesOrderService.mergeOrders(req.body.saleIds, req.body.targetCustomerId);
@@ -128,5 +137,5 @@ async function mergeOrders(req, res) {
 module.exports = {
   listQuotations, listSalesOrders, createQuotation, createSalesOrder, acceptQuotation, convertToInvoice, cancel,
   publicTrackOrder,
-  placeOrderHold, releaseOrderHold, getConsolidatedOrders, splitOrder, mergeOrders,
+  placeOrderHold, releaseOrderHold, getConsolidatedOrders, splitOrder, mergeOrders, fulfillPartially,
 };

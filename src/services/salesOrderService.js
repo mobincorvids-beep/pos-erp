@@ -573,6 +573,83 @@ async function splitOrder(saleId, { lineItemAllocations }) {
 }
 
 /**
+ * Partial fulfillment / backorder handling. convertToInvoice() is
+ * deliberately all-or-nothing (it pre-flight-checks every line has enough
+ * stock and fails the whole conversion otherwise) — that's the right
+ * behavior for a POS-style checkout, but wrong for a wholesale/distributor
+ * order where "ship what you have now, backorder the rest" is the normal
+ * case. Rather than forking convertToInvoice's stock/accounting logic into
+ * a second partial-aware version (real risk of the two drifting out of
+ * sync over time), this reuses splitOrder(): whatever can be fulfilled now
+ * stays on the original document and goes through the exact same, single,
+ * well-tested convertToInvoice path; the shortfall is split off into a new
+ * linked sales_order (flagged isBackorder/backorderOfSaleId) that sits
+ * exactly like any other pending order until it's fulfilled later — via
+ * this same function again, or a plain convertToInvoice once stock is
+ * back, with no separate code path to keep correct.
+ *
+ * @param {String} saleId
+ * @param {Object} [opts]
+ * @param {String} [opts.warehouseId] - defaults to the sale's own warehouseId
+ * @param {Array<{variantId, batchId, quantity}>} [opts.itemFulfillments] -
+ *   explicit "fulfill this much of this line now" instructions. Any line
+ *   NOT listed here defaults to "fulfill whatever is currently on hand",
+ *   so this is safe to call with no itemFulfillments at all ("just ship
+ *   what you can").
+ * @param {Object} [opts.invoiceInput] - passed through to convertToInvoice
+ *   for the fulfilled portion (posTerminalId, payments, revenueAccountId, taxAccountId).
+ */
+async function fulfillPartially(saleId, { warehouseId, itemFulfillments, invoiceInput = {} } = {}) {
+  const sale = await Sale.findById(saleId);
+  if (!sale) throw new Error('Order not found.');
+  if (!['quotation', 'sales_order'].includes(sale.status)) {
+    throw new Error(`Cannot fulfill a document with status "${sale.status}".`);
+  }
+
+  const effectiveWarehouseId = warehouseId || sale.warehouseId;
+  if (!effectiveWarehouseId) throw new Error('warehouseId is required (no warehouseId on the order to default to).');
+
+  const overrideByKey = new Map(
+    (itemFulfillments || []).map((f) => [`${f.variantId}:${f.batchId || ''}`, f.quantity])
+  );
+
+  const shortfallAllocations = [];
+  for (const item of sale.items) {
+    const key = `${item.variantId}:${item.batchId || ''}`;
+    let fulfillNow;
+    if (overrideByKey.has(key)) {
+      fulfillNow = Math.min(overrideByKey.get(key), item.quantity);
+    } else {
+      const onHand = await inventoryService.getStockLevel(effectiveWarehouseId, item.variantId, item.batchId || null);
+      fulfillNow = Math.min(Math.max(onHand, 0), item.quantity);
+    }
+
+    const shortfall = item.quantity - fulfillNow;
+    if (shortfall > 0) {
+      shortfallAllocations.push({ variantId: item.variantId, batchId: item.batchId || null, quantity: shortfall });
+    }
+  }
+
+  let backorderSale = null;
+  if (shortfallAllocations.length > 0) {
+    if (shortfallAllocations.length === sale.items.length) {
+      // Nothing at all can be fulfilled right now — don't split (splitOrder
+      // refuses to leave the original with zero lines anyway); the whole
+      // order is the backorder, so just report that rather than invoicing
+      // an empty document.
+      return { invoicedSale: null, backorderSale: null, fullyBackordered: true };
+    }
+    backorderSale = await splitOrder(saleId, { lineItemAllocations: shortfallAllocations });
+    backorderSale.isBackorder = true;
+    backorderSale.backorderOfSaleId = sale._id;
+    await backorderSale.save();
+  }
+
+  const invoicedSale = await convertToInvoice(saleId, { warehouseId: effectiveWarehouseId, ...invoiceInput });
+  return { invoicedSale, backorderSale, fullyBackordered: false };
+}
+
+/**
  * Merges multiple pending (quotation/sales_order) orders from the same
  * customer into one combined order, only allowed pre-fulfillment (neither
  * this nor any invoicing has happened yet). The first order in saleIds is
@@ -628,5 +705,5 @@ module.exports = {
   createQuotation, createSalesOrder, convertQuotationToSalesOrder, convertToInvoice, cancel,
   toPublicStatusSummary, getPublicOrderStatus,
   placeOrderHold, releaseOrderHold, getConsolidatedOrders,
-  splitOrder, mergeOrders,
+  splitOrder, mergeOrders, fulfillPartially,
 };
