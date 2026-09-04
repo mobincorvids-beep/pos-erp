@@ -23,4 +23,19 @@ router.get('/purchase-orders', controller.myPurchaseOrders); // ?status=ordered 
 router.get('/purchase-orders/:poId', controller.getPurchaseOrder);
 router.get('/payments', controller.myPayments);
 
+// Vendor-Managed Inventory — this supplier's covered products with live
+// on-hand, and proposing/tracking their own replenishment suggestions.
+router.get('/vmi/visibility', controller.vmiVisibility);
+router.post('/vmi/agreements/:agreementId/propose', controller.vmiPropose);
+router.get('/vmi/proposals', controller.vmiMyProposals);
+
+// Punchout-style catalog — the supplier maintains their own price/SKU
+// catalog here; staff "shop" it inside the app (see punchoutRoutes.js)
+// instead of a live redirect to a real punchout endpoint. See
+// punchoutService's header comment for why this differs from true
+// cXML/OCI punchout.
+router.put('/catalog/items', controller.catalogUpsert);
+router.get('/catalog/items', controller.catalogList);
+router.delete('/catalog/items/:itemId', controller.catalogRemove);
+
 module.exports = router;

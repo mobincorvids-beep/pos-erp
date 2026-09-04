@@ -1,4 +1,6 @@
 const supplierPortalService = require('../services/supplierPortalService');
+const vmiService = require('../services/vmiService');
+const punchoutService = require('../services/punchoutService');
 
 // --- Staff-side (uses normal staff auth — inviting a supplier to the portal) ---
 async function invite(req, res) {
@@ -57,4 +59,54 @@ async function myPayments(req, res) {
   res.json(await supplierPortalService.myPayments(req.supplierPortalAuth.supplierId));
 }
 
-module.exports = { invite, activateInvite, login, refresh, dashboard, myPurchaseOrders, getPurchaseOrder, myPayments };
+// --- VMI (Vendor-Managed Inventory) — supplier-portal-side ---
+async function vmiVisibility(req, res) {
+  try { res.json(await vmiService.getSupplierVisibility(req.supplierPortalAuth.companyId, req.supplierPortalAuth.supplierId)); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+}
+
+async function vmiPropose(req, res) {
+  try {
+    const proposal = await vmiService.proposeReplenishment(req.supplierPortalAuth.companyId, req.params.agreementId, {
+      proposedQty: req.body?.proposedQty, supplierId: req.supplierPortalAuth.supplierId,
+    });
+    res.json(proposal);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function vmiMyProposals(req, res) {
+  try { res.json(await vmiService.listProposals(req.supplierPortalAuth.companyId, { supplierId: req.supplierPortalAuth.supplierId })); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+}
+
+// --- Punchout-style catalog — supplier-portal-side ---
+async function catalogUpsert(req, res) {
+  try {
+    const catalog = await punchoutService.upsertCatalogItem(req.supplierPortalAuth.companyId, req.supplierPortalAuth.supplierId, req.body);
+    res.json(catalog);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function catalogList(req, res) {
+  try { res.json(await punchoutService.listMyCatalog(req.supplierPortalAuth.companyId, req.supplierPortalAuth.supplierId)); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+}
+
+async function catalogRemove(req, res) {
+  try {
+    await punchoutService.removeCatalogItem(req.supplierPortalAuth.companyId, req.supplierPortalAuth.supplierId, req.params.itemId);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+module.exports = {
+  invite, activateInvite, login, refresh, dashboard, myPurchaseOrders, getPurchaseOrder, myPayments,
+  vmiVisibility, vmiPropose, vmiMyProposals,
+  catalogUpsert, catalogList, catalogRemove,
+};
