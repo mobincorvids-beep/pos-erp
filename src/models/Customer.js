@@ -27,6 +27,12 @@ const customerSchema = new Schema({
   // needs to filter by these; a full segment-builder is a UI concern, not
   // a schema one.
   tags: [{ type: String }],
+
+  // Used only by stockAllocationService when several pending orders compete
+  // for the same limited on-hand stock — higher goes first. Defaults to 0
+  // (no special priority) so every existing customer is unaffected until a
+  // business deliberately marks a key account higher.
+  allocationPriority: { type: Number, default: 0 },
 }, { timestamps: true });
 
 customerSchema.index({ companyId: 1, tags: 1 });
