@@ -6,6 +6,13 @@ const projectSchema = new Schema({
   name: { type: String, required: true },
   code: { type: String, required: true, unique: true },
   budget: { type: Number, default: 0 },
+  // What's actually billed to the customer for the project (the contract
+  // sum) — deliberately separate from `budget` above, which is the
+  // internal COST estimate. projectBillingService.getPOCRevenue() uses
+  // this (not budget) as the revenue base for percentage-of-completion
+  // recognition. Defaults to 0 so a purely internal/cost-tracking project
+  // (no customer billing at all) is unaffected.
+  contractValue: { type: Number, default: 0 },
   // Budget granularity by category, e.g. { labor: 20000, material: 15000,
   // subcontractor: 8000, overhead: 2000 }. Optional — a project with no
   // per-category split still works fine against the single `budget` total;
