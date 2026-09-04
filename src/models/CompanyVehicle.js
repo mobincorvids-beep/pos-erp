@@ -1,5 +1,18 @@
 const { Schema, model } = require('mongoose');
 
+// A compliance document tied to the VEHICLE itself (registration renewal,
+// insurance policy, route permit, fitness/emissions certificate) as
+// opposed to Driver.otherDocuments (license, medical cert — tied to the
+// PERSON). Same shape/expiry-notified convention as Driver's documents so
+// fleetComplianceService's expiry sweep can follow the exact same pattern
+// vehicleIncidentService/driverService already established.
+const complianceDocumentSchema = new Schema({
+  label: { type: String, required: true }, // "Registration", "Insurance policy", "Route permit", "Fitness certificate"
+  documentNumber: { type: String, default: '' },
+  expiryDate: { type: Date, default: null },
+  expiryNotified: { type: Boolean, default: false },
+}, { _id: true });
+
 // The standalone CORE vehicle record — any business with company-owned
 // vehicles (not just Car Rental's rented-out fleet or Logistics' delivery
 // fleet) can register one here. Deliberately generic: no daily rate (not
@@ -26,6 +39,8 @@ const vehicleSchema = new Schema({
   odometerReading: { type: Number, default: 0 },
   fuelType: { type: String, default: 'petrol', enum: ['petrol', 'diesel', 'cng', 'electric', 'hybrid', 'other'] },
   notes: { type: String, default: '' },
+
+  complianceDocuments: { type: [complianceDocumentSchema], default: [] },
 }, { timestamps: true });
 
 vehicleSchema.index({ companyId: 1, registrationNumber: 1 }, { unique: true });

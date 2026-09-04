@@ -74,9 +74,12 @@ router.use('/fleet', require('./fleetRoutes'));
 router.use('/fleet', require('./fleetAnalyticsRoutes')); // fuel efficiency, freight quoting — disjoint paths from fleetRoutes
 router.use('/fleet/incidents', require('./vehicleIncidentRoutes'));
 router.use('/fleet/drivers', require('./driverRoutes'));
+router.use('/fleet/maintenance', require('./fleetMaintenanceRoutes'));
 router.use('/bin-transfers', require('./binTransferRoutes'));
 router.use('/license-plates', require('./licensePlateRoutes'));
 router.use('/supplier-invoices', require('./supplierInvoiceRoutes'));
+router.use('/demand-forecast', require('./demandForecastRoutes'));
+router.use('/drp', require('./drpRoutes'));
 router.use('/pack-ship', require('./packShipRoutes'));
 router.use('/warehouse/scan', require('./scanRoutes'));
 router.use('/asns', require('./asnRoutes'));
