@@ -84,18 +84,34 @@ test('recordMovement rejects a zero-quantity movement', async () => {
   ).rejects.toThrow(/quantity must be non-zero/);
 });
 
-test('recordMovement does NOT itself prevent stock from going negative — it just records the movement (assertSufficientStock is the separate, opt-in guard)', async () => {
-  // Current balance is 120. Recording a sale of -500 units is not blocked by
-  // recordMovement itself (no guard exists in it — see inventoryService.js);
-  // negative-stock prevention, where it exists, is the caller's
-  // responsibility via assertSufficientStock().
+test('recordMovement rejects an oversell for a normal movement type (the centralized negative-stock guard)', async () => {
+  // Current balance is 120. recordMovement() itself now guards every type
+  // except 'adjustment' (see the "Centralized negative-stock guard" comment
+  // in inventoryService.js) — a 'sale' movement that would take stock
+  // negative is rejected here, not just by the separate, opt-in
+  // assertSufficientStock() pre-check.
+  await expect(
+    inventoryService.recordMovement({
+      companyId: company._id, warehouseId: warehouse._id, productId: product._id, variantId,
+      type: 'sale', quantity: -500, userId: admin._id, note: 'oversell attempt',
+    })
+  ).rejects.toThrow(/Insufficient stock/);
+
+  const qtyAfterRejectedSale = await inventoryService.getStockLevel(warehouse._id, variantId);
+  expect(qtyAfterRejectedSale).toBe(120); // rejected — balance unchanged
+});
+
+test('recordMovement still allows an "adjustment" movement to take stock negative — that is the one type exempt from the guard, since it is how a stocktake corrects a wrong balance', async () => {
+  // Current balance is 120. An 'adjustment' of -500 is exempt from the
+  // guard (see inventoryService.js), so it goes through and genuinely
+  // takes the balance negative.
   await inventoryService.recordMovement({
     companyId: company._id, warehouseId: warehouse._id, productId: product._id, variantId,
-    type: 'sale', quantity: -500, userId: admin._id, note: 'oversell attempt',
+    type: 'adjustment', quantity: -500, userId: admin._id, note: 'stocktake correction',
   });
 
   const qty = await inventoryService.getStockLevel(warehouse._id, variantId);
-  expect(qty).toBe(-380); // 120 - 500, genuinely negative — recordMovement allowed it
+  expect(qty).toBe(-380); // 120 - 500, genuinely negative — 'adjustment' is exempt from the guard
 });
 
 test('assertSufficientStock throws when the requested quantity exceeds what is available', async () => {
