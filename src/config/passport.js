@@ -40,13 +40,28 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: process.env.GOOGLE_CALLBACK_URL,
+      passReqToCallback: true, // so we can read req.query.state below — see comment
     },
     // We don't need the access/refresh token Google issues for its own
     // APIs — this app only wants the verified identity. The real
     // find-or-link-or-reject logic lives in src/services/oauthService.js,
     // called from the callback route, not here — keeping this file pure
     // strategy wiring.
-    (_accessToken, _refreshToken, profile, done) => done(null, profile)
+    //
+    // req.query.state is read directly (rather than relying on passport's
+    // own state handling) because oauthRoutes.js passes `state` as a plain
+    // string ('login' vs 'signup', to distinguish GET /auth/google from
+    // GET /auth/google/signup) and this app runs OAuth fully stateless
+    // (session: false everywhere) — passport-oauth2's default NullStore
+    // (used whenever the strategy itself isn't configured with `state:
+    // true`) verifies successfully but always drops the actual state
+    // value, so `info.state` in the callback route never gets populated.
+    // Stashing it directly onto the profile here is what makes it reach
+    // oauthController.googleCallback reliably.
+    (req, _accessToken, _refreshToken, profile, done) => {
+      profile._oauthState = req.query.state;
+      done(null, profile);
+    }
   ));
   googleEnabled = true;
 } else if (process.env.NODE_ENV !== 'test') {

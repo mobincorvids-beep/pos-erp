@@ -28,11 +28,14 @@ function frontendBaseUrl() {
 async function googleCallback(req, res) {
   const base = frontendBaseUrl();
   try {
-    // req.authInfo.state round-trips whatever `state` GET /auth/google (or
-    // /auth/google/signup) passed to passport.authenticate — see
-    // oauthRoutes.js. Only the /signup entry point is allowed to create a
-    // brand-new tenant when no existing account matches.
-    const allowSelfServeSignup = req.authInfo?.state === 'signup';
+    // req.user._oauthState is stashed by the verify callback in
+    // src/config/passport.js (passport's own state-store round-trip drops
+    // it under session:false — see that file's comment for why we don't
+    // rely on it) — round-trips whatever `state` GET /auth/google (or
+    // /auth/google/signup) passed to passport.authenticate. Only the
+    // /signup entry point is allowed to create a brand-new tenant when no
+    // existing account matches.
+    const allowSelfServeSignup = req.user?._oauthState === 'signup';
     const user = await oauthService.findOrLinkUser('google', req.user, { allowSelfServeSignup });
     if (!user.isActive) {
       return res.redirect(`${base}/login?oauth_error=${encodeURIComponent('This account is disabled.')}`);
