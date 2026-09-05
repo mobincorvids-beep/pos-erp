@@ -46,7 +46,7 @@ jobs:
               // Requiring them here would always fail with 'beforeAll is
               // not defined', so they're walked by npm test instead.
               if (entry.isDirectory()) { if (full !== 'src/tests') walk(full); }
-              else if (entry.name.endsWith('.js') && !full.startsWith('src/tests/') && !full.endsWith('server.js') && !full.endsWith('seed.js') && !full.endsWith('seedPlatformAdmin.js') && !full.endsWith('smokeTest.js')) {
+              else if (entry.name.endsWith('.js') && !full.startsWith('src/tests/') && !full.endsWith('server.js') && !full.endsWith('seed.js') && !full.endsWith('seedPlatformAdmin.js') && !full.endsWith('resetPlatformAdminPassword.js') && !full.endsWith('smokeTest.js')) {
                 try { require(path.resolve(full)); } catch (e) { ok = false; console.log('FAIL', full, '->', e.message); }
               }
             }
