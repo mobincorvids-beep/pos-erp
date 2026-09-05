@@ -247,9 +247,7 @@ export function Sidebar({ mobileOpen, onClose }) {
     <>
       <div className="px-5 pt-5 pb-6 flex items-center justify-between">
         <div className="min-w-0 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-accent text-white flex items-center justify-center font-display font-bold text-base shrink-0">
-            {(company?.name || 'M').charAt(0).toUpperCase()}
-          </div>
+          <img src="/logo.png" alt="ZAM ERP" className="w-9 h-9 rounded-lg object-contain shrink-0" />
           <div className="min-w-0">
             <p className="font-display text-lg leading-none text-ink font-bold">ZAM ERP</p>
             <p className="eyebrow mt-1 truncate">{company?.name || 'Enterprise Ledger'}</p>

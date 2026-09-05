@@ -51,12 +51,28 @@ async function send({ to, subject, html, text }) {
     return { delivered: false };
   }
 
+  const fromAddress = process.env.SMTP_FROM || process.env.SMTP_USER;
+  // A bare "someone@gmail.com" From reads as more spam-like to filters than
+  // a named sender — cheap to add, no reason not to. SMTP_FROM_NAME lets a
+  // deployment override it (e.g. once they have a real business domain);
+  // defaults to the brand name.
+  const fromName = process.env.SMTP_FROM_NAME || 'ZAM ERP';
+
   await transporter.sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    from: `"${fromName}" <${fromAddress}>`,
+    // Replies land back at the same inbox that sent it, so a reply doesn't
+    // silently vanish — some inbox providers weigh "from == replyTo, and
+    // replies actually work" as a signal against a message being spam.
+    replyTo: fromAddress,
     to,
     subject,
     html,
     text: text || html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
+    // A stable, real-looking Message-ID (rather than nodemailer's default,
+    // which nodemailer already generates from the `from` domain — this
+    // just makes the domain explicit) helps some spam filters that
+    // penalize a mismatched or missing Message-ID domain.
+    messageId: `<${Date.now()}.${Math.random().toString(36).slice(2)}@${fromAddress.split('@')[1] || 'zam-erp.local'}>`,
   });
   return { delivered: true };
 }
