@@ -9,6 +9,7 @@
     "start": "node src/server.js",
     "seed": "node src/seed.js",
     "seed:admin": "node src/seedPlatformAdmin.js",
+    "reset:admin": "node src/resetPlatformAdminPassword.js",
     "smoke-test": "node src/smokeTest.js",
     "test": "jest --runInBand"
   },
