@@ -42,12 +42,18 @@ const STARTER_ACCOUNTS = [
  * @param {String} [input.currency]
  * @param {String} input.adminName - name for the first user
  * @param {String} input.adminEmail
- * @param {String} [input.adminPassword] - generated if omitted
+ * @param {String} [input.adminPassword] - generated if omitted (ignored when oauthProvider is given)
+ * @param {Object} [input.oauthProvider] - { provider, providerId } — set when this
+ *   company is being self-serve-created via "Sign up with Google" (see
+ *   oauthService.findOrLinkUser). When present, the admin user is created
+ *   with no local password (oauthProviders only) and emailVerified: true
+ *   immediately, since the provider already proved mailbox ownership —
+ *   same reasoning as the existing OAuth auto-link path.
  */
 async function onboardCompany(input) {
   const {
     name, industryType = 'retail', currency = 'PKR',
-    adminName, adminEmail, adminPassword,
+    adminName, adminEmail, adminPassword, oauthProvider,
   } = input;
 
   if (!name) throw new Error('Company name is required.');
@@ -105,7 +111,12 @@ async function onboardCompany(input) {
       await company.save({ session });
 
       const admin = new User({ companyId: company._id, branchId: branch._id, name: adminName || 'Admin', email: adminEmail.toLowerCase() });
-      await admin.setPassword(generatedPassword);
+      if (oauthProvider) {
+        admin.oauthProviders = [{ provider: oauthProvider.provider, providerId: oauthProvider.providerId, email: adminEmail.toLowerCase() }];
+        admin.emailVerified = true;
+      } else {
+        await admin.setPassword(generatedPassword);
+      }
       await admin.save({ session });
 
       result = { company, branch, warehouse, posTerminal: terminal, admin, generatedPassword };

@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { INDUSTRY_MODULES } from '../industryModuleRegistry';
+import { api } from '../api/client';
 
 // Every business type the platform recognizes for tailoring the sidebar
 // and home dashboard (see lib/businessProfile.js) — reusing the same
@@ -23,6 +24,23 @@ export function SignupPage() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  // Same "only render once the server confirms it's configured" pattern as
+  // LoginPage — see its comment for why.
+  const [oauthProviders, setOauthProviders] = useState(null);
+
+  useEffect(() => {
+    api.get('/auth/oauth-providers').then(setOauthProviders).catch(() => setOauthProviders({ google: false, microsoft: false }));
+  }, []);
+
+  function signUpWithGoogle() {
+    // Deliberately a DIFFERENT backend route than LoginPage's Google
+    // button (/auth/google/signup vs /auth/google) — it's what tells the
+    // backend this click is allowed to create a brand-new company when no
+    // existing account matches the Google email. See oauthRoutes.js /
+    // oauthService.findOrLinkUser.
+    const base = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1').replace(/\/$/, '');
+    window.location.href = `${base}/auth/google/signup`;
+  }
 
   function update(field) {
     return (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
@@ -109,6 +127,29 @@ export function SignupPage() {
           <button type="submit" disabled={loading} className="btn-primary w-full">
             {loading ? t('signup.creatingAccount') : t('signup.createBusinessAccountButton')}
           </button>
+
+          {oauthProviders?.google && (
+            <>
+              <div className="flex items-center gap-3 text-xs text-ink-muted">
+                <span className="h-px flex-1 bg-rule" />
+                <span>or</span>
+                <span className="h-px flex-1 bg-rule" />
+              </div>
+              <button
+                type="button"
+                onClick={signUpWithGoogle}
+                className="btn-secondary w-full flex items-center justify-center gap-2"
+              >
+                <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">
+                  <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l6-6C34.6 5.1 29.6 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21 21-9.4 21-21c0-1.4-.1-2.7-.4-3.5z"/>
+                  <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.3 19 12 24 12c3.1 0 5.8 1.1 8 3l6-6C34.6 5.1 29.6 3 24 3 16.3 3 9.6 7.3 6.3 14.7z"/>
+                  <path fill="#4CAF50" d="M24 45c5.5 0 10.4-1.9 14.2-5.1l-6.6-5.4C29.6 36.4 26.9 37.4 24 37.4c-5.2 0-9.6-3.3-11.2-7.9l-6.6 5.1C9.5 40.6 16.2 45 24 45z"/>
+                  <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.6l6.6 5.4C41.6 35.6 45 30.2 45 24c0-1.4-.1-2.7-.4-3.5z"/>
+                </svg>
+                Sign up with Google
+              </button>
+            </>
+          )}
         </form>
 
         <p className="text-sm text-ink-muted text-center mt-4">

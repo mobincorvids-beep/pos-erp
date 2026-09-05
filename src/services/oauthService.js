@@ -22,21 +22,32 @@
  *      rather than loosen it — do NOT fall back to matching by email
  *      alone.
  *
- * Self-serve tenant creation via OAuth is explicitly NOT supported here:
- * a brand-new person with no existing account gets a clear message to
- * contact their company admin, never a silently-created orphaned
- * company. (Self-serve signup for a genuinely new business still exists
- * via POST /auth/register, which is unrelated to this file.)
+ * Self-serve tenant creation via OAuth: case 3 below USED to always
+ * refuse. It now creates a brand-new company + admin user (via the same
+ * companyProvisioningService.onboardCompany the "Sign up with Google"
+ * button hits — see oauthController.googleCallback / GET
+ * /auth/google/signup), but ONLY when the caller explicitly passes
+ * `allowSelfServeSignup: true` — i.e. only when the user actually clicked
+ * "Sign up with Google", never plain "Sign in with Google" (that route
+ * omits the flag, so an existing-account-not-found there still refuses
+ * with a clear message exactly as before — someone mistakenly hitting
+ * "sign in" instead of "sign up" should not accidentally spin up a
+ * second, orphaned tenant for themselves).
  */
 const User = require('../models/User');
+const companyProvisioningService = require('./companyProvisioningService');
 
 /**
  * @param {'google'|'microsoft'} provider
  * @param {object} profile - the passport strategy's verified profile
  *   (for passport-google-oauth20: { id, emails: [{value, verified}], displayName, ... })
+ * @param {Object} [opts]
+ * @param {Boolean} [opts.allowSelfServeSignup] - true only for the
+ *   "Sign up with Google" entry point; see file doc comment above.
  * @returns {Promise<import('../models/User')>}
  */
-async function findOrLinkUser(provider, profile) {
+async function findOrLinkUser(provider, profile, opts = {}) {
+  const { allowSelfServeSignup = false } = opts;
   const providerId = profile?.id;
   if (!providerId) throw new Error('OAuth provider did not return an account id.');
 
@@ -85,10 +96,26 @@ async function findOrLinkUser(provider, profile) {
     return existing;
   }
 
-  // Case 3: nobody to link to — refuse rather than orphan-create.
-  const err = new Error('No account found for this email — contact your company admin to be added as a user. Self-serve company creation via Google sign-in is not yet supported.');
-  err.statusCode = 404;
-  throw err;
+  // Case 3: nobody to link to.
+  if (!allowSelfServeSignup) {
+    const err = new Error('No account found for this email — contact your company admin to be added as a user, or use "Sign up with Google" to create a new business account.');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  // Genuinely new business signing up via Google — mirrors what
+  // POST /auth/register does for a password-based signup, minus the
+  // password: Google already proved this mailbox is real, so the new
+  // admin user goes straight to emailVerified: true with no local
+  // password set (oauthProviders only — see User.passwordHash's
+  // conditional `required`).
+  const { admin } = await companyProvisioningService.onboardCompany({
+    name: `${profile.displayName || email.split('@')[0]}'s Business`,
+    adminName: profile.displayName || email.split('@')[0],
+    adminEmail: email,
+    oauthProvider: { provider, providerId },
+  });
+  return admin;
 }
 
 module.exports = { findOrLinkUser };

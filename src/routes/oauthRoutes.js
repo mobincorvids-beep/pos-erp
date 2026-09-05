@@ -19,7 +19,16 @@ router.get('/oauth-providers', (req, res) => {
 });
 
 if (googleEnabled) {
-  router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'], session: false }));
+  // Two entry points, one callback. `state` here is a plain string (not
+  // `state: true`), so passport-oauth2 round-trips it verbatim on the
+  // redirect back from Google without needing session support (this app
+  // runs OAuth fully stateless, session: false throughout) — see
+  // oauthController.googleCallback, which reads it back as
+  // req.authInfo.state to decide whether "no existing account found" is
+  // allowed to self-serve-create a brand-new tenant (signup) or should
+  // refuse with a clear message (login).
+  router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'], session: false, state: 'login' }));
+  router.get('/google/signup', passport.authenticate('google', { scope: ['profile', 'email'], session: false, state: 'signup' }));
   router.get(
     '/google/callback',
     passport.authenticate('google', { session: false, failureRedirect: '/login' }),
