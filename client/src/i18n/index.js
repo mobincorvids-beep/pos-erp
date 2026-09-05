@@ -9,6 +9,8 @@ import sd from './locales/sd/translation.json';
 import ps from './locales/ps/translation.json';
 import skr from './locales/skr/translation.json';
 import bal from './locales/bal/translation.json';
+import ar from './locales/ar/translation.json';
+import fr from './locales/fr/translation.json';
 
 // Every language the app ships translations for, plus the metadata the
 // language switcher and RTL logic need. `nativeName` is what's shown in
@@ -23,6 +25,8 @@ export const SUPPORTED_LANGUAGES = [
   { code: 'ps', nativeName: 'پښتو', rtl: true },
   { code: 'skr', nativeName: 'سرائیکی', rtl: true },
   { code: 'bal', nativeName: 'بلوچی', rtl: true },
+  { code: 'ar', nativeName: 'العربية', rtl: true },
+  { code: 'fr', nativeName: 'Français', rtl: false },
 ];
 
 export const RTL_LANGUAGES = SUPPORTED_LANGUAGES.filter((l) => l.rtl).map((l) => l.code);
@@ -48,6 +52,8 @@ i18n
       ps: { translation: ps },
       skr: { translation: skr },
       bal: { translation: bal },
+      ar: { translation: ar },
+      fr: { translation: fr },
     },
     fallbackLng: 'en',
     supportedLngs: SUPPORTED_LANGUAGES.map((l) => l.code),
