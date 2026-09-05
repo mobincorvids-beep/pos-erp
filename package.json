@@ -1,5 +1,5 @@
 {
-  "name": "pos-erp-mern",
+  "name": "zam-erp",
   "version": "0.1.0",
   "description": "Multi-industry POS/ERP platform - core engine + industry modules",
   "main": "src/server.js",
@@ -29,6 +29,7 @@
     "multer": "^2.3.0",
     "nanoid": "^3.3.7",
     "node-cron": "^4.6.0",
+    "nodemailer": "^10.0.0",
     "otplib": "^13.4.1",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",

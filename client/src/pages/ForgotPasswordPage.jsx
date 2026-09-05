@@ -30,10 +30,8 @@ export function ForgotPasswordPage() {
     <div className="min-h-screen bg-surface-sunken flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center mb-6">
-          <div className="w-12 h-12 rounded-xl bg-accent text-white font-display font-bold text-xl flex items-center justify-center shadow-sm">
-            M
-          </div>
-          <p className="font-display text-2xl font-bold text-ink mt-3">Muhasib</p>
+          <img src="/logo.png" alt="ZAM ERP" className="w-14 h-14 rounded-xl shadow-sm object-contain" />
+          <p className="font-display text-2xl font-bold text-ink mt-3">ZAM ERP</p>
           <p className="eyebrow mt-1">{t('forgotPassword.resetYourPassword')}</p>
         </div>
 

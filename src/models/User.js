@@ -46,6 +46,26 @@ const userSchema = new Schema({
   twoFactorSecret: { type: String, default: null },
   twoFactorEnabled: { type: Boolean, default: false },
   twoFactorBackupCodeHashes: { type: [String], default: [] },
+
+  // Email ownership verification — separate from 2FA above (2FA proves
+  // "you have this authenticator device on every login"; this proves
+  // "you actually own this mailbox", once, at signup). A brand-new local
+  // (email/password) signup starts with emailVerified: false and cannot
+  // log in (see authController.login) until they submit the 6-digit code
+  // emailVerificationService mails them. A user created via Google OAuth
+  // is marked verified immediately — Google has already proven mailbox
+  // ownership, asking them to re-prove it would be redundant. The code
+  // itself is NEVER stored in plaintext (hashed with bcrypt, same
+  // principle as passwordHash/twoFactorBackupCodeHashes) and expires
+  // quickly (emailVerificationService.OTP_TTL_MINUTES).
+  emailVerified: { type: Boolean, default: false },
+  emailOtpHash: { type: String, default: null },
+  emailOtpExpiresAt: { type: Date, default: null },
+  // Throttles resend-code abuse independently of the shared authLimiter
+  // (which is per-IP) — this is per-ACCOUNT, so someone can't be spammed
+  // with verification emails from many IPs, and a legitimate user who
+  // fat-fingers "resend" repeatedly still can't flood their own inbox.
+  emailOtpLastSentAt: { type: Date, default: null },
 }, { timestamps: true });
 
 userSchema.methods.setPassword = async function (plain) {

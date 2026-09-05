@@ -21,7 +21,7 @@ export function AppLayout() {
           <button onClick={() => setMobileOpen(true)} className="text-ink px-1" aria-label="Open menu">
             <Menu size={20} strokeWidth={2} />
           </button>
-          <p className="font-display font-bold text-base text-ink truncate flex-1">{company?.name || 'Muhasib'}</p>
+          <p className="font-display font-bold text-base text-ink truncate flex-1">{company?.name || 'ZAM ERP'}</p>
           <LanguageSwitcher />
         </div>
 

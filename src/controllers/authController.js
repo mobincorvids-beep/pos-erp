@@ -5,6 +5,7 @@ const refreshTokenService = require('../services/refreshTokenService');
 const twoFactorService = require('../services/twoFactorService');
 const securityService = require('../services/securityService');
 const companyProvisioningService = require('../services/companyProvisioningService');
+const emailVerificationService = require('../services/emailVerificationService');
 
 function deviceContext(req) {
   return { ipAddress: req.ip, userAgent: req.get('User-Agent') || null };
@@ -26,6 +27,14 @@ function signAccessToken(user) {
 // minutes so an abandoned login attempt can't be resumed hours later.
 function signPreAuthToken(user) {
   return jwt.sign({ userId: user._id, pending2FA: true }, process.env.JWT_SECRET, { expiresIn: '5m' });
+}
+
+// Same shape/lifetime rule as signPreAuthToken above, for the OTHER
+// pending-step case: a signup (or a local-login attempt) whose email
+// isn't verified yet. Also unusable against any real API route —
+// requireAuth only accepts a normal access token.
+function signEmailVerificationToken(user) {
+  return jwt.sign({ userId: user._id, pendingEmailVerification: true }, process.env.JWT_SECRET, { expiresIn: '30m' });
 }
 
 // The single place that mints a real access+refresh token pair for an
@@ -56,6 +65,21 @@ async function login(req, res) {
   if (!user.isActive) {
     await securityService.recordAttempt({ email, userId: user._id, companyId: user.companyId, success: false, failureReason: 'account_disabled', ...ctx });
     return res.status(403).json({ error: 'This account is disabled.' });
+  }
+
+  // Local (email/password) accounts must prove mailbox ownership before
+  // their first real login — see emailVerificationService. A pure-OAuth
+  // account (oauthProviders non-empty, no local password ever set) is
+  // exempt: Google already proved they own this mailbox at signup, and
+  // this branch only matters for local-password logins anyway (an OAuth
+  // user doesn't call this endpoint — they go through oauthController).
+  if (!user.emailVerified && user.passwordHash) {
+    await securityService.recordAttempt({ email, userId: user._id, companyId: user.companyId, success: false, failureReason: 'email_not_verified', ...ctx });
+    return res.status(403).json({
+      error: 'Please verify your email before signing in.',
+      requiresEmailVerification: true,
+      preAuthToken: signEmailVerificationToken(user),
+    });
   }
 
   // Genuinely unchanged for every user without 2FA enabled — the default,
@@ -101,13 +125,88 @@ async function register(req, res) {
     });
 
     const ctx = deviceContext(req);
-    await securityService.recordAttempt({ email: admin.email, userId: admin._id, companyId: admin.companyId, success: true, ...ctx });
-    const { token, refreshToken } = await issueTokensForUser(admin, ctx);
+    // Full session tokens are withheld until the new admin proves they own
+    // this mailbox — mirrors the 2FA response shape (requires2FA/preAuthToken)
+    // so the frontend can reuse the same "pending step" pattern for both.
+    // Not recorded as a successful login attempt yet either — that happens
+    // once verifyEmail() below actually completes the flow.
+    await emailVerificationService.sendVerificationCode(admin);
     res.status(201).json({
-      token, refreshToken,
-      user: { id: admin._id, name: admin.name, email: admin.email, companyId: admin.companyId, branchId: admin.branchId, twoFactorEnabled: false },
+      requiresEmailVerification: true,
+      preAuthToken: signEmailVerificationToken(admin),
+      user: { id: admin._id, name: admin.name, email: admin.email },
       company: { id: company._id, name: company.name, industryType: company.industryType, currency: company.currency },
     });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+/** The second step of signup/first-login: exchanges a valid email-verification preAuthToken + the mailed code for real session tokens. */
+async function verifyEmail(req, res) {
+  try {
+    const { preAuthToken, code } = req.body;
+    const ctx = deviceContext(req);
+    if (!preAuthToken || !code) return res.status(400).json({ error: 'preAuthToken and code are required.' });
+
+    let decoded;
+    try {
+      decoded = jwt.verify(preAuthToken, process.env.JWT_SECRET);
+    } catch {
+      return res.status(401).json({ error: 'This verification session has expired, please sign up or log in again.' });
+    }
+    if (!decoded.pendingEmailVerification) return res.status(401).json({ error: 'Invalid pre-authentication token.' });
+
+    const user = await User.findById(decoded.userId);
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    try {
+      await emailVerificationService.verifyCode(user, code);
+    } catch (err) {
+      await securityService.recordAttempt({ email: user.email, userId: user._id, companyId: user.companyId, success: false, failureReason: 'invalid_email_otp', ...ctx });
+      return res.status(400).json({ error: err.message });
+    }
+    if (!user.isActive) return res.status(403).json({ error: 'This account is disabled.' });
+
+    // Email verified — now behave exactly like a normal completed login,
+    // including still respecting 2FA if the account has it enabled (an
+    // admin could in principle enable 2FA between signup and first
+    // verification, or this path is reused for a local-login-gated user).
+    if (user.twoFactorEnabled) {
+      return res.json({ requires2FA: true, preAuthToken: signPreAuthToken(user) });
+    }
+
+    await securityService.recordAttempt({ email: user.email, userId: user._id, companyId: user.companyId, success: true, ...ctx });
+    const { token, refreshToken } = await issueTokensForUser(user, ctx);
+    res.json({
+      token, refreshToken,
+      user: { id: user._id, name: user.name, email: user.email, companyId: user.companyId, branchId: user.branchId, twoFactorEnabled: user.twoFactorEnabled },
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+/** Re-sends a fresh email verification code for a still-pending signup/login, rate-limited server-side (see emailVerificationService.RESEND_COOLDOWN_SECONDS). */
+async function resendVerificationCode(req, res) {
+  try {
+    const { preAuthToken } = req.body;
+    if (!preAuthToken) return res.status(400).json({ error: 'preAuthToken is required.' });
+
+    let decoded;
+    try {
+      decoded = jwt.verify(preAuthToken, process.env.JWT_SECRET);
+    } catch {
+      return res.status(401).json({ error: 'This verification session has expired, please sign up or log in again.' });
+    }
+    if (!decoded.pendingEmailVerification) return res.status(401).json({ error: 'Invalid pre-authentication token.' });
+
+    const user = await User.findById(decoded.userId);
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    const result = await emailVerificationService.sendVerificationCode(user);
+    // Issue a fresh token too, so a resend also quietly extends the 30-minute window.
+    res.json({ ...result, preAuthToken: signEmailVerificationToken(user) });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -189,7 +288,7 @@ async function me(req, res) {
   });
 }
 
-module.exports = { login, register, verifyTwoFactor, refresh, logout, me, setupTwoFactor, confirmTwoFactor, disableTwoFactor, listSessions, revokeSession, listLoginHistory, issueTokensForUser, deviceContext };
+module.exports = { login, register, verifyEmail, resendVerificationCode, verifyTwoFactor, refresh, logout, me, setupTwoFactor, confirmTwoFactor, disableTwoFactor, listSessions, revokeSession, listLoginHistory, issueTokensForUser, deviceContext };
 
 async function setupTwoFactor(req, res) {
   try { res.json(await twoFactorService.setup(req.auth.userId)); }

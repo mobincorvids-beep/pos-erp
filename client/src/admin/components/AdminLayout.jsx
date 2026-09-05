@@ -20,7 +20,7 @@ export function AdminLayout() {
       <div className="bg-ink text-paper">
         <div className="max-w-6xl mx-auto px-4 md:px-6 py-2 md:py-0 md:h-12 flex flex-col md:flex-row md:items-center gap-2 md:gap-0 md:justify-between">
           <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6">
-            <p className="font-display text-base leading-none">Muhasib <span className="text-white/50 font-sans text-xs align-middle ml-1">Platform Admin</span></p>
+            <p className="font-display text-base leading-none">ZAM ERP <span className="text-white/50 font-sans text-xs align-middle ml-1">Platform Admin</span></p>
             <nav className="flex gap-1 flex-wrap">
               {NAV.map((item) => (
                 <NavLink

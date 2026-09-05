@@ -3,7 +3,7 @@ const { body } = require('express-validator');
 const { requireAuth } = require('../middleware/auth');
 const { authLimiter } = require('../middleware/rateLimit');
 const { validate } = require('../middleware/validate');
-const { login, register, verifyTwoFactor, refresh, logout, me, setupTwoFactor, confirmTwoFactor, disableTwoFactor, listSessions, revokeSession, listLoginHistory } = require('../controllers/authController');
+const { login, register, verifyEmail, resendVerificationCode, verifyTwoFactor, refresh, logout, me, setupTwoFactor, confirmTwoFactor, disableTwoFactor, listSessions, revokeSession, listLoginHistory } = require('../controllers/authController');
 
 const loginValidation = [
   body('email').isEmail().withMessage('A valid email is required.').normalizeEmail(),
@@ -20,7 +20,15 @@ const registerValidation = [
   body('industryType').isString().trim().notEmpty().withMessage('Please choose your business type.'),
   body('adminName').isString().trim().isLength({ min: 2 }).withMessage('Your name is required.'),
   body('adminEmail').isEmail().withMessage('A valid email is required.').normalizeEmail(),
-  body('adminPassword').isString().isLength({ min: 8 }).withMessage('Password must be at least 8 characters.'),
+  // Minimum length AND a mix of letters + numbers — a bare length check lets
+  // through weak-but-long strings like "aaaaaaaa". This isn't a full
+  // complexity policy (no special-character requirement, to stay friendly
+  // for a first-time "noob" user per the product's own product), just a
+  // baseline that blocks the most common trivially-guessable passwords,
+  // since vendor/customer PII now lives behind this account.
+  body('adminPassword').isString().isLength({ min: 8 }).withMessage('Password must be at least 8 characters.')
+    .matches(/[A-Za-z]/).withMessage('Password must include at least one letter.')
+    .matches(/[0-9]/).withMessage('Password must include at least one number.'),
 ];
 
 router.post('/login', authLimiter, loginValidation, validate, login);
@@ -30,6 +38,10 @@ router.post('/register', authLimiter, registerValidation, validate, register);
 // login's password field already gets, not weaker protection just because
 // it's a second step.
 router.post('/verify-2fa', authLimiter, body('preAuthToken').isString().notEmpty(), body('token').isString().notEmpty(), validate, verifyTwoFactor);
+// Same rate limiter as everything else in this "prove who you are" family
+// — a 6-digit email code is just as brute-forceable as a 2FA code.
+router.post('/verify-email', authLimiter, body('preAuthToken').isString().notEmpty(), body('code').isString().notEmpty(), validate, verifyEmail);
+router.post('/resend-verification', authLimiter, body('preAuthToken').isString().notEmpty(), validate, resendVerificationCode);
 router.post('/refresh', authLimiter, body('refreshToken').isString().notEmpty(), validate, refresh);
 router.post('/logout', logout);
 router.get('/me', requireAuth, me);

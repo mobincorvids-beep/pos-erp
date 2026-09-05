@@ -65,11 +65,23 @@ async function findOrLinkUser(provider, profile) {
       throw new Error('Your Google account email address is not verified with Google, so it cannot be automatically linked to an existing account. Contact your company admin.');
     }
     const alreadyHasThisProvider = (existing.oauthProviders || []).some((p) => p.provider === provider && p.providerId === providerId);
+    let changed = false;
     if (!alreadyHasThisProvider) {
       existing.oauthProviders = existing.oauthProviders || [];
       existing.oauthProviders.push({ provider, providerId, email });
-      await existing.save();
+      changed = true;
     }
+    // Linking only ever happens with a provider-verified email (see the
+    // check above), so this is just as strong a proof of mailbox ownership
+    // as our own OTP flow — a local account that was still sitting
+    // unverified (e.g. signed up but never finished emailVerificationService's
+    // code step) is now considered verified too, rather than staying stuck
+    // behind a local-login gate it can no longer even reach the OTP for.
+    if (!existing.emailVerified) {
+      existing.emailVerified = true;
+      changed = true;
+    }
+    if (changed) await existing.save();
     return existing;
   }
 

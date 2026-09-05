@@ -53,7 +53,11 @@ export function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      await login(email, password);
+      const result = await login(email, password);
+      if (result && result.pending) {
+        navigate('/verify', { state: { preAuthToken: result.preAuthToken, kind: result.pending, email } });
+        return;
+      }
       navigate('/dashboard');
     } catch (err) {
       setError(err.message);
@@ -69,10 +73,8 @@ export function LoginPage() {
           <LanguageSwitcher />
         </div>
         <div className="flex flex-col items-center mb-6">
-          <div className="w-12 h-12 rounded-xl bg-accent text-white font-display font-bold text-xl flex items-center justify-center shadow-sm">
-            M
-          </div>
-          <p className="font-display text-2xl font-bold text-ink mt-3">Muhasib</p>
+          <img src="/logo.png" alt="ZAM ERP" className="w-14 h-14 rounded-xl shadow-sm object-contain" />
+          <p className="font-display text-2xl font-bold text-ink mt-3">ZAM ERP</p>
           <p className="eyebrow mt-1">{t('auth.tagline')}</p>
         </div>
 

@@ -25,7 +25,7 @@ async function setup(userId) {
   user.twoFactorSecret = secret;
   await user.save();
 
-  const otpauthUrl = generateURI({ secret, label: user.email, issuer: 'Muhasib POS/ERP' });
+  const otpauthUrl = generateURI({ secret, label: user.email, issuer: 'ZAM ERP' });
   const qrCodeDataUrl = await QRCode.toDataURL(otpauthUrl);
 
   return { secret, otpauthUrl, qrCodeDataUrl };

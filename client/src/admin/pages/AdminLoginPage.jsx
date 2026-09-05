@@ -28,10 +28,8 @@ export function AdminLoginPage() {
     <div className="min-h-screen bg-accent-strong flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center mb-6">
-          <div className="w-12 h-12 rounded-xl bg-paper text-accent-strong font-display font-bold text-xl flex items-center justify-center shadow-sm">
-            M
-          </div>
-          <p className="font-display text-2xl font-bold text-paper mt-3">Muhasib</p>
+          <img src="/logo.png" alt="ZAM ERP" className="w-14 h-14 rounded-xl shadow-sm object-contain bg-paper" />
+          <p className="font-display text-2xl font-bold text-paper mt-3">ZAM ERP</p>
           <p className="text-xs font-semibold uppercase tracking-widest text-paper/50 mt-1">Platform admin — not a shop login</p>
         </div>
 

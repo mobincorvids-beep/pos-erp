@@ -5,6 +5,7 @@ import { AppLayout } from './components/AppLayout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 import { LoginPage } from './pages/LoginPage';
+import { VerifyAuthPage } from './pages/VerifyAuthPage';
 import { OAuthCompletePage } from './pages/OAuthCompletePage';
 import { SignupPage } from './pages/SignupPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -134,6 +135,7 @@ export default function App() {
             }
           >
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/verify" element={<VerifyAuthPage />} />
             <Route path="/oauth-complete" element={<OAuthCompletePage />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route

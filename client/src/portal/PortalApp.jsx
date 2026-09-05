@@ -58,7 +58,7 @@ function Shell({ title, children }) {
             className="font-display text-lg font-bold text-white tracking-tight"
             onClick={() => navigate('/portal')}
           >
-            SafePOS <span className="font-normal text-white/70">Customer Portal</span>
+            ZAM ERP <span className="font-normal text-white/70">Customer Portal</span>
           </button>
           <nav className="flex items-center gap-5">
             <NavLink label="Dashboard" onClick={() => navigate('/portal')} />
@@ -108,7 +108,7 @@ function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
       <form onSubmit={handleSubmit} className="card p-7 w-full max-w-sm">
-        <p className="eyebrow mb-2">SafePOS</p>
+        <p className="eyebrow mb-2">ZAM ERP</p>
         <p className="font-display text-xl font-bold text-ink mb-1">Customer Portal</p>
         <p className="text-sm text-ink-muted mb-5">Sign in to view your invoices and account.</p>
         {error && (
@@ -171,7 +171,7 @@ function ActivatePage() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
       <form onSubmit={handleSubmit} className="card p-7 w-full max-w-sm">
-        <p className="eyebrow mb-2">SafePOS</p>
+        <p className="eyebrow mb-2">ZAM ERP</p>
         <p className="font-display text-xl font-bold text-ink mb-1">Set your password</p>
         <p className="text-sm text-ink-muted mb-5">Choose a password to activate your portal account.</p>
         {error && (

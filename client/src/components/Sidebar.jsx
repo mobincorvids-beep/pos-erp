@@ -233,7 +233,7 @@ export function Sidebar({ mobileOpen, onClose }) {
 
   // Shared classes for every nav row — a bold, filled active state (dark
   // accent bg + white text + a left accent-strong border stripe) rather
-  // than the old soft-tint active state, matching the SafePOS design
+  // than the old soft-tint active state, matching the ZAM ERP design
   // system's nav treatment. rtl:border-l-0 rtl:border-r-4 flips the
   // accent stripe to the visual "leading" edge under dir="rtl".
   const linkClass = () => ({ isActive }) =>
@@ -251,7 +251,7 @@ export function Sidebar({ mobileOpen, onClose }) {
             {(company?.name || 'M').charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0">
-            <p className="font-display text-lg leading-none text-ink font-bold">Muhasib</p>
+            <p className="font-display text-lg leading-none text-ink font-bold">ZAM ERP</p>
             <p className="eyebrow mt-1 truncate">{company?.name || 'Enterprise Ledger'}</p>
           </div>
         </div>
