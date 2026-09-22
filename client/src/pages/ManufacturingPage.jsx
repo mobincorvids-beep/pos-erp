@@ -8,23 +8,24 @@ import { EmptyState } from '../components/EmptyState';
 import { formatQty, formatMoney } from '../lib/format';
 
 export function ManufacturingPage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState('work-orders');
   return (
     <div>
       <div className="flex justify-between items-end mb-6">
         <div>
-          <p className="page-title mb-1">Production Control</p>
-          <p className="text-ink-muted">Work orders, bills of materials &amp; production status</p>
+          <p className="page-title mb-1">{t('manufacturing.title', 'Production Control')}</p>
+          <p className="text-ink-muted">{t('manufacturing.subtitle', 'Work orders, bills of materials & production status')}</p>
         </div>
         <div className="flex gap-2 flex-wrap justify-end">
           {[
-            ['work-orders', 'Work orders'],
-            ['boms', 'Bills of materials'],
-            ['work-centers', 'Work centers'],
-            ['routings', 'Routings'],
-            ['mrp', 'MRP'],
-            ['schedule', 'Schedule'],
-            ['yield', 'Yield report'],
+            ['work-orders', t('manufacturing.tabWorkOrders', 'Work orders')],
+            ['boms', t('manufacturing.tabBoms', 'Bills of materials')],
+            ['work-centers', t('manufacturing.tabWorkCenters', 'Work centers')],
+            ['routings', t('manufacturing.tabRoutings', 'Routings')],
+            ['mrp', t('manufacturing.tabMrp', 'MRP')],
+            ['schedule', t('manufacturing.tabSchedule', 'Schedule')],
+            ['yield', t('manufacturing.tabYieldReport', 'Yield report')],
           ].map(([key, label]) => (
             <button key={key} onClick={() => setTab(key)} className={tab === key ? 'pill-active' : 'pill'}>
               {label}
@@ -44,6 +45,7 @@ export function ManufacturingPage() {
 }
 
 function WorkOrdersTab() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -64,35 +66,35 @@ function WorkOrdersTab() {
       <div className="flex-1 min-w-0">
         <div className="grid grid-cols-3 gap-4 mb-4">
           <div className="card p-5">
-            <p className="eyebrow mb-3">Active orders</p>
+            <p className="eyebrow mb-3">{t('manufacturing.activeOrders', 'Active orders')}</p>
             <p className="font-display text-3xl font-bold text-accent num">{activeCount}<span className="text-base font-normal text-ink-muted"> / {orders.length}</span></p>
           </div>
           <div className="card p-5">
-            <p className="eyebrow mb-3">Completed</p>
+            <p className="eyebrow mb-3">{t('manufacturing.completed', 'Completed')}</p>
             <p className="font-display text-3xl font-bold text-accent num">{completedCount}</p>
           </div>
           <div className="card p-5">
-            <p className="eyebrow mb-3">Planned</p>
+            <p className="eyebrow mb-3">{t('manufacturing.planned', 'Planned')}</p>
             <p className="font-display text-3xl font-bold text-accent num">{orders.filter((o) => o.status === 'planned').length}</p>
           </div>
         </div>
 
         <div className="card overflow-hidden">
           <div className="flex justify-between items-center px-5 py-4 border-b border-rule">
-            <p className="font-display text-lg font-semibold text-accent">Active Work Order Ledger</p>
-            <button className="btn-primary" onClick={() => setShowForm(true)}>New work order</button>
+            <p className="font-display text-lg font-semibold text-accent">{t('manufacturing.activeWorkOrderLedger', 'Active Work Order Ledger')}</p>
+            <button className="btn-primary" onClick={() => setShowForm(true)}>{t('manufacturing.newWorkOrder', 'New work order')}</button>
           </div>
           {loading && <div className="p-5"><Loading /></div>}
-          {!loading && orders.length === 0 && <div className="p-5"><EmptyState title="No work orders yet" description="Create a Bill of Materials first, then start a production run against it." /></div>}
+          {!loading && orders.length === 0 && <div className="p-5"><EmptyState title={t('manufacturing.noWorkOrdersYet', 'No work orders yet')} description={t('manufacturing.noWorkOrdersDescription', 'Create a Bill of Materials first, then start a production run against it.')} /></div>}
           {!loading && orders.length > 0 && (
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b-2 border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken">
-                  <th className="px-5 py-3 font-semibold">Work order #</th>
-                  <th className="px-5 py-3 font-semibold text-right">Planned qty</th>
-                  <th className="px-5 py-3 font-semibold text-right">Produced</th>
-                  <th className="px-5 py-3 font-semibold w-40">Progress</th>
-                  <th className="px-5 py-3 font-semibold">Status</th>
+                  <th className="px-5 py-3 font-semibold">{t('manufacturing.colWorkOrderNumber', 'Work order #')}</th>
+                  <th className="px-5 py-3 font-semibold text-right">{t('manufacturing.colPlannedQty', 'Planned qty')}</th>
+                  <th className="px-5 py-3 font-semibold text-right">{t('manufacturing.colProduced', 'Produced')}</th>
+                  <th className="px-5 py-3 font-semibold w-40">{t('manufacturing.colProgress', 'Progress')}</th>
+                  <th className="px-5 py-3 font-semibold">{t('manufacturing.colStatus', 'Status')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -125,6 +127,7 @@ function WorkOrdersTab() {
 }
 
 function WorkOrderPanel({ workOrder, onClose, onChanged }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [quantityProduced, setQuantityProduced] = useState(workOrder.quantityToProduce);
   const [busy, setBusy] = useState(false);
@@ -133,7 +136,7 @@ function WorkOrderPanel({ workOrder, onClose, onChanged }) {
     setBusy(true);
     try {
       await api.post(`/manufacturing/work-orders/${workOrder._id}/start`);
-      toast('Production started: raw materials consumed.', 'success');
+      toast(t('manufacturing.startProductionToast', 'Production started: raw materials consumed.'), 'success');
       onChanged();
       onClose();
     } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }
@@ -143,7 +146,7 @@ function WorkOrderPanel({ workOrder, onClose, onChanged }) {
     setBusy(true);
     try {
       await api.post(`/manufacturing/work-orders/${workOrder._id}/complete`, { quantityProduced: Number(quantityProduced) });
-      toast('Production completed: finished goods added to stock.', 'success');
+      toast(t('manufacturing.completeProductionToast', 'Production completed: finished goods added to stock.'), 'success');
       onChanged();
       onClose();
     } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }
@@ -153,48 +156,48 @@ function WorkOrderPanel({ workOrder, onClose, onChanged }) {
     <div className="w-full lg:w-80 shrink-0 card p-5 h-fit">
       <div className="flex items-center justify-between mb-3">
         <p className="font-display text-lg font-semibold text-accent num">{workOrder.workOrderNumber}</p>
-        <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>Close</button>
+        <button className="text-ink-muted hover:text-ink text-sm" onClick={onClose}>{t('manufacturing.close', 'Close')}</button>
       </div>
-      <p className="text-sm text-ink-muted mb-4">Planned: {formatQty(workOrder.quantityToProduce)} units</p>
+      <p className="text-sm text-ink-muted mb-4">{t('manufacturing.plannedUnits', 'Planned: {{qty}} units', { qty: formatQty(workOrder.quantityToProduce) })}</p>
 
       {workOrder.status === 'planned' && (
         <button className="btn-primary w-full" disabled={busy} onClick={start}>
-          {busy ? 'Starting…' : 'Start production (consume materials)'}
+          {busy ? t('manufacturing.starting', 'Starting…') : t('manufacturing.startProduction', 'Start production (consume materials)')}
         </button>
       )}
       {workOrder.status === 'in_progress' && (
         <div>
-          <label className="field-label">Quantity actually produced</label>
+          <label className="field-label">{t('manufacturing.quantityActuallyProduced', 'Quantity actually produced')}</label>
           <input type="number" className="field-input num mb-2" value={quantityProduced} onChange={(e) => setQuantityProduced(e.target.value)} />
-          <p className="text-xs text-ink-muted mb-2">If less than planned, the shortfall (wastage) makes each finished unit cost more, the difference isn't silently absorbed.</p>
+          <p className="text-xs text-ink-muted mb-2">{t('manufacturing.wastageNote', "If less than planned, the shortfall (wastage) makes each finished unit cost more, the difference isn't silently absorbed.")}</p>
           <button className="btn-primary w-full" disabled={busy} onClick={complete}>
-            {busy ? 'Completing…' : 'Complete production'}
+            {busy ? t('manufacturing.completing', 'Completing…') : t('manufacturing.completeProduction', 'Complete production')}
           </button>
         </div>
       )}
       {workOrder.status === 'completed' && (
         <div>
-          <p className="text-sm text-accent-strong mb-3">Completed: {formatQty(workOrder.quantityProduced)} units added to stock.</p>
+          <p className="text-sm text-accent-strong mb-3">{t('manufacturing.completedUnitsAdded', 'Completed: {{qty}} units added to stock.', { qty: formatQty(workOrder.quantityProduced) })}</p>
           <div className="space-y-1 text-xs text-ink-muted border-t border-rule pt-3">
-            <div className="flex justify-between"><span>Material cost</span><span className="num">{formatMoney(workOrder.actualMaterialCost)}</span></div>
-            <div className="flex justify-between"><span>Labor cost</span><span className="num">{formatMoney(workOrder.actualLaborCost)}</span></div>
-            <div className="flex justify-between"><span>Overhead</span><span className="num">{formatMoney(workOrder.overheadCost)}</span></div>
-            <div className="flex justify-between font-semibold text-ink"><span>Total production cost</span><span className="num">{formatMoney(workOrder.totalProductionCost)}</span></div>
-            <div className="flex justify-between font-semibold text-ink"><span>Cost per unit</span><span className="num">{formatMoney(workOrder.costPerUnit)}</span></div>
+            <div className="flex justify-between"><span>{t('manufacturing.materialCost', 'Material cost')}</span><span className="num">{formatMoney(workOrder.actualMaterialCost)}</span></div>
+            <div className="flex justify-between"><span>{t('manufacturing.laborCost', 'Labor cost')}</span><span className="num">{formatMoney(workOrder.actualLaborCost)}</span></div>
+            <div className="flex justify-between"><span>{t('manufacturing.overhead', 'Overhead')}</span><span className="num">{formatMoney(workOrder.overheadCost)}</span></div>
+            <div className="flex justify-between font-semibold text-ink"><span>{t('manufacturing.totalProductionCost', 'Total production cost')}</span><span className="num">{formatMoney(workOrder.totalProductionCost)}</span></div>
+            <div className="flex justify-between font-semibold text-ink"><span>{t('manufacturing.costPerUnit', 'Cost per unit')}</span><span className="num">{formatMoney(workOrder.costPerUnit)}</span></div>
           </div>
           {workOrder.yieldPercentage != null && (
             <div className="space-y-1 text-xs text-ink-muted border-t border-rule pt-3 mt-3">
-              <div className="flex justify-between"><span>Expected output</span><span className="num">{formatQty(workOrder.expectedOutputQuantity)}</span></div>
-              <div className="flex justify-between"><span>Wastage</span><span className="num">{formatQty(workOrder.wastageQuantity)}</span></div>
+              <div className="flex justify-between"><span>{t('manufacturing.expectedOutput', 'Expected output')}</span><span className="num">{formatQty(workOrder.expectedOutputQuantity)}</span></div>
+              <div className="flex justify-between"><span>{t('manufacturing.wastage', 'Wastage')}</span><span className="num">{formatQty(workOrder.wastageQuantity)}</span></div>
               <div className="flex justify-between font-semibold text-ink">
-                <span>Yield</span>
+                <span>{t('manufacturing.yieldLabel', 'Yield')}</span>
                 <span className={`num ${workOrder.yieldPercentage >= 95 ? 'text-accent-strong' : workOrder.yieldPercentage >= 85 ? '' : 'text-danger'}`}>{workOrder.yieldPercentage.toFixed(1)}%</span>
               </div>
             </div>
           )}
           {workOrder.consumedBatches?.length > 0 && (
             <div className="text-xs text-ink-muted border-t border-rule pt-3 mt-3">
-              <p className="field-label mb-1">Raw material batches consumed</p>
+              <p className="field-label mb-1">{t('manufacturing.rawMaterialBatchesConsumed', 'Raw material batches consumed')}</p>
               <ul className="space-y-0.5">
                 {workOrder.consumedBatches.map((cb, i) => (
                   <li key={i} className="flex justify-between"><span>{cb.batchNumber || cb.batchId}</span><span className="num">{formatQty(cb.quantityConsumed)}</span></li>
@@ -209,6 +212,7 @@ function WorkOrderPanel({ workOrder, onClose, onChanged }) {
 }
 
 function WorkOrderForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [boms, setBoms] = useState([]);
   const [branches, setBranches] = useState([]);
@@ -232,7 +236,7 @@ function WorkOrderForm({ onClose, onSaved }) {
     setSaving(true);
     try {
       await api.post('/manufacturing/work-orders', { ...form, routingId: form.routingId || undefined, quantityToProduce: Number(form.quantityToProduce) });
-      toast('Work order created.', 'success');
+      toast(t('manufacturing.workOrderCreated', 'Work order created.'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -244,43 +248,43 @@ function WorkOrderForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">New work order</p>
+        <p className="font-display text-lg mb-4">{t('manufacturing.newWorkOrderTitle', 'New work order')}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Bill of materials</label>
+            <label className="field-label">{t('manufacturing.billOfMaterials', 'Bill of materials')}</label>
             <select required className="field-input" value={form.bomId} onChange={(e) => setForm({ ...form, bomId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('manufacturing.select', 'Select…')}</option>
               {boms.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Branch</label>
+            <label className="field-label">{t('manufacturing.branch', 'Branch')}</label>
             <select required className="field-input" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{t('manufacturing.select', 'Select…')}</option>
               {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Warehouse</label>
+            <label className="field-label">{t('manufacturing.warehouse', 'Warehouse')}</label>
             <select required className="field-input" value={form.warehouseId} onChange={(e) => setForm({ ...form, warehouseId: e.target.value })} disabled={!form.branchId}>
-              <option value="">Select…</option>
+              <option value="">{t('manufacturing.select', 'Select…')}</option>
               {warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
             </select>
           </div>
           {routings.length > 0 && (
             <div>
-              <label className="field-label">Routing (optional — enables scheduling)</label>
+              <label className="field-label">{t('manufacturing.routingOptional', 'Routing (optional — enables scheduling)')}</label>
               <select className="field-input" value={form.routingId} onChange={(e) => setForm({ ...form, routingId: e.target.value })}>
-                <option value="">No routing</option>
+                <option value="">{t('manufacturing.noRouting', 'No routing')}</option>
                 {routings.map((r) => <option key={r._id} value={r._id}>{r.name}</option>)}
               </select>
             </div>
           )}
-          <div><label className="field-label">Quantity to produce</label><input type="number" min="1" required className="field-input num" value={form.quantityToProduce} onChange={(e) => setForm({ ...form, quantityToProduce: e.target.value })} /></div>
+          <div><label className="field-label">{t('manufacturing.quantityToProduce', 'Quantity to produce')}</label><input type="number" min="1" required className="field-input num" value={form.quantityToProduce} onChange={(e) => setForm({ ...form, quantityToProduce: e.target.value })} /></div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Creating…' : 'Create'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('manufacturing.cancel', 'Cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('manufacturing.creating', 'Creating…') : t('manufacturing.create', 'Create')}</button>
         </div>
       </form>
     </div>
@@ -288,6 +292,7 @@ function WorkOrderForm({ onClose, onSaved }) {
 }
 
 function BomsTab() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [boms, setBoms] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -302,17 +307,17 @@ function BomsTab() {
   return (
     <div>
       <div className="flex justify-end mb-3">
-        <button className="btn-primary" onClick={() => setShowForm(true)}>New BOM</button>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>{t('manufacturing.newBom', 'New BOM')}</button>
       </div>
       {loading && <Loading />}
-      {!loading && boms.length === 0 && <EmptyState title="No bills of materials yet" description="Define what raw materials go into one finished unit." />}
+      {!loading && boms.length === 0 && <EmptyState title={t('manufacturing.noBomsYet', 'No bills of materials yet')} description={t('manufacturing.noBomsDescription', 'Define what raw materials go into one finished unit.')} />}
       {!loading && boms.length > 0 && (
         <div className="grid grid-cols-2 gap-4">
           {boms.map((b) => (
             <div key={b._id} className="card p-5">
               <p className="font-display font-semibold text-accent">{b.name}</p>
-              <p className="text-xs text-ink-muted mt-2">{b.components.length} component{b.components.length === 1 ? '' : 's'}</p>
-              <p className="text-xs text-ink-muted mt-1">Labor {formatMoney(b.laborCostPerUnit)}/unit · Overhead {formatMoney(b.overheadCostPerUnit)}/unit</p>
+              <p className="text-xs text-ink-muted mt-2">{t('manufacturing.componentCount', '{{count}} component', { count: b.components.length })}</p>
+              <p className="text-xs text-ink-muted mt-1">{t('manufacturing.laborPerUnit', 'Labor {{cost}}/unit', { cost: formatMoney(b.laborCostPerUnit) })} · {t('manufacturing.overheadPerUnit', 'Overhead {{cost}}/unit', { cost: formatMoney(b.overheadCostPerUnit) })}</p>
             </div>
           ))}
         </div>
@@ -323,6 +328,7 @@ function BomsTab() {
 }
 
 function BomForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [products, setProducts] = useState([]);
   const [name, setName] = useState('');
@@ -351,7 +357,7 @@ function BomForm({ onClose, onSaved }) {
           return { productId: c.productId, variantId: p?.variants?.[0]?._id, quantityPerUnit: Number(c.quantityPerUnit) };
         }),
       });
-      toast('BOM created.', 'success');
+      toast(t('manufacturing.bomCreated', 'BOM created.'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -363,41 +369,41 @@ function BomForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-lg max-h-[85vh] overflow-y-auto">
-        <p className="font-display text-lg mb-4">New bill of materials</p>
+        <p className="font-display text-lg mb-4">{t('manufacturing.newBomTitle', 'New bill of materials')}</p>
         <div className="space-y-3 mb-4">
-          <div><label className="field-label">Name</label><input required autoFocus className="field-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Standard Recipe" /></div>
+          <div><label className="field-label">{t('manufacturing.name', 'Name')}</label><input required autoFocus className="field-input" value={name} onChange={(e) => setName(e.target.value)} placeholder={t('manufacturing.namePlaceholderRecipe', 'e.g. Standard Recipe')} /></div>
           <div>
-            <label className="field-label">Finished product</label>
+            <label className="field-label">{t('manufacturing.finishedProduct', 'Finished product')}</label>
             <select required className="field-input" value={finishedProductId} onChange={(e) => setFinishedProductId(e.target.value)}>
-              <option value="">Select…</option>
+              <option value="">{t('manufacturing.select', 'Select…')}</option>
               {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <div><label className="field-label">Labor cost/unit</label><input type="number" className="field-input num" value={laborCostPerUnit} onChange={(e) => setLaborCostPerUnit(e.target.value)} /></div>
-            <div><label className="field-label">Overhead/unit</label><input type="number" className="field-input num" value={overheadCostPerUnit} onChange={(e) => setOverheadCostPerUnit(e.target.value)} /></div>
+            <div><label className="field-label">{t('manufacturing.laborCostPerUnit', 'Labor cost/unit')}</label><input type="number" className="field-input num" value={laborCostPerUnit} onChange={(e) => setLaborCostPerUnit(e.target.value)} /></div>
+            <div><label className="field-label">{t('manufacturing.overheadCostPerUnit', 'Overhead/unit')}</label><input type="number" className="field-input num" value={overheadCostPerUnit} onChange={(e) => setOverheadCostPerUnit(e.target.value)} /></div>
           </div>
         </div>
 
-        <p className="field-label mb-1">Components (raw materials per finished unit)</p>
+        <p className="field-label mb-1">{t('manufacturing.componentsLabel', 'Components (raw materials per finished unit)')}</p>
         <div className="space-y-2 mb-2">
           {components.map((c, i) => (
             <div key={i} className="grid grid-cols-3 gap-2">
               <select className="field-input col-span-2" value={c.productId} onChange={(e) => updateComponent(i, { productId: e.target.value })}>
-                <option value="">Product…</option>
+                <option value="">{t('manufacturing.productEllipsis', 'Product…')}</option>
                 {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
               </select>
-              <input type="number" step="0.01" className="field-input num" value={c.quantityPerUnit} onChange={(e) => updateComponent(i, { quantityPerUnit: e.target.value })} placeholder="Qty" />
+              <input type="number" step="0.01" className="field-input num" value={c.quantityPerUnit} onChange={(e) => updateComponent(i, { quantityPerUnit: e.target.value })} placeholder={t('manufacturing.qtyPlaceholder', 'Qty')} />
             </div>
           ))}
         </div>
         <button type="button" className="btn-ghost !px-0 text-xs mb-4" onClick={() => setComponents([...components, { productId: '', quantityPerUnit: 1 }])}>
-          + Add component
+          {t('manufacturing.addComponent', '+ Add component')}
         </button>
 
         <div className="flex justify-end gap-2">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save BOM'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('manufacturing.cancel', 'Cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('manufacturing.saving', 'Saving…') : t('manufacturing.saveBom', 'Save BOM')}</button>
         </div>
       </form>
     </div>
@@ -409,6 +415,7 @@ function BomForm({ onClose, onSaved }) {
 // ---------------------------------------------------------------------------
 
 function WorkCentersTab() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -424,20 +431,20 @@ function WorkCentersTab() {
   return (
     <div>
       <div className="flex justify-end mb-3">
-        <button className="btn-primary" onClick={() => { setEditing(null); setShowForm(true); }}>New work center</button>
+        <button className="btn-primary" onClick={() => { setEditing(null); setShowForm(true); }}>{t('manufacturing.newWorkCenter', 'New work center')}</button>
       </div>
       {loading && <Loading />}
-      {!loading && rows.length === 0 && <EmptyState title="No work centers yet" description="Add the machines, lines, or labor groups production runs against." />}
+      {!loading && rows.length === 0 && <EmptyState title={t('manufacturing.noWorkCentersYet', 'No work centers yet')} description={t('manufacturing.noWorkCentersDescription', 'Add the machines, lines, or labor groups production runs against.')} />}
       {!loading && rows.length > 0 && (
         <div className="card overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b-2 border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken">
-                <th className="px-5 py-3 font-semibold">Name</th>
-                <th className="px-5 py-3 font-semibold">Description</th>
-                <th className="px-5 py-3 font-semibold text-right">Capacity (hrs/day)</th>
-                <th className="px-5 py-3 font-semibold text-right">Hourly rate</th>
-                <th className="px-5 py-3 font-semibold">Status</th>
+                <th className="px-5 py-3 font-semibold">{t('manufacturing.colName', 'Name')}</th>
+                <th className="px-5 py-3 font-semibold">{t('manufacturing.colDescription', 'Description')}</th>
+                <th className="px-5 py-3 font-semibold text-right">{t('manufacturing.colCapacity', 'Capacity (hrs/day)')}</th>
+                <th className="px-5 py-3 font-semibold text-right">{t('manufacturing.colHourlyRate', 'Hourly rate')}</th>
+                <th className="px-5 py-3 font-semibold">{t('manufacturing.colStatus', 'Status')}</th>
                 <th className="px-5 py-3 font-semibold"></th>
               </tr>
             </thead>
@@ -448,8 +455,8 @@ function WorkCentersTab() {
                   <td className="px-5 py-3 text-ink-muted">{wc.description || '—'}</td>
                   <td className="px-5 py-3 num text-right">{formatQty(wc.capacityHoursPerDay)}</td>
                   <td className="px-5 py-3 num text-right">{formatMoney(wc.hourlyRate || 0)}</td>
-                  <td className="px-5 py-3"><span className={wc.isActive ? 'chip-accent' : 'chip-neutral'}>{wc.isActive ? 'Active' : 'Inactive'}</span></td>
-                  <td className="px-5 py-3 text-right"><button className="btn-ghost !px-0 text-xs" onClick={() => { setEditing(wc); setShowForm(true); }}>Edit</button></td>
+                  <td className="px-5 py-3"><span className={wc.isActive ? 'chip-accent' : 'chip-neutral'}>{wc.isActive ? t('manufacturing.active', 'Active') : t('manufacturing.inactive', 'Inactive')}</span></td>
+                  <td className="px-5 py-3 text-right"><button className="btn-ghost !px-0 text-xs" onClick={() => { setEditing(wc); setShowForm(true); }}>{t('manufacturing.edit', 'Edit')}</button></td>
                 </tr>
               ))}
             </tbody>
@@ -462,6 +469,7 @@ function WorkCentersTab() {
 }
 
 function WorkCenterForm({ workCenter, onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [name, setName] = useState(workCenter?.name || '');
   const [description, setDescription] = useState(workCenter?.description || '');
@@ -477,7 +485,7 @@ function WorkCenterForm({ workCenter, onClose, onSaved }) {
       const payload = { name, description, capacityHoursPerDay: Number(capacityHoursPerDay), hourlyRate: Number(hourlyRate) || 0, isActive };
       if (workCenter) await api.put(`/manufacturing/work-centers/${workCenter._id}`, payload);
       else await api.post('/manufacturing/work-centers', payload);
-      toast(workCenter ? 'Work center updated.' : 'Work center created.', 'success');
+      toast(workCenter ? t('manufacturing.workCenterUpdated', 'Work center updated.') : t('manufacturing.workCenterCreated', 'Work center created.'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -489,21 +497,21 @@ function WorkCenterForm({ workCenter, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-sm">
-        <p className="font-display text-lg mb-4">{workCenter ? 'Edit work center' : 'New work center'}</p>
+        <p className="font-display text-lg mb-4">{workCenter ? t('manufacturing.editWorkCenterTitle', 'Edit work center') : t('manufacturing.newWorkCenterTitle', 'New work center')}</p>
         <div className="space-y-3">
-          <div><label className="field-label">Name</label><input required autoFocus className="field-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. CNC Line 1" /></div>
-          <div><label className="field-label">Description</label><input className="field-input" value={description} onChange={(e) => setDescription(e.target.value)} /></div>
-          <div><label className="field-label">Capacity (hours/day)</label><input type="number" min="0.1" step="0.5" required className="field-input num" value={capacityHoursPerDay} onChange={(e) => setCapacityHoursPerDay(e.target.value)} /></div>
-          <div><label className="field-label">Hourly labor rate</label><input type="number" min="0" step="0.01" className="field-input num" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} placeholder="Used for production labor costing" /></div>
+          <div><label className="field-label">{t('manufacturing.name', 'Name')}</label><input required autoFocus className="field-input" value={name} onChange={(e) => setName(e.target.value)} placeholder={t('manufacturing.namePlaceholderCnc', 'e.g. CNC Line 1')} /></div>
+          <div><label className="field-label">{t('manufacturing.description', 'Description')}</label><input className="field-input" value={description} onChange={(e) => setDescription(e.target.value)} /></div>
+          <div><label className="field-label">{t('manufacturing.capacityHoursPerDay', 'Capacity (hours/day)')}</label><input type="number" min="0.1" step="0.5" required className="field-input num" value={capacityHoursPerDay} onChange={(e) => setCapacityHoursPerDay(e.target.value)} /></div>
+          <div><label className="field-label">{t('manufacturing.hourlyLaborRate', 'Hourly labor rate')}</label><input type="number" min="0" step="0.01" className="field-input num" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} placeholder={t('manufacturing.hourlyRateHint', 'Used for production labor costing')} /></div>
           {workCenter && (
             <label className="flex items-center gap-2 text-sm text-ink-muted">
-              <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} /> Active
+              <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} /> {t('manufacturing.activeLabel', 'Active')}
             </label>
           )}
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('manufacturing.cancel', 'Cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('manufacturing.saving', 'Saving…') : t('manufacturing.save', 'Save')}</button>
         </div>
       </form>
     </div>
@@ -515,6 +523,7 @@ function WorkCenterForm({ workCenter, onClose, onSaved }) {
 // ---------------------------------------------------------------------------
 
 function RoutingsTab() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [routings, setRoutings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -529,10 +538,10 @@ function RoutingsTab() {
   return (
     <div>
       <div className="flex justify-end mb-3">
-        <button className="btn-primary" onClick={() => setShowForm(true)}>New routing</button>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>{t('manufacturing.newRouting', 'New routing')}</button>
       </div>
       {loading && <Loading />}
-      {!loading && routings.length === 0 && <EmptyState title="No routings yet" description="Attach an ordered list of operations to a BOM so its work orders can be scheduled against real work-center capacity." />}
+      {!loading && routings.length === 0 && <EmptyState title={t('manufacturing.noRoutingsYet', 'No routings yet')} description={t('manufacturing.noRoutingsDescription', 'Attach an ordered list of operations to a BOM so its work orders can be scheduled against real work-center capacity.')} />}
       {!loading && routings.length > 0 && (
         <div className="grid grid-cols-2 gap-4">
           {routings.map((r) => (
@@ -556,6 +565,7 @@ function RoutingsTab() {
 }
 
 function RoutingForm({ onClose, onSaved }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [boms, setBoms] = useState([]);
   const [workCenters, setWorkCenters] = useState([]);
@@ -581,7 +591,7 @@ function RoutingForm({ onClose, onSaved }) {
         bomId, name,
         operations: operations.map((o) => ({ ...o, sequence: Number(o.sequence), estimatedHours: Number(o.estimatedHours) })),
       });
-      toast('Routing created.', 'success');
+      toast(t('manufacturing.routingCreated', 'Routing created.'), 'success');
       onSaved();
     } catch (err) {
       toast(err.message, 'error');
@@ -593,40 +603,40 @@ function RoutingForm({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 bg-ink/20 flex items-center justify-center z-40 px-4">
       <form onSubmit={handleSubmit} className="card p-5 w-full max-w-lg max-h-[85vh] overflow-y-auto">
-        <p className="font-display text-lg mb-4">New routing</p>
+        <p className="font-display text-lg mb-4">{t('manufacturing.newRoutingTitle', 'New routing')}</p>
         <div className="space-y-3 mb-4">
-          <div><label className="field-label">Name</label><input required autoFocus className="field-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Standard routing" /></div>
+          <div><label className="field-label">{t('manufacturing.name', 'Name')}</label><input required autoFocus className="field-input" value={name} onChange={(e) => setName(e.target.value)} placeholder={t('manufacturing.namePlaceholderRouting', 'e.g. Standard routing')} /></div>
           <div>
-            <label className="field-label">Bill of materials</label>
+            <label className="field-label">{t('manufacturing.billOfMaterials', 'Bill of materials')}</label>
             <select required className="field-input" value={bomId} onChange={(e) => setBomId(e.target.value)}>
-              <option value="">Select…</option>
+              <option value="">{t('manufacturing.select', 'Select…')}</option>
               {boms.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
             </select>
           </div>
         </div>
 
-        <p className="field-label mb-1">Operations, in order</p>
+        <p className="field-label mb-1">{t('manufacturing.operationsInOrder', 'Operations, in order')}</p>
         <div className="space-y-2 mb-2">
           {operations.map((o, i) => (
             <div key={i} className="grid grid-cols-6 gap-2 items-center">
-              <input type="number" min="1" className="field-input num col-span-1" value={o.sequence} onChange={(e) => updateOp(i, { sequence: e.target.value })} title="Sequence" />
-              <input className="field-input col-span-2" placeholder="Operation" value={o.operationName} onChange={(e) => updateOp(i, { operationName: e.target.value })} />
+              <input type="number" min="1" className="field-input num col-span-1" value={o.sequence} onChange={(e) => updateOp(i, { sequence: e.target.value })} title={t('manufacturing.sequenceTitle', 'Sequence')} />
+              <input className="field-input col-span-2" placeholder={t('manufacturing.operationPlaceholder', 'Operation')} value={o.operationName} onChange={(e) => updateOp(i, { operationName: e.target.value })} />
               <select className="field-input col-span-2" value={o.workCenterId} onChange={(e) => updateOp(i, { workCenterId: e.target.value })}>
-                <option value="">Work center…</option>
+                <option value="">{t('manufacturing.workCenterEllipsis', 'Work center…')}</option>
                 {workCenters.map((wc) => <option key={wc._id} value={wc._id}>{wc.name}</option>)}
               </select>
-              <input type="number" step="0.25" min="0.25" className="field-input num col-span-1" placeholder="Hrs" value={o.estimatedHours} onChange={(e) => updateOp(i, { estimatedHours: e.target.value })} />
+              <input type="number" step="0.25" min="0.25" className="field-input num col-span-1" placeholder={t('manufacturing.hrsPlaceholder', 'Hrs')} value={o.estimatedHours} onChange={(e) => updateOp(i, { estimatedHours: e.target.value })} />
             </div>
           ))}
         </div>
         <button type="button" className="btn-ghost !px-0 text-xs mb-4"
           onClick={() => setOperations([...operations, { sequence: operations.length + 1, workCenterId: '', operationName: '', estimatedHours: 1 }])}>
-          + Add operation
+          {t('manufacturing.addOperation', '+ Add operation')}
         </button>
 
         <div className="flex justify-end gap-2">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save routing'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{t('manufacturing.cancel', 'Cancel')}</button>
+          <button type="submit" disabled={saving} className="btn-primary">{saving ? t('manufacturing.saving', 'Saving…') : t('manufacturing.saveRouting', 'Save routing')}</button>
         </div>
       </form>
     </div>
@@ -638,6 +648,7 @@ function RoutingForm({ onClose, onSaved }) {
 // ---------------------------------------------------------------------------
 
 function MrpTab() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [products, setProducts] = useState([]);
   const [branches, setBranches] = useState([]);
@@ -668,7 +679,7 @@ function MrpTab() {
       });
       const result = await api.post('/manufacturing/mrp-runs', { branchId, warehouseId, demand, includeReorderLevel });
       setRun(result);
-      toast('MRP run computed.', 'success');
+      toast(t('manufacturing.mrpComputed', 'MRP run computed.'), 'success');
     } catch (err) {
       toast(err.message, 'error');
     } finally {
@@ -679,33 +690,33 @@ function MrpTab() {
   return (
     <div className="flex flex-col lg:flex-row gap-6">
       <div className="w-full lg:w-96 shrink-0 card p-5 h-fit">
-        <p className="font-display text-lg font-semibold text-accent mb-3">Run MRP</p>
+        <p className="font-display text-lg font-semibold text-accent mb-3">{t('manufacturing.runMrp', 'Run MRP')}</p>
         <div className="space-y-3">
           <div>
-            <label className="field-label">Branch</label>
+            <label className="field-label">{t('manufacturing.branch', 'Branch')}</label>
             <select required className="field-input" value={branchId} onChange={(e) => setBranchId(e.target.value)}>
-              <option value="">Select…</option>
+              <option value="">{t('manufacturing.select', 'Select…')}</option>
               {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="field-label">Warehouse</label>
+            <label className="field-label">{t('manufacturing.warehouse', 'Warehouse')}</label>
             <select required className="field-input" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} disabled={!branchId}>
-              <option value="">Select…</option>
+              <option value="">{t('manufacturing.select', 'Select…')}</option>
               {warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
             </select>
           </div>
           <label className="flex items-center gap-2 text-sm text-ink-muted">
             <input type="checkbox" checked={includeReorderLevel} onChange={(e) => setIncludeReorderLevel(e.target.checked)} />
-            Also plan for products at/below reorder level
+            {t('manufacturing.alsoPlanReorder', 'Also plan for products at/below reorder level')}
           </label>
 
-          <p className="field-label mb-1">Target quantities (optional)</p>
+          <p className="field-label mb-1">{t('manufacturing.targetQuantities', 'Target quantities (optional)')}</p>
           <div className="space-y-2">
             {demandLines.map((l, i) => (
               <div key={i} className="grid grid-cols-3 gap-2">
                 <select className="field-input col-span-2" value={l.productId} onChange={(e) => updateLine(i, { productId: e.target.value })}>
-                  <option value="">Product…</option>
+                  <option value="">{t('manufacturing.productEllipsis', 'Product…')}</option>
                   {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
                 </select>
                 <input type="number" min="1" className="field-input num" value={l.quantity} onChange={(e) => updateLine(i, { quantity: e.target.value })} />
@@ -713,17 +724,17 @@ function MrpTab() {
             ))}
           </div>
           <button type="button" className="btn-ghost !px-0 text-xs" onClick={() => setDemandLines([...demandLines, { productId: '', quantity: 1 }])}>
-            + Add target
+            {t('manufacturing.addTarget', '+ Add target')}
           </button>
 
           <button className="btn-primary w-full mt-2" disabled={running || !warehouseId} onClick={handleRun}>
-            {running ? 'Running…' : 'Run MRP'}
+            {running ? t('manufacturing.running', 'Running…') : t('manufacturing.runMrpBtn', 'Run MRP')}
           </button>
         </div>
       </div>
 
       <div className="flex-1 min-w-0">
-        {!run && <EmptyState title="No MRP run yet" description="Set targets (or auto-plan from reorder levels) and run MRP to see the exploded shortage list." />}
+        {!run && <EmptyState title={t('manufacturing.noMrpRunYet', 'No MRP run yet')} description={t('manufacturing.noMrpRunDescription', 'Set targets (or auto-plan from reorder levels) and run MRP to see the exploded shortage list.')} />}
         {run && <MrpResult run={run} branchId={branchId} warehouseId={warehouseId} onConverted={setRun} />}
       </div>
     </div>
@@ -731,6 +742,7 @@ function MrpTab() {
 }
 
 function MrpResult({ run, branchId, warehouseId, onConverted }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [suppliers, setSuppliers] = useState([]);
   const [supplierByLine, setSupplierByLine] = useState({});
@@ -745,11 +757,11 @@ function MrpResult({ run, branchId, warehouseId, onConverted }) {
 
   async function convertPurchase(line) {
     const supplierId = supplierByLine[line._id];
-    if (!supplierId) { toast('Choose a supplier first.', 'error'); return; }
+    if (!supplierId) { toast(t('manufacturing.chooseSupplierFirst', 'Choose a supplier first.'), 'error'); return; }
     setBusyLine(line._id);
     try {
       await api.post(`/manufacturing/mrp-runs/${run._id}/suggested-purchases/${line._id}/convert`, { supplierId, branchId, warehouseId });
-      toast('Draft purchase order created.', 'success');
+      toast(t('manufacturing.draftPoCreated', 'Draft purchase order created.'), 'success');
       await refresh();
     } catch (err) {
       toast(err.message, 'error');
@@ -762,7 +774,7 @@ function MrpResult({ run, branchId, warehouseId, onConverted }) {
     setBusyLine(line._id);
     try {
       await api.post(`/manufacturing/mrp-runs/${run._id}/suggested-work-orders/${line._id}/convert`, { branchId, warehouseId });
-      toast('Draft work order created.', 'success');
+      toast(t('manufacturing.draftWoCreated', 'Draft work order created.'), 'success');
       await refresh();
     } catch (err) {
       toast(err.message, 'error');
@@ -774,16 +786,16 @@ function MrpResult({ run, branchId, warehouseId, onConverted }) {
   return (
     <div className="space-y-6">
       <div className="card overflow-hidden">
-        <p className="font-display text-lg font-semibold text-accent px-5 py-4 border-b border-rule">Suggested purchases (raw materials)</p>
-        {run.suggestedPurchases.length === 0 && <p className="text-sm text-ink-muted p-5">Nothing short — on-hand stock covers demand.</p>}
+        <p className="font-display text-lg font-semibold text-accent px-5 py-4 border-b border-rule">{t('manufacturing.suggestedPurchases', 'Suggested purchases (raw materials)')}</p>
+        {run.suggestedPurchases.length === 0 && <p className="text-sm text-ink-muted p-5">{t('manufacturing.nothingShort', 'Nothing short — on-hand stock covers demand.')}</p>}
         {run.suggestedPurchases.length > 0 && (
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b-2 border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken">
-                <th className="px-5 py-3 font-semibold">Required</th>
-                <th className="px-5 py-3 font-semibold text-right">On hand</th>
-                <th className="px-5 py-3 font-semibold text-right">Shortfall</th>
-                <th className="px-5 py-3 font-semibold">Supplier</th>
+                <th className="px-5 py-3 font-semibold">{t('manufacturing.colRequired', 'Required')}</th>
+                <th className="px-5 py-3 font-semibold text-right">{t('manufacturing.colOnHand', 'On hand')}</th>
+                <th className="px-5 py-3 font-semibold text-right">{t('manufacturing.colShortfall', 'Shortfall')}</th>
+                <th className="px-5 py-3 font-semibold">{t('manufacturing.colSupplier', 'Supplier')}</th>
                 <th className="px-5 py-3 font-semibold"></th>
               </tr>
             </thead>
@@ -794,9 +806,9 @@ function MrpResult({ run, branchId, warehouseId, onConverted }) {
                   <td className="px-5 py-3 num text-right">{formatQty(line.onHandQuantity)}</td>
                   <td className="px-5 py-3 num text-right font-semibold text-danger">{formatQty(line.shortfallQuantity)}</td>
                   <td className="px-5 py-3">
-                    {line.status === 'converted' ? <span className="chip-accent">PO raised</span> : (
+                    {line.status === 'converted' ? <span className="chip-accent">{t('manufacturing.poRaised', 'PO raised')}</span> : (
                       <select className="field-input" value={supplierByLine[line._id] || ''} onChange={(e) => setSupplierByLine({ ...supplierByLine, [line._id]: e.target.value })}>
-                        <option value="">Select…</option>
+                        <option value="">{t('manufacturing.select', 'Select…')}</option>
                         {suppliers.map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
                       </select>
                     )}
@@ -804,7 +816,7 @@ function MrpResult({ run, branchId, warehouseId, onConverted }) {
                   <td className="px-5 py-3 text-right">
                     {line.status !== 'converted' && (
                       <button className="btn-secondary text-xs" disabled={busyLine === line._id} onClick={() => convertPurchase(line)}>
-                        {busyLine === line._id ? 'Creating…' : 'Convert to PO'}
+                        {busyLine === line._id ? t('manufacturing.creating', 'Creating…') : t('manufacturing.convertToPo', 'Convert to PO')}
                       </button>
                     )}
                   </td>
@@ -816,13 +828,13 @@ function MrpResult({ run, branchId, warehouseId, onConverted }) {
       </div>
 
       <div className="card overflow-hidden">
-        <p className="font-display text-lg font-semibold text-accent px-5 py-4 border-b border-rule">Suggested work orders (sub-assemblies)</p>
-        {run.suggestedWorkOrders.length === 0 && <p className="text-sm text-ink-muted p-5">No sub-assembly shortages.</p>}
+        <p className="font-display text-lg font-semibold text-accent px-5 py-4 border-b border-rule">{t('manufacturing.suggestedWorkOrders', 'Suggested work orders (sub-assemblies)')}</p>
+        {run.suggestedWorkOrders.length === 0 && <p className="text-sm text-ink-muted p-5">{t('manufacturing.noSubAssemblyShortages', 'No sub-assembly shortages.')}</p>}
         {run.suggestedWorkOrders.length > 0 && (
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b-2 border-rule text-left text-xs text-ink-muted uppercase tracking-wide bg-surface-sunken">
-                <th className="px-5 py-3 font-semibold text-right">Quantity needed</th>
+                <th className="px-5 py-3 font-semibold text-right">{t('manufacturing.colQuantityNeeded', 'Quantity needed')}</th>
                 <th className="px-5 py-3 font-semibold"></th>
               </tr>
             </thead>
@@ -831,9 +843,9 @@ function MrpResult({ run, branchId, warehouseId, onConverted }) {
                 <tr key={line._id} className="border-b border-rule last:border-0">
                   <td className="px-5 py-3 num text-right">{formatQty(line.requiredQuantity)}</td>
                   <td className="px-5 py-3 text-right">
-                    {line.status === 'converted' ? <span className="chip-accent">WO raised</span> : (
+                    {line.status === 'converted' ? <span className="chip-accent">{t('manufacturing.woRaised', 'WO raised')}</span> : (
                       <button className="btn-secondary text-xs" disabled={busyLine === line._id} onClick={() => convertWorkOrder(line)}>
-                        {busyLine === line._id ? 'Creating…' : 'Convert to work order'}
+                        {busyLine === line._id ? t('manufacturing.creating', 'Creating…') : t('manufacturing.convertToWorkOrder', 'Convert to work order')}
                       </button>
                     )}
                   </td>
@@ -852,6 +864,7 @@ function MrpResult({ run, branchId, warehouseId, onConverted }) {
 // ---------------------------------------------------------------------------
 
 function ScheduleTab() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [workOrders, setWorkOrders] = useState([]);
   const [workCenters, setWorkCenters] = useState([]);
@@ -879,14 +892,14 @@ function ScheduleTab() {
   const sortedGroups = Object.values(groups).sort((a, b) => (a.day + a.workCenterId).localeCompare(b.day + b.workCenterId));
 
   if (loading) return <Loading />;
-  if (sortedGroups.length === 0) return <EmptyState title="Nothing scheduled" description="Start a work order that has a routing to schedule its operations against work-center capacity." />;
+  if (sortedGroups.length === 0) return <EmptyState title={t('manufacturing.nothingScheduled', 'Nothing scheduled')} description={t('manufacturing.nothingScheduledDescription', 'Start a work order that has a routing to schedule its operations against work-center capacity.')} />;
 
   return (
     <div className="space-y-4">
       {sortedGroups.map((g) => (
         <div key={`${g.workCenterId}|${g.day}`} className="card overflow-hidden">
           <div className="flex justify-between items-center px-5 py-3 border-b border-rule bg-surface-sunken">
-            <p className="font-display font-semibold text-accent">{workCenterNames[g.workCenterId] || 'Work center'}</p>
+            <p className="font-display font-semibold text-accent">{workCenterNames[g.workCenterId] || t('manufacturing.workCenterFallback', 'Work center')}</p>
             <p className="text-xs text-ink-muted num">{g.day}</p>
           </div>
           <table className="w-full text-sm">
