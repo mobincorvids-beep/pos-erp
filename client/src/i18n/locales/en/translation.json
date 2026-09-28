@@ -5354,5 +5354,9 @@
     "confirmPasswordPlaceholder": "Re-enter password",
     "resetting": "Resetting…",
     "backToSignIn": "Back to sign in"
+  },
+  "completeSignup": {
+    "subtitle": "One last step — tell us about your business",
+    "finishButton": "Finish creating my account"
   }
 }

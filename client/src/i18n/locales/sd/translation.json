@@ -5221,5 +5221,9 @@
     "confirmPasswordPlaceholder": "پاسورڊ ٻيهر داخل ڪريو",
     "resetting": "ري سيٽ ڪري رهيو آهي…",
     "backToSignIn": "سائن ان ڏانهن واپس"
+  },
+  "completeSignup": {
+    "subtitle": "One last step — tell us about your business",
+    "finishButton": "Finish creating my account"
   }
 }

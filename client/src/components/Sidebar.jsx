@@ -139,27 +139,30 @@ const SECTIONS = [
 
 export function Sidebar({ mobileOpen, onClose }) {
   const { t } = useTranslation();
-  const { company, logout, user, permissions } = useAuth();
+  const { company, logout, user } = useAuth();
   // null permissions is this app's super-admin convention (see
   // AuthContext.can and every backend requirePermission check) — the
-  // owner/first-admin account, not scoped to any one industry the way a
-  // real tenant's day-to-day staff are. Gating them down to a single
-  // industryType's modules made no sense for the one account whose whole
-  // job is reviewing/using the full platform, so a super-admin sees every
-  // industry module and every nav item unfiltered, same as "Customize
-  // sidebar" mode gives anyone — just without having to find and flip
-  // that toggle first.
-  const isSuperAdmin = permissions === null;
+  // owner/first-admin account of THIS tenant, with unrestricted access to
+  // everything their own company has. That's a permissions concept, not
+  // an industry one: this account still runs one real business in one
+  // real industry, same as their staff — a jewelry-shop owner doesn't
+  // want a sidebar full of Hotel, Farm and Hospital links just because
+  // their account has no permission restrictions. (The platform's own
+  // operators — reviewing/supporting tenants across the whole platform —
+  // are a completely separate login and app: see src/admin, mounted at
+  // /admin/login with its own JWT namespace, not this Sidebar at all.)
+  // So industry-module and nav-section visibility below is never
+  // exempted by permission level; "Customize sidebar" mode (further
+  // down) is how anyone reveals an extra industry or section if their
+  // business genuinely spans verticals.
   // Only surface the ONE industry module this tenant actually has (if
   // any) — previously every tenant's sidebar listed all ~30 industry
   // modules regardless of plan, and clicking one for a module the tenant
   // doesn't have rendered a fully interactive page that only failed once
   // you tried to submit (see IndustryModuleGate in App.jsx, which still
-  // blocks direct URL access as a second layer). A super-admin is exempt
-  // — see isSuperAdmin above.
-  const enabledIndustryModules = isSuperAdmin
-    ? INDUSTRY_MODULES
-    : INDUSTRY_MODULES.filter((m) => m.key === company?.industryType);
+  // blocks direct URL access as a second layer). This applies to every
+  // account in the tenant, owner included — see the comment above.
+  const enabledIndustryModules = INDUSTRY_MODULES.filter((m) => m.key === company?.industryType);
 
   // v4: out-of-scope items are hidden by default again — no muted styling,
   // no "extra" badge, just absent from the normal view. What counts as
@@ -205,18 +208,14 @@ export function Sidebar({ mobileOpen, onClose }) {
     });
   }
 
-  // Industry-default relevance (the same per-business logic as before), now
-  // used only to decide styling — never to filter items out of the list.
+  // Industry-default relevance (the same per-business logic as before) —
+  // this now governs visibility for everyone in the tenant, owner
+  // included, same reasoning as enabledIndustryModules above.
   const isDefaultRelevant = getNavVisibility(company?.industryType, false);
   function isInScope(path) {
     const override = overrides[path];
     if (override === 'in') return true;
     if (override === 'out') return false;
-    // A super-admin's default is "everything in scope" rather than one
-    // industry's slice — see isSuperAdmin above. An explicit 'out'
-    // override (checked first, above) still hides it for them too, so
-    // they can still trim their own view if they want to.
-    if (isSuperAdmin) return true;
     return isDefaultRelevant(path);
   }
 

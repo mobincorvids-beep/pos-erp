@@ -5354,5 +5354,9 @@
     "confirmPasswordPlaceholder": "Ressaisissez le mot de passe",
     "resetting": "Réinitialisation…",
     "backToSignIn": "Retour à la connexion"
+  },
+  "completeSignup": {
+    "subtitle": "Dernière étape — parlez-nous de votre entreprise",
+    "finishButton": "Terminer la création de mon compte"
   }
 }

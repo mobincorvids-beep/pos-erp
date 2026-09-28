@@ -5354,5 +5354,9 @@
     "confirmPasswordPlaceholder": "أعد إدخال كلمة المرور",
     "resetting": "جارٍ إعادة التعيين…",
     "backToSignIn": "العودة لتسجيل الدخول"
+  },
+  "completeSignup": {
+    "subtitle": "خطوة أخيرة — أخبرنا عن نشاطك التجاري",
+    "finishButton": "إنهاء إنشاء حسابي"
   }
 }

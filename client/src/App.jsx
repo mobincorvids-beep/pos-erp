@@ -7,6 +7,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { LoginPage } from './pages/LoginPage';
 import { VerifyAuthPage } from './pages/VerifyAuthPage';
 import { OAuthCompletePage } from './pages/OAuthCompletePage';
+import { CompleteGoogleSignupPage } from './pages/CompleteGoogleSignupPage';
 import { SignupPage } from './pages/SignupPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { HomeDashboardPage } from './pages/HomeDashboardPage';
@@ -137,6 +138,7 @@ export default function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/verify" element={<VerifyAuthPage />} />
             <Route path="/oauth-complete" element={<OAuthCompletePage />} />
+            <Route path="/complete-signup" element={<CompleteGoogleSignupPage />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route
               element={

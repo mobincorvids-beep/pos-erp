@@ -23,16 +23,18 @@
  *      alone.
  *
  * Self-serve tenant creation via OAuth: case 3 below USED to always
- * refuse. It now creates a brand-new company + admin user (via the same
- * companyProvisioningService.onboardCompany the "Sign up with Google"
- * button hits — see oauthController.googleCallback / GET
- * /auth/google/signup), but ONLY when the caller explicitly passes
- * `allowSelfServeSignup: true` — i.e. only when the user actually clicked
- * "Sign up with Google", never plain "Sign in with Google" (that route
- * omits the flag, so an existing-account-not-found there still refuses
- * with a clear message exactly as before — someone mistakenly hitting
- * "sign in" instead of "sign up" should not accidentally spin up a
- * second, orphaned tenant for themselves).
+ * refuse, then later provisioned a company immediately (guessing an
+ * industryType default and a placeholder business name). It now instead
+ * returns a `pendingSignup` marker — company creation itself happens in
+ * completeSelfServeSignup below, once the user has picked a real business
+ * name + industry on the frontend (see CompleteGoogleSignupPage.jsx) —
+ * ONLY when the caller explicitly passes `allowSelfServeSignup: true`,
+ * i.e. only when the user actually clicked "Sign up with Google", never
+ * plain "Sign in with Google" (that route omits the flag, so an
+ * existing-account-not-found there still refuses with a clear message
+ * exactly as before — someone mistakenly hitting "sign in" instead of
+ * "sign up" should not accidentally spin up a second, orphaned tenant for
+ * themselves).
  */
 const User = require('../models/User');
 const companyProvisioningService = require('./companyProvisioningService');
@@ -103,19 +105,46 @@ async function findOrLinkUser(provider, profile, opts = {}) {
     throw err;
   }
 
-  // Genuinely new business signing up via Google — mirrors what
-  // POST /auth/register does for a password-based signup, minus the
-  // password: Google already proved this mailbox is real, so the new
-  // admin user goes straight to emailVerified: true with no local
-  // password set (oauthProviders only — see User.passwordHash's
-  // conditional `required`).
+  // Genuinely new business signing up via Google. Previously this
+  // provisioned the company immediately, right here, with a generic
+  // "<name>'s Business" placeholder and no industryType (silently
+  // defaulting to 'retail') — the user never got asked which industry
+  // they're in, unlike the password-based signup form, which always asks.
+  // Now we don't provision at all: we signal the caller (oauthController)
+  // that this Google identity is verified and ready to sign up, but still
+  // needs the same business-name + industry step everyone else fills in.
+  // The actual company creation happens in
+  // completeSelfServeSignup below, once that's collected.
+  return {
+    pendingSignup: true,
+    provider,
+    providerId,
+    email,
+    displayName: profile.displayName || email.split('@')[0],
+  };
+}
+
+/**
+ * Second half of the Google self-serve signup flow — called once the user
+ * has picked a business name + industry on the frontend's "Complete your
+ * signup" step (see CompleteGoogleSignupPage.jsx), with the verified
+ * profile fields carried over from findOrLinkUser's `pendingSignup` result
+ * via a short-lived signed token (see controllers/oauthController.js).
+ * Mirrors POST /auth/register for a password-based signup, minus the
+ * password: Google already proved this mailbox is real, so the new admin
+ * user goes straight to emailVerified: true with no local password set
+ * (oauthProviders only — see User.passwordHash's conditional `required`).
+ */
+async function completeSelfServeSignup({ provider, providerId, email, displayName, businessName, industryType }) {
+  if (!businessName) throw new Error('Business name is required.');
   const { admin } = await companyProvisioningService.onboardCompany({
-    name: `${profile.displayName || email.split('@')[0]}'s Business`,
-    adminName: profile.displayName || email.split('@')[0],
+    name: businessName,
+    industryType,
+    adminName: displayName || email.split('@')[0],
     adminEmail: email,
     oauthProvider: { provider, providerId },
   });
   return admin;
 }
 
-module.exports = { findOrLinkUser };
+module.exports = { findOrLinkUser, completeSelfServeSignup };

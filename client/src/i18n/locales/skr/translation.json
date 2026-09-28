@@ -5221,5 +5221,9 @@
     "confirmPasswordPlaceholder": "پاس ورڈ دوبارہ درج کرو",
     "resetting": "ری سیٹ تھیندا پئے…",
     "backToSignIn": "سائن اِن ول واپس"
+  },
+  "completeSignup": {
+    "subtitle": "One last step — tell us about your business",
+    "finishButton": "Finish creating my account"
   }
 }

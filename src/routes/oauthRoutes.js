@@ -12,11 +12,17 @@
  */
 const router = require('express').Router();
 const { passport, googleEnabled, microsoftEnabled } = require('../config/passport');
-const { googleCallback } = require('../controllers/oauthController');
+const { googleCallback, completeGoogleSignup } = require('../controllers/oauthController');
 
 router.get('/oauth-providers', (req, res) => {
   res.json({ google: googleEnabled, microsoft: microsoftEnabled });
 });
+
+// Always registered (not gated on googleEnabled) so a pending token minted
+// while Google OAuth *was* configured still fails with a clean 400 rather
+// than a 404 if it's ever disabled mid-flight — same reasoning as
+// /oauth-providers above.
+router.post('/google/complete-signup', completeGoogleSignup);
 
 if (googleEnabled) {
   // Two entry points, one callback. `state` here is a plain string (not
