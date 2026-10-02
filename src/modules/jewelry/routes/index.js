@@ -33,4 +33,25 @@ router.post('/buybacks/:id/apply', body('saleId').isString().notEmpty().withMess
 router.post('/buybacks/:id/cancel', controller.cancelBuyback);
 router.get('/customers/:customerId/buybacks', controller.customerBuybacks);
 
+router.get('/reports/karat-valuation', controller.karatValuationReport);
+
+router.post('/gold-savings',
+  body('customerId').isString().notEmpty().withMessage('customerId is required.'),
+  body('branchId').isString().notEmpty().withMessage('branchId is required.'),
+  body('targetKarat').isFloat({ gt: 0 }).withMessage('targetKarat is required.'),
+  body('monthlyAmount').isFloat({ gt: 0 }).withMessage('monthlyAmount must be greater than zero.'),
+  body('totalMonths').isInt({ gt: 0 }).withMessage('totalMonths must be greater than zero.'),
+  body('liabilityAccountId').isString().notEmpty().withMessage('liabilityAccountId is required.'),
+  validate, controller.enrollGoldSavings);
+router.get('/gold-savings', controller.listGoldSavings);
+router.post('/gold-savings/:id/installments',
+  body('amount').isFloat({ gt: 0 }).withMessage('amount must be greater than zero.'),
+  body('receivedInAccountId').isString().notEmpty().withMessage('receivedInAccountId is required.'),
+  validate, controller.recordGoldSavingsInstallment);
+router.post('/gold-savings/:id/cancel', controller.cancelGoldSavings);
+router.post('/gold-savings/:id/redeem',
+  body('items').isArray({ min: 1 }).withMessage('items is required.'),
+  body('warehouseId').isString().notEmpty().withMessage('warehouseId is required.'),
+  validate, controller.redeemGoldSavings);
+
 module.exports = router;

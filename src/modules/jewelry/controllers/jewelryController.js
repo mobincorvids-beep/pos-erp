@@ -1,5 +1,6 @@
 const jewelryPricingService = require('../services/jewelryPricingService');
 const buybackService = require('../services/buybackService');
+const goldSavingsService = require('../services/goldSavingsService');
 const GoldRate = require('../models/GoldRate');
 
 async function currentRates(req, res) {
@@ -85,7 +86,55 @@ async function customerBuybacks(req, res) {
   res.json(rows);
 }
 
+async function karatValuationReport(req, res) {
+  const report = await jewelryPricingService.karatValuationReport(req.companyId);
+  res.json(report);
+}
+
+async function enrollGoldSavings(req, res) {
+  try {
+    const scheme = await goldSavingsService.enroll({ ...req.body, companyId: req.companyId, userId: req.auth.userId });
+    res.status(201).json(scheme);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function listGoldSavings(req, res) {
+  const rows = await goldSavingsService.listSchemes(req.companyId, { customerId: req.query.customerId, status: req.query.status });
+  res.json(rows);
+}
+
+async function recordGoldSavingsInstallment(req, res) {
+  try {
+    const scheme = await goldSavingsService.recordInstallment(req.params.id, { ...req.body, userId: req.auth.userId });
+    res.json(scheme);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function cancelGoldSavings(req, res) {
+  try {
+    const scheme = await goldSavingsService.cancel(req.params.id);
+    res.json(scheme);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+async function redeemGoldSavings(req, res) {
+  try {
+    const result = await goldSavingsService.redeem(req.params.id, { ...req.body, userId: req.auth.userId });
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
 module.exports = {
   currentRates, setRate, configureItem, listConfigs, deleteConfig, quote,
   intakeBuyback, markBuybackApplied, cancelBuyback, customerBuybacks,
+  karatValuationReport,
+  enrollGoldSavings, listGoldSavings, recordGoldSavingsInstallment, cancelGoldSavings, redeemGoldSavings,
 };

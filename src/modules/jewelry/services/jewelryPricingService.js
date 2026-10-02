@@ -10,6 +10,7 @@
  * it just computes the number checkout needs.
  */
 const Product = require('../../../models/Product');
+const StockLevel = require('../../../models/StockLevel');
 const GoldRate = require('../models/GoldRate');
 const JewelryItemConfig = require('../models/JewelryItemConfig');
 
@@ -25,11 +26,23 @@ async function getCurrentRate(companyId, karat) {
 }
 
 function configureItem(input) {
-  const { companyId, productId, variantId, karat, makingChargeType, makingChargeValue, stoneCharge } = input;
+  const {
+    companyId, productId, variantId, karat, makingChargeType, makingChargeValue, stoneCharge,
+    hallmarkNumber, hallmarkingAuthority, hallmarkedAt,
+    stoneCertNumber, stoneCertAuthority, stoneCertDetails,
+  } = input;
   if (!karat) throw new Error('karat is required.');
   return JewelryItemConfig.findOneAndUpdate(
     { variantId },
-    { companyId, productId, variantId, karat, makingChargeType, makingChargeValue, stoneCharge },
+    {
+      companyId, productId, variantId, karat, makingChargeType, makingChargeValue, stoneCharge,
+      hallmarkNumber: hallmarkNumber || null,
+      hallmarkingAuthority: hallmarkingAuthority || null,
+      hallmarkedAt: hallmarkedAt || null,
+      stoneCertNumber: stoneCertNumber || null,
+      stoneCertAuthority: stoneCertAuthority || null,
+      stoneCertDetails: stoneCertDetails || null,
+    },
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );
 }
@@ -76,4 +89,54 @@ async function quotePrice(companyId, variantId) {
   };
 }
 
-module.exports = { setGoldRate, getCurrentRate, configureItem, listConfigs, deleteConfig, quotePrice };
+/**
+ * Karat-wise stock valuation — a plain "total inventory cost" report means
+ * nothing in this trade the way it does elsewhere: gold's own value moves
+ * daily, so the useful number is "how much gold weight (and its current
+ * market value) am I holding, broken down by karat" — not a static cost
+ * figure frozen at purchase time. Walks every configured jewelry item,
+ * sums its on-hand weight across all warehouses, and re-prices that
+ * weight at today's rate for that karat.
+ */
+async function karatValuationReport(companyId) {
+  const configs = await JewelryItemConfig.find({ companyId });
+  if (configs.length === 0) return { asOf: new Date(), karats: [], grandTotalValue: 0 };
+
+  const rates = await GoldRate.find({ companyId }).sort({ effectiveDate: -1 });
+  const latestRateByKarat = new Map();
+  for (const r of rates) if (!latestRateByKarat.has(r.karat)) latestRateByKarat.set(r.karat, r.ratePerGram);
+
+  const byKarat = new Map(); // karat -> { itemCount, totalWeightGrams, totalValue, items: [] }
+
+  for (const config of configs) {
+    const product = await Product.findOne({ companyId, 'variants._id': config.variantId });
+    const variant = product?.variants?.id(config.variantId);
+    if (!variant?.weight) continue; // unweighted variant — can't value it by weight, skip
+
+    const stockLines = await StockLevel.find({ companyId, variantId: config.variantId });
+    const onHandUnits = stockLines.reduce((sum, s) => sum + s.quantity, 0);
+    if (onHandUnits <= 0) continue;
+
+    const weightGrams = onHandUnits * variant.weight;
+    const ratePerGram = latestRateByKarat.get(config.karat) || 0;
+    const value = Math.round(weightGrams * ratePerGram * 100) / 100;
+
+    if (!byKarat.has(config.karat)) byKarat.set(config.karat, { karat: config.karat, itemCount: 0, totalWeightGrams: 0, totalValue: 0, items: [] });
+    const bucket = byKarat.get(config.karat);
+    bucket.itemCount += 1;
+    bucket.totalWeightGrams += weightGrams;
+    bucket.totalValue += value;
+    bucket.items.push({
+      productId: product._id, variantId: config.variantId,
+      productName: product.name, sku: variant.sku,
+      onHandUnits, weightGrams, ratePerGram, value,
+      hallmarkNumber: config.hallmarkNumber,
+    });
+  }
+
+  const karats = Array.from(byKarat.values()).sort((a, b) => b.karat - a.karat);
+  const grandTotalValue = Math.round(karats.reduce((sum, k) => sum + k.totalValue, 0) * 100) / 100;
+  return { asOf: new Date(), karats, grandTotalValue };
+}
+
+module.exports = { setGoldRate, getCurrentRate, configureItem, listConfigs, deleteConfig, quotePrice, karatValuationReport };

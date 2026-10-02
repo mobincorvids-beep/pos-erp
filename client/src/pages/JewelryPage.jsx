@@ -13,6 +13,8 @@ export function JewelryPage() {
     ['rates', t('jewelry.goldRates'), 'payments'],
     ['items', t('jewelry.itemPricing'), 'sell'],
     ['buybacks', t('jewelry.buybacks'), 'sync_alt'],
+    ['valuation', t('jewelry.karatValuation'), 'inventory_2'],
+    ['savings', t('jewelry.goldSavings'), 'savings'],
   ];
   const [tab, setTab] = useState('rates');
   return (
@@ -32,6 +34,8 @@ export function JewelryPage() {
       {tab === 'rates' && <RatesTab />}
       {tab === 'items' && <ItemsTab />}
       {tab === 'buybacks' && <BuybacksTab />}
+      {tab === 'valuation' && <ValuationTab />}
+      {tab === 'savings' && <GoldSavingsTab />}
     </div>
   );
 }
@@ -103,7 +107,10 @@ function ItemsTab() {
   const { company } = useAuth();
   const toast = useToast();
   const [products, setProducts] = useState([]);
-  const [form, setForm] = useState({ variantId: '', karat: 22, makingChargeType: 'percentage', makingChargeValue: '', stoneCharge: 0 });
+  const [form, setForm] = useState({
+    variantId: '', karat: 22, makingChargeType: 'percentage', makingChargeValue: '', stoneCharge: 0,
+    hallmarkNumber: '', hallmarkingAuthority: '', stoneCertNumber: '', stoneCertAuthority: '', stoneCertDetails: '',
+  });
   const [saving, setSaving] = useState(false);
   const [quote, setQuote] = useState(null);
   const [quoting, setQuoting] = useState(false);
@@ -118,6 +125,10 @@ function ItemsTab() {
       await api.post('/jewelry/items/config', {
         productId: product?._id, variantId: form.variantId, karat: Number(form.karat),
         makingChargeType: form.makingChargeType, makingChargeValue: Number(form.makingChargeValue) || 0, stoneCharge: Number(form.stoneCharge) || 0,
+        hallmarkNumber: form.hallmarkNumber || null, hallmarkingAuthority: form.hallmarkingAuthority || null,
+        hallmarkedAt: form.hallmarkNumber ? new Date().toISOString() : null,
+        stoneCertNumber: form.stoneCertNumber || null, stoneCertAuthority: form.stoneCertAuthority || null,
+        stoneCertDetails: form.stoneCertDetails || null,
       });
       toast(t('jewelry.itemPricingConfigured'), 'success');
       setQuote(null);
@@ -169,6 +180,20 @@ function ItemsTab() {
             <div><label className="field-label">{t('jewelry.value')}</label><input type="number" className="field-input num" value={form.makingChargeValue} onChange={(e) => setForm({ ...form, makingChargeValue: e.target.value })} /></div>
           </div>
           <div><label className="field-label">{t('jewelry.stoneCharge')}</label><input type="number" className="field-input num" value={form.stoneCharge} onChange={(e) => setForm({ ...form, stoneCharge: e.target.value })} /></div>
+
+          <div className="tear-line my-1" />
+          <p className="text-xs font-semibold text-ink-muted uppercase tracking-wide">{t('jewelry.hallmarkingSection')}</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className="field-label">{t('jewelry.hallmarkNumber')}</label><input className="field-input" value={form.hallmarkNumber} onChange={(e) => setForm({ ...form, hallmarkNumber: e.target.value })} placeholder={t('jewelry.hallmarkNumberPlaceholder')} /></div>
+            <div><label className="field-label">{t('jewelry.hallmarkingAuthority')}</label><input className="field-input" value={form.hallmarkingAuthority} onChange={(e) => setForm({ ...form, hallmarkingAuthority: e.target.value })} placeholder={t('jewelry.hallmarkingAuthorityPlaceholder')} /></div>
+          </div>
+
+          <p className="text-xs font-semibold text-ink-muted uppercase tracking-wide mt-3">{t('jewelry.stoneCertSection')}</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className="field-label">{t('jewelry.stoneCertNumber')}</label><input className="field-input" value={form.stoneCertNumber} onChange={(e) => setForm({ ...form, stoneCertNumber: e.target.value })} /></div>
+            <div><label className="field-label">{t('jewelry.stoneCertAuthority')}</label><input className="field-input" value={form.stoneCertAuthority} onChange={(e) => setForm({ ...form, stoneCertAuthority: e.target.value })} placeholder={t('jewelry.stoneCertAuthorityPlaceholder')} /></div>
+          </div>
+          <div><label className="field-label">{t('jewelry.stoneCertDetails')}</label><input className="field-input" value={form.stoneCertDetails} onChange={(e) => setForm({ ...form, stoneCertDetails: e.target.value })} placeholder={t('jewelry.stoneCertDetailsPlaceholder')} /></div>
         </div>
         <div className="flex gap-2 mt-5">
           <button type="submit" disabled={saving} className="btn-primary flex-1">{saving ? t('jewelry.saving') : t('jewelry.saveConfiguration')}</button>
@@ -270,6 +295,297 @@ function BuybacksTab() {
           ))}
         </div>
         <p className="text-xs text-ink-muted mt-3">{t('jewelry.applyCreditHint')}</p>
+      </div>
+    </div>
+  );
+}
+
+function ValuationTab() {
+  const { t } = useTranslation();
+  const { company } = useAuth();
+  const toast = useToast();
+  const [report, setReport] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    api.get('/jewelry/reports/karat-valuation').then(setReport).catch((err) => toast(err.message, 'error')).finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <Loading />;
+  if (!report || report.karats.length === 0) return <EmptyState title={t('jewelry.noValuationYet')} description={t('jewelry.noValuationYetDescription')} />;
+
+  return (
+    <div>
+      <div className="card p-5 mb-5 flex justify-between items-center">
+        <div>
+          <p className="eyebrow mb-1">{t('jewelry.grandTotalValue')}</p>
+          <p className="font-display text-3xl font-bold text-accent num">{formatMoney(report.grandTotalValue, company?.currency)}</p>
+        </div>
+        <p className="text-xs text-ink-muted">{t('jewelry.asOf')} {new Date(report.asOf).toLocaleString()}</p>
+      </div>
+
+      <div className="space-y-5">
+        {report.karats.map((k) => (
+          <div key={k.karat} className="card overflow-hidden">
+            <div className="flex justify-between items-center px-5 py-3 border-b border-rule bg-surface-sunken">
+              <p className="font-display font-semibold text-accent">{k.karat}{t('jewelry.karatSuffix')}</p>
+              <div className="flex gap-5 text-xs text-ink-muted">
+                <span>{t('jewelry.items')}: <span className="num text-ink font-semibold">{k.itemCount}</span></span>
+                <span>{t('jewelry.totalWeight')}: <span className="num text-ink font-semibold">{k.totalWeightGrams.toFixed(2)}g</span></span>
+                <span>{t('jewelry.totalValue')}: <span className="num text-accent-strong font-semibold">{formatMoney(k.totalValue, company?.currency)}</span></span>
+              </div>
+            </div>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-ink-muted uppercase tracking-wide">
+                  <th className="px-5 py-2 font-semibold">{t('jewelry.product')}</th>
+                  <th className="px-5 py-2 font-semibold text-right">{t('jewelry.onHandUnits')}</th>
+                  <th className="px-5 py-2 font-semibold text-right">{t('jewelry.weight')}</th>
+                  <th className="px-5 py-2 font-semibold text-right">{t('jewelry.ratePerGram')}</th>
+                  <th className="px-5 py-2 font-semibold text-right">{t('jewelry.totalValue')}</th>
+                  <th className="px-5 py-2 font-semibold">{t('jewelry.hallmarkNumber')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {k.items.map((item) => (
+                  <tr key={item.variantId} className="border-t border-rule">
+                    <td className="px-5 py-2.5">{item.productName}</td>
+                    <td className="px-5 py-2.5 num text-right">{item.onHandUnits}</td>
+                    <td className="px-5 py-2.5 num text-right">{item.weightGrams.toFixed(2)}g</td>
+                    <td className="px-5 py-2.5 num text-right">{formatMoney(item.ratePerGram, company?.currency)}</td>
+                    <td className="px-5 py-2.5 num text-right font-semibold">{formatMoney(item.value, company?.currency)}</td>
+                    <td className="px-5 py-2.5 text-ink-muted">{item.hallmarkNumber || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function GoldSavingsTab() {
+  const { t } = useTranslation();
+  const { company } = useAuth();
+  const toast = useToast();
+  const [schemes, setSchemes] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [accounts, setAccounts] = useState([]);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ customerId: '', branchId: '', targetKarat: 22, monthlyAmount: '', totalMonths: 11, liabilityAccountId: '' });
+  const [saving, setSaving] = useState(false);
+  const [installmentAmount, setInstallmentAmount] = useState({});
+  const [installmentAccount, setInstallmentAccount] = useState({});
+  const [busyId, setBusyId] = useState(null);
+  const [redeemFor, setRedeemFor] = useState(null);
+  const [products, setProducts] = useState([]);
+  const [warehouses, setWarehouses] = useState([]);
+  const [redeemForm, setRedeemForm] = useState({ variantId: '', quantity: 1, unitPrice: '', warehouseId: '' });
+
+  function load() {
+    api.get('/jewelry/gold-savings').then(setSchemes).catch((err) => toast(err.message, 'error'));
+  }
+  useEffect(() => {
+    load();
+    api.get('/customers').then(setCustomers).catch(() => {});
+    api.get('/org/branches').then(setBranches).catch(() => {});
+    api.get('/org/accounts').then(setAccounts).catch(() => {});
+    api.get('/products').then(setProducts).catch(() => {});
+  }, []);
+  useEffect(() => {
+    if (redeemFor) api.get(`/org/warehouses?branchId=${schemes.find((s) => s._id === redeemFor)?.branchId}`).then(setWarehouses).catch(() => {});
+  }, [redeemFor]);
+
+  async function enroll(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.post('/jewelry/gold-savings', {
+        ...form, targetKarat: Number(form.targetKarat), monthlyAmount: Number(form.monthlyAmount), totalMonths: Number(form.totalMonths),
+      });
+      toast(t('jewelry.schemeEnrolled'), 'success');
+      setShowForm(false);
+      setForm({ customerId: '', branchId: '', targetKarat: 22, monthlyAmount: '', totalMonths: 11, liabilityAccountId: '' });
+      load();
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function payInstallment(schemeId) {
+    const amount = Number(installmentAmount[schemeId]);
+    const receivedInAccountId = installmentAccount[schemeId];
+    if (!amount || !receivedInAccountId) return toast(t('jewelry.enterAmountAndAccount'), 'error');
+    setBusyId(schemeId);
+    try {
+      await api.post(`/jewelry/gold-savings/${schemeId}/installments`, { amount, receivedInAccountId });
+      toast(t('jewelry.installmentRecorded'), 'success');
+      setInstallmentAmount({ ...installmentAmount, [schemeId]: '' });
+      load();
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function cancelScheme(schemeId) {
+    setBusyId(schemeId);
+    try {
+      await api.post(`/jewelry/gold-savings/${schemeId}/cancel`);
+      toast(t('jewelry.schemeCancelled'), 'success');
+      load();
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function redeem(schemeId) {
+    if (!redeemForm.variantId || !redeemForm.unitPrice || !redeemForm.warehouseId) return toast(t('jewelry.fillRedeemForm'), 'error');
+    const product = products.find((p) => p.variants.some((v) => v._id === redeemForm.variantId));
+    setBusyId(schemeId);
+    try {
+      const result = await api.post(`/jewelry/gold-savings/${schemeId}/redeem`, {
+        warehouseId: redeemForm.warehouseId,
+        items: [{ productId: product?._id, variantId: redeemForm.variantId, quantity: Number(redeemForm.quantity), unitPrice: Number(redeemForm.unitPrice) }],
+      });
+      toast(t('jewelry.redeemedFor', { weight: result.redeemedWeightGrams }), 'success');
+      setRedeemFor(null);
+      load();
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  const statusChip = { active: 'chip-info', matured: 'chip-accent', redeemed: 'chip-neutral', cancelled: 'chip-danger' };
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-4">
+        <p className="text-sm text-ink-muted max-w-md">{t('jewelry.goldSavingsDescription')}</p>
+        <button className="btn-primary" onClick={() => setShowForm(!showForm)}>{t('jewelry.newScheme')}</button>
+      </div>
+
+      {showForm && (
+        <form onSubmit={enroll} className="card p-5 mb-5">
+          <p className="text-sm font-semibold text-ink flex items-center gap-2 mb-4">
+            <span className="material-symbols-outlined text-accent">savings</span>
+            {t('jewelry.enrollCustomer')}
+          </p>
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label className="field-label">{t('jewelry.customer')}</label>
+              <select required className="field-input" value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })}>
+                <option value="">{t('jewelry.selectPlaceholder')}</option>
+                {customers.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="field-label">{t('jewelry.branch')}</label>
+              <select required className="field-input" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value })}>
+                <option value="">{t('jewelry.selectPlaceholder')}</option>
+                {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3 mb-3">
+            <div><label className="field-label">{t('jewelry.targetKarat')}</label><input type="number" required className="field-input num" value={form.targetKarat} onChange={(e) => setForm({ ...form, targetKarat: e.target.value })} /></div>
+            <div><label className="field-label">{t('jewelry.monthlyAmount')}</label><input type="number" required className="field-input num" value={form.monthlyAmount} onChange={(e) => setForm({ ...form, monthlyAmount: e.target.value })} /></div>
+            <div><label className="field-label">{t('jewelry.totalMonths')}</label><input type="number" required className="field-input num" value={form.totalMonths} onChange={(e) => setForm({ ...form, totalMonths: e.target.value })} /></div>
+          </div>
+          <div className="mb-4">
+            <label className="field-label">{t('jewelry.liabilityAccount')}</label>
+            <select required className="field-input" value={form.liabilityAccountId} onChange={(e) => setForm({ ...form, liabilityAccountId: e.target.value })}>
+              <option value="">{t('jewelry.selectPlaceholder')}</option>
+              {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
+            </select>
+            <p className="text-xs text-ink-muted mt-1">{t('jewelry.liabilityAccountHint')}</p>
+          </div>
+          <button type="submit" disabled={saving} className="btn-primary w-full">{saving ? t('jewelry.saving') : t('jewelry.enrollScheme')}</button>
+        </form>
+      )}
+
+      {schemes.length === 0 && <EmptyState title={t('jewelry.noSchemesYet')} description={t('jewelry.noSchemesYetDescription')} />}
+      <div className="space-y-3">
+        {schemes.map((s) => (
+          <div key={s._id} className="card p-5">
+            <div className="flex justify-between items-start mb-3">
+              <div>
+                <p className="font-semibold text-ink">{s.customerId?.name}</p>
+                <p className="text-xs text-ink-muted">{t('jewelry.targetKarat')}: {s.targetKarat}{t('jewelry.karatSuffix')} · {s.installments.length}/{s.totalMonths} {t('jewelry.installmentsLabel')}</p>
+              </div>
+              <span className={statusChip[s.status] || 'chip-neutral'}>{s.status}</span>
+            </div>
+            <div className="flex justify-between text-sm mb-3">
+              <span className="text-ink-muted">{t('jewelry.totalPaid')}</span>
+              <span className="num font-semibold text-accent-strong">{formatMoney(s.totalPaid, company?.currency)} / {formatMoney(s.monthlyAmount * s.totalMonths, company?.currency)}</span>
+            </div>
+            {['active', 'matured'].includes(s.status) && (
+              <div className="flex gap-2 items-end border-t border-rule pt-3">
+                <div className="flex-1">
+                  <label className="field-label">{t('jewelry.amount')}</label>
+                  <input type="number" className="field-input num" value={installmentAmount[s._id] || ''} onChange={(e) => setInstallmentAmount({ ...installmentAmount, [s._id]: e.target.value })} />
+                </div>
+                <div className="flex-1">
+                  <label className="field-label">{t('jewelry.receivedInto')}</label>
+                  <select className="field-input" value={installmentAccount[s._id] || ''} onChange={(e) => setInstallmentAccount({ ...installmentAccount, [s._id]: e.target.value })}>
+                    <option value="">{t('jewelry.selectPlaceholder')}</option>
+                    {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
+                  </select>
+                </div>
+                <button disabled={busyId === s._id} className="btn-secondary" onClick={() => payInstallment(s._id)}>{t('jewelry.recordInstallment')}</button>
+                {s.status === 'matured' && (
+                  <button disabled={busyId === s._id} className="btn-primary" onClick={() => { setRedeemFor(redeemFor === s._id ? null : s._id); setRedeemForm({ variantId: '', quantity: 1, unitPrice: '', warehouseId: '' }); }}>
+                    {t('jewelry.redeemScheme')}
+                  </button>
+                )}
+                <button disabled={busyId === s._id} className="btn-ghost text-xs text-danger" onClick={() => cancelScheme(s._id)}>{t('jewelry.cancelScheme')}</button>
+              </div>
+            )}
+            {s.status === 'redeemed' && (
+              <p className="text-xs text-ink-muted border-t border-rule pt-3">{t('jewelry.redeemedFor', { weight: s.redeemedWeightGrams })}</p>
+            )}
+
+            {redeemFor === s._id && (
+              <div className="border-t border-rule pt-3 mt-3">
+                <p className="text-xs text-ink-muted mb-2">{t('jewelry.redeemHint')}</p>
+                <div className="grid grid-cols-2 gap-3 mb-2">
+                  <div>
+                    <label className="field-label">{t('jewelry.itemToRedeem')}</label>
+                    <select className="field-input" value={redeemForm.variantId} onChange={(e) => setRedeemForm({ ...redeemForm, variantId: e.target.value })}>
+                      <option value="">{t('jewelry.selectPlaceholder')}</option>
+                      {products.map((p) => p.variants.map((v) => <option key={v._id} value={v._id}>{p.name} ({v.weight ? `${v.weight}g` : v.sku})</option>))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="field-label">{t('jewelry.warehouse')}</label>
+                    <select className="field-input" value={redeemForm.warehouseId} onChange={(e) => setRedeemForm({ ...redeemForm, warehouseId: e.target.value })}>
+                      <option value="">{t('jewelry.selectPlaceholder')}</option>
+                      {warehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div><label className="field-label">{t('jewelry.quantity')}</label><input type="number" className="field-input num" value={redeemForm.quantity} onChange={(e) => setRedeemForm({ ...redeemForm, quantity: e.target.value })} /></div>
+                  <div><label className="field-label">{t('jewelry.unitPrice')}</label><input type="number" className="field-input num" value={redeemForm.unitPrice} onChange={(e) => setRedeemForm({ ...redeemForm, unitPrice: e.target.value })} /></div>
+                </div>
+                <button disabled={busyId === s._id} className="btn-primary w-full" onClick={() => redeem(s._id)}>
+                  {busyId === s._id ? t('jewelry.saving') : t('jewelry.confirmRedeem')}
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
