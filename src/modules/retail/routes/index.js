@@ -4,6 +4,7 @@ const { requireAuth, scopeToCompany } = require('../../../middleware/auth');
 const { requireActiveModule } = require('../../../middleware/requireActiveModule');
 const { validate } = require('../../../middleware/validate');
 const controller = require('../controllers/layawayController');
+const retailController = require('../controllers/retailController');
 
 router.use(requireAuth, scopeToCompany);
 router.use(requireActiveModule('retail'));
@@ -27,5 +28,17 @@ router.put('/layaway/:id',
   body('totalPrice').optional().isFloat({ gt: 0 }).withMessage('totalPrice must be greater than zero.'),
   body('quantity').optional().isInt({ gt: 0 }).withMessage('quantity must be greater than zero.'),
   validate, controller.updatePlan);
+
+router.post('/promotions',
+  body('name').isString().notEmpty().withMessage('name is required.'),
+  body('type').isIn(['buy_x_get_y', 'bundle']).withMessage('type must be buy_x_get_y or bundle.'),
+  validate, retailController.createPromotion);
+router.get('/promotions', retailController.listPromotions); // ?branchId=&activeOnly=true
+router.put('/promotions/:id/active', body('active').isBoolean().withMessage('active must be true or false.'), validate, retailController.setPromotionActive);
+router.post('/promotions/evaluate-cart',
+  body('items').isArray({ min: 1 }).withMessage('items is required.'),
+  validate, retailController.evaluateCart);
+
+router.get('/reports/supplier-scorecard', retailController.supplierScorecard); // ?fromDate=&toDate=
 
 module.exports = router;
